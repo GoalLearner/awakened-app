@@ -7315,7 +7315,7 @@ test.describe('BG · Today’s Briefing v2 (W978)', () => {
 // BH. W980 — HUNT RESULTS (Claude Design handoffs 31 + 32): solo + co-op, win + loss
 // ─────────────────────────────────────────────────────────────────────────
 // W986 — the morning briefing names a developer update the hunter has not opened.
-test.describe('BI · Briefing names a new update (W986 → the board tile, W1178)', () => {
+test.describe('BI · Briefing names a new update (W986 → the board tile, W1178; the fact once read, W1179)', () => {
   const VOWS = [{ id: 'bi-read', name: 'Read', emoji: '•', difficulty: 'easy', type: 'build' }];
   async function seed(page: Page, extra: Record<string, string>) {
     await freshApp(page);
@@ -7332,46 +7332,48 @@ test.describe('BI · Briefing names a new update (W986 → the board tile, W1178
     await page.reload();
     await expect(page.locator('#tab-habits')).toBeVisible({ timeout: 15_000 });
   }
-  const news = (page: Page) => page.evaluate(() => { const el = document.querySelector('#tb-root [data-tile="board"]'); return el ? { title: (el.querySelector('.tb4-bt')?.textContent || '').trim(), isNew: !!el.querySelector('.tb4-new'), read: el.classList.contains('tb4-read') } : null; });
+  const news = (page: Page) => page.evaluate(() => { const el = document.querySelector('#tb-root [data-tile="board"]'); return el ? { title: (el.querySelector('.tb4-bt')?.textContent || '').trim(), isNew: !!el.querySelector('.tb4-new'), fact: (el.querySelector('.tb4-ft')?.textContent || '').trim() } : null; });
+  const todaysFact = (page: Page) => page.evaluate(() => (window as any).__tb.fact().text);
 
   test('an unopened update is named on the board tile, marked NEW', async ({ page }) => {
     await seed(page, { hb_board_update_last: JSON.stringify({ id: 'up-1', created_at: Date.UTC(2026, 10, 8, 18), title: 'Week of Sep 21' }) });
     await page.evaluate(() => (window as any).__previewTodaysBriefing());
-    await expect.poll(() => news(page), { timeout: 6_000 }).toEqual({ title: 'Week of Sep 21', isNew: true, read: false });
+    await expect.poll(() => news(page), { timeout: 6_000 }).toEqual({ title: 'Week of Sep 21', isNew: true, fact: '' });
     await expect(page.locator('#tb-root [data-tile="board"] .tb4-bd')).toHaveText(/^Sun · NOV 8$/i);
   });
 
   // The real briefing (not the owner's preview) is the one hunters see.
   const real = (page: Page) => page.evaluate(() => (window as any).__tb.show({}));
 
-  test('once that update is opened, the tile keeps its title, quietly', async ({ page }) => {
+  test('once that update is opened, the tile turns to today’s health fact (W1179)', async ({ page }) => {
     await seed(page, { hb_board_update_last: JSON.stringify({ id: 'up-1', created_at: 1, title: 'Week of Sep 21' }), hb_board_update_seen: 'up-1' });
     await real(page);
     await expect(page.locator('.tb-frame')).toBeVisible({ timeout: 6_000 });
-    expect(await news(page)).toEqual({ title: 'Week of Sep 21', isNew: false, read: true });
+    expect(await news(page)).toEqual({ title: '', isNew: false, fact: await todaysFact(page) });
+    await expect(page.locator('#tb-root [data-tile="board"] .tb4-tl2')).toHaveText('Did you know?');
   });
 
-  test('no update at all: the tile waits for one', async ({ page }) => {
+  test('no update at all: the fact too', async ({ page }) => {
     await seed(page, {});
     await real(page);
     await expect(page.locator('.tb-frame')).toBeVisible({ timeout: 6_000 });
-    expect(await news(page)).toEqual({ title: 'News from the developer lands here.', isNew: false, read: true });
+    expect(await news(page)).toEqual({ title: '', isNew: false, fact: await todaysFact(page) });
   });
 
-  test('the owner preview with no update yet shows a sample title', async ({ page }) => {
+  test('the owner preview shows what hunters see: the fact when nothing is new', async ({ page }) => {
     await seed(page, {});
     await page.evaluate(() => (window as any).__previewTodaysBriefing());
-    await expect.poll(() => news(page), { timeout: 6_000 }).toEqual({ title: 'Your next update’s title appears here', isNew: true, read: false });
+    await expect.poll(async () => (await news(page))?.fact, { timeout: 6_000 }).toBe(await todaysFact(page));
   });
 });
 
 // W1178 — Today's Briefing: the four tiles (Claude Design handoff 10). Pact Flames, the board,
-// your steps ranked against every hunter, and Write a review, in place of the to-do card.
-test.describe('BI2 · Briefing tiles (W1178)', () => {
-  const OTHERS = [12796, 11020, 9678, 8913, 8528, 7743, 7520, 7012, 6800, 6540, 6317, 6220, 6048, 5900, 5730, 5469, 5300, 5009, 4800, 4500, 4210, 3900, 3500, 3100, 2700, 2300, 1582, 9900, 8100, 7300, 6900, 6600, 6100, 5600, 5200, 4900, 4400, 3800, 3300, 2900];
-  async function seed(page: Page, o: { you?: number; days?: number; friends?: number; field?: boolean }) {
+// your steps, and Write a review, in place of the to-do card. W1179 — steps against the world
+// average, a health fact once the update is read, and the matched partner's pact.
+test.describe('BI2 · Briefing tiles (W1178, W1179)', () => {
+  async function seed(page: Page, o: { you?: number; days?: number; friends?: number; match?: number | null }) {
     await freshApp(page);
-    await page.addInitScript(([you, days, friends, field, others]) => {
+    await page.addInitScript(([you, days, friends, match]) => {
       try {
         if (sessionStorage.getItem('__w1178')) return;
         sessionStorage.setItem('__w1178', '1');
@@ -7383,17 +7385,20 @@ test.describe('BI2 · Briefing tiles (W1178)', () => {
         const back = (i: number) => { const d = new Date(now); d.setDate(d.getDate() - i); return dk(d); };
         const sd: Record<string, number> = {}; for (let i = 1; i <= (days as number); i++) sd[back(i)] = you as number;
         localStorage.setItem('hb_leaderboard', JSON.stringify({ steps_daily: sd }));
-        if (field) localStorage.setItem('hb_steps_rank_v1', JSON.stringify({ day: dk(now), others }));
         const pt = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Los_Angeles' }).format(now);
         const roster = [['u-ren', 'RenDIESEL', 'S+', 14], ['u-jus', 'Justin', 'B III', 12], ['u-gal', 'Galilea', 'A II', 10], ['u-ant', 'Anthony', 'B III', 3], ['u-gru', 'Grubbadub', 'C II', 0]].slice(0, friends as number);
+        const pacts: Record<string, any> = {};
         if (roster.length) {
           localStorage.setItem('hb_friends_cache_v1', JSON.stringify({ ts: Date.now(), friends: roster.map((r) => ({ user_id: r[0], alias: r[1], rankLabel: r[2] })) }));
-          const pacts: Record<string, any> = {};
           roster.forEach((r) => { if (r[3]) pacts[r[0] as string] = { streak: r[3], best: r[3], total: 5, daysBonded: r[3], lastDay: pt, firstWonAt: 1, lastWonAt: 1 }; });
-          localStorage.setItem('hb_coop_pacts', JSON.stringify(pacts));
         }
+        if (match != null) {
+          localStorage.setItem('hb_coop_match_v1', JSON.stringify({ uid: 'u-sha', alias: 'Sharr', day: pt }));
+          if (match) pacts['u-sha'] = { streak: match, best: match, total: 1, daysBonded: match, lastDay: pt, firstWonAt: 1, lastWonAt: 1 };
+        }
+        localStorage.setItem('hb_coop_pacts', JSON.stringify(pacts));
       } catch (_) {}
-    }, [o.you ?? 9184, o.days ?? 14, o.friends ?? 0, o.field !== false, OTHERS] as [number, number, number, boolean, number[]]);
+    }, [o.you ?? 9184, o.days ?? 14, o.friends ?? 0, o.match ?? null] as [number, number, number, number | null]);
     await page.reload();
     await expect(page.locator('#tab-habits')).toBeVisible({ timeout: 15_000 });
   }
@@ -7426,27 +7431,49 @@ test.describe('BI2 · Briefing tiles (W1178)', () => {
     await expect(page.locator('#tab-habits')).toBeVisible({ timeout: 15_000 });
     await show(page);
     await expect(tile(page, 'pact').locator('.tb4-empty h4')).toHaveText('Add a friend.', { timeout: 5_000 });
+    await expect(tile(page, 'pact').locator('.tb4-empty p')).toHaveText('Or keep hunting bosses. Active hunters get a partner.');
   });
 
-  test('steps: your 14-day average placed among every hunter (top half, bottom half, first)', async ({ page }) => {
+  test('W1179: no friends, a matched partner: their flame takes the tile, or the pairing waits to be lit; a tap opens your hunts', async ({ page }) => {
+    await seed(page, { friends: 0, match: 3 });
+    await show(page);
+    await expect(tile(page, 'pact').locator('.tb4-oneh b')).toHaveText('3', { timeout: 5_000 });
+    await expect(tile(page, 'pact').locator('.tb4-nm b')).toHaveText('sharr');
+    await expect(tile(page, 'pact').locator('.tb4-nm i')).toHaveText('Matched');
+    await expect(tile(page, 'pact').locator('.tb4-tl em')).toHaveText('1 burning');
+    await expect(tile(page, 'pact').locator('.tb4-note')).toHaveText('Your matched hunt partner.');
+    await expect(tile(page, 'pact')).toHaveAttribute('aria-label', 'Open your hunts');
+    await page.waitForTimeout(1300);
+    await tile(page, 'pact').click();
+    await expect(page.locator('#daily-insight-overlay')).toHaveClass(/hidden/, { timeout: 4_000 });
+    await expect(page.locator('#coop-dash-overlay')).not.toHaveClass(/hidden/, { timeout: 4_000 });
+    // a new pairing: no flame yet
+    await page.evaluate(() => localStorage.setItem('hb_coop_pacts', '{}'));
+    await show(page);
+    await expect(tile(page, 'pact').locator('.tb4-empty h4')).toHaveText('Paired with sharr.', { timeout: 5_000 });
+    await expect(tile(page, 'pact').locator('.tb4-empty p')).toHaveText('Both walk today and your flame lights.');
+  });
+
+  test('W1179: steps against the world average (4,961 a day): above it, the band you walk in; below it, the step to reach it', async ({ page }) => {
     await seed(page, { you: 9184 });
-    expect(await page.evaluate(() => { const s = (window as any).__tb.steps(); return [s.mode, s.n, s.place, s.median, s.top]; })).toEqual(['rank', 41, 5, 5900, 12796]);
+    expect(await page.evaluate(() => { const s = (window as any).__tb.steps(); return [s.mode, s.you, s.band]; })).toEqual(['world', 9184, 'Somewhat active']);
     await show(page);
-    await expect(tile(page, 'steps').locator('.tb4-hero')).toHaveText(/^Top 12%#5 of 41$/, { timeout: 5_000 });
-    await expect(tile(page, 'steps').locator('.tb4-sub')).toHaveText('9,184 a day, last 14 days', { timeout: 3_000 });
-    await expect(tile(page, 'steps').locator('.tb4-dot')).toHaveCount(40);   // every other hunter is a dot…
-    await expect(tile(page, 'steps').locator('.tb4-youd')).toHaveCount(1);   // …and you are the green one
-    await expect(tile(page, 'steps').locator('.tb4-axis')).toHaveText(/Mid 5,900.*Top 12,796/);
-    // the bottom half: no place number, the step to the middle
-    await page.evaluate(() => { const d = JSON.parse(localStorage.getItem('hb_leaderboard')!); Object.keys(d.steps_daily).forEach((k) => { d.steps_daily[k] = 4000; }); localStorage.setItem('hb_leaderboard', JSON.stringify(d)); });
+    await expect(tile(page, 'steps').locator('.tb4-tl')).toHaveText('Steps vs the world');
+    await expect(tile(page, 'steps').locator('.tb4-hero')).toHaveText('1.9×the world average', { timeout: 5_000 });
+    await expect(tile(page, 'steps').locator('.tb4-sub')).toHaveText('9,184 a day · Somewhat active', { timeout: 3_000 });
+    await expect(tile(page, 'steps').locator('.tb4-band')).toHaveCount(5);
+    await expect(tile(page, 'steps').locator('.tb4-youd')).toHaveCount(1);
+    await expect(tile(page, 'steps').locator('.tb4-axis')).toHaveText(/World 4,961.*15k/);
+    // below the world: the step to reach it
+    await page.evaluate(() => { const d = JSON.parse(localStorage.getItem('hb_leaderboard')!); Object.keys(d.steps_daily).forEach((k) => { d.steps_daily[k] = 3400; }); localStorage.setItem('hb_leaderboard', JSON.stringify(d)); });
     await show(page);
-    await expect(tile(page, 'steps').locator('.tb4-hero')).toHaveText('Ahead of 23%', { timeout: 5_000 });
-    await expect(tile(page, 'steps').locator('.tb4-sub')).toHaveText('of hunters. +1,700 a day reaches the middle.');
-    // first place
-    await page.evaluate(() => { const d = JSON.parse(localStorage.getItem('hb_leaderboard')!); Object.keys(d.steps_daily).forEach((k) => { d.steps_daily[k] = 20000; }); localStorage.setItem('hb_leaderboard', JSON.stringify(d)); });
+    await expect(tile(page, 'steps').locator('.tb4-hero')).toHaveText('0.7×the world average', { timeout: 5_000 });
+    await expect(tile(page, 'steps').locator('.tb4-sub')).toHaveText('3,400 a day. +1,600 reaches the world average.', { timeout: 3_000 });
+    // the top band
+    await page.evaluate(() => { const d = JSON.parse(localStorage.getItem('hb_leaderboard')!); Object.keys(d.steps_daily).forEach((k) => { d.steps_daily[k] = 14000; }); localStorage.setItem('hb_leaderboard', JSON.stringify(d)); });
     await show(page);
-    await expect(tile(page, 'steps').locator('.tb4-hero')).toHaveText('#1of 41', { timeout: 5_000 });
-    await expect(tile(page, 'steps').locator('.tb4-sub')).toHaveText('The most steps on the app.');
+    await expect(tile(page, 'steps').locator('.tb4-sub')).toHaveText('14,000 a day · Highly active', { timeout: 5_000 });
+    expect(await page.evaluate(() => typeof (window as any).Auth.stepsRank)).toBe('undefined');   // nothing to fetch: it works offline
   });
 
   test('steps: fewer than three days waits; no steps and no Apple Health asks to connect', async ({ page }) => {
@@ -7454,32 +7481,47 @@ test.describe('BI2 · Briefing tiles (W1178)', () => {
     await show(page);
     await expect(tile(page, 'steps').locator('.tb4-hm')).toHaveText('2 of 3 days', { timeout: 5_000 });
     await expect(tile(page, 'steps').locator('.tb4-pips .tb4-on')).toHaveCount(2);
-    await expect(tile(page, 'steps').locator('.tb4-sub')).toHaveText('Your rank appears after 3 days of steps.');
+    await expect(tile(page, 'steps').locator('.tb4-sub')).toHaveText('Your average appears after 3 days of steps.');
     await page.evaluate(() => localStorage.setItem('hb_leaderboard', JSON.stringify({ steps_daily: {} })));
     await show(page);
-    await expect(tile(page, 'steps').locator('.tb4-sub')).toHaveText('Connect Apple Health to be ranked.', { timeout: 5_000 });
+    await expect(tile(page, 'steps').locator('.tb4-sub')).toHaveText('Connect Apple Health to see where you stand.', { timeout: 5_000 });
     await expect(tile(page, 'steps')).toHaveAttribute('aria-label', 'Connect Apple Health');
   });
 
-  test('steps: the field is fetched once a day and the tile ranks you in place', async ({ page }) => {
-    await seed(page, { you: 9184, field: false });
-    await page.evaluate((others) => {
-      const A = (window as any).Auth; (window as any).__srCalls = 0;
-      A.getCurrentUser = () => ({ jwt: 'test', alias: 'tester' });
-      A.stepsRank = () => { (window as any).__srCalls++; return new Promise((res) => setTimeout(() => res({ ok: true, days: ['a', 'b'], others }), 400)); };
-    }, OTHERS);
+  test('W1179: Did you know? A tap opens today’s fact on a card; Got it closes it and the briefing stays', async ({ page }) => {
+    await seed(page, {});
     await show(page);
-    await expect(tile(page, 'steps').locator('.tb4-sub')).toHaveText('Last 14 days. Ranking you against every hunter…', { timeout: 5_000 });
-    await expect(tile(page, 'steps').locator('.tb4-hero')).toHaveText(/^Top 12%#5 of 41$/, { timeout: 5_000 });
-    const t = await today(page);
-    expect(await page.evaluate(() => JSON.parse(localStorage.getItem('hb_steps_rank_v1')!).day)).toBe(t);
-    await show(page);   // the same day: no second fetch
-    await expect(tile(page, 'steps').locator('.tb4-hero')).toHaveText(/^Top 12%/, { timeout: 5_000 });
-    expect(await page.evaluate(() => (window as any).__srCalls)).toBe(1);
-    // offline: your average, and the rank once you're online
-    await page.evaluate(() => { localStorage.removeItem('hb_steps_rank_v1'); (window as any).Auth.stepsRank = () => Promise.resolve({ ok: false, code: 'NETWORK' }); });
-    await show(page);
-    await expect(tile(page, 'steps').locator('.tb4-sub')).toHaveText('Last 14 days. Your rank appears when you’re online.', { timeout: 5_000 });
+    const f = await page.evaluate(() => (window as any).__tb.fact());
+    await expect(tile(page, 'board').locator('.tb4-ft')).toHaveText(f.text, { timeout: 5_000 });
+    await expect(tile(page, 'board').locator('.tb4-ftag')).toHaveText(f.tag);
+    await expect(tile(page, 'board')).toHaveAttribute('aria-label', 'Read today’s fact');
+    await page.waitForTimeout(1300);
+    await tile(page, 'board').click();
+    await expect(page.locator('#tb-root .tb4-fcard .tb4-fct')).toHaveText(f.text, { timeout: 3_000 });
+    await expect(page.locator('#tb-root .tb4-fcm')).toHaveText(f.more);
+    await expect(page.locator('#tb-root .tb4-fcs')).toHaveText(f.src);
+    await expect(page.locator('#tb-root')).not.toHaveClass(/tb-stamped/);   // reading is not beginning the day
+    await page.locator('#tb-root [data-tb4-fx]').click();
+    await expect(page.locator('#tb-root .tb4-fcard')).toHaveCount(0, { timeout: 3_000 });
+    await expect(page.locator('#daily-insight-overlay')).not.toHaveClass(/hidden/);
+  });
+
+  test('W1179: the facts are short, sourced, rotate daily, and never run two of a kind in a row', async ({ page }) => {
+    await seed(page, {});
+    const facts = await page.evaluate(() => (window as any).__tb.facts()) as string[][];
+    expect(facts.length).toBeGreaterThanOrEqual(24);
+    expect(facts.filter((f) => f[0] === 'Sleep').length).toBeGreaterThanOrEqual(10);
+    for (let i = 0; i < facts.length; i++) {
+      const [tag, text, more, src] = facts[i];
+      expect(['Sleep', 'Vitamin D', 'Women', 'Strength', 'Walking']).toContain(tag);
+      expect(text.length).toBeLessThanOrEqual(60);
+      expect(more.length).toBeLessThanOrEqual(120);
+      expect(src.length).toBeGreaterThan(2);
+      expect(text + more).not.toMatch(/!|\bfell(ed)?\b/i);
+      expect(tag).not.toBe(facts[(i + 1) % facts.length][0]);
+    }
+    const day = await page.evaluate(() => [(window as any).__tb.fact(0).text, (window as any).__tb.fact(1).text]);
+    expect(day[0]).not.toBe(day[1]);   // tomorrow brings the next one
   });
 
   test('review: opens the App Store review page, the briefing stays, and the tile says thank you until midnight', async ({ page }) => {
@@ -7514,7 +7556,7 @@ test.describe('BI2 · Briefing tiles (W1178)', () => {
     await expect(page.locator('#cm-pane-friends')).toHaveAttribute('data-active', 'true', { timeout: 3_000 });
   });
 
-  test('the board tile opens the update itself', async ({ page }) => {
+  test('the board tile opens the update itself while it is new', async ({ page }) => {
     await seed(page, {});
     await page.evaluate(() => { localStorage.setItem('hb_board_update_last', JSON.stringify({ id: 'up-9', created_at: 1, title: 'Week of Nov 8 - v3.0.23' })); });
     await page.reload();

@@ -40,9 +40,13 @@
  * another such hunter, and the pair gets the same sized daily hunt (auto = 1, matched = 1).
  * Pairing is by how often each shows up (kill days, then kills, then walking), so two committed
  * hunters meet and a hunter who drifts is paired with one who drifts — never a ghost on a
- * regular. A pair stays together for the PT week while both stay eligible; the leftovers are
- * re-paired each day. Matched rows never form a Pact Flame (coop-pacts.ts, pact-flame-risk.ts
- * skip matched = 1). Making a friend ends matching for that hunter; their friend hunts take over.
+ * regular. The leftovers are re-paired each day. Making a friend ends matching for that hunter;
+ * their friend hunts take over.
+ *
+ * W1179 (owner 2026-11-10: "match someone up with someone who doesn't have a friend to have a pact
+ * with"): a matched pair forms a Pact Flame like friends do (coop-pacts.ts and pact-flame-risk.ts
+ * no longer skip matched rows), and a pair stays together for as long as both stay eligible —
+ * each hunter's latest partner in the last MATCH_KEEP_DAYS is kept — so the flame can grow.
  */
 import type { Env } from '../env';
 import type { SessionPayload } from '../session-jwt';
@@ -50,7 +54,7 @@ import { jsonOk, jsonError } from '../lib/responses';
 import { chunks } from '../lib/chunk';
 import { MERGED_FOR_WEEK } from '../lib/week-board';
 import { getAccoladeWeekStart, priorWeekStart } from '../lib/accolade-week';
-import { ptDayKey, nextDay, ptMidnightIso } from '../lib/pact-streak';
+import { ptDayKey, nextDay, prevDay, ptMidnightIso } from '../lib/pact-streak';
 import {
   COOP_BOSS_CFG,
   emptyProgress,
@@ -81,6 +85,8 @@ const MAX_RESOLVE_PER_RUN = 200;
 /** W1164 — "active" for matching: a boss killed on at least this many of the last 7 days. */
 export const MATCH_MIN_KILL_DAYS = 2;
 const MATCH_WINDOW_MS = 7 * 86_400_000;
+/** W1179 — how far back a hunter's latest matched partner is kept (was: this PT week only). */
+export const MATCH_KEEP_DAYS = 14;
 const RANK_ORDER: Record<string, number> = { E: 0, D: 1, C: 2, B: 3, A: 4, S: 5, 'S+': 6 };
 
 /** "3.0.16-w1094" → 1094; anything else → 0. */
@@ -355,13 +361,16 @@ async function sweepMatchedPairs(
   }
   if (pool.length < 2) return 0;
 
-  // This PT week's matched rows, newest first: each hunter's latest partner is kept, and anyone
-  // already in a matched hunt today is never handed a second.
+  // The last MATCH_KEEP_DAYS of matched rows, newest first: each hunter's latest partner is kept
+  // (W1179 — across weeks, so the pair's Pact Flame can grow), and anyone already in a matched
+  // hunt today is never handed a second.
+  let keepSince = today;
+  for (let i = 0; i < MATCH_KEEP_DAYS; i++) keepSince = prevDay(keepSince) || keepSince;
   const weekRows = (await env.DB.prepare(
     `SELECT challenger_user_id AS a, partner_user_id AS b, hunt_day AS d FROM coop_boss_instances
       WHERE matched = 1 AND hunt_day >= ? ORDER BY hunt_day DESC`,
   )
-    .bind(thisWeek)
+    .bind(keepSince)
     .all<{ a: string; b: string; d: string }>()).results ?? [];
   const keep: Array<[string, string]> = [];
   const seen = new Set<string>();

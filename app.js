@@ -160,7 +160,7 @@
   const APP_VERSION = '3.0.24';   // W1169 — 3.0.23 APPROVED 2026-11-08 (submitted 2026-11-07 5:00 PM PST, LIVE 2:33 PM PST on the 8th; almost certainly build 628 = w1161: pins, the Wardrobe tap fix), so 3.0.24 opened carrying W1162-W1169 (the 3.0.23 store notes, the board update, matched hunt partners, Add as friend, late steps reach the board, The Patient Flame falls by itself, earned ultimates behind their flag). [history] W1134 — 3.0.22 APPROVED 2026-11-06 (submitted 4:53 AM PST from build 617 = w1132: the Shadowborn + the Elite Eight, the Rising redrawn, profile cards name the look, every open counted), so 3.0.23 opened carrying W1134 (the Worldgate counts a hunter's steps only after 2 days in the app that week). [history] W1127 — 3.0.21 LIVE on the App Store 2026-11-05 9:34 AM PST (built from w1126: no memberships, kill stamps without a title, the tier crests, the onboarding's "How did you find the Gate?"), so 3.0.22 opened carrying W1127 (the app-open ping says when it is a real open; the server counts every one per Pacific day). [history] W1124 — 3.0.20 LIVE on the App Store 2026-11-01 12:50 PM PST (built from w1120: final standings Sunday, shadows in the public feed, Shadow Army on Status); 3.0.21 opened carrying W1121 (its What's New, never shown: re-keyed to 3.0.21), W1122 (no memberships), W1124 (kill stamp without a title, inlined tier crests) and W1125 (the onboarding's last screen asks how the hunter found the app; W1126 keeps it in place when the keyboard opens). [history] W1114 — 3.0.19 approved 2026-10-30 (submitted 1:45 AM PST, w1113: shadows 1 in 5, armor upgrades, relic power by boss rank, relic cards three across); 3.0.20 opened with the feed's boss rank chips, no What's New entry yet. W1107 — 3.0.18 approved and LIVE 2026-10-28 8:02 AM PST (submitted 2026-10-27 7:41 PM PST, build 602 = w1106: the four steps trios, the Rising's nine looks, the earned line in the Wardrobe, the richer-backup offer); 3.0.19 opened at approval. [history] W1103 — 3.0.17 approved 2026-10-27 (build 600, submitted 2026-10-26 6:21 PM PST: the automatic friend hunts, the earned looks, the two-tab Wardrobe); 3.0.18 opened at approval, carrying W1102 (the app offers back a richer cloud backup). [history] W1097 — 3.0.16 approved + live 2026-10-26 (build 599, the iOS 27 fix); 3.0.17 opened at approval. Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.16 = the post-3.0.15 train, opened 2026-10-23 (W1085): 3.0.15 was submitted 2026-10-22 2:55 PM PST from build 595 (w1083: the tally, the preview row, the security pass) and approved the same day, so the train closed under it. It carries W1084 (the tally leads the 3.0.15 What's New) forward. [history] 3.0.15 = the post-3.0.14 train, opened 2026-10-22 (W1080): 3.0.14 was approved and LIVE 2026-10-21 5:08 PM PST from build 591 (w1074) — the first 592 upload was refused ("train closed"), the sixth time an approval closed a train under a build. It carries W1077/W1078 (sign-out ends the session, cloud save checksum + gzip, socket token out of the URL, invite links ask first) forward. [history] 3.0.14 = the post-3.0.13 train, opened 2026-10-21 (W1074): 3.0.13 was approved and went LIVE 2026-10-20 3:50 AM PST from build 587 (w1068), so it carries W1069 (the floor 100 curve), W1070-W1073 (the ten weekly step and sleep bosses and their drops) and the real-screen screenshots and header Apple asked for (App Review 2.3.3) forward. [history] 3.0.11 = the post-3.0.10 train, opened 2026-10-05: Apple's store lookup showed 3.0.10 LIVE (released 11:35 AM PST that day, built from w1024, so it carried W1023 the 9:45 PM finish-strong reminder and nothing after). It carries forward W1025 (Myrmidon King art), W1026 (one request for every co-op hunt) and W1027 (steps 'today' = the device's day), all pushed under the 3.0.10 tag after that build was cut. [history] 3.0.10 = the post-3.0.9 train, opened 2026-10-04 when the owner passed on Apple's approval of 3.0.9 (submitted 2026-10-02 12:41 PM PST, approved 2026-10-03; carried W1002–W1022: weekly to-do planner, to-dos first in the briefing, the Monday recap, times-a-week vows, the interactive Status tab, the Jump Manual program, the flights-hunt result fix). It carries W1023 (the 9:45 PM finish-strong reminder) forward. First TWO-DIGIT patch: every version compare in the app is numeric (_updVersionNewer, the What's New compare), never a string compare. [history] 3.0.9 = the post-3.0.8 train, opened 2026-09-25 the moment Apple approved 3.0.8 (submitted 4:57 PM PST, approved the same evening; carried W989–W1001: Items overhaul, Resolved + mod view counts, the sectioned Habits tab + to-dos v2, topic edit). [history] 3.0.8 = the post-3.0.7 train, opened 2026-09-24 the moment Apple approved 3.0.7 (build 543, submitted 1:15 AM PST, approved same day; the Worldgate In-App Event was approved in the same hour). Carries forward: the three description corrections (Ranked PvP / Streak Shields / five-hunter raid = Premium) go out WITH this version, since a description only changes with a new version. [history] 3.0.7 carried W968–W987 (vows yours + glory verified, morning briefing v2, hunt results, Worldgate MVPs + weekly line + strike freeze, Community Updates + briefing line, mod preview rows, awakened:// scheme). [history] 3.0.7 = the post-3.0.6 train, opened 2026-09-20 the moment Apple approved 3.0.6 (submitted 3:14 AM PST that day, approved same day) — an approval CLOSES a train, and uploading under the approved number is refused (CFBundleShortVersionString must exceed it). This has now bitten FOUR times; the bump is done at approval, not at upload. [history] 3.0.6 carried W960–W967 (Manage Vows fix, rank-bar hairline, Worldgate kill ceremony, division-up celebration, owner preview row, 3.0.6 release notes). [history] 3.0.4 = the post-3.0.3 train, opened 2026-09-11 because Apple approved 3.0.3 (live 2026-09-09) and an approval closes a train — carries W935 (weekly-board upload fix + Apple Health asked on every onboarding path). [history] 3.0.3 = the post-3.0.2 train, opened 2026-09-07 the morning after Apple approved 3.0.2 (submitted 2026-09-06 4:41 PM PT; approval closes a train — twice-bitten lesson) — carries W917-W919b (Ledger view, Streak Shields deleted, handoff 29) forward under the new number. [history] 3.0.2 = the post-release train, opened 2026-09-04 because Apple closes a train on approval (build 493 under 3.0.1 was refused: CFBundleShortVersionString must exceed the approved 3.0.1) — carries W903 (boss-sheet hotfix) + W905 (Status is the hunter profile again). 3.0.1 "MAKE IT LAND" = the repair release (W882-W890): Wave-2 progression joins cloud sync, the activation funnel is instrumented end to end, silent Wave-2 server failures leave breadcrumbs, the altar routes to a same-day first kill, the Double Dungeon stops reporting false failures and yields when the stair is unavailable, the beat What's New used to eat is chained, and every banked free engage is visible before the tap. 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.24-w1178'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '3.0.24-w1179'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -10219,13 +10219,13 @@
       if (!inst || !inst.id || !inst.starts_at) return;
       var st = inst.status;
       if (st !== 'active' && st !== 'completed' && st !== 'expired') return;   // never actually ran (declined / pre-start cancel)
+      // W1179 — a matched partner (W1164: two friendless hunters the server paired) now builds a Pact
+      // Flame like a friend (coop-pacts.ts counts matched rows too), and the briefing names them.
+      if (inst.matched) { try { _tb4NoteMatch(inst); } catch (_) {} }
       // W1094 — an automatic hunt lights the day only once BOTH hunters' apps posted to it (the
       // server stamps `committed` at settle and reports it live before). Not yet → come back later;
       // the per-instance guard below is left unset so a later sync still stamps the day.
       if (Number(inst.auto) === 1 && !inst.committed) return;
-      // W1164 — a matched partner (two friendless hunters the server paired) is not a friend: no
-      // Pact Flame, here or on the server (coop-pacts.ts skips matched rows the same way).
-      if (inst.matched) return;
       var g = _loadPactStarted();
       if (g[inst.id]) return;
       var others = _coopOthers(inst);
@@ -17281,7 +17281,6 @@
           // W1127 — { open: true }: a return to the app is an open, and the server counts each one.
           try { if (window.Auth && Auth.reportAppOpen) Auth.reportAppOpen({ open: true }); } catch (_) {}
           try { if (typeof _tbRecapPrefetch === 'function') _tbRecapPrefetch(); } catch (_) {}   // W1015 — the Monday recap words
-          try { if (typeof _tb4StepsPrefetch === 'function') _tb4StepsPrefetch(); } catch (_) {}   // W1178 — the steps field
           // W833 — step backfill on resume too, not just the cold-boot +5s
           // timer: an iOS warm resume re-enters here without ever re-running
           // boot, and a user who opens the app for <5s can kill the timer
@@ -17293,7 +17292,7 @@
       // W526 — retention ping on initial launch (deferred ~1.5s so the session is
       // restored from storage and Auth is ready). No-op if not signed in. W1127 — a launch is an open.
       try { setTimeout(function () { try { if (window.Auth && Auth.reportAppOpen) Auth.reportAppOpen({ open: true }); } catch (_) {} }, 1500); } catch (_) {}
-      try { setTimeout(function () { try { if (typeof _tbRecapPrefetch === 'function') _tbRecapPrefetch(); } catch (_) {} try { if (typeof _tb4StepsPrefetch === 'function') _tb4StepsPrefetch(); } catch (_) {} }, 600); } catch (_) {}   // W1015 + W1178
+      try { setTimeout(function () { try { if (typeof _tbRecapPrefetch === 'function') _tbRecapPrefetch(); } catch (_) {} }, 600); } catch (_) {}   // W1015
     } catch (_) {}
   })();
 
@@ -30406,9 +30405,9 @@
       items: [
         { emoji: '', title: 'Eight new ultimates', description: "Earn them from boss kills, your shadows and the summit, then choose one in the Wardrobe. Each hits differently and has its own moment." },
         { emoji: '', title: 'Watch before you choose', description: "Every ultimate in the Wardrobe has a Preview." },
-        { emoji: '', title: 'A new morning briefing', description: "Your pact flames, where your steps rank among every hunter, the latest update and a way to review the app. Tap one to start your day there." },   // W1178
+        { emoji: '', title: 'A new morning briefing', description: "Your pact flames, your steps against the world average, the latest update or a health fact, and a way to review the app." },   // W1178, W1179
         { emoji: '', title: 'Multi-day bosses fall by themselves', description: "Two or three days in a row of sleep, steps or stairs, and the boss is yours, even if you open the app days later. No tap needed." },   // W1176 (was W1167, the Patient Flame alone)
-        { emoji: '', title: 'A partner for every hunter', description: "No friends yet? You are paired with another active hunter for a daily hunt. After a win, add them as a friend in one tap." },
+        { emoji: '', title: 'A partner for every hunter', description: "No friends yet? You are paired with another active hunter for a daily hunt, and your Pact Flame grows each day you both walk." },   // W1179
         { emoji: '', title: 'Every step on the board', description: "Steps that arrive right after an upload now reach the Steps board." },
         { emoji: '', title: 'Upgrades for ultra rares and mythics', description: "Rare relics no longer upgrade. Every soul spent upgrading a rare has been refunded." },   // W1174
       ],
@@ -67672,7 +67671,7 @@
   // Pact Flames · the newest Community board update · your steps ranked · Write a review.
   // A tap on the first three begins the day (the seal stamps by itself) and opens that place;
   // the review tile opens the App Store and the briefing stays. Classes are tb4- (the mock's).
-  const TB_STEPS_KEY = 'hb_steps_rank_v1';     // { day, others[] }: every other hunter's 14-day average, once a day
+  const TB_MATCH_KEY = 'hb_coop_match_v1';     // W1179 — { uid, alias, day }: the partner the server matched (no friends yet)
   const TB_REVIEW_KEY = 'hb_tb_review_thanks'; // = the device day the review tile was tapped: thanks until midnight
   const TB_REVIEW_URL = 'https://apps.apple.com/app/id6764727990?action=write-review';
   const TB4_CW = 180;
@@ -67694,7 +67693,10 @@
   }
   function _tb4Tier(d) { return d >= 365 ? 14 : d >= 100 ? 13 : d >= 30 ? 11.5 : d >= 7 ? 10 : d >= 3 ? 9 : 8; }
 
-  // ── tile 1 · Pact Flames: burning bonds, highest first, three rows, then +N more ──
+  // ── tile 1 · Pact Flames: burning bonds, highest first, three rows, then +N more.
+  // W1179 — a hunter with no friends sees the partner the server matched them with (W1164); since
+  // W1179 that pair builds a Pact Flame of its own. The partner is remembered from the hunts the
+  // phone has seen (TB_MATCH_KEY, written by _coopBumpPactStart). ──
   function _tb4Pact() {
     let friends = [];
     try { friends = (_friendsCache && Array.isArray(_friendsCache.friends)) ? _friendsCache.friends : []; } catch (_) {}
@@ -67702,7 +67704,19 @@
     const bonds = rows.filter(function (r) { return (r.streak | 0) > 0; })
       .sort(function (a, b) { return (b.streak | 0) - (a.streak | 0); })
       .map(function (r) { return { n: String(r.alias || 'hunter'), rk: (r.tier && r.tier !== '?') ? String(r.tier) : '', rc: r.rc || _pfRankColor(r.rank), d: r.streak | 0 }; });
-    return { friends: friends.length, bonds: bonds };
+    let match = null;
+    if (!friends.length) {
+      try {
+        const o = JSON.parse(localStorage.getItem(TB_MATCH_KEY) || 'null');
+        const pt = getPTDate();
+        if (o && o.uid && o.day && (o.day === pt || o.day === _pactPrevDay(pt))) {
+          const p = _coopPactFor(o.uid);
+          let n = String(o.alias || 'hunter'); try { n = _coopAlias(o.alias) || n; } catch (_) {}
+          match = { n: n, rk: 'Matched', rc: '#a78bfa', d: p ? (p.streak | 0) : 0 };
+        }
+      } catch (_) {}
+    }
+    return { friends: friends.length, bonds: bonds, match: match };
   }
   function _tb4Bond(b, i, nc) {
     const d = 420 + i * 60;
@@ -67710,23 +67724,33 @@
       '<span class="tb4-nm"><b>' + esc(b.n) + '</b><i>' + esc(b.rk) + '</i></span>' +
       (nc ? '' : '<span class="tb4-cnt"><b data-tb4-count="' + b.d + '" data-cd="' + (d + 60) + '">' + b.d + '</b>' + _tb4Flame(_tb4Tier(b.d)) + '</span>') + '</div>';
   }
+  function _tb4One(b, note) {
+    return '<div class="tb4-one"><div class="tb4-oneh tb4-e" style="--d:420ms">' + _tb4Flame(20) + '<b data-tb4-count="' + b.d + '" data-cd="440">' + b.d + '</b><span class="tb4-m">' + (b.d === 1 ? 'day' : 'days') + '</span></div>' +
+      _tb4Bond(b, 1, true) + '<p class="tb4-note">' + note + '</p></div>';
+  }
   function _tb4PactInner(p) {
     const lab = function (m) { return '<div class="tb4-tl">' + _tb4Flame(8, false, true) + '<span>Pact flames</span>' + (m ? '<em>' + m + '</em>' : '') + '</div>'; };
-    if (!p.friends) return lab('') + '<div class="tb4-empty">' + _tb4Unlit() + '<h4>Add a friend.</h4><p>Every day you both walk, your flame grows.</p></div>';
+    if (!p.friends) {
+      if (p.match && p.match.d > 0) return lab('<b>1</b> burning') + _tb4One(p.match, 'Your matched hunt partner.');
+      if (p.match) return lab('') + '<div class="tb4-empty">' + _tb4Unlit() + '<h4>Paired with ' + esc(p.match.n) + '.</h4><p>Both walk today and your flame lights.</p></div>';
+      return lab('') + '<div class="tb4-empty">' + _tb4Unlit() + '<h4>Add a friend.</h4><p>Or keep hunting bosses. Active hunters get a partner.</p></div>';
+    }
     const burn = p.bonds, cold = Math.max(0, p.friends - burn.length);
     if (!burn.length) return lab('') + '<div class="tb4-empty">' + _tb4Flame(18, true) + '<h4>' + (p.friends === 1 ? 'Your flame is cold.' : 'All ' + p.friends + ' flames are cold.') + '</h4><p>Walk today. Any friend who walks too lights one again.</p></div>';
     const m = '<b>' + burn.length + '</b> burning';
-    if (burn.length === 1) {
-      const b = burn[0];
-      return lab(m) + '<div class="tb4-one"><div class="tb4-oneh tb4-e" style="--d:420ms">' + _tb4Flame(20) + '<b data-tb4-count="' + b.d + '" data-cd="440">' + b.d + '</b><span class="tb4-m">' + (b.d === 1 ? 'day' : 'days') + '</span></div>' +
-        _tb4Bond(b, 1, true) + '<p class="tb4-note">' + (cold ? 'Your other ' + cold + ' flame' + (cold > 1 ? 's are' : ' is') + ' cold.' : '') + '</p></div>';
-    }
+    if (burn.length === 1) return lab(m) + _tb4One(burn[0], cold ? 'Your other ' + cold + ' flame' + (cold > 1 ? 's are' : ' is') + ' cold.' : '');
     return lab(m) + '<div class="tb4-bonds">' + burn.slice(0, 3).map(function (b, i) { return _tb4Bond(b, i, false); }).join('') + '</div>' +
       (burn.length > 3 ? '<div class="tb4-more">+' + (burn.length - 3) + ' more</div>' : '');
   }
 
-  // ── tile 2 · Your steps, ranked. Your own 14 finished days (only days with steps, three needed)
-  // against every other hunter's, from GET /v1/steps/rank (anonymous, fetched once a day). ──
+  // ── tile 2 · Your steps against the world. W1179 (owner 2026-11-10): with ~14 hunters on the app,
+  // rank against the world instead. Your average over the 14 finished days before today (only
+  // days with steps; three needed), against the worldwide average of 4,961 steps a day (Althoff
+  // et al., Nature 2017: 717,527 people in 111 countries), on the step-count scale of Tudor-Locke
+  // & Bassett (2004). Nothing to fetch: it works offline. ──
+  const TB4_WORLD = 4961;
+  const TB4_BANDS = [[0, 'Sedentary'], [5000, 'Low active'], [7500, 'Somewhat active'], [10000, 'Active'], [12500, 'Highly active']];
+  function _tb4Band(v) { let b = TB4_BANDS[0][1]; TB4_BANDS.forEach(function (x) { if (v >= x[0]) b = x[1]; }); return b; }
   function _tb4StepsLocal() {
     let daily = {}; try { daily = (loadLeaderboardState() || {}).steps_daily || {}; } catch (_) {}
     let sum = 0, have = 0, k = prevDay(today);
@@ -67736,132 +67760,111 @@
   function _tb4HealthOk() {
     try { return (typeof Health !== 'undefined') && !!Health.isAvailable && !!Health.isAvailable() && !!Health.permissionStatus && Health.permissionStatus() === 'granted'; } catch (_) { return false; }
   }
-  function _tb4StepsField() {
-    try { const o = JSON.parse(localStorage.getItem(TB_STEPS_KEY) || 'null'); if (o && o.day === today && Array.isArray(o.others)) return o; } catch (_) {}
-    return null;
-  }
-  let _tb4StepsInflight = null, _tb4StepsFailed = false;
-  function _tb4StepsPrefetch() {
-    try {
-      if (_tb4StepsInflight) return _tb4StepsInflight;
-      if (_tb4StepsField()) return null;
-      if (!(window.Auth && typeof Auth.stepsRank === 'function')) { _tb4StepsFailed = true; return null; }
-      let u = null; try { u = Auth.getCurrentUser(); } catch (_) {}
-      if (!u || !u.jwt) { _tb4StepsFailed = true; return null; }
-      const day = today;
-      _tb4StepsInflight = Promise.resolve(Auth.stepsRank()).then(function (r) {
-        if (r && r.ok && Array.isArray(r.others)) {
-          _tb4StepsFailed = false;
-          const others = r.others.map(Number).filter(function (v) { return v > 0 && v < 200000; }).slice(0, 5000);
-          try { localStorage.setItem(TB_STEPS_KEY, JSON.stringify({ day: day, others: others })); } catch (_) {}
-        } else _tb4StepsFailed = true;
-      }).catch(function () { _tb4StepsFailed = true; }).then(function () { _tb4StepsInflight = null; });
-      return _tb4StepsInflight;
-    } catch (_) { return null; }
-  }
   function _tb4Steps() {
     const me = _tb4StepsLocal();
     if (me.have < 3) return (me.have > 0 || _tb4HealthOk()) ? { mode: 'days', have: me.have } : { mode: 'nohealth' };
-    const f = _tb4StepsField();
-    if (!f) return { mode: 'wait', you: me.avg, failed: _tb4StepsFailed && !_tb4StepsInflight };
-    const others = f.others.slice(), you = me.avg, n = others.length + 1;
-    let above = 0, below = 0;
-    others.forEach(function (v) { if (v > you) above++; else if (v < you) below++; });
-    const all = others.concat([you]).sort(function (a, b) { return a - b; }), h = all.length >> 1;
-    const median = all.length % 2 ? all[h] : Math.round((all[h - 1] + all[h]) / 2);
-    return { mode: 'rank', n: n, you: you, place: above + 1, below: below, median: median, top: all[all.length - 1], others: others };
+    return { mode: 'world', you: me.avg, x: me.avg / TB4_WORLD, band: _tb4Band(me.avg) };
   }
-  // A quiet stand-in field (never real numbers) behind the not-yet-ranked states.
-  let _tb4GhostF = null;
-  function _tb4Ghost() {
-    if (_tb4GhostF) return _tb4GhostF;
-    const a = []; for (let i = 0; i < 41; i++) { const q = (i + 0.5) / 41; a.push(Math.max(400, Math.round(7000 + Math.log(q / (1 - q)) * 0.5513 * 2600))); }
-    return (_tb4GhostF = a);
-  }
-  function _tb4Rng(seed) { let s = (seed * 2654435761) >>> 0 || 1; return function () { s ^= s << 13; s >>>= 0; s ^= s >>> 17; s ^= s << 5; s >>>= 0; return s / 4294967296; }; }
-  function _tb4YouMark(cx, cy, r, s, mx, pin) {
-    const below = s.place > s.n / 2, left = below || cx > TB4_CW - 30, lx = left ? cx - r - 4 : cx + r + 4;
-    let arrow = '';
-    if (below) {
-      const x0 = cx + r + 3, x1 = mx - 2;
-      if (x1 > x0 + 4) arrow = '<path d="M' + x0.toFixed(1) + ' ' + cy.toFixed(1) + 'H' + x1.toFixed(1) + '" stroke="#4ade80" stroke-width="1.2" stroke-dasharray="2 2"/>' +
-        '<path d="M' + (x1 - 3).toFixed(1) + ' ' + (cy - 2.5).toFixed(1) + 'L' + x1.toFixed(1) + ' ' + cy.toFixed(1) + 'L' + (x1 - 3).toFixed(1) + ' ' + (cy + 2.5).toFixed(1) + '" stroke="#4ade80" stroke-width="1.2" fill="none" stroke-linecap="round"/>';
+  /** 0 → 15,000 in the five step-count bands (brighter as they climb), the world's average as a
+   *  dashed line, and you as the green dot. No you: the scale alone, dimmed. */
+  function _tb4Scale(you) {
+    const W = TB4_CW, MAX = 15000, y = 22, X = function (v) { return Math.max(0, Math.min(W, v / MAX * W)); };
+    const edges = [0, 5000, 7500, 10000, 12500, MAX];
+    let bands = '';
+    for (let i = 0; i < 5; i++) {
+      const x0 = X(edges[i]) + (i ? 1 : 0), x1 = X(edges[i + 1]);
+      bands += '<rect class="tb4-band" x="' + x0.toFixed(1) + '" y="' + (y - 2) + '" width="' + Math.max(0, x1 - x0).toFixed(1) + '" height="4" rx="1" style="opacity:' + (0.18 + i * 0.13).toFixed(2) + ';--d:' + (520 + i * 70) + 'ms"/>';
     }
-    const stem = pin ? '<line x1="' + cx.toFixed(1) + '" x2="' + cx.toFixed(1) + '" y1="' + cy.toFixed(1) + '" y2="32" stroke="#4ade80" stroke-width="1.2"/>' : '';
-    return '<g class="tb4-youg" style="--d:1000ms">' + arrow + stem +
-      '<circle class="tb4-pulse" cx="' + cx.toFixed(1) + '" cy="' + cy.toFixed(1) + '" r="' + r + '" fill="none" stroke="#4ade80"/>' +
-      '<circle class="tb4-youd" cx="' + cx.toFixed(1) + '" cy="' + cy.toFixed(1) + '" r="' + r + '"/>' +
-      '<text class="tb4-yl" x="' + lx.toFixed(1) + '" y="' + (cy + 2.4).toFixed(1) + '" text-anchor="' + (left ? 'end' : 'start') + '">YOU</text></g>';
-  }
-  /** Up to 150 hunters: one stacked dot each, 25 columns. Above that every hunter is still a dot,
-   *  scattered inside the shape of the distribution. The dashed line is the middle hunter. */
-  function _tb4Chart(s, others, ghost) {
-    const base = 32, top = Math.max(1, s.you || 0, Math.max.apply(null, others.length ? others : [0]));
-    const X = function (v) { return v / top * TB4_CW; }, mx = X(s.median || 0);
-    let g = '', you = '';
-    if (others.length <= 150) {
-      const C = 25, P = TB4_CW / C, bins = new Array(C).fill(0), bi = function (v) { return Math.max(0, Math.min(C - 1, Math.floor(v / top * C))); };
-      others.forEach(function (v) { bins[bi(v)]++; });
-      const yb = ghost ? -1 : bi(s.you);
-      const mxs = Math.max(1, Math.max.apply(null, bins.map(function (c, i) { return c + (i === yb ? 1 : 0); })));
-      const py = Math.min(5.2, 27 / mxs), r = Math.min(2.15, py * 0.42);
-      bins.forEach(function (c, i) { for (let k = 0; k < c; k++) g += '<circle class="tb4-dot" cx="' + ((i + 0.5) * P).toFixed(1) + '" cy="' + (base - r - k * py).toFixed(1) + '" r="' + r.toFixed(2) + '" style="--d:' + (520 + i * 15) + 'ms"/>'; });
-      if (yb >= 0) you = _tb4YouMark((yb + 0.5) * P, base - r - bins[yb] * py, +(r + 1.1).toFixed(2), s, mx);
-    } else {
-      const C = 60, bins = new Array(C).fill(0), bi = function (v) { return Math.max(0, Math.min(C - 1, Math.floor(v / top * C))); };
-      others.forEach(function (v) { bins[bi(v)]++; });
-      const sm = bins.map(function (c, i) { return (bins[i - 1] || 0) * 0.25 + c * 0.5 + (bins[i + 1] || 0) * 0.25; });
-      const M = Math.max(0.0001, Math.max.apply(null, sm)), R = _tb4Rng(5);
-      others.forEach(function (v) { const h = sm[bi(v)] / M * 27; g += '<circle class="tb4-dot" cx="' + Math.min(TB4_CW, X(v) + (R() - 0.5) * 1.4).toFixed(1) + '" cy="' + (base - 0.9 - R() * h).toFixed(1) + '" r=".8" style="--d:' + (520 + Math.round(X(v) * 2)) + 'ms"/>'; });
-      if (!ghost) you = _tb4YouMark(X(s.you), base - sm[bi(s.you)] / M * 27 - 4, 2.6, s, mx, true);
+    const wx = X(TB4_WORLD);
+    const world = '<line x1="' + wx.toFixed(1) + '" x2="' + wx.toFixed(1) + '" y1="6" y2="' + (y + 8) + '" stroke="#9596b2" stroke-width="1" stroke-dasharray="2 2"/>';
+    let me = '';
+    if (you != null) {
+      const cx = X(you), left = cx > W - 34;
+      me = '<g class="tb4-youg" style="--d:1000ms"><circle class="tb4-pulse" cx="' + cx.toFixed(1) + '" cy="' + y + '" r="3.4" fill="none" stroke="#4ade80"/>' +
+        '<circle class="tb4-youd" cx="' + cx.toFixed(1) + '" cy="' + y + '" r="3.4"/>' +
+        '<text class="tb4-yl" x="' + (left ? cx - 6 : cx + 6).toFixed(1) + '" y="' + (y - 6) + '" text-anchor="' + (left ? 'end' : 'start') + '">YOU</text></g>';
     }
-    const med = ghost ? '' : '<line x1="' + mx.toFixed(1) + '" x2="' + mx.toFixed(1) + '" y1="0" y2="' + (base + 3) + '" stroke="#585a76" stroke-width="1" stroke-dasharray="2 2"/>';
-    return '<div class="tb4-chart"><svg viewBox="0 0 ' + TB4_CW + ' ' + (base + 4) + '" aria-hidden="true">' + med +
-      '<line x1="0" x2="' + TB4_CW + '" y1="' + (base + 3) + '" y2="' + (base + 3) + '" stroke="rgba(149,150,178,.18)"/>' +
-      '<g' + (ghost ? ' opacity=".32"' : '') + '>' + g + '</g>' + you + '</svg></div>';
+    return '<div class="tb4-chart"><svg viewBox="0 0 ' + W + ' 32" aria-hidden="true"' + (you == null ? ' opacity=".4"' : '') + '>' + bands + world + me + '</svg></div>' +
+      '<div class="tb4-axis"><span style="left:' + Math.max(0, wx / W * 100 - 6).toFixed(1) + '%">World ' + _wgmFmtN(TB4_WORLD) + '</span><span style="right:0">15k</span></div>';
   }
   function _tb4StepsInner(s) {
-    const head = '<div class="tb4-tl">' + _TB4_FEET + '<span>Your steps, ranked</span></div>';
-    if (s.mode === 'nohealth') return head + '<p class="tb4-sub tb4-lead">Connect Apple Health to be ranked.</p>' + _tb4Chart({}, _tb4Ghost(), true) + '<div class="tb4-axis"><span class="tb4-gd" style="left:0">Connect ›</span></div>';
+    const head = '<div class="tb4-tl">' + _TB4_FEET + '<span>Steps vs the world</span></div>';
+    if (s.mode === 'nohealth') return head + '<p class="tb4-sub tb4-lead">Connect Apple Health to see where you stand.</p>' + _tb4Scale(null);
     if (s.mode === 'days') {
       let pips = ''; for (let i = 0; i < 3; i++) pips += '<i' + (i < s.have ? ' class="tb4-on"' : '') + '></i>';
-      return head + '<div class="tb4-hero tb4-hl"><span class="tb4-pips">' + pips + '</span><span class="tb4-hm">' + s.have + ' of 3 days</span></div><p class="tb4-sub">Your rank appears after 3 days of steps.</p>' + _tb4Chart({}, _tb4Ghost(), true);
+      return head + '<div class="tb4-hero tb4-hl"><span class="tb4-pips">' + pips + '</span><span class="tb4-hm">' + s.have + ' of 3 days</span></div><p class="tb4-sub">Your average appears after 3 days of steps.</p>' + _tb4Scale(null);
     }
-    if (s.mode === 'wait') {
-      return head + '<div class="tb4-hero"><b data-tb4-count="' + s.you + '" data-cd="520">' + _wgmFmtN(s.you) + '</b><span class="tb4-hm">a day</span></div>' +
-        '<p class="tb4-sub">' + (s.failed ? 'Last 14 days. Your rank appears when you’re online.' : 'Last 14 days. Ranking you against every hunter…') + '</p>' + _tb4Chart({}, _tb4Ghost(), true);
-    }
-    const first = s.place === 1, mx = s.median / Math.max(1, s.top) * 100;
-    let hero, sub;
-    if (first) { hero = '<b>#1</b><span class="tb4-hm">of ' + _wgmFmtN(s.n) + '</span>'; sub = 'The most steps on the app.'; }
-    else if (s.place <= s.n / 2) {
-      hero = '<b>Top ' + Math.max(1, Math.round(s.place / s.n * 100)) + '%</b><span class="tb4-hm' + (s.n > 999 ? ' tb4-tight' : '') + '">#' + _wgmFmtN(s.place) + ' of ' + _wgmFmtN(s.n) + '</span>';
-      sub = '<b data-tb4-count="' + s.you + '" data-cd="520">' + _wgmFmtN(s.you) + '</b> a day, last 14 days';
-    } else {
-      const a = Math.round(s.below / Math.max(1, s.n - 1) * 100), gap = Math.round((s.median - s.you) / 100) * 100;
-      hero = '<b class="tb4-sm">Ahead of ' + a + '%</b>';
-      sub = gap > 0 ? 'of hunters. <b class="tb4-g">+' + _wgmFmtN(gap) + '</b> a day reaches the middle.' : 'of hunters, at the middle.';
-    }
-    const midR = Math.max(36, Math.min(66, 100 - mx));   // keep the Mid label clear of the edge and of the right label
-    return head + '<div class="tb4-hero">' + hero + '</div><p class="tb4-sub">' + sub + '</p>' + _tb4Chart(s, s.others) +
-      '<div class="tb4-axis"><span style="right:' + midR.toFixed(1) + '%">Mid ' + _wgmFmtN(s.median) + '</span><span' + (first ? ' class="tb4-g"' : '') + ' style="right:0">' + (first ? 'You ' + _wgmFmtN(s.you) : 'Top ' + _wgmFmtN(s.top)) + '</span></div>';
+    const xs = s.x >= 10 ? String(Math.round(s.x)) : s.x.toFixed(1);
+    const count = '<b data-tb4-count="' + s.you + '" data-cd="520">' + _wgmFmtN(s.you) + '</b> a day';
+    let sub;
+    if (s.you >= TB4_WORLD) sub = count + ' · <span class="tb4-g">' + s.band + '</span>';
+    else { const gap = Math.max(100, Math.round((TB4_WORLD - s.you) / 100) * 100); sub = count + '. <b class="tb4-g">+' + _wgmFmtN(gap) + '</b> reaches the world average.'; }
+    return head + '<div class="tb4-hero tb4-hw"><b>' + xs + '×</b><span class="tb4-hm">the world average</span></div><p class="tb4-sub">' + sub + '</p>' + _tb4Scale(s.you);
   }
 
-  // ── tile 3 · the newest developer update (W973/W986 cache), NEW until it is opened ──
+  // ── tile 3 · the newest developer update (W973/W986 cache), NEW until it is opened. Once it has
+  // been read the tile turns to a health fact (W1179, owner 2026-11-10): one a day, short, sourced.
+  // A tap opens it on a card to read; the briefing stays. ──
+  // [tag, the fact (≤ 60 chars, fits the tile), one line more (the card), the source]
+  const TB4_FACTS = [
+    ['Sleep', 'Most growth hormone is released in deep sleep.', 'Deep sleep comes early in the night. Cut the night short and you cut your body’s main repair window.', 'Van Cauter & Plat, J Pediatr 1996'],
+    ['Vitamin D', 'About 4 in 10 US adults are low in vitamin D.', 'Rates run higher in people with darker skin and in anyone who spends little time outdoors.', 'Forrest & Stuhldreher, Nutr Res 2011'],
+    ['Sleep', 'Five-hour nights cut testosterone 10–15% in a week.', 'Young men slept 5 hours a night for one week. Their daytime testosterone dropped 10 to 15%.', 'Leproult & Van Cauter, JAMA 2011'],
+    ['Strength', 'After 30, adults lose 3–8% of their muscle each decade.', 'Lifting is the most direct way to keep it, at any age.', 'Volpi et al., Curr Opin Clin Nutr 2004'],
+    ['Sleep', 'One sleepless night cut muscle building by 18%.', 'After a night without sleep, muscle protein synthesis dropped 18% and cortisol rose 21%.', 'Lamon et al., Physiol Rep 2021'],
+    ['Women', 'Women need more than twice the iron men do.', '18 mg a day from 19 to 50, against 8 mg for men. Pregnancy raises it to 27 mg.', 'NIH Office of Dietary Supplements'],
+    ['Sleep', 'Under 6 hours of sleep: 4× more likely to catch a cold.', 'People given a cold virus caught it far more often when they slept under 6 hours a night.', 'Prather et al., SLEEP 2015'],
+    ['Walking', 'Each extra 1,000 daily steps: 15% lower risk of death.', 'In a study of over 226,000 people, the benefit started at about 4,000 steps a day.', 'Banach et al., Eur J Prev Cardiol 2023'],
+    ['Sleep', 'Two short nights raised the hunger hormone 28%.', 'After two nights of 4 hours, ghrelin rose 28%, leptin dropped 18% and hunger rose 24%.', 'Spiegel et al., Ann Intern Med 2004'],
+    ['Vitamin D', 'In winter, northern sun makes almost no vitamin D.', 'In Boston, skin made no vitamin D from November to February. Food or a supplement fills the gap.', 'Webb et al., J Clin Endocrinol Metab 1988'],
+    ['Sleep', 'Your brain clears its waste mostly while you sleep.', 'In sleep, the space between brain cells widens about 60% and waste drains out faster.', 'Xie et al., Science 2013'],
+    ['Strength', 'An hour of lifting a week is linked to a longer life.', '30 to 60 minutes of strength training a week went with a 10–20% lower risk of death.', 'Momma et al., Br J Sports Med 2022'],
+    ['Sleep', 'Adults need at least 7 hours of sleep a night.', 'About 1 in 3 US adults gets less. Short sleep is linked to weight gain, diabetes and heart disease.', 'AASM & SRS 2015; CDC'],
+    ['Women', 'Nearly 1 in 3 women aged 15–49 has anemia.', 'Worldwide. Iron deficiency is the main cause: tiredness, weakness and shortness of breath.', 'WHO, 2019 estimates'],
+    ['Sleep', 'Sleeping 4–5 hours quadruples your crash risk.', 'Drivers who slept 4 to 5 hours crashed over 4 times as often as those who slept 7 or more.', 'AAA Foundation for Traffic Safety, 2016'],
+    ['Strength', 'Grip strength is a strong predictor of lifespan.', 'Each 5 kg drop in grip strength went with a 16% higher risk of death.', 'Leong et al., Lancet 2015 (PURE)'],
+    ['Sleep', 'Coffee 6 hours before bed still costs sleep.', 'Caffeine taken 6 hours before bed cut total sleep by about an hour.', 'Drake et al., J Clin Sleep Med 2013'],
+    ['Vitamin D', 'Darker skin makes less vitamin D from the same sun.', 'Melanin shields the skin, so it needs more time in the sun to make the same amount.', 'NIH Office of Dietary Supplements'],
+    ['Sleep', 'Six short nights made healthy men handle sugar 40% slower.', 'After six nights of 4 hours, healthy young men handled sugar like older adults with impaired glucose tolerance.', 'Spiegel et al., Lancet 1999'],
+    ['Women', 'Women can lose up to 20% of bone density after menopause.', 'Most of it goes in the first 5 to 7 years. Lifting, calcium and vitamin D slow the loss.', 'Bone Health & Osteoporosis Foundation'],
+    ['Strength', 'Lifting builds bone, not just muscle.', 'Heavy, supervised lifting raised bone density in women with low bone mass.', 'Watson et al., J Bone Miner Res 2018 (LIFTMOR)'],
+    ['Walking', 'The benefit of steps levels off near 8,000–10,000.', 'That is for adults under 60. Over 60, it levels off around 6,000 to 8,000 a day.', 'Paluch et al., Lancet Public Health 2022'],
+    ['Vitamin D', 'Vitamin D lets your body absorb calcium.', 'Without enough, bones can soften. Adults need 600 IU a day, and 800 IU after 70.', 'NIH Office of Dietary Supplements'],
+    ['Women', 'Women over 50 need 1,200 mg of calcium a day.', 'That is 200 mg more than before 50, to protect bone as estrogen drops.', 'NIH Office of Dietary Supplements'],
+    ['Strength', 'Adults should train strength at least 2 days a week.', 'Work every major muscle group: legs, hips, back, chest, shoulders, arms and core.', 'WHO & CDC guidelines'],
+    ['Women', 'Folic acid before pregnancy helps prevent birth defects.', '400 mcg a day, started before pregnancy, lowers the risk of defects of the brain and spine.', 'CDC'],
+  ];
+  const TB4_FACT_C = { Sleep: '#a78bfa', 'Vitamin D': '#f5b842', Women: '#f472b6', Strength: '#ff7a3c', Walking: '#4ade80' };
+  /** Today's fact: one a day, in order (the list alternates sleep with the rest). */
+  function _tb4Fact(offset) {
+    const t = new Date(), n = Math.floor(Date.UTC(t.getFullYear(), t.getMonth(), t.getDate()) / 86400000) + (offset | 0);
+    const f = TB4_FACTS[((n % TB4_FACTS.length) + TB4_FACTS.length) % TB4_FACTS.length];
+    return { tag: f[0], text: f[1], more: f[2], src: f[3], c: TB4_FACT_C[f[0]] || '#a78bfa' };
+  }
+  const _TB4_BULB = '<svg width="16" height="17" viewBox="0 0 20 20" fill="none" stroke="#f5b842" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7.5 14.5h5M8 17h4"/><path d="M10 2.5a5.5 5.5 0 0 0-3.2 10c.5.4.7.9.7 1.5v.5h5V14c0-.6.2-1.1.7-1.5A5.5 5.5 0 0 0 10 2.5z"/></svg>';
   function _tb4Board() {
     let u = null; try { u = _cmUpdate; } catch (_) {}
-    if (!u || !u.id) return { id: '', title: '', date: '', isNew: false };
+    let isNew = false; try { isNew = !!(u && u.id) && _cmUpdateUnseen(); } catch (_) {}
+    if (!isNew) return { id: u && u.id ? String(u.id) : '', isNew: false, fact: _tb4Fact() };
     let date = '';
     const ca = Number(u.created_at) || 0;
     if (ca > 0) { const dt = new Date(ca < 1e12 ? ca * 1000 : ca); date = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][dt.getDay()] + ' · ' + _TB_MON[dt.getMonth()] + ' ' + dt.getDate(); }
-    let isNew = false; try { isNew = _cmUpdateUnseen(); } catch (_) {}
-    return { id: String(u.id), title: String(u.title || '').trim() || 'A new update', date: date, isNew: isNew };
+    return { id: String(u.id), title: String(u.title || '').trim() || 'A new update', date: date, isNew: true };
   }
   function _tb4BoardInner(b) {
-    return '<div class="tb4-nt">' + _TB4_DOC + (b.isNew ? '<span class="tb4-new">New</span>' : '') + '</div><div class="tb4-tl2">Community board</div>' +
-      '<div class="tb4-bt">' + esc(b.title || 'News from the developer lands here.') + '</div><div class="tb4-bd">' + esc(b.date || '') + '</div>';
+    if (b.fact) {
+      return '<div class="tb4-nt">' + _TB4_BULB + '<span class="tb4-ftag" style="--fc:' + b.fact.c + '">' + esc(b.fact.tag) + '</span></div>' +
+        '<div class="tb4-tl2">Did you know?</div><div class="tb4-ft">' + esc(b.fact.text) + '</div>';
+    }
+    return '<div class="tb4-nt">' + _TB4_DOC + '<span class="tb4-new">New</span></div><div class="tb4-tl2">Community board</div>' +
+      '<div class="tb4-bt">' + esc(b.title) + '</div><div class="tb4-bd">' + esc(b.date || '') + '</div>';
   }
-
+  function _tb4FactCard(f) {
+    return '<div class="tb4-fc" role="dialog" aria-modal="true" aria-label="Did you know?" style="--fc:' + f.c + '">' +
+      '<div class="tb4-fch">' + _TB4_BULB + '<span class="tb4-m">Did you know?</span><span class="tb4-ftag">' + esc(f.tag) + '</span></div>' +
+      '<p class="tb4-fct">' + esc(f.text) + '</p><p class="tb4-fcm">' + esc(f.more) + '</p><p class="tb4-fcs">' + esc(f.src) + '</p>' +
+      '<button type="button" class="tb4-fcx" data-tb4-fx>Got it</button></div>';
+  }
   // ── tile 4 · Write a review. No stars, no question, no reward, nothing in return (W974 / Apple 1.1.7). ──
   function _tb4Thanked() { try { return localStorage.getItem(TB_REVIEW_KEY) === today; } catch (_) { return false; } }
   function _tb4ReviewInner(r) {
@@ -67871,23 +67874,33 @@
   }
 
   const _TB4_TK = { pact: ['#ff7a3c', 340, 'Open Pact Flames'], board: ['#5ad6c8', 400, 'Open the latest update'], steps: ['#4ade80', 460, 'Open the steps board'], review: ['#f5b842', 520, 'Write a review on the App Store'] };
-  function _tb4Tile(k, inner, cls, label) {
+  function _tb4Tile(k, inner, cls, label, attrs) {
     const a = _TB4_TK[k];
-    return '<div class="tb4-tile tb4-e' + (cls ? ' ' + cls : '') + '" role="button" tabindex="0" data-tile="' + k + '" aria-label="' + (label || a[2]) + '" style="--tb4-acc:' + a[0] + ';--d:' + a[1] + 'ms">' + inner + '</div>';
+    return '<div class="tb4-tile tb4-e' + (cls ? ' ' + cls : '') + '" role="button" tabindex="0" data-tile="' + k + '"' + (attrs || '') + ' aria-label="' + (label || a[2]) + '" style="--tb4-acc:' + a[0] + ';--d:' + a[1] + 'ms">' + inner + '</div>';
   }
   function _tb4TilesHtml(d) {
+    const f = d.board.fact, matched = !d.pact.friends && !!d.pact.match;
     return '<div class="tb4-tiles">' +
-      _tb4Tile('pact', _tb4PactInner(d.pact)) +
-      _tb4Tile('board', _tb4BoardInner(d.board), d.board.isNew ? '' : 'tb4-read') +
+      _tb4Tile('pact', _tb4PactInner(d.pact), '', matched ? 'Open your hunts' : '') +
+      _tb4Tile('board', _tb4BoardInner(d.board), f ? 'tb4-fact' : '', f ? 'Read today’s fact' : '', f ? ' data-fact="1"' : '') +
       _tb4Tile('steps', _tb4StepsInner(d.steps), '', d.steps.mode === 'nohealth' ? 'Connect Apple Health' : '') +
       _tb4Tile('review', _tb4ReviewInner(d.review), d.review === 'thanked' ? 'tb4-inert' : '') +
       '</div>';
+  }
+  /** W1179 — remember the partner of a matched hunt (W1164) for the pact tile; the newest day wins. */
+  function _tb4NoteMatch(inst) {
+    const o = _coopOthers(inst); if (o.length !== 1 || !o[0] || !o[0].user_id) return;
+    const day = _pactDayKey(_coopTsToMs(inst.starts_at) || Date.now()) || getPTDate();
+    let cur = null; try { cur = JSON.parse(localStorage.getItem(TB_MATCH_KEY) || 'null'); } catch (_) {}
+    if (cur && cur.day && cur.day > day) return;
+    localStorage.setItem(TB_MATCH_KEY, JSON.stringify({ uid: String(o[0].user_id), alias: String(o[0].alias || ''), day: day }));
   }
   /** Where a tile tap lands once the sheet has left. */
   function _tb4Go(k, d) {
     setTimeout(function () {
       try {
         if (k === 'pact') {
+          if (d.pact && !d.pact.friends && d.pact.match) { _coopOpenDashboard(); return; }   // W1179 — the matched hunt lives in your hunts
           switchTab('social'); _cmSetPane('friends');
           const g = document.getElementById('guildhall-friends-section'); if (g && g.scrollIntoView) g.scrollIntoView({ block: 'start' });
         } else if (k === 'board') {
@@ -67928,8 +67941,6 @@
     const d = _tbData();
     // W986 — the owner's preview always shows the update line: the latest update's
     // title even once he has opened it, or a sample when there is none yet.
-    // W1178 — the owner's preview always has a board tile to look at: a sample when there is no update yet.
-    if (opts.preview && !d.board.id) d.board = { id: '', title: 'Your next update’s title appears here', date: '', isNew: true };
     if (opts.preview && !d.recap) { try { d.recap = _tbRecap({ force: true }); } catch (_) {} }
     if (opts.preview && !d.recap) d.recap = { ws: '', K: 38, S: 43, tone: 'plain', lead: null, range: 'SEP 28 – OCT 4', dots: ['p', 'k', 'p', 'k', 'p', 'p', 'k'], lines: ['Sleep was your hardest vow: 2 of 7 days.', 'It’s first on today’s list.'] };
     let wkWait = null;   // W1015
@@ -68042,7 +68053,24 @@
       at(450, function () { t.style.opacity = '0'; });
       at(650, function () { t.innerHTML = _tb4ReviewInner('thanked'); t.style.opacity = ''; });
     };
-    const act = function (t) { const k = t.getAttribute('data-tile'); if (k === 'review') thank(t); else quick(k, t); };
+    // W1179 — today's fact opens on a card to read; the briefing stays and nothing is begun.
+    const openFact = function () {
+      if (done || held || root.querySelector('.tb4-fcard')) return;
+      const f = d.board && d.board.fact; if (!f) return;
+      const el = document.createElement('div');
+      el.className = 'tb4-fcard'; el.innerHTML = _tb4FactCard(f);
+      root.appendChild(el); _tbHap('light');
+      requestAnimationFrame(function () { el.classList.add('tb4-fcard--in'); });
+      const shut = function () { if (!el.classList.contains('tb4-fcard--in')) return; el.classList.remove('tb4-fcard--in'); _tbHap('selection'); at(240, function () { el.remove(); }); };
+      el.addEventListener('click', function (e) { if (e.target === el || (e.target.closest && e.target.closest('[data-tb4-fx]'))) shut(); });
+      const x = el.querySelector('[data-tb4-fx]'); if (x) try { x.focus({ preventScroll: true }); } catch (_) {}
+    };
+    const act = function (t) {
+      const k = t.getAttribute('data-tile');
+      if (k === 'review') thank(t);
+      else if (k === 'board' && t.hasAttribute('data-fact')) openFact();
+      else quick(k, t);
+    };
     root.querySelectorAll('.tb4-tile').forEach(function (t) {
       const off = function () { t.classList.remove('tb4-down'); };
       t.addEventListener('pointerdown', function () { if (done || held || t.classList.contains('tb4-inert')) return; t.classList.add('tb4-down'); _tbHap('light'); });
@@ -68061,18 +68089,6 @@
       });
     };
     counts(root);
-    // The field arrives once a day; until it does the steps tile shows your average, then ranks you in place.
-    if (d.steps && d.steps.mode === 'wait') {
-      Promise.resolve(_tb4StepsPrefetch()).then(function () {
-        if (dead) return;
-        let s2 = null; try { s2 = _tb4Steps(); } catch (_) {}
-        if (!s2 || s2.mode === 'wait') s2 = Object.assign({}, d.steps, { failed: true });
-        d.steps = s2;
-        const t = root.querySelector('[data-tile="steps"]'); if (!t || t.classList.contains('tb4-picked')) return;
-        t.innerHTML = _tb4StepsInner(s2);
-        counts(t);
-      });
-    }
 
     const stop = function () {
       dead = true; _tbLive = null; timers.forEach(clearTimeout); cancelAnimationFrame(raf);
@@ -68140,7 +68156,7 @@
     step(0);
   }
   try { window.__previewHuntResults = previewHuntResults; window.__hr = { data: _hrData, coop: _hrCoopData, show: _hrShow, sheet: function (inst) { _coopOpenHuntDetail(inst, false); }, sheetNow: function (id) { return _coopSheetResult(id); } }; } catch (_) {}   // QA
-  try { window.__previewTodaysBriefing = previewTodaysBriefing; window.__tb = { data: _tbData, show: _tbShow, leadFirst: _tbLeadFirst, recap: _tbRecap, recapPrefetch: _tbRecapPrefetch, steps: _tb4Steps, stepsPrefetch: _tb4StepsPrefetch }; } catch (_) {}   // QA
+  try { window.__previewTodaysBriefing = previewTodaysBriefing; window.__tb = { data: _tbData, show: _tbShow, leadFirst: _tbLeadFirst, recap: _tbRecap, recapPrefetch: _tbRecapPrefetch, steps: _tb4Steps, fact: _tb4Fact, facts: function () { return TB4_FACTS.slice(); }, pact: _tb4Pact }; } catch (_) {}   // QA
 
   // ── EDIT MODAL ───────────────────────────────────────────
   let editGoalValue = 0;

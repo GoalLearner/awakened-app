@@ -18,6 +18,7 @@ import {
   elapsedDaysPt,
   handleCoopAutoOptOut,
   MATCH_MIN_KILL_DAYS,
+  MATCH_KEEP_DAYS,
   pairKey,
   pickAutoBoss,
   pickMatchedPairs,
@@ -25,7 +26,7 @@ import {
   sweepCoopResolve,
 } from './coop-auto';
 import { getAccoladeWeekStart, priorWeekStart } from '../lib/accolade-week';
-import { ptDayKey, ptMidnightIso, nextDay } from '../lib/pact-streak';
+import { ptDayKey, ptMidnightIso, nextDay, prevDay } from '../lib/pact-streak';
 import type { Env } from '../env';
 import type { SessionPayload } from '../session-jwt';
 
@@ -443,5 +444,15 @@ describe('sweepCoopAutoHunts — matched partners (W1164)', () => {
     const res2 = await sweepCoopAutoHunts(makeEnv(sweepDb(f2, calls2)), ctx);
     expect(res2.matched).toBe(0);
     expect(matchedInserts(calls2).length).toBe(0);
+  });
+
+  // W1179 — a matched pair forms a Pact Flame, so it is kept across weeks (14 days back), not reset each Sunday
+  it('looks back MATCH_KEEP_DAYS for each hunter\'s latest partner, across the week line', async () => {
+    const calls: Call[] = [];
+    await sweepCoopAutoHunts(makeEnv(sweepDb({ ...friendsBase, kills: [kill('u5', 5, 10), kill('u6', 4, 8)] }, calls)), ctx);
+    const q = calls.find((c) => c.sql.includes('WHERE matched = 1 AND hunt_day'))!;
+    let want = today; for (let i = 0; i < MATCH_KEEP_DAYS; i++) want = prevDay(want);
+    expect(q.args[0]).toBe(want);
+    expect(MATCH_KEEP_DAYS).toBe(14);
   });
 });

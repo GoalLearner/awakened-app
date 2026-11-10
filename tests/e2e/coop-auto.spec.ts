@@ -228,8 +228,9 @@ test.describe('Automatic friend hunts (W1094)', () => {
     expect(started['a-live2']).toBe(1);
   });
 
-  // W1164 — two friendless hunters the server matched share the daily hunt but not a flame
-  test('a matched partner\'s hunt never lights the local flame, even once both posted', async ({ page }) => {
+  // W1164 — two friendless hunters the server matched share the daily hunt. W1179 — and now a flame:
+  // the matched hunt lights the local pact once both posted, and the briefing remembers the partner.
+  test('a matched partner\'s hunt lights the local flame once both posted, and names the partner for the briefing', async ({ page }) => {
     await boot(page, {
       instances: [
         inst({ id: 'a-match', status: 'active', auto: true, committed: true, matched: true }),
@@ -239,8 +240,10 @@ test.describe('Automatic friend hunts (W1094)', () => {
     await sync(page);
     await expect.poll(() => page.evaluate(() => (window as any).__coopCalls.resolve), { timeout: 15_000 }).toContain('m-live3');
     const started = await page.evaluate(() => JSON.parse(localStorage.getItem('hb_coop_pact_started') || '{}'));
-    expect(started['a-match']).toBeFalsy();
+    expect(started['a-match']).toBe(1);
     expect(started['m-live3']).toBe(1);
+    const match = await page.evaluate(() => JSON.parse(localStorage.getItem('hb_coop_match_v1') || 'null'));
+    expect(match && match.uid).toBeTruthy();
   });
 
   test('the dashboard marks automatic hunts DAILY', async ({ page }) => {

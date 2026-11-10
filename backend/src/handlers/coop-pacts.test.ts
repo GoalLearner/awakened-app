@@ -114,8 +114,8 @@ describe('GET /v1/coop-boss/pacts', () => {
     expect(sql).toBeTruthy();
     // W813 — the pact counts attempts: any instance that actually began.
     expect(sql).toMatch(/i\.starts_at IS NOT NULL/);
-    // W1164 — a matched stranger pair never forms a Pact Flame.
-    expect(sql).toMatch(/COALESCE\(i\.matched, 0\) = 0/);
+    // W1179 — a matched pair (two friendless hunters the cron paired) forms a Pact Flame too.
+    expect(sql).not.toMatch(/i\.matched/);
     expect(sql).not.toMatch(/WHERE i\.status = 'completed'/);
     // …while the Bond still needs the outcome, so is_win is computed in-query.
     expect(sql).toMatch(/CASE WHEN i\.status = 'completed' AND i\.result = 'success' THEN 1 ELSE 0 END AS is_win/);
