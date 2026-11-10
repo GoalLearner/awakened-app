@@ -7456,11 +7456,11 @@ test.describe('BI2 · Briefing tiles (W1178, W1179)', () => {
 
   test('W1179: steps against the world average (4,961 a day): above it, the band you walk in; below it, the step to reach it', async ({ page }) => {
     await seed(page, { you: 9184 });
-    expect(await page.evaluate(() => { const s = (window as any).__tb.steps(); return [s.mode, s.you, s.band]; })).toEqual(['world', 9184, 'Somewhat active']);
+    expect(await page.evaluate(() => { const s = (window as any).__tb.steps(); return [s.mode, s.you, s.band]; })).toEqual(['world', 9184, 'Very active']);   // W1180 — the names read against the world
     await show(page);
     await expect(tile(page, 'steps').locator('.tb4-tl')).toHaveText('Steps vs the world');
     await expect(tile(page, 'steps').locator('.tb4-hero')).toHaveText('1.9×the world average', { timeout: 5_000 });
-    await expect(tile(page, 'steps').locator('.tb4-sub')).toHaveText('9,184 a day · Somewhat active', { timeout: 3_000 });
+    await expect(tile(page, 'steps').locator('.tb4-sub')).toHaveText('9,184 a day · Very active', { timeout: 3_000 });
     await expect(tile(page, 'steps').locator('.tb4-band')).toHaveCount(5);
     await expect(tile(page, 'steps').locator('.tb4-youd')).toHaveCount(1);
     await expect(tile(page, 'steps').locator('.tb4-axis')).toHaveText(/World 4,961.*15k/);
@@ -7472,7 +7472,7 @@ test.describe('BI2 · Briefing tiles (W1178, W1179)', () => {
     // the top band
     await page.evaluate(() => { const d = JSON.parse(localStorage.getItem('hb_leaderboard')!); Object.keys(d.steps_daily).forEach((k) => { d.steps_daily[k] = 14000; }); localStorage.setItem('hb_leaderboard', JSON.stringify(d)); });
     await show(page);
-    await expect(tile(page, 'steps').locator('.tb4-sub')).toHaveText('14,000 a day · Highly active', { timeout: 5_000 });
+    await expect(tile(page, 'steps').locator('.tb4-sub')).toHaveText('14,000 a day · Elite', { timeout: 5_000 });
     expect(await page.evaluate(() => typeof (window as any).Auth.stepsRank)).toBe('undefined');   // nothing to fetch: it works offline
   });
 
