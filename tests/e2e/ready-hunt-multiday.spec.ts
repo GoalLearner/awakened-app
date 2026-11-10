@@ -14,7 +14,11 @@
  */
 import { test, expect, Page } from '@playwright/test';
 
-type Fix = { steps?: Record<string, number>; flights?: Record<string, number>; sleep?: Record<string, number> };
+type Fix = { steps?: Record<string, number>; flights?: Record<string, number>; sleep?: Record<string, number>; workouts?: Record<string, number> };
+
+// W1176 — every multi-day boss is automated now; the judge tests below switch them all off unless `auto` is set.
+const AUTO = ['the_patient_flame', 'the_vow_keeper', 'the_tideless_marcher', 'the_forge_of_ten_thousand_days', 'the_sleepless_ascent',
+  'erebus_the_shadow_sovereign', 'the_starved_sentinel', 'the_gray_pilgrim'];
 
 async function boot(page: Page, bosses?: Record<string, unknown>, points = '40000') {
   await page.addInitScript(([b, pts]: string[]) => {
@@ -42,26 +46,35 @@ async function boot(page: Page, bosses?: Record<string, unknown>, points = '4000
 }
 
 // Replace Apple Health with the fixture (keys = local dates), then run the real scan and return the offered boss ids.
-// W1167 — the Flame now falls by itself (autoKill); these judge tests switch that off unless `auto` is set.
+// W1167 — the Flame fell by itself first; W1176 — every multi-day boss does. These judge tests switch them off unless `auto` is set.
 async function scan(page: Page, fix: Fix, auto = false): Promise<string[]> {
-  return page.evaluate(async ([f, au]: [Fix, boolean]) => {
-    (window as any).Bosses.BOSSES.the_patient_flame.autoKill = au;
+  return page.evaluate(async ([f, au, ids]: [Fix, boolean, string[]]) => {
+    ids.forEach((id) => { (window as any).Bosses.BOSSES[id].autoKill = au; });
     const H = (window as any).Health;
     const key = (iso: string) => { const d = new Date(iso); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
     const today = key(new Date().toISOString());
+    // W1176 — flights add up over the days a query spans (the Gray Pilgrim asks for seven days at once); a one-day
+    // query reads that day alone, as before.
+    const flightsBetween = (a: string, b: string) => {
+      const from = new Date(a); from.setHours(0, 0, 0, 0);
+      const to = new Date(b).getTime();
+      let sum = 0;
+      for (const d = new Date(from); d.getTime() < to; d.setDate(d.getDate() + 1)) sum += (f.flights || {})[key(d.toISOString())] || 0;
+      return sum;
+    };
     H.isAvailable = () => true;
     H.permissionStatus = () => 'granted';
     H.getStepsBetween = async (a: string) => (f.steps || {})[key(a)] || 0;
-    H.getFlightsClimbedBetween = async (a: string) => (f.flights || {})[key(a)] || 0;
+    H.getFlightsClimbedBetween = async (a: string, b: string) => flightsBetween(a, b);
     H.getStepsToday = async () => (f.steps || {})[today] || 0;
     H.getFlightsClimbedToday = async () => (f.flights || {})[today] || 0;
     H.getSleepBetween = async () => { const byDate: Record<string, { totalAsleepHours: number }> = {}; Object.keys(f.sleep || {}).forEach((k) => { byDate[k] = { totalAsleepHours: (f.sleep as any)[k] }; }); return { samples: [], byDate }; };
-    H.getAnyWorkoutsBetween = async () => [];
+    H.getAnyWorkoutsBetween = async (a: string) => { const m = (f.workouts || {})[key(a)] || 0; return m > 0 ? [{ duration_min: m }] : []; };
     H.getStrengthWorkoutsBetween = async () => [];
     H.getActiveEnergyBetween = async () => 0;
     const r = await (window as any).__readyHunt.scan();
     return (r.offers || []).map((o: any) => o.bossId);
-  }, [fix, auto] as [Fix, boolean]);
+  }, [fix, auto, AUTO] as [Fix, boolean, string[]]);
 }
 
 // local date keys for today and the days before it
@@ -116,8 +129,10 @@ test.describe('The Ready Hunt and the multi-day bosses (W1039)', () => {
     expect(await scan(page, two)).not.toContain('erebus_the_shadow_sovereign');
     const three = { steps: { ...two.steps, '2026-11-02': 12000 }, flights: { ...two.flights, '2026-11-02': 10 } };
     expect(await scan(page, three)).toContain('erebus_the_shadow_sovereign');
-    // the Flame's two days are Nov 1 + Nov 2: Oct 31 + Nov 1 alone must not pass for them
-    expect(await scan(page, two)).not.toContain('the_patient_flame');
+    // one qualifying Nov 1 must never pass for the Flame's two days (the old 24 h step read it twice). W1176: Oct 31 +
+    // Nov 1 is a real finished run now, and it does count.
+    expect(await scan(page, { steps: { '2026-11-01': 12000 } })).not.toContain('the_patient_flame');
+    expect(await scan(page, two)).toContain('the_patient_flame');
   });
 
   // W1149 — what the phone watcher is handed for the multi-day bosses (window.__readyHunt.watch() after a scan)
@@ -193,5 +208,61 @@ test.describe('The Ready Hunt and the multi-day bosses (W1039)', () => {
     await scan(page, { steps: { [T1]: 12000, [T0]: 10500 } }, true);
     await page.waitForTimeout(800);
     expect((await flame(page)).kill_count || 0).toBe(0);
+  });
+
+  // W1176 — owner 2026-11-09: "the multiple day automatic hunts ... whether it be 2-days or 3-days+, if they fulfill
+  // the condition then they get the reward ... whether be sleep, walking, or flights". Every multi-day boss is
+  // automatic now, and a run that finished on an earlier day still pays when the app is opened later.
+  const kills = (page: Page, ids: string[]) => page.evaluate((l: string[]) => l.map((id) => (window as any).Bosses.getBossState(id).kill_count || 0), ids);
+  const days = (n: number, v: number) => { const o: Record<string, number> = {}; for (let i = 0; i < n; i++) o[dayKey(i)] = v; return o; };
+  const fees = (page: Page) => page.evaluate(() => JSON.parse(localStorage.getItem('hb_souls_ledger') || '[]').filter((e: any) => typeof e.delta === 'number' && e.delta < 0).length);
+
+  test('W1176: every multi-day boss falls by itself — steps, sleep, stairs and workouts; two days, three, and seven', async ({ page }) => {
+    await boot(page);
+    const fix = { steps: days(3, 12000), flights: days(7, 10), sleep: days(3, 7.5), workouts: days(3, 45) };
+    const offered = await scan(page, fix, true);
+    expect(offered).toEqual(expect.arrayContaining(AUTO));   // the judge saw every one of them...
+    await expect.poll(() => kills(page, AUTO), { timeout: 30_000 }).toEqual(AUTO.map(() => 1));   // ...and nobody had to tap
+    expect((await page.evaluate(() => (window as any).__readyHunt.offers())).filter((id: string) => AUTO.indexOf(id) >= 0)).toEqual([]);
+    // one entrance fee each, out of the win; the same days never pay twice
+    expect(await fees(page)).toBe(AUTO.length);
+    await scan(page, fix, true);
+    await page.waitForTimeout(1500);
+    expect(await kills(page, AUTO)).toEqual(AUTO.map(() => 1));
+  });
+
+  test('W1176: a run finished days ago still pays when the app opens later — once, credited to the run’s own day', async ({ page }) => {
+    await boot(page);
+    const T3 = dayKey(3), T4 = dayKey(4);
+    const fix = { steps: { [T4]: 12000, [T3]: 11000 }, sleep: { [T4]: 7.2, [T3]: 7.9 } };   // nothing since: the app stayed shut
+    await scan(page, fix, true);
+    await expect.poll(() => kills(page, ['the_patient_flame', 'the_vow_keeper']), { timeout: 15_000 }).toEqual([1, 1]);
+    const claimed = await page.evaluate(() => Object.keys(localStorage).filter((k) => /^hb_kill_reward_(the_patient_flame|the_vow_keeper)_/.test(k)).sort());
+    expect(claimed).toEqual(['hb_kill_reward_the_patient_flame_' + T3, 'hb_kill_reward_the_vow_keeper_' + T3]);
+    expect(await fees(page)).toBe(2);
+    await scan(page, fix, true);
+    await page.waitForTimeout(1500);
+    expect(await kills(page, ['the_patient_flame', 'the_vow_keeper'])).toEqual([1, 1]);
+  });
+
+  test('W1176: the look-back has limits — a run older than a week, or one before the last kill, does not pay', async ({ page }) => {
+    await boot(page);
+    await scan(page, { steps: { [dayKey(8)]: 12000, [dayKey(7)]: 12000 } }, true);   // its first day is past the look-back
+    await page.waitForTimeout(1500);
+    expect((await flame(page)).kill_count || 0).toBe(0);
+    const k = new Date(); k.setDate(k.getDate() - 2); k.setHours(18, 0, 0, 0);
+    await boot(page, { the_patient_flame: { streak: 0, kill_count: 1, engaged: false, last_defeated_at: k.toISOString(), last_hunt_outcome: 'defeated' } });
+    await scan(page, { steps: { [dayKey(4)]: 12000, [dayKey(3)]: 12000 } }, true);   // spent: before the last kill
+    await page.waitForTimeout(1500);
+    expect((await flame(page)).kill_count).toBe(1);
+  });
+
+  test('W1176: the Gray Pilgrim counts seven days of stairs — 55 and it stands, 56 and it falls', async ({ page }) => {
+    await boot(page);
+    await scan(page, { flights: { ...days(6, 8), [dayKey(6)]: 7 } }, true);   // 6 × 8 + 7 = 55
+    await page.waitForTimeout(1500);
+    expect(await kills(page, ['the_gray_pilgrim'])).toEqual([0]);
+    await scan(page, { flights: { ...days(6, 8), [dayKey(6)]: 8 } }, true);   // 56
+    await expect.poll(() => kills(page, ['the_gray_pilgrim']), { timeout: 10_000 }).toEqual([1]);
   });
 });

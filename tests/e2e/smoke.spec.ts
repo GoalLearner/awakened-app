@@ -9943,6 +9943,7 @@ test.describe('CB · The ready hunt (W1034 · W1039)', () => {
   test('W1039 — three days and a week: Erebus on three full days, the Gray Pilgrim on 56 flights in seven', async ({ page }) => {
     const d = { steps: 10400, flights: 10 };
     await hunter(page, { ...GATE.C, ...GATE.S });
+    await page.evaluate(() => { ['the_patient_flame', 'the_vow_keeper', 'the_tideless_marcher', 'the_forge_of_ten_thousand_days', 'the_sleepless_ascent', 'erebus_the_shadow_sovereign', 'the_starved_sentinel', 'the_gray_pilgrim'].forEach((id) => { (window as any).Bosses.BOSSES[id].autoKill = false; }); });   // W1176 — every multi-day boss falls by itself now; this is the judge alone
     await health(page, { days: { 0: d, 1: d, 2: d, 3: { flights: 9 }, 4: { flights: 9 }, 5: { flights: 9 }, 6: { flights: 9 } } });   // 66 flights this week
     const o = await offers(page);
     expect(o).toContain('erebus_the_shadow_sovereign');
@@ -9957,7 +9958,7 @@ test.describe('CB · The ready hunt (W1034 · W1039)', () => {
   test('W1039 — asking changes nothing: a scan with a dozen bosses ready leaves bosses and souls untouched', async ({ page }) => {
     const d = { steps: 15400, flights: 22, sleepH: 8, workoutMin: 45, kcal: 600 };
     await hunter(page, { ...GATE.D, ...GATE.C, ...GATE.B, ...GATE.A, ...GATE.S });
-    await page.evaluate(() => { (window as any).Bosses.BOSSES.the_patient_flame.autoKill = false; });   // W1167 — an automated boss is meant to fall; the rest only ask
+    await page.evaluate(() => { ['the_patient_flame', 'the_vow_keeper', 'the_tideless_marcher', 'the_forge_of_ten_thousand_days', 'the_sleepless_ascent', 'erebus_the_shadow_sovereign', 'the_starved_sentinel', 'the_gray_pilgrim'].forEach((id) => { (window as any).Bosses.BOSSES[id].autoKill = false; }); });   // W1167/W1176 — an automated boss is meant to fall; the rest only ask
     const snap = () => page.evaluate(() => [localStorage.getItem('hb_bosses'), localStorage.getItem('hb_souls'), localStorage.getItem('hb_souls_ledger'), localStorage.getItem('hb_hunt_history')]);
     const before = await snap();
     await health(page, { days: { 0: d, 1: d, 2: d, 3: d, 4: d, 5: d, 6: d } });
