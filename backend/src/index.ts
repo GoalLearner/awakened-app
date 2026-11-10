@@ -96,6 +96,7 @@ import {
   handleCoopBossEmote,
 } from './handlers/coop-boss';
 import { handleCoopPacts } from './handlers/coop-pacts';
+import { handleStepsRank } from './handlers/steps-rank';
 // W1094 — automatic friend hunts: the opt-out switch + the two cron sweeps (settle, create).
 import { handleCoopAutoOptOut, sweepCoopAutoHunts, sweepCoopResolve } from './handlers/coop-auto';
 // W836 (Train 3, R2) — server-side win-back push for lapsed hunters.
@@ -645,6 +646,9 @@ export default {
             // W747 — battle emote: enum key only; server owns the text; pushes
             // to every OTHER participant of the (active) hunt the caller is in.
             response = await handleCoopBossEmote(request, env, session, ctx);
+          } else if (path === '/v1/steps/rank' && method === 'GET') {
+            // W1178 — Today's Briefing: every other hunter's 14-day average steps (anonymous).
+            response = await handleStepsRank(request, env, session);
           } else if (path === '/v1/coop-boss/pacts' && method === 'GET') {
             // W664 Phase 2 — canonical per-friend co-op daily-streak "pacts"
             // computed from the durable instance history (so both friends agree).

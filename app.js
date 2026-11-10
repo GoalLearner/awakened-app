@@ -160,7 +160,7 @@
   const APP_VERSION = '3.0.24';   // W1169 — 3.0.23 APPROVED 2026-11-08 (submitted 2026-11-07 5:00 PM PST, LIVE 2:33 PM PST on the 8th; almost certainly build 628 = w1161: pins, the Wardrobe tap fix), so 3.0.24 opened carrying W1162-W1169 (the 3.0.23 store notes, the board update, matched hunt partners, Add as friend, late steps reach the board, The Patient Flame falls by itself, earned ultimates behind their flag). [history] W1134 — 3.0.22 APPROVED 2026-11-06 (submitted 4:53 AM PST from build 617 = w1132: the Shadowborn + the Elite Eight, the Rising redrawn, profile cards name the look, every open counted), so 3.0.23 opened carrying W1134 (the Worldgate counts a hunter's steps only after 2 days in the app that week). [history] W1127 — 3.0.21 LIVE on the App Store 2026-11-05 9:34 AM PST (built from w1126: no memberships, kill stamps without a title, the tier crests, the onboarding's "How did you find the Gate?"), so 3.0.22 opened carrying W1127 (the app-open ping says when it is a real open; the server counts every one per Pacific day). [history] W1124 — 3.0.20 LIVE on the App Store 2026-11-01 12:50 PM PST (built from w1120: final standings Sunday, shadows in the public feed, Shadow Army on Status); 3.0.21 opened carrying W1121 (its What's New, never shown: re-keyed to 3.0.21), W1122 (no memberships), W1124 (kill stamp without a title, inlined tier crests) and W1125 (the onboarding's last screen asks how the hunter found the app; W1126 keeps it in place when the keyboard opens). [history] W1114 — 3.0.19 approved 2026-10-30 (submitted 1:45 AM PST, w1113: shadows 1 in 5, armor upgrades, relic power by boss rank, relic cards three across); 3.0.20 opened with the feed's boss rank chips, no What's New entry yet. W1107 — 3.0.18 approved and LIVE 2026-10-28 8:02 AM PST (submitted 2026-10-27 7:41 PM PST, build 602 = w1106: the four steps trios, the Rising's nine looks, the earned line in the Wardrobe, the richer-backup offer); 3.0.19 opened at approval. [history] W1103 — 3.0.17 approved 2026-10-27 (build 600, submitted 2026-10-26 6:21 PM PST: the automatic friend hunts, the earned looks, the two-tab Wardrobe); 3.0.18 opened at approval, carrying W1102 (the app offers back a richer cloud backup). [history] W1097 — 3.0.16 approved + live 2026-10-26 (build 599, the iOS 27 fix); 3.0.17 opened at approval. Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.16 = the post-3.0.15 train, opened 2026-10-23 (W1085): 3.0.15 was submitted 2026-10-22 2:55 PM PST from build 595 (w1083: the tally, the preview row, the security pass) and approved the same day, so the train closed under it. It carries W1084 (the tally leads the 3.0.15 What's New) forward. [history] 3.0.15 = the post-3.0.14 train, opened 2026-10-22 (W1080): 3.0.14 was approved and LIVE 2026-10-21 5:08 PM PST from build 591 (w1074) — the first 592 upload was refused ("train closed"), the sixth time an approval closed a train under a build. It carries W1077/W1078 (sign-out ends the session, cloud save checksum + gzip, socket token out of the URL, invite links ask first) forward. [history] 3.0.14 = the post-3.0.13 train, opened 2026-10-21 (W1074): 3.0.13 was approved and went LIVE 2026-10-20 3:50 AM PST from build 587 (w1068), so it carries W1069 (the floor 100 curve), W1070-W1073 (the ten weekly step and sleep bosses and their drops) and the real-screen screenshots and header Apple asked for (App Review 2.3.3) forward. [history] 3.0.11 = the post-3.0.10 train, opened 2026-10-05: Apple's store lookup showed 3.0.10 LIVE (released 11:35 AM PST that day, built from w1024, so it carried W1023 the 9:45 PM finish-strong reminder and nothing after). It carries forward W1025 (Myrmidon King art), W1026 (one request for every co-op hunt) and W1027 (steps 'today' = the device's day), all pushed under the 3.0.10 tag after that build was cut. [history] 3.0.10 = the post-3.0.9 train, opened 2026-10-04 when the owner passed on Apple's approval of 3.0.9 (submitted 2026-10-02 12:41 PM PST, approved 2026-10-03; carried W1002–W1022: weekly to-do planner, to-dos first in the briefing, the Monday recap, times-a-week vows, the interactive Status tab, the Jump Manual program, the flights-hunt result fix). It carries W1023 (the 9:45 PM finish-strong reminder) forward. First TWO-DIGIT patch: every version compare in the app is numeric (_updVersionNewer, the What's New compare), never a string compare. [history] 3.0.9 = the post-3.0.8 train, opened 2026-09-25 the moment Apple approved 3.0.8 (submitted 4:57 PM PST, approved the same evening; carried W989–W1001: Items overhaul, Resolved + mod view counts, the sectioned Habits tab + to-dos v2, topic edit). [history] 3.0.8 = the post-3.0.7 train, opened 2026-09-24 the moment Apple approved 3.0.7 (build 543, submitted 1:15 AM PST, approved same day; the Worldgate In-App Event was approved in the same hour). Carries forward: the three description corrections (Ranked PvP / Streak Shields / five-hunter raid = Premium) go out WITH this version, since a description only changes with a new version. [history] 3.0.7 carried W968–W987 (vows yours + glory verified, morning briefing v2, hunt results, Worldgate MVPs + weekly line + strike freeze, Community Updates + briefing line, mod preview rows, awakened:// scheme). [history] 3.0.7 = the post-3.0.6 train, opened 2026-09-20 the moment Apple approved 3.0.6 (submitted 3:14 AM PST that day, approved same day) — an approval CLOSES a train, and uploading under the approved number is refused (CFBundleShortVersionString must exceed it). This has now bitten FOUR times; the bump is done at approval, not at upload. [history] 3.0.6 carried W960–W967 (Manage Vows fix, rank-bar hairline, Worldgate kill ceremony, division-up celebration, owner preview row, 3.0.6 release notes). [history] 3.0.4 = the post-3.0.3 train, opened 2026-09-11 because Apple approved 3.0.3 (live 2026-09-09) and an approval closes a train — carries W935 (weekly-board upload fix + Apple Health asked on every onboarding path). [history] 3.0.3 = the post-3.0.2 train, opened 2026-09-07 the morning after Apple approved 3.0.2 (submitted 2026-09-06 4:41 PM PT; approval closes a train — twice-bitten lesson) — carries W917-W919b (Ledger view, Streak Shields deleted, handoff 29) forward under the new number. [history] 3.0.2 = the post-release train, opened 2026-09-04 because Apple closes a train on approval (build 493 under 3.0.1 was refused: CFBundleShortVersionString must exceed the approved 3.0.1) — carries W903 (boss-sheet hotfix) + W905 (Status is the hunter profile again). 3.0.1 "MAKE IT LAND" = the repair release (W882-W890): Wave-2 progression joins cloud sync, the activation funnel is instrumented end to end, silent Wave-2 server failures leave breadcrumbs, the altar routes to a same-day first kill, the Double Dungeon stops reporting false failures and yields when the stair is unavailable, the beat What's New used to eat is chained, and every banked free engage is visible before the tap. 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.24-w1177'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '3.0.24-w1178'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -17281,6 +17281,7 @@
           // W1127 — { open: true }: a return to the app is an open, and the server counts each one.
           try { if (window.Auth && Auth.reportAppOpen) Auth.reportAppOpen({ open: true }); } catch (_) {}
           try { if (typeof _tbRecapPrefetch === 'function') _tbRecapPrefetch(); } catch (_) {}   // W1015 — the Monday recap words
+          try { if (typeof _tb4StepsPrefetch === 'function') _tb4StepsPrefetch(); } catch (_) {}   // W1178 — the steps field
           // W833 — step backfill on resume too, not just the cold-boot +5s
           // timer: an iOS warm resume re-enters here without ever re-running
           // boot, and a user who opens the app for <5s can kill the timer
@@ -17292,7 +17293,7 @@
       // W526 — retention ping on initial launch (deferred ~1.5s so the session is
       // restored from storage and Auth is ready). No-op if not signed in. W1127 — a launch is an open.
       try { setTimeout(function () { try { if (window.Auth && Auth.reportAppOpen) Auth.reportAppOpen({ open: true }); } catch (_) {} }, 1500); } catch (_) {}
-      try { setTimeout(function () { try { if (typeof _tbRecapPrefetch === 'function') _tbRecapPrefetch(); } catch (_) {} }, 600); } catch (_) {}   // W1015
+      try { setTimeout(function () { try { if (typeof _tbRecapPrefetch === 'function') _tbRecapPrefetch(); } catch (_) {} try { if (typeof _tb4StepsPrefetch === 'function') _tb4StepsPrefetch(); } catch (_) {} }, 600); } catch (_) {}   // W1015 + W1178
     } catch (_) {}
   })();
 
@@ -30405,6 +30406,7 @@
       items: [
         { emoji: '', title: 'Eight new ultimates', description: "Earn them from boss kills, your shadows and the summit, then choose one in the Wardrobe. Each hits differently and has its own moment." },
         { emoji: '', title: 'Watch before you choose', description: "Every ultimate in the Wardrobe has a Preview." },
+        { emoji: '', title: 'A new morning briefing', description: "Your pact flames, where your steps rank among every hunter, the latest update and a way to review the app. Tap one to start your day there." },   // W1178
         { emoji: '', title: 'Multi-day bosses fall by themselves', description: "Two or three days in a row of sleep, steps or stairs, and the boss is yours, even if you open the app days later. No tap needed." },   // W1176 (was W1167, the Patient Flame alone)
         { emoji: '', title: 'A partner for every hunter', description: "No friends yet? You are paired with another active hunter for a daily hunt. After a win, add them as a friend in one tap." },
         { emoji: '', title: 'Every step on the board', description: "Steps that arrive right after an upload now reach the Steps board." },
@@ -67611,10 +67613,10 @@
       if (c && c.hp && _wgStale(c)) world = 'A new Worldgate rises · <b>' + esc(_wgBossName(_wgThisWeek())) + '</b>';   // W1006 — last week's cache never speaks for this week
       else if (c && c.hp) world = c.status === 'slain' ? 'The Worldgate has <b>fallen</b> this week' : 'The Worldgate is <b>' + Math.floor(_wgPct(c)) + '%</b> down';
     } catch (_) {}
-    // W986 — a developer update the hunter has not opened yet (a new topic, never a reply).
-    let news = '';
-    try { if (_cmUpdateUnseen()) news = String((_cmUpdate && _cmUpdate.title) || '').trim() || 'A new update'; } catch (_) {}
-    let todos = null; try { todos = _todoBrief(); } catch (_) {}   // W1009 — the to-do card
+    // W1178 — the four tiles (they took the to-do card's place and the update line)
+    let pact = { friends: 0, bonds: [] }; try { pact = _tb4Pact(); } catch (e) { _logSwallow('tb:pact', e); }
+    let steps = { mode: 'nohealth' }; try { steps = _tb4Steps(); } catch (e) { _logSwallow('tb:steps', e); }
+    let board = { id: '', title: '', date: '', isNew: false }; try { board = _tb4Board(); } catch (_) {}
     let recap = null; try { recap = _tbRecap(); } catch (e) { _logSwallow('tb:recap', e); }   // W1014 — the Monday recap
     return {
       date: ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'][dt.getDay()] + ' · ' + ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'][dt.getMonth()] + ' ' + dt.getDate(),
@@ -67625,8 +67627,7 @@
       rank: info ? info.majorRank : 'E',
       isMax: !!(info && info.isMax),
       next: info && info.nextDivisionLabel ? info.nextDivisionLabel : '',
-      news: news,
-      todos: todos,
+      pact: pact, steps: steps, board: board, review: _tb4Thanked() ? 'thanked' : 'rest',
       recap: recap,
       to: info ? Math.max(0, Math.ceil(Number(info.xpToNextDivision) || 0)) : 0,
       frac: info ? Math.max(0, Math.min(1, Number(info.divisionProgress) || 0)) : 0,
@@ -67657,9 +67658,7 @@
     try { _hapticTick(k === 'heavy' ? 'HEAVY' : k === 'medium' ? 'MEDIUM' : 'LIGHT'); } catch (_) {}
   }
   const _TB_FLAME = '<svg width="12" height="15" viewBox="0 0 12 15" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" aria-hidden="true"><path d="M6 1c.5 2.6 4.5 4.3 4.5 8.1A4.5 4.5 0 0 1 1.5 9.1C1.5 6.6 3.4 5.6 3.8 3.6c1 .9 1.4 2 1.3 3.2C6.4 5.5 6.6 3.4 6 1z"/></svg>';
-  const _TB_NEWS = '<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="#5eead4" stroke-width="1.3" aria-hidden="true"><path d="M4 4.5h10.5a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5.5a2 2 0 0 1-2-2V5"/><path d="M6.5 8.5h7M6.5 11.5h7M6.5 14.5h4" stroke="#f5b842"/></svg>';   // W986
   const _TB_GATE = '<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="#a78bfa" stroke-width="1.3" aria-hidden="true"><path d="M3 18V8a7 7 0 0 1 14 0v10M6.5 18V9a3.5 3.5 0 0 1 7 0v9M1.5 18h17"/><path d="M10 5.5l-.8 2.2 1.4 1.2-.9 2.1" stroke="#f5b842"/></svg>';
-  const _TB_TODO = '<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="#a78bfa" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="14" height="14" rx="3.5"/><path d="M6.5 10.3l2.4 2.4 4.8-5.4" stroke="#f5b842"/></svg>';   // W995
   function _tbSealSvg() {
     let rays = '';
     for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4; rays += '<line x1="' + (60 + Math.cos(a) * 30).toFixed(1) + '" y1="' + (60 + Math.sin(a) * 30).toFixed(1) + '" x2="' + (60 + Math.cos(a) * 38).toFixed(1) + '" y2="' + (60 + Math.sin(a) * 38).toFixed(1) + '"/>'; }
@@ -67668,46 +67667,251 @@
       '<g class="tb-sig" fill="none" stroke="#f5b842" stroke-width="1.2" stroke-linejoin="round"><rect x="46" y="46" width="28" height="28"></rect><rect x="46" y="46" width="28" height="28" transform="rotate(45 60 60)"></rect><circle cx="60" cy="60" r="8"></circle><g stroke-width="1" opacity=".6">' + rays + '</g></g></g></svg>' +
       '<div class="tb-ink"></div><div class="tb-num"><span class="tb-mono">Day</span><b></b></div>';
   }
-  // W1009 (owner 2026-09-27): "the to-do list is more urgent to present than the vows" —
-  // hunters see their vows every day; the briefing is where a to-do gets remembered.
-  // The card lists what is due today and anything overdue (four rows at most).
-  function _tbTodoHtml(t, max) {
-    if (!t) return '';
-    const n = t.items.length, MAX = max || 4;
-    let cnt = '';
-    if (t.due || t.od) cnt = (t.due ? t.due + ' due' : '') + (t.due && t.od ? ' · ' : '') + (t.od ? '<em>' + t.od + ' overdue</em>' : '');
-    let body = '';
-    if (n) {
-      body = t.items.slice(0, MAX).map(function (it, i) {
-        return '<div class="tb-tdr tb-e" style="--d:' + (380 + i * 70) + 'ms"><i class="' + (it.pri ? 'tb-tdpri' : '') + '"></i><span>' + esc(it.t) + '</span>' +
-          (it.od ? '<b class="tb-tdod">OVERDUE</b>' : it.rem ? '<b class="tb-tdrem">' + esc(it.rem) + '</b>' : '') + '</div>';
-      }).join('') + (n > MAX ? '<div class="tb-tdm tb-mono">+' + (n - MAX) + ' more on your list</div>' : '');
-    } else if (t.any) {
-      body = '<div class="tb-tde">Nothing due today.</div>' + (t.next ? '<div class="tb-tdm tb-mono">Next · ' + esc(t.next.day) + ' · <span>' + esc(t.next.t) + '</span></div>' : '');
-    } else {
-      // W1017 — no to-dos yet: ask for the first one right here
-      // W1018 (owner): "this week", so people plan ahead — a day row picks the day (today by default)
-      let dayRow = '';
-      for (let o = 0; o < 7; o++) dayRow += '<button type="button" class="tb-tdday' + (o === 0 ? ' tb-tdday--on' : '') + '" data-tb-tdday="' + o + '" aria-pressed="' + (o === 0 ? 'true' : 'false') + '">' + (o === 0 ? 'TODAY' : _TODO_WD[_todoDt(o).getDay()]) + '</button>';
-      body = '<div class="tb-tde">Have an appointment or errand this week?</div>' +
-        '<div class="tb-tdadd"><input type="text" class="tb-tdin" data-tb-tdin maxlength="80" placeholder="Add it to your to-do list" aria-label="Add a to-do" enterkeyhint="done" autocomplete="off" autocapitalize="sentences">' +
-        '<button type="button" class="tb-tdgo" data-tb-tdgo>ADD</button></div>' +
-        '<div class="tb-tddays" role="group" aria-label="Which day">' + dayRow + '</div>';
+  // ── W1178 · THE FOUR TILES (owner 2026-11-09; Claude Design handoff 10, "Today's Briefing v4 - Tiles") ──
+  // The to-do card left the briefing (2 of 11 recent saves held a to-do). In its place, a 2 × 2:
+  // Pact Flames · the newest Community board update · your steps ranked · Write a review.
+  // A tap on the first three begins the day (the seal stamps by itself) and opens that place;
+  // the review tile opens the App Store and the briefing stays. Classes are tb4- (the mock's).
+  const TB_STEPS_KEY = 'hb_steps_rank_v1';     // { day, others[] }: every other hunter's 14-day average, once a day
+  const TB_REVIEW_KEY = 'hb_tb_review_thanks'; // = the device day the review tile was tapped: thanks until midnight
+  const TB_REVIEW_URL = 'https://apps.apple.com/app/id6764727990?action=write-review';
+  const TB4_CW = 180;
+  const _TB4_DEFS = '<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><defs>' +
+    '<linearGradient id="tb4-fg" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#ffd574"/><stop offset=".5" stop-color="#ff8a3c"/><stop offset="1" stop-color="#e2531c"/></linearGradient>' +
+    '<linearGradient id="tb4-fgi" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#fff6d5"/><stop offset="1" stop-color="#ffd574"/></linearGradient>' +
+    '<linearGradient id="tb4-fgc" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#6a6c88"/><stop offset="1" stop-color="#2c2c46"/></linearGradient>' +
+    '</defs></svg>';
+  const _TB4_FEET = '<svg width="12" height="13" viewBox="0 0 14 16" fill="none" stroke="#4ade80" stroke-width="1.3" aria-hidden="true"><path d="M4 1.5c1.5 0 2.2 1.5 2.2 3.3S5.4 8 4 8 1.8 6.6 1.8 4.8 2.5 1.5 4 1.5z"/><path d="M2.4 9.8h3.2v1.6a1.6 1.6 0 0 1-3.2 0z"/><path d="M10 4.5c1.5 0 2.2 1.5 2.2 3.3S11.4 11 10 11 7.8 9.6 7.8 7.8 8.5 4.5 10 4.5z"/><path d="M8.4 12.8h3.2v1.6a1.6 1.6 0 0 1-3.2 0z"/></svg>';
+  const _TB4_DOC = '<svg width="17" height="17" viewBox="0 0 20 20" fill="none" stroke="#5ad6c8" stroke-width="1.4" stroke-linecap="round" aria-hidden="true"><rect x="3.5" y="2.5" width="13" height="15" rx="2.5"/><path d="M7 7h6M7 10h6M7 13h4"/></svg>';
+  const _TB4_QUILL = '<svg width="17" height="17" viewBox="0 0 20 20" fill="none" stroke="#f5b842" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17.5 2.5C11 3.5 6.5 8 4.8 14.6"/><path d="M17.5 2.5c-.6 4.8-3.6 8.6-8.6 10.2l-3.4.9"/><path d="M10.2 8.3l-2.1 2.1"/><path d="M2.5 17.5l2.3-2.9"/></svg>';
+  const _TB4_EXT = '<svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="#9596b2" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 2.5h5.5V8M9.2 2.8L2.5 9.5"/></svg>';
+  const _TB4_THANKS = '<svg width="17" height="17" viewBox="0 0 20 20" fill="none" stroke="#f5b842" stroke-width="1.3" aria-hidden="true"><circle cx="10" cy="10" r="7.5"/><path d="M6.6 10.2l2.3 2.3 4.6-4.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  function _tb4Unlit() { return '<svg width="18" height="25" viewBox="0 0 64 88" fill="none" aria-hidden="true"><path d="' + _PF_F_OUT + '" stroke="#f5b842" stroke-opacity=".6" stroke-width="3.5" stroke-dasharray="7 6" stroke-linejoin="round"/></svg>'; }
+  /** The pact flame: grows with the tier (Spark 8 px … Eternal 14 px); cold is ash grey and still. */
+  function _tb4Flame(w, cold, still) {
+    return '<svg class="tb4-flame' + (cold ? ' tb4-cold' : '') + (still ? ' tb4-still' : '') + '" width="' + w + '" height="' + (w * 1.375).toFixed(1) + '" viewBox="0 0 64 88" fill="none" aria-hidden="true">' +
+      '<path d="' + _PF_F_OUT + '" fill="url(#' + (cold ? 'tb4-fgc' : 'tb4-fg') + ')"/><path d="' + _PF_F_IN + '" fill="url(#tb4-fgi)" opacity="' + (cold ? 0 : 0.92) + '"/></svg>';
+  }
+  function _tb4Tier(d) { return d >= 365 ? 14 : d >= 100 ? 13 : d >= 30 ? 11.5 : d >= 7 ? 10 : d >= 3 ? 9 : 8; }
+
+  // ── tile 1 · Pact Flames: burning bonds, highest first, three rows, then +N more ──
+  function _tb4Pact() {
+    let friends = [];
+    try { friends = (_friendsCache && Array.isArray(_friendsCache.friends)) ? _friendsCache.friends : []; } catch (_) {}
+    let rows = []; try { rows = _pfBuildData(friends, false); } catch (_) {}
+    const bonds = rows.filter(function (r) { return (r.streak | 0) > 0; })
+      .sort(function (a, b) { return (b.streak | 0) - (a.streak | 0); })
+      .map(function (r) { return { n: String(r.alias || 'hunter'), rk: (r.tier && r.tier !== '?') ? String(r.tier) : '', rc: r.rc || _pfRankColor(r.rank), d: r.streak | 0 }; });
+    return { friends: friends.length, bonds: bonds };
+  }
+  function _tb4Bond(b, i, nc) {
+    const d = 420 + i * 60;
+    return '<div class="tb4-bond tb4-e' + (nc ? ' tb4-nc' : '') + '" style="--rc:' + b.rc + ';--d:' + d + 'ms"><span class="tb4-av">' + esc(b.n.charAt(0).toUpperCase()) + '</span>' +
+      '<span class="tb4-nm"><b>' + esc(b.n) + '</b><i>' + esc(b.rk) + '</i></span>' +
+      (nc ? '' : '<span class="tb4-cnt"><b data-tb4-count="' + b.d + '" data-cd="' + (d + 60) + '">' + b.d + '</b>' + _tb4Flame(_tb4Tier(b.d)) + '</span>') + '</div>';
+  }
+  function _tb4PactInner(p) {
+    const lab = function (m) { return '<div class="tb4-tl">' + _tb4Flame(8, false, true) + '<span>Pact flames</span>' + (m ? '<em>' + m + '</em>' : '') + '</div>'; };
+    if (!p.friends) return lab('') + '<div class="tb4-empty">' + _tb4Unlit() + '<h4>Add a friend.</h4><p>Every day you both walk, your flame grows.</p></div>';
+    const burn = p.bonds, cold = Math.max(0, p.friends - burn.length);
+    if (!burn.length) return lab('') + '<div class="tb4-empty">' + _tb4Flame(18, true) + '<h4>' + (p.friends === 1 ? 'Your flame is cold.' : 'All ' + p.friends + ' flames are cold.') + '</h4><p>Walk today. Any friend who walks too lights one again.</p></div>';
+    const m = '<b>' + burn.length + '</b> burning';
+    if (burn.length === 1) {
+      const b = burn[0];
+      return lab(m) + '<div class="tb4-one"><div class="tb4-oneh tb4-e" style="--d:420ms">' + _tb4Flame(20) + '<b data-tb4-count="' + b.d + '" data-cd="440">' + b.d + '</b><span class="tb4-m">' + (b.d === 1 ? 'day' : 'days') + '</span></div>' +
+        _tb4Bond(b, 1, true) + '<p class="tb4-note">' + (cold ? 'Your other ' + cold + ' flame' + (cold > 1 ? 's are' : ' is') + ' cold.' : '') + '</p></div>';
     }
-    return '<div class="tb-todo tb-e" style="--d:320ms"><div class="tb-tdh tb-mono">' + _TB_TODO + '<span>Today’s to-dos</span>' + (cnt ? '<span class="tb-tdc">' + cnt + '</span>' : '') + '</div>' + body + '</div>';
+    return lab(m) + '<div class="tb4-bonds">' + burn.slice(0, 3).map(function (b, i) { return _tb4Bond(b, i, false); }).join('') + '</div>' +
+      (burn.length > 3 ? '<div class="tb4-more">+' + (burn.length - 3) + ' more</div>' : '');
+  }
+
+  // ── tile 2 · Your steps, ranked. Your own 14 finished days (only days with steps, three needed)
+  // against every other hunter's, from GET /v1/steps/rank (anonymous, fetched once a day). ──
+  function _tb4StepsLocal() {
+    let daily = {}; try { daily = (loadLeaderboardState() || {}).steps_daily || {}; } catch (_) {}
+    let sum = 0, have = 0, k = prevDay(today);
+    for (let i = 0; i < 14; i++) { const v = Number(daily[k]) || 0; if (v > 0 && v < 200000) { sum += v; have++; } k = prevDay(k); }
+    return { have: have, avg: have ? Math.round(sum / have) : 0 };
+  }
+  function _tb4HealthOk() {
+    try { return (typeof Health !== 'undefined') && !!Health.isAvailable && !!Health.isAvailable() && !!Health.permissionStatus && Health.permissionStatus() === 'granted'; } catch (_) { return false; }
+  }
+  function _tb4StepsField() {
+    try { const o = JSON.parse(localStorage.getItem(TB_STEPS_KEY) || 'null'); if (o && o.day === today && Array.isArray(o.others)) return o; } catch (_) {}
+    return null;
+  }
+  let _tb4StepsInflight = null, _tb4StepsFailed = false;
+  function _tb4StepsPrefetch() {
+    try {
+      if (_tb4StepsInflight) return _tb4StepsInflight;
+      if (_tb4StepsField()) return null;
+      if (!(window.Auth && typeof Auth.stepsRank === 'function')) { _tb4StepsFailed = true; return null; }
+      let u = null; try { u = Auth.getCurrentUser(); } catch (_) {}
+      if (!u || !u.jwt) { _tb4StepsFailed = true; return null; }
+      const day = today;
+      _tb4StepsInflight = Promise.resolve(Auth.stepsRank()).then(function (r) {
+        if (r && r.ok && Array.isArray(r.others)) {
+          _tb4StepsFailed = false;
+          const others = r.others.map(Number).filter(function (v) { return v > 0 && v < 200000; }).slice(0, 5000);
+          try { localStorage.setItem(TB_STEPS_KEY, JSON.stringify({ day: day, others: others })); } catch (_) {}
+        } else _tb4StepsFailed = true;
+      }).catch(function () { _tb4StepsFailed = true; }).then(function () { _tb4StepsInflight = null; });
+      return _tb4StepsInflight;
+    } catch (_) { return null; }
+  }
+  function _tb4Steps() {
+    const me = _tb4StepsLocal();
+    if (me.have < 3) return (me.have > 0 || _tb4HealthOk()) ? { mode: 'days', have: me.have } : { mode: 'nohealth' };
+    const f = _tb4StepsField();
+    if (!f) return { mode: 'wait', you: me.avg, failed: _tb4StepsFailed && !_tb4StepsInflight };
+    const others = f.others.slice(), you = me.avg, n = others.length + 1;
+    let above = 0, below = 0;
+    others.forEach(function (v) { if (v > you) above++; else if (v < you) below++; });
+    const all = others.concat([you]).sort(function (a, b) { return a - b; }), h = all.length >> 1;
+    const median = all.length % 2 ? all[h] : Math.round((all[h - 1] + all[h]) / 2);
+    return { mode: 'rank', n: n, you: you, place: above + 1, below: below, median: median, top: all[all.length - 1], others: others };
+  }
+  // A quiet stand-in field (never real numbers) behind the not-yet-ranked states.
+  let _tb4GhostF = null;
+  function _tb4Ghost() {
+    if (_tb4GhostF) return _tb4GhostF;
+    const a = []; for (let i = 0; i < 41; i++) { const q = (i + 0.5) / 41; a.push(Math.max(400, Math.round(7000 + Math.log(q / (1 - q)) * 0.5513 * 2600))); }
+    return (_tb4GhostF = a);
+  }
+  function _tb4Rng(seed) { let s = (seed * 2654435761) >>> 0 || 1; return function () { s ^= s << 13; s >>>= 0; s ^= s >>> 17; s ^= s << 5; s >>>= 0; return s / 4294967296; }; }
+  function _tb4YouMark(cx, cy, r, s, mx, pin) {
+    const below = s.place > s.n / 2, left = below || cx > TB4_CW - 30, lx = left ? cx - r - 4 : cx + r + 4;
+    let arrow = '';
+    if (below) {
+      const x0 = cx + r + 3, x1 = mx - 2;
+      if (x1 > x0 + 4) arrow = '<path d="M' + x0.toFixed(1) + ' ' + cy.toFixed(1) + 'H' + x1.toFixed(1) + '" stroke="#4ade80" stroke-width="1.2" stroke-dasharray="2 2"/>' +
+        '<path d="M' + (x1 - 3).toFixed(1) + ' ' + (cy - 2.5).toFixed(1) + 'L' + x1.toFixed(1) + ' ' + cy.toFixed(1) + 'L' + (x1 - 3).toFixed(1) + ' ' + (cy + 2.5).toFixed(1) + '" stroke="#4ade80" stroke-width="1.2" fill="none" stroke-linecap="round"/>';
+    }
+    const stem = pin ? '<line x1="' + cx.toFixed(1) + '" x2="' + cx.toFixed(1) + '" y1="' + cy.toFixed(1) + '" y2="32" stroke="#4ade80" stroke-width="1.2"/>' : '';
+    return '<g class="tb4-youg" style="--d:1000ms">' + arrow + stem +
+      '<circle class="tb4-pulse" cx="' + cx.toFixed(1) + '" cy="' + cy.toFixed(1) + '" r="' + r + '" fill="none" stroke="#4ade80"/>' +
+      '<circle class="tb4-youd" cx="' + cx.toFixed(1) + '" cy="' + cy.toFixed(1) + '" r="' + r + '"/>' +
+      '<text class="tb4-yl" x="' + lx.toFixed(1) + '" y="' + (cy + 2.4).toFixed(1) + '" text-anchor="' + (left ? 'end' : 'start') + '">YOU</text></g>';
+  }
+  /** Up to 150 hunters: one stacked dot each, 25 columns. Above that every hunter is still a dot,
+   *  scattered inside the shape of the distribution. The dashed line is the middle hunter. */
+  function _tb4Chart(s, others, ghost) {
+    const base = 32, top = Math.max(1, s.you || 0, Math.max.apply(null, others.length ? others : [0]));
+    const X = function (v) { return v / top * TB4_CW; }, mx = X(s.median || 0);
+    let g = '', you = '';
+    if (others.length <= 150) {
+      const C = 25, P = TB4_CW / C, bins = new Array(C).fill(0), bi = function (v) { return Math.max(0, Math.min(C - 1, Math.floor(v / top * C))); };
+      others.forEach(function (v) { bins[bi(v)]++; });
+      const yb = ghost ? -1 : bi(s.you);
+      const mxs = Math.max(1, Math.max.apply(null, bins.map(function (c, i) { return c + (i === yb ? 1 : 0); })));
+      const py = Math.min(5.2, 27 / mxs), r = Math.min(2.15, py * 0.42);
+      bins.forEach(function (c, i) { for (let k = 0; k < c; k++) g += '<circle class="tb4-dot" cx="' + ((i + 0.5) * P).toFixed(1) + '" cy="' + (base - r - k * py).toFixed(1) + '" r="' + r.toFixed(2) + '" style="--d:' + (520 + i * 15) + 'ms"/>'; });
+      if (yb >= 0) you = _tb4YouMark((yb + 0.5) * P, base - r - bins[yb] * py, +(r + 1.1).toFixed(2), s, mx);
+    } else {
+      const C = 60, bins = new Array(C).fill(0), bi = function (v) { return Math.max(0, Math.min(C - 1, Math.floor(v / top * C))); };
+      others.forEach(function (v) { bins[bi(v)]++; });
+      const sm = bins.map(function (c, i) { return (bins[i - 1] || 0) * 0.25 + c * 0.5 + (bins[i + 1] || 0) * 0.25; });
+      const M = Math.max(0.0001, Math.max.apply(null, sm)), R = _tb4Rng(5);
+      others.forEach(function (v) { const h = sm[bi(v)] / M * 27; g += '<circle class="tb4-dot" cx="' + Math.min(TB4_CW, X(v) + (R() - 0.5) * 1.4).toFixed(1) + '" cy="' + (base - 0.9 - R() * h).toFixed(1) + '" r=".8" style="--d:' + (520 + Math.round(X(v) * 2)) + 'ms"/>'; });
+      if (!ghost) you = _tb4YouMark(X(s.you), base - sm[bi(s.you)] / M * 27 - 4, 2.6, s, mx, true);
+    }
+    const med = ghost ? '' : '<line x1="' + mx.toFixed(1) + '" x2="' + mx.toFixed(1) + '" y1="0" y2="' + (base + 3) + '" stroke="#585a76" stroke-width="1" stroke-dasharray="2 2"/>';
+    return '<div class="tb4-chart"><svg viewBox="0 0 ' + TB4_CW + ' ' + (base + 4) + '" aria-hidden="true">' + med +
+      '<line x1="0" x2="' + TB4_CW + '" y1="' + (base + 3) + '" y2="' + (base + 3) + '" stroke="rgba(149,150,178,.18)"/>' +
+      '<g' + (ghost ? ' opacity=".32"' : '') + '>' + g + '</g>' + you + '</svg></div>';
+  }
+  function _tb4StepsInner(s) {
+    const head = '<div class="tb4-tl">' + _TB4_FEET + '<span>Your steps, ranked</span></div>';
+    if (s.mode === 'nohealth') return head + '<p class="tb4-sub tb4-lead">Connect Apple Health to be ranked.</p>' + _tb4Chart({}, _tb4Ghost(), true) + '<div class="tb4-axis"><span class="tb4-gd" style="left:0">Connect ›</span></div>';
+    if (s.mode === 'days') {
+      let pips = ''; for (let i = 0; i < 3; i++) pips += '<i' + (i < s.have ? ' class="tb4-on"' : '') + '></i>';
+      return head + '<div class="tb4-hero tb4-hl"><span class="tb4-pips">' + pips + '</span><span class="tb4-hm">' + s.have + ' of 3 days</span></div><p class="tb4-sub">Your rank appears after 3 days of steps.</p>' + _tb4Chart({}, _tb4Ghost(), true);
+    }
+    if (s.mode === 'wait') {
+      return head + '<div class="tb4-hero"><b data-tb4-count="' + s.you + '" data-cd="520">' + _wgmFmtN(s.you) + '</b><span class="tb4-hm">a day</span></div>' +
+        '<p class="tb4-sub">' + (s.failed ? 'Last 14 days. Your rank appears when you’re online.' : 'Last 14 days. Ranking you against every hunter…') + '</p>' + _tb4Chart({}, _tb4Ghost(), true);
+    }
+    const first = s.place === 1, mx = s.median / Math.max(1, s.top) * 100;
+    let hero, sub;
+    if (first) { hero = '<b>#1</b><span class="tb4-hm">of ' + _wgmFmtN(s.n) + '</span>'; sub = 'The most steps on the app.'; }
+    else if (s.place <= s.n / 2) {
+      hero = '<b>Top ' + Math.max(1, Math.round(s.place / s.n * 100)) + '%</b><span class="tb4-hm' + (s.n > 999 ? ' tb4-tight' : '') + '">#' + _wgmFmtN(s.place) + ' of ' + _wgmFmtN(s.n) + '</span>';
+      sub = '<b data-tb4-count="' + s.you + '" data-cd="520">' + _wgmFmtN(s.you) + '</b> a day, last 14 days';
+    } else {
+      const a = Math.round(s.below / Math.max(1, s.n - 1) * 100), gap = Math.round((s.median - s.you) / 100) * 100;
+      hero = '<b class="tb4-sm">Ahead of ' + a + '%</b>';
+      sub = gap > 0 ? 'of hunters. <b class="tb4-g">+' + _wgmFmtN(gap) + '</b> a day reaches the middle.' : 'of hunters, at the middle.';
+    }
+    const midR = Math.max(36, Math.min(66, 100 - mx));   // keep the Mid label clear of the edge and of the right label
+    return head + '<div class="tb4-hero">' + hero + '</div><p class="tb4-sub">' + sub + '</p>' + _tb4Chart(s, s.others) +
+      '<div class="tb4-axis"><span style="right:' + midR.toFixed(1) + '%">Mid ' + _wgmFmtN(s.median) + '</span><span' + (first ? ' class="tb4-g"' : '') + ' style="right:0">' + (first ? 'You ' + _wgmFmtN(s.you) : 'Top ' + _wgmFmtN(s.top)) + '</span></div>';
+  }
+
+  // ── tile 3 · the newest developer update (W973/W986 cache), NEW until it is opened ──
+  function _tb4Board() {
+    let u = null; try { u = _cmUpdate; } catch (_) {}
+    if (!u || !u.id) return { id: '', title: '', date: '', isNew: false };
+    let date = '';
+    const ca = Number(u.created_at) || 0;
+    if (ca > 0) { const dt = new Date(ca < 1e12 ? ca * 1000 : ca); date = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][dt.getDay()] + ' · ' + _TB_MON[dt.getMonth()] + ' ' + dt.getDate(); }
+    let isNew = false; try { isNew = _cmUpdateUnseen(); } catch (_) {}
+    return { id: String(u.id), title: String(u.title || '').trim() || 'A new update', date: date, isNew: isNew };
+  }
+  function _tb4BoardInner(b) {
+    return '<div class="tb4-nt">' + _TB4_DOC + (b.isNew ? '<span class="tb4-new">New</span>' : '') + '</div><div class="tb4-tl2">Community board</div>' +
+      '<div class="tb4-bt">' + esc(b.title || 'News from the developer lands here.') + '</div><div class="tb4-bd">' + esc(b.date || '') + '</div>';
+  }
+
+  // ── tile 4 · Write a review. No stars, no question, no reward, nothing in return (W974 / Apple 1.1.7). ──
+  function _tb4Thanked() { try { return localStorage.getItem(TB_REVIEW_KEY) === today; } catch (_) { return false; } }
+  function _tb4ReviewInner(r) {
+    return r === 'thanked'
+      ? '<div class="tb4-nt">' + _TB4_THANKS + '</div><div class="tb4-rv">Thank you.</div><p class="tb4-rp">Every review helps another hunter find Awakened.</p>'
+      : '<div class="tb4-nt">' + _TB4_QUILL + _TB4_EXT + '</div><div class="tb4-rv">Write a review</div><p class="tb4-rp">It helps other hunters find Awakened.</p>';
+  }
+
+  const _TB4_TK = { pact: ['#ff7a3c', 340, 'Open Pact Flames'], board: ['#5ad6c8', 400, 'Open the latest update'], steps: ['#4ade80', 460, 'Open the steps board'], review: ['#f5b842', 520, 'Write a review on the App Store'] };
+  function _tb4Tile(k, inner, cls, label) {
+    const a = _TB4_TK[k];
+    return '<div class="tb4-tile tb4-e' + (cls ? ' ' + cls : '') + '" role="button" tabindex="0" data-tile="' + k + '" aria-label="' + (label || a[2]) + '" style="--tb4-acc:' + a[0] + ';--d:' + a[1] + 'ms">' + inner + '</div>';
+  }
+  function _tb4TilesHtml(d) {
+    return '<div class="tb4-tiles">' +
+      _tb4Tile('pact', _tb4PactInner(d.pact)) +
+      _tb4Tile('board', _tb4BoardInner(d.board), d.board.isNew ? '' : 'tb4-read') +
+      _tb4Tile('steps', _tb4StepsInner(d.steps), '', d.steps.mode === 'nohealth' ? 'Connect Apple Health' : '') +
+      _tb4Tile('review', _tb4ReviewInner(d.review), d.review === 'thanked' ? 'tb4-inert' : '') +
+      '</div>';
+  }
+  /** Where a tile tap lands once the sheet has left. */
+  function _tb4Go(k, d) {
+    setTimeout(function () {
+      try {
+        if (k === 'pact') {
+          switchTab('social'); _cmSetPane('friends');
+          const g = document.getElementById('guildhall-friends-section'); if (g && g.scrollIntoView) g.scrollIntoView({ block: 'start' });
+        } else if (k === 'board') {
+          switchTab('social'); _cmSetPane('board');
+          if (d.board && d.board.id) openBoardTopic(d.board.id);
+        } else if (k === 'steps') {
+          if (d.steps && d.steps.mode === 'nohealth') showHealthKitPreprompt();
+          else openLeaderboardRanking('step_total');
+        }
+      } catch (e) { _logSwallow('tb:go', e); }
+    }, 0);
   }
   function _tbHtml(d) {
     const climb = d.isMax
       ? '<div class="tb-clt tb-mono"><span>Rank ' + esc(d.rank) + '</span><span class="tb-to">The summit of the ranks</span></div><div class="tb-bar"><i data-frac="1"></i></div>'
       : '<div class="tb-clt tb-mono"><span>Rank ' + esc(d.rank) + '</span><span class="tb-to">' + _wgmFmtN(d.to) + ' XP to ' + esc(d.next) + '</span></div><div class="tb-bar"><i data-frac="' + d.frac + '"></i></div>';
-    return '<div class="tb-sheet">' +
+    return '<div class="tb-sheet">' + _TB4_DEFS +
       '<div class="tb-head"><div class="tb-e" style="--d:80ms"><div class="tb-mono tb-date">' + esc(d.date) + '</div><div class="tb-dayn">Day <em>' + d.day + '</em></div></div>' +
-      '<div class="tb-streak tb-mono tb-e' + (d.streak ? '' : ' tb-none') + '" style="--d:160ms">' + (d.streak ? _TB_FLAME + d.streak + '-day streak' : 'Streak begins today') + '</div></div>' +
-      (d.recap ? _tbRecapHtml(d.recap) : '<p class="tb-yest tb-e" style="--d:220ms">' + d.yest + '</p>') +   // W1014 — Monday: last week replaces yesterday
-      _tbTodoHtml(d.todos, d.recap ? ((window.innerHeight || 800) <= 720 ? 2 : 3) : 4) +
-      '<div class="tb-climb tb-e" style="--d:700ms"><div class="tb-hex"><svg viewBox="0 0 44 48" fill="none" aria-hidden="true"><path d="M22 2l18 10v24L22 46 4 36V12z" stroke="#f5b842" stroke-width="1.4" fill="#13132a"></path><path d="M22 7l14 8v18l-14 8-14-8V15z" stroke="rgba(245,184,66,.25)"></path></svg><b>' + esc(d.rank) + '</b></div><div class="tb-cl">' + climb + '</div></div>' +
-      (d.world ? '<div class="tb-world tb-e" style="--d:1120ms">' + _TB_GATE + '<span>' + d.world + '</span></div>' : '') +
-      (d.news ? '<div class="tb-world tb-news tb-e" style="--d:1180ms">' + _TB_NEWS + '<span>New on the Community board: <b>' + esc(d.news) + '</b></span></div>' : '') +
+      '<div class="tb-streak tb-mono tb-e' + (d.streak ? '' : ' tb-none') + '" style="--d:140ms">' + (d.streak ? _TB_FLAME + d.streak + '-day streak' : 'Streak begins today') + '</div></div>' +
+      // W1178 — the climb sits under the day now (the design); Monday's recap band or yesterday's line follows
+      '<div class="tb-climb tb-e" style="--d:170ms"><div class="tb-hex"><svg viewBox="0 0 44 48" fill="none" aria-hidden="true"><path d="M22 2l18 10v24L22 46 4 36V12z" stroke="#f5b842" stroke-width="1.4" fill="#13132a"></path><path d="M22 7l14 8v18l-14 8-14-8V15z" stroke="rgba(245,184,66,.25)"></path></svg><b>' + esc(d.rank) + '</b></div><div class="tb-cl">' + climb + '</div></div>' +
+      (d.recap ? _tbRecapHtml(d.recap) : '<p class="tb-yest tb-e" style="--d:200ms">' + d.yest + '</p>') +   // W1014 — Monday: last week replaces yesterday
+      _tb4TilesHtml(d) +
+      (d.world ? '<div class="tb-world tb-e" style="--d:840ms">' + _TB_GATE + '<span>' + d.world + '</span></div>' : '') +
       '<div class="tb-ritual tb-sealin"><button type="button" class="tb-seal" aria-label="Hold to begin the day">' + _tbSealSvg() + '</button><div class="tb-rl"><span class="tb-mono">Hold to begin</span><span class="tb-done">The day is yours.</span></div></div>' +
       '</div>';
   }
@@ -67724,7 +67928,8 @@
     const d = _tbData();
     // W986 — the owner's preview always shows the update line: the latest update's
     // title even once he has opened it, or a sample when there is none yet.
-    if (opts.preview && !d.news) { try { d.news = String((_cmUpdate && _cmUpdate.title) || '').trim() || 'Your next update’s title appears here'; } catch (_) { d.news = 'Your next update’s title appears here'; } }
+    // W1178 — the owner's preview always has a board tile to look at: a sample when there is no update yet.
+    if (opts.preview && !d.board.id) d.board = { id: '', title: 'Your next update’s title appears here', date: '', isNew: true };
     if (opts.preview && !d.recap) { try { d.recap = _tbRecap({ force: true }); } catch (_) {} }
     if (opts.preview && !d.recap) d.recap = { ws: '', K: 38, S: 43, tone: 'plain', lead: null, range: 'SEP 28 – OCT 4', dots: ['p', 'k', 'p', 'k', 'p', 'p', 'k'], lines: ['Sleep was your hardest vow: 2 of 7 days.', 'It’s first on today’s list.'] };
     let wkWait = null;   // W1015
@@ -67735,7 +67940,6 @@
       else { const p = _tbRecapPrefetch(!!opts.preview); if (p) { d.recap.pending = true; wkWait = p; } }
     }
     if (!opts.preview && d.recap && d.recap.lead) { try { localStorage.setItem(TB_LEAD_KEY, JSON.stringify({ date: today, id: d.recap.lead })); } catch (_) {} }
-    // W1017 — the preview shows the real to-do card (with no to-dos, that is the add box)
     let RM = false; try { RM = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches); } catch (_) {}
     root.className = 'tb-frame';
     root.innerHTML = _tbHtml(d);
@@ -67747,38 +67951,8 @@
     void root.offsetWidth; root.classList.add('tb-enter');
     const frac = Number(bar.getAttribute('data-frac')) || 0;
     if (RM) bar.style.width = (frac * 100) + '%';
-    else at(700, function () { bar.style.width = (frac * 100) + '%'; });
-    at(1850, function () { root.classList.add('tb-breathe'); });
-    // W1017 — the first to-do, straight from the briefing. In the preview nothing is saved.
-    let addedTodo = false;
-    (function wireTdAdd() {
-      const box = root.querySelector('.tb-todo'); if (!box) return;
-      const inp = box.querySelector('[data-tb-tdin]'), go = box.querySelector('[data-tb-tdgo]'); if (!inp || !go) return;
-      let dayOff = 0;   // W1018 — the chosen day
-      box.querySelectorAll('[data-tb-tdday]').forEach(function (b) {
-        b.addEventListener('click', function () {
-          dayOff = parseInt(b.getAttribute('data-tb-tdday'), 10) || 0;
-          box.querySelectorAll('[data-tb-tdday]').forEach(function (x) { const on = x === b; x.classList.toggle('tb-tdday--on', on); x.setAttribute('aria-pressed', on ? 'true' : 'false'); });
-          _tbHap('selection');
-        });
-      });
-      const add = function () {
-        if (dead) return;
-        const v = (inp.value || '').trim(); if (!v) { try { inp.focus(); } catch (_) {} return; }
-        if (opts.preview) {
-          d.todos = dayOff === 0 ? { due: 1, od: 0, any: true, next: null, items: [{ t: v.slice(0, 80), od: false, rem: '', pri: false }] }
-                                 : { due: 0, od: 0, any: true, items: [], next: { t: v.slice(0, 80), day: dayOff === 1 ? 'TOMORROW' : _TODO_WD[_todoDt(dayOff).getDay()] } };
-        } else { try { _todoQuickAdd(v, dayOff); d.todos = _todoBrief(); addedTodo = true; } catch (e) { _logSwallow('tb:quickadd', e); } }
-        try { inp.blur(); } catch (_) {}
-        const tmp = document.createElement('div');
-        tmp.innerHTML = _tbTodoHtml(d.todos, d.recap ? ((window.innerHeight || 800) <= 720 ? 2 : 3) : 4);
-        const fresh = tmp.firstElementChild;
-        if (fresh) { fresh.classList.remove('tb-e'); fresh.classList.add('tb-todo--added'); box.replaceWith(fresh); }
-        _tbHap('light'); _tbTone(660, 0, 0.12, 0.05); _tbTone(990, 0.08, 0.16, 0.05);
-      };
-      go.addEventListener('click', add);
-      inp.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); add(); } });
-    })();
+    else at(400, function () { bar.style.width = (frac * 100) + '%'; });
+    at(1750, function () { root.classList.add('tb-breathe'); });
     // W1015 — the words land when DeepSeek answers (or the rules sentence after a short wait)
     if (wkWait) {
       Promise.race([wkWait, new Promise(function (res) { setTimeout(res, opts.preview ? 4000 : 1500); })]).then(function () {
@@ -67809,14 +67983,15 @@
     // The ritual: hold ~1s. Early release drains back over 250ms, no message.
     let p = 0, raf = 0, t0 = 0, held = false, ticks = 0;
     const set = function (v) { p = v; seal.style.setProperty('--p', v); };
-    const stamp = function () {
+    // k: the tile that began the day (W1178): a two-note chord and a quicker exit, to that place.
+    const stamp = function (k) {
       done = true; held = false;
       root.classList.remove('tb-holding'); root.classList.add('tb-stamped', 'tb-anim');
       _tbHap('heavy');
-      [392, 523.25, 659.25, 783.99].forEach(function (fr, i) { _tbTone(fr, i * 0.06, 1.3, 0.09); });
-      _tbTone(98, 0, 0.5, 0.12);
-      at(1300, function () { root.classList.add('tb-leaving'); });
-      at(1750, function () { close(); });
+      if (k) { _tbTone(523.25, 0, 0.8, 0.08); _tbTone(783.99, 0.05, 0.9, 0.08); }
+      else { [392, 523.25, 659.25, 783.99].forEach(function (fr, i) { _tbTone(fr, i * 0.06, 1.3, 0.09); }); _tbTone(98, 0, 0.5, 0.12); }
+      at(k ? 640 : 1300, function () { root.classList.add('tb-leaving'); });
+      at(k ? 1090 : 1750, function () { close(k); });
     };
     const down = function (e) {
       if (done || held) return;
@@ -67827,7 +68002,7 @@
         if (!held || dead) return;
         const v = Math.min(1, (t - t0) / 1000); set(v);
         if ((ticks < 1 && v > 0.33) || (ticks < 2 && v > 0.66)) { ticks++; _tbHap('selection'); }
-        if (v >= 1) return stamp();
+        if (v >= 1) return stamp(null);
         raf = requestAnimationFrame(step);
       })(performance.now());
     };
@@ -67843,19 +68018,75 @@
     seal.addEventListener('keyup', function (e) { if (e.key === ' ' || e.key === 'Enter') up(); });
     seal.addEventListener('contextmenu', function (e) { e.preventDefault(); });   // iOS long-press menu
 
+    // W1178 — the tiles. A tap on Pact Flames, the board or the steps begins the day: the seal fills
+    // in 260 ms and stamps by itself, then the sheet leaves for that place. The review tile opens the
+    // App Store; the briefing stays and the tile says thank you until midnight.
+    const quick = function (k, t) {
+      if (done || held) return;
+      done = true;
+      root.querySelectorAll('.tb4-picked').forEach(function (x) { x.classList.remove('tb4-picked'); });
+      t.classList.add('tb4-picked'); _tbHap('selection');
+      if (RM) { set(1); stamp(k); return; }
+      const s = performance.now();
+      (function fill(n) { if (dead) return; const x = Math.min(1, (n - s) / 260); set(x * x); if (x < 1) raf = requestAnimationFrame(fill); else stamp(k); })(s);
+    };
+    const thank = function (t) {
+      if (t.classList.contains('tb4-inert')) return;
+      t.classList.add('tb4-inert');
+      try { window.open(TB_REVIEW_URL, '_system'); } catch (_) {}
+      if (!opts.preview) {
+        try { localStorage.setItem(TB_REVIEW_KEY, today); } catch (_) {}
+        try { _reviewConsumeAsk(); } catch (_) {}   // the rating cards count it as an ask (W847 spacing)
+      }
+      _tbHap('light');
+      at(450, function () { t.style.opacity = '0'; });
+      at(650, function () { t.innerHTML = _tb4ReviewInner('thanked'); t.style.opacity = ''; });
+    };
+    const act = function (t) { const k = t.getAttribute('data-tile'); if (k === 'review') thank(t); else quick(k, t); };
+    root.querySelectorAll('.tb4-tile').forEach(function (t) {
+      const off = function () { t.classList.remove('tb4-down'); };
+      t.addEventListener('pointerdown', function () { if (done || held || t.classList.contains('tb4-inert')) return; t.classList.add('tb4-down'); _tbHap('light'); });
+      t.addEventListener('pointerleave', off); t.addEventListener('pointercancel', off);
+      t.addEventListener('pointerup', function () { if (!t.classList.contains('tb4-down')) return; off(); act(t); });
+      t.addEventListener('keydown', function (e) { if ((e.key === 'Enter' || e.key === ' ') && !done && !t.classList.contains('tb4-inert')) { e.preventDefault(); act(t); } });
+      t.addEventListener('contextmenu', function (e) { e.preventDefault(); });
+    });
+    // Numbers count up from their own moment (streaks, your average).
+    const counts = function (scope) {
+      if (RM) return;
+      scope.querySelectorAll('[data-tb4-count]').forEach(function (el) {
+        const v = Number(el.getAttribute('data-tb4-count')) || 0, t0 = performance.now() + (Number(el.getAttribute('data-cd')) || 400);
+        el.textContent = '0';
+        (function tick(n) { if (dead) return; const k = Math.min(1, Math.max(0, (n - t0) / 600)); el.textContent = _wgmFmtN(v * (1 - Math.pow(1 - k, 3))); if (k < 1) requestAnimationFrame(tick); })(performance.now());
+      });
+    };
+    counts(root);
+    // The field arrives once a day; until it does the steps tile shows your average, then ranks you in place.
+    if (d.steps && d.steps.mode === 'wait') {
+      Promise.resolve(_tb4StepsPrefetch()).then(function () {
+        if (dead) return;
+        let s2 = null; try { s2 = _tb4Steps(); } catch (_) {}
+        if (!s2 || s2.mode === 'wait') s2 = Object.assign({}, d.steps, { failed: true });
+        d.steps = s2;
+        const t = root.querySelector('[data-tile="steps"]'); if (!t || t.classList.contains('tb4-picked')) return;
+        t.innerHTML = _tb4StepsInner(s2);
+        counts(t);
+      });
+    }
+
     const stop = function () {
       dead = true; _tbLive = null; timers.forEach(clearTimeout); cancelAnimationFrame(raf);
       try { if (H && typeof H.selectionEnd === 'function') H.selectionEnd(); } catch (_) {}
     };
-    const close = function () {
+    const close = function (k) {
       stop();
       if (opts.preview) { sheet.classList.add('hidden'); overlay.classList.add('hidden'); root.innerHTML = ''; }
       else {
         if (d.recap && d.recap.ws) { try { localStorage.setItem(TB_RECAP_KEY, d.recap.ws); } catch (_) {} }   // once a week
         dismissDailyInsight();
         if (d.recap && d.recap.lead) { try { renderHabits(); } catch (_) {} }   // the hardest vow leads today's list
-        if (addedTodo) { try { switchTab('habits'); _setHabitsView('todo'); } catch (e) { _logSwallow('tb:toTodo', e); } }   // W1017 — land on the planner
       }
+      if (k) _tb4Go(k, d);   // W1178 — a tile tap lands there
     };
     _tbLive = { stop: stop };
     return true;
@@ -67909,7 +68140,7 @@
     step(0);
   }
   try { window.__previewHuntResults = previewHuntResults; window.__hr = { data: _hrData, coop: _hrCoopData, show: _hrShow, sheet: function (inst) { _coopOpenHuntDetail(inst, false); }, sheetNow: function (id) { return _coopSheetResult(id); } }; } catch (_) {}   // QA
-  try { window.__previewTodaysBriefing = previewTodaysBriefing; window.__tb = { data: _tbData, show: _tbShow, leadFirst: _tbLeadFirst, recap: _tbRecap, recapPrefetch: _tbRecapPrefetch }; } catch (_) {}   // QA
+  try { window.__previewTodaysBriefing = previewTodaysBriefing; window.__tb = { data: _tbData, show: _tbShow, leadFirst: _tbLeadFirst, recap: _tbRecap, recapPrefetch: _tbRecapPrefetch, steps: _tb4Steps, stepsPrefetch: _tb4StepsPrefetch }; } catch (_) {}   // QA
 
   // ── EDIT MODAL ───────────────────────────────────────────
   let editGoalValue = 0;
