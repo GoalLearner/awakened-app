@@ -58,6 +58,53 @@
     </div>
   </div>
 
+  <!-- W1177 — owner 2026-11-09: "make sure the app doesn't break down and there's no way to enter or tell me"
+       (Katherine had to find an email address when 3.0.15 closed at launch on iOS 27). A native crash never reaches
+       this page; build step 8e guards that one. Everything else that keeps the app from starting does: this plain
+       inline script runs even when app.js fails to load or throws before the app mounts. If the splash is still up
+       15 s after launch, or app.js reports a failed start (window.__awRescue), a card offers Try again and an email
+       to us with the hunter, the app version, the iOS version and the first error filled in. -->
+  <div id="aw-rescue" hidden style="position:fixed;left:0;right:0;bottom:0;z-index:100500;padding:0 16px calc(20px + env(safe-area-inset-bottom));"></div>
+  <script>
+  (function () {
+    var errs = [], shown = false;
+    function note(m) { try { if (m && errs.length < 3) errs.push(String(m).slice(0, 160)); } catch (_) {} }
+    window.addEventListener('error', function (e) { note(e && e.message); });
+    window.addEventListener('unhandledrejection', function (e) { var r = e && e.reason; note(r && (r.message || String(r))); });
+    function info(why) {
+      var v = '', ios = '', who = '';
+      try { var sc = document.querySelector('script[src*="app.js"]'); v = sc ? (String(sc.getAttribute('src')).split('v=')[1] || '') : ''; } catch (_) {}
+      try { var m = /OS (\d+(?:_\d+)*)/.exec(navigator.userAgent || ''); ios = m ? m[1].replace(/_/g, '.') : ''; } catch (_) {}
+      try { who = (JSON.parse(localStorage.getItem('hb_user') || '{}') || {}).alias || ''; } catch (_) {}
+      var l = ['', '', '', '-', 'Hunter: ' + (who || '?'), 'App: web ' + (v || '?') + ' (' + why + ')', 'iOS: ' + (ios || '?')];
+      if (errs.length) l.push('Error: ' + errs.join(' | '));
+      return l.join('\n');
+    }
+    function show(why, err) {
+      if (shown) return;
+      if (err) note(err.message || String(err));
+      var box = document.getElementById('aw-rescue');
+      if (!box) return;
+      shown = true;
+      var mail = 'mailto:richmondcampano93@gmail.com?subject=' + encodeURIComponent('Awakened did not start') + '&body=' + encodeURIComponent('What happened:' + info(why || 'stuck'));
+      box.innerHTML = '<div role="alertdialog" aria-labelledby="aw-rescue-t" style="max-width:420px;margin:0 auto;background:#15131c;border:1px solid rgba(255,255,255,.12);border-radius:18px;padding:20px 18px 16px;color:#f5f3fb;box-shadow:0 18px 50px rgba(0,0,0,.6);font-family:-apple-system,system-ui,sans-serif;position:relative">' +
+        '<button type="button" id="aw-rescue-x" aria-label="Close" style="position:absolute;top:8px;right:8px;width:36px;height:36px;border:0;background:none;color:rgba(245,243,251,.6);font-size:20px;cursor:pointer">&times;</button>' +
+        '<div id="aw-rescue-t" style="font-weight:700;font-size:19px;margin-bottom:6px">Awakened didn\u2019t start</div>' +
+        '<div style="font-size:15px;line-height:1.4;color:rgba(245,243,251,.75)">Try again. If it keeps happening, tell us and we\u2019ll fix it.</div>' +
+        '<button type="button" id="aw-rescue-retry" style="display:block;width:100%;box-sizing:border-box;height:48px;border-radius:12px;font:600 16px/48px -apple-system,system-ui,sans-serif;text-align:center;text-decoration:none;border:0;margin-top:10px;cursor:pointer;background:#f5f3fb;color:#15131c">Try again</button>' +
+        '<a id="aw-rescue-mail" href="' + mail.replace(/"/g, '&quot;') + '" style="display:block;width:100%;box-sizing:border-box;height:48px;border-radius:12px;font:600 16px/48px -apple-system,system-ui,sans-serif;text-align:center;text-decoration:none;border:0;margin-top:10px;cursor:pointer;background:rgba(255,255,255,.08);color:#f5f3fb">Tell us what happened</a></div>';
+      box.hidden = false;
+      var r = document.getElementById('aw-rescue-retry'); if (r) r.addEventListener('click', function () { try { location.reload(); } catch (_) {} });
+      var x = document.getElementById('aw-rescue-x'); if (x) x.addEventListener('click', function () { box.hidden = true; });
+    }
+    window.__awRescue = show;
+    setTimeout(function () {
+      var sp = document.getElementById('awakened-splash');
+      if (sp && !sp.classList.contains('is-hidden')) show('stuck');
+    }, 15000);
+  })();
+  </script>
+
   <!-- Sign in with Apple gate (v2.1 Phase A). Sits OUTSIDE the main
        tab system; shown before app.js mounts anything. See BACKEND.md §4.
        W1050 — the gate is the first two beats of Onboarding v4 (the mark,
@@ -2885,7 +2932,7 @@
   <script src="simulated-leaderboard.js?v=13"></script>
   <script src="lib/economy.js?v=3"></script>
   <script src="lib/drops.js?v=2"></script>
-  <script src="app.js?v=1559"></script>
+  <script src="app.js?v=1560"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>
@@ -3422,6 +3469,14 @@
             <div class="settings-v2-fcol">
               <div class="settings-v2-fname">Field Manual</div>
               <div class="settings-v2-fsub">The system, plainly stated</div>
+            </div>
+            <span class="settings-v2-fright"><span class="settings-v2-chevsmall">›</span></span>
+          </button>
+          <!-- W1177 — the way to tell us from inside the app: an email with the hunter, version and phone filled in -->
+          <button id="settings-report-problem" class="settings-v2-frow settings-v2-rowbtn" type="button">
+            <div class="settings-v2-fcol">
+              <div class="settings-v2-fname">Report a problem</div>
+              <div class="settings-v2-fsub">Email us · we read every one</div>
             </div>
             <span class="settings-v2-fright"><span class="settings-v2-chevsmall">›</span></span>
           </button>
