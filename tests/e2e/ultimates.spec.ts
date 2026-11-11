@@ -270,6 +270,12 @@ test.describe('W1168/W1169 — earned ultimates', () => {
     const sec = page.locator('#pokedex-sections .pokedex-section--ultimates');
     await expect(sec).toBeVisible({ timeout: 6000 });
     expect(await page.evaluate(() => (document.querySelector('#pokedex-sections .pokedex-section') as HTMLElement).getAttribute('data-section-key'))).toBe('ultimates');   // first, above Mega Rare
+    // W1184 — it starts closed (owner: "I want it closed on default"); a tap opens it and that sticks
+    await expect(sec).toHaveClass(/pokedex-section--collapsed/);
+    await expect(sec.locator('.ua-card').first()).toBeHidden();
+    await sec.locator('[data-section-toggle="ultimates"]').click();
+    await expect(sec).not.toHaveClass(/pokedex-section--collapsed/);
+    expect(await page.evaluate(() => JSON.parse(localStorage.getItem('hb_pokedex_collapsed') || '[]').indexOf('ultimates'))).toBe(-1);
     await expect(sec.locator('.pokedex-section-count')).toHaveText('3 / 9');   // the Signature is always there
     await expect(sec.locator('.ua-card')).toHaveCount(3);
     await expect(sec.locator('.ua-card').first()).toHaveAttribute('data-ua', 'signature');
@@ -297,10 +303,24 @@ test.describe('W1168/W1169 — earned ultimates', () => {
     await page.evaluate(() => (document.querySelector('[data-tab="items"]') as HTMLElement).click());
     const sec = page.locator('#pokedex-sections .pokedex-section--ultimates');
     await expect(sec.locator('.pokedex-section-count')).toHaveText('1 / 9', { timeout: 6000 });
+    await expect(sec).toHaveClass(/pokedex-section--collapsed/);   // W1184 — closed until tapped
     await expect(sec.locator('.ua-card')).toHaveCount(1);
     await expect(sec.locator('.ua-card[data-ua="signature"] .ua-kd')).toHaveText('Equipped');
     await expect(sec.locator('.ua-card[data-ua="signature"] .ua-nm')).not.toHaveText('');
     await expect(sec.locator('.ua-lock')).toHaveCount(8);
+  });
+
+  test('W1184: a saved section list from before (Ultimates open) closes it once; after that the hunter choice sticks', async ({ page }) => {
+    await boot(page, 50, { hb_dev_ults: '1', hb_tour_items_v1: '1', hb_pokedex_collapsed: JSON.stringify(['rare']) });
+    await page.evaluate(() => (document.querySelector('[data-tab="items"]') as HTMLElement).click());
+    const sec = page.locator('#pokedex-sections .pokedex-section--ultimates');
+    await expect(sec).toHaveClass(/pokedex-section--collapsed/, { timeout: 6000 });
+    await expect(page.locator('#pokedex-sections .pokedex-section--rare')).toHaveClass(/pokedex-section--collapsed/);
+    await sec.locator('[data-section-toggle="ultimates"]').click();
+    await expect(sec).not.toHaveClass(/pokedex-section--collapsed/);
+    await page.reload();
+    await page.evaluate(() => (document.querySelector('[data-tab="items"]') as HTMLElement).click());
+    await expect(page.locator('#pokedex-sections .pokedex-section--ultimates')).not.toHaveClass(/pokedex-section--collapsed/, { timeout: 6000 });
   });
 
   test('W1183: a hunter who never saw the old tab keeps nothing from the milestones', async ({ page }) => {
