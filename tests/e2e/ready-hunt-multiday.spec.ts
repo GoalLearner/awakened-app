@@ -47,9 +47,9 @@ async function boot(page: Page, bosses?: Record<string, unknown>, points = '4000
 
 // Replace Apple Health with the fixture (keys = local dates), then run the real scan and return the offered boss ids.
 // W1167 — the Flame fell by itself first; W1176 — every multi-day boss does. These judge tests switch them off unless `auto` is set.
-async function scan(page: Page, fix: Fix, auto = false): Promise<string[]> {
-  return page.evaluate(async ([f, au, ids]: [Fix, boolean, string[]]) => {
-    ids.forEach((id) => { (window as any).Bosses.BOSSES[id].autoKill = au; });
+async function scan(page: Page, fix: Fix, auto: boolean | string = false): Promise<string[]> {   // W1187 — a boss id: that boss alone falls by itself
+  return page.evaluate(async ([f, au, ids]: [Fix, boolean | string, string[]]) => {
+    ids.forEach((id) => { (window as any).Bosses.BOSSES[id].autoKill = au === true || au === id; });
     const H = (window as any).Health;
     const key = (iso: string) => { const d = new Date(iso); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
     const today = key(new Date().toISOString());
@@ -74,7 +74,7 @@ async function scan(page: Page, fix: Fix, auto = false): Promise<string[]> {
     H.getActiveEnergyBetween = async () => 0;
     const r = await (window as any).__readyHunt.scan();
     return (r.offers || []).map((o: any) => o.bossId);
-  }, [fix, auto, AUTO] as [Fix, boolean, string[]]);
+  }, [fix, auto, AUTO] as [Fix, boolean | string, string[]]);
 }
 
 // local date keys for today and the days before it
@@ -264,5 +264,120 @@ test.describe('The Ready Hunt and the multi-day bosses (W1039)', () => {
     expect(await kills(page, ['the_gray_pilgrim'])).toEqual([0]);
     await scan(page, { flights: { ...days(6, 6), [dayKey(6)]: 6 } }, true);   // 42
     await expect.poll(() => kills(page, ['the_gray_pilgrim']), { timeout: 10_000 }).toEqual([1]);
+  });
+});
+
+// W1187 — owner 2026-11-11: "I want to make sure that the automations works for all the multi day bosses from S-tier
+// down... Test and make sure that all automations work over the 2-3 day long bosses". Each boss ALONE (the others wait
+// for a tap), at its exact W1186 bar, so a pass proves the numbers the hunter reads are the numbers that pay:
+//   - the bar on every day of the run → it falls by itself, its own result screen, its reward claimed once, one
+//     entrance fee out of the win, and the same days never pay twice;
+//   - one day short anywhere in the run, on either condition, by the smallest step (1 step, 1 flight, 1 minute of
+//     workout, 6 minutes of sleep) → it stands;
+//   - a run that ends today falls the moment today reaches the bar;
+//   - a run that ended two days ago still pays on the next open, credited to its own last day;
+//   - the rank lock: an A hunter's runs drop the A and B bosses but no S one; a B hunter only the B ones.
+type Bar = { steps?: number; flights?: number; sleep?: number; workouts?: number };
+type MD = { id: string; name: string; rank: string; n: number; bar: Bar };
+const MD_BOSSES: MD[] = [
+  { id: 'erebus_the_shadow_sovereign', name: 'Erebus, the Shadow Sovereign', rank: 'S', n: 3, bar: { steps: 8000, flights: 4 } },
+  { id: 'the_worldspine', name: 'The Worldspine', rank: 'S', n: 3, bar: { steps: 8000 } },
+  { id: 'the_starved_sentinel', name: 'The Starved Sentinel', rank: 'S', n: 3, bar: { steps: 5000, sleep: 6.5 } },
+  { id: 'the_tideless_marcher', name: 'The Tideless Marcher', rank: 'A', n: 2, bar: { steps: 7500, flights: 4 } },
+  { id: 'the_sleepless_ascent', name: 'The Sleepless Ascent', rank: 'A', n: 2, bar: { workouts: 20, sleep: 7 } },
+  { id: 'the_patient_flame', name: 'The Patient Flame', rank: 'B', n: 2, bar: { steps: 7000 } },
+  { id: 'the_vow_keeper', name: 'The Vow Keeper', rank: 'B', n: 2, bar: { sleep: 7 } },
+  { id: 'the_forge_of_ten_thousand_days', name: 'The Forge of Ten Thousand Days', rank: 'B', n: 2, bar: { workouts: 20 } },
+];
+const UNDER: Required<Bar> = { steps: 1, flights: 1, sleep: 0.1, workouts: 1 };
+// the bar on each of the run's n days, ending `end` days ago; `short` takes one condition down on one day
+function runOf(b: MD, end = 0, short?: { metric: keyof Bar; back: number }): Fix {
+  const f: any = {};
+  (Object.keys(b.bar) as (keyof Bar)[]).forEach((m) => {
+    f[m] = {};
+    for (let i = end; i < end + b.n; i++) f[m][dayKey(i)] = (b.bar[m] as number) - (short && short.metric === m && short.back === i ? UNDER[m] : 0);
+  });
+  return f;
+}
+const killOf = (page: Page, id: string) => page.evaluate((i: string) => (window as any).Bosses.getBossState(i).kill_count || 0, id);
+const rewardKeysOf = (page: Page, id: string) => page.evaluate((i: string) => Object.keys(localStorage).filter((k) => k.indexOf('hb_kill_reward_' + i + '_') === 0).sort(), id);
+const feesPaid = (page: Page) => page.evaluate(() => JSON.parse(localStorage.getItem('hb_souls_ledger') || '[]').filter((e: any) => typeof e.delta === 'number' && e.delta < 0).length);
+const barText = (b: MD) => (Object.keys(b.bar) as (keyof Bar)[]).map((m) => m + ' ' + b.bar[m]).join(' + ');
+
+test.describe('W1187 — every multi-day boss falls by itself at its exact bar, S down to B', () => {
+  for (const b of MD_BOSSES) {
+    test(`${b.rank} · ${b.name}: ${barText(b)} on ${b.n} days in a row → falls by itself, once, one fee`, async ({ page }) => {
+      await boot(page);
+      await scan(page, runOf(b), b.id);
+      await expect.poll(() => killOf(page, b.id), { timeout: 15_000 }).toBe(1);
+      await expect(page.locator('#boss-result-overlay .hr-boss')).toHaveText(b.name, { timeout: 8000 });
+      expect(await rewardKeysOf(page, b.id)).toEqual(['hb_kill_reward_' + b.id + '_' + T0]);
+      expect(await feesPaid(page)).toBe(1);
+      expect(await page.evaluate(() => (window as any).__readyHunt.offers())).not.toContain(b.id);   // never offered for a tap
+      await scan(page, runOf(b), b.id);   // the same days again
+      await page.waitForTimeout(1200);
+      expect(await killOf(page, b.id)).toBe(1);
+      expect(await feesPaid(page)).toBe(1);
+    });
+
+    test(`${b.rank} · ${b.name}: one day short anywhere, on any condition, and it stands`, async ({ page }) => {
+      await boot(page);
+      for (const m of Object.keys(b.bar) as (keyof Bar)[]) {
+        for (let back = 0; back < b.n; back++) {
+          await scan(page, runOf(b, 0, { metric: m, back }), b.id);
+          await page.waitForTimeout(900);
+          expect(await killOf(page, b.id), m + ' short ' + back + ' day(s) ago').toBe(0);
+        }
+      }
+      expect(await feesPaid(page)).toBe(0);
+    });
+
+    test(`${b.rank} · ${b.name}: a run ending today falls the moment today reaches the bar`, async ({ page }) => {
+      await boot(page);
+      const first = Object.keys(b.bar)[0] as keyof Bar;
+      await scan(page, runOf(b, 0, { metric: first, back: 0 }), b.id);   // earlier days done, today not yet
+      await page.waitForTimeout(900);
+      expect(await killOf(page, b.id)).toBe(0);
+      await scan(page, runOf(b), b.id);   // today gets there
+      await expect.poll(() => killOf(page, b.id), { timeout: 15_000 }).toBe(1);
+    });
+
+    test(`${b.rank} · ${b.name}: a run that ended two days ago pays on the next open, credited to its own last day`, async ({ page }) => {
+      await boot(page);
+      await scan(page, runOf(b, 2), b.id);   // nothing since: the app stayed shut
+      await expect.poll(() => killOf(page, b.id), { timeout: 15_000 }).toBe(1);
+      expect(await rewardKeysOf(page, b.id)).toEqual(['hb_kill_reward_' + b.id + '_' + dayKey(2)]);
+      expect(await feesPaid(page)).toBe(1);
+    });
+  }
+
+  // every run at once, at the bars, three days long (the two-day bosses read the last two)
+  const ALL: Fix = { steps: days3(8000), flights: days3(4), sleep: days3(7), workouts: days3(20) };
+  function days3(v: number) { const o: Record<string, number> = {}; for (let i = 0; i < 3; i++) o[dayKey(i)] = v; return o; }
+  const byRank = (r: string) => MD_BOSSES.filter((x) => x.rank === r).map((x) => x.id);
+
+  test('the rank lock: an A hunter\'s runs drop every A and B boss and no S one', async ({ page }) => {
+    await boot(page, {}, '7000');   // A rank
+    await scan(page, ALL, true);
+    const ab = byRank('A').concat(byRank('B'));
+    await expect.poll(() => Promise.all(ab.map((id) => killOf(page, id))), { timeout: 30_000 }).toEqual(ab.map(() => 1));
+    await page.waitForTimeout(1200);
+    expect(await Promise.all(byRank('S').map((id) => killOf(page, id)))).toEqual([0, 0, 0]);
+  });
+
+  test('the rank lock: a B hunter\'s runs drop the B bosses only', async ({ page }) => {
+    await boot(page, {}, '3000');   // B rank
+    await scan(page, ALL, true);
+    await expect.poll(() => Promise.all(byRank('B').map((id) => killOf(page, id))), { timeout: 30_000 }).toEqual([1, 1, 1]);
+    await page.waitForTimeout(1200);
+    expect(await Promise.all(byRank('S').concat(byRank('A')).map((id) => killOf(page, id)))).toEqual([0, 0, 0, 0, 0]);
+  });
+
+  test('an S hunter\'s runs, all at the bars at once: all eight fall by themselves, one fee each', async ({ page }) => {
+    await boot(page, {}, '12000');   // S rank
+    await scan(page, ALL, true);
+    const ids = MD_BOSSES.map((x) => x.id);
+    await expect.poll(() => Promise.all(ids.map((id) => killOf(page, id))), { timeout: 40_000 }).toEqual(ids.map(() => 1));
+    expect(await feesPaid(page)).toBe(ids.length);
   });
 });
