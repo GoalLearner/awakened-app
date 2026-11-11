@@ -37,15 +37,15 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 
-// W1182 — AUTO_FIT 0.9 → 0.75 and the goals came down (Coursing Dread 14k, Twin Maw 10k).
+// W1182 — AUTO_FIT 0.9 → 0.75 and the goals came down (Coursing Dread 14k, Twin Maw 10k). W1186 — the Dread 13k.
 describe('pickAutoBoss — the strongest boss both ranks allow whose printed goal fits AUTO_FIT (0.75) × pattern', () => {
   it('a C pair walking 20,000 a day faces The Coursing Dread at its real goal', () => {
     expect(AUTO_FIT).toBe(0.75);
-    expect(pickAutoBoss('C', 'B', 20000)).toEqual({ bossId: 'the_coursing_dread', goalSteps: 14000 });
+    expect(pickAutoBoss('C', 'B', 20000)).toEqual({ bossId: 'the_coursing_dread', goalSteps: 13000 });
   });
-  it('the boundary: 14,000 fits at 18,667; a step less drops to the Twin Maw at 10,000', () => {
-    expect(pickAutoBoss('C', 'C', 18667).bossId).toBe('the_coursing_dread');
-    expect(pickAutoBoss('C', 'C', 18666)).toEqual({ bossId: 'the_twin_maw', goalSteps: 10000 });
+  it('the boundary: 13,000 fits at 17,334; a step less drops to the Twin Maw at 10,000', () => {
+    expect(pickAutoBoss('C', 'C', 17334).bossId).toBe('the_coursing_dread');
+    expect(pickAutoBoss('C', 'C', 17333)).toEqual({ bossId: 'the_twin_maw', goalSteps: 10000 });
   });
   it('an E hunter caps the pair at the Twin Maw however far they walk', () => {
     expect(pickAutoBoss('E', 'S', 40000)).toEqual({ bossId: 'the_twin_maw', goalSteps: 10000 });
@@ -183,9 +183,9 @@ describe('sweepCoopAutoHunts — one sized hunt per walking friend pair per day'
     // u1 (C) + u2 (E): the E hunter caps it at the Twin Maw; pattern ≈ 100k/9 + 50k/9 = 16.7k, × 0.75 = 12.5k → the real 10,000
     expect(byPair.get('u1|u2')!.args[1]).toBe('the_twin_maw');
     expect(byPair.get('u1|u2')!.args[6]).toBe(10000);
-    // u1 (C) + u3 (C): pattern ≈ 24.4k, × 0.75 = 18.3k → The Coursing Dread at 14,000
+    // u1 (C) + u3 (C): pattern ≈ 24.4k, × 0.75 = 18.3k → The Coursing Dread at 13,000 (W1186)
     expect(byPair.get('u1|u3')!.args[1]).toBe('the_coursing_dread');
-    expect(byPair.get('u1|u3')!.args[6]).toBe(14000);
+    expect(byPair.get('u1|u3')!.args[6]).toBe(13000);
     // the participant row is guarded on the instance existing
     const parts = calls.filter((c) => c.sql.includes('INTO coop_boss_participants'));
     expect(parts.length).toBe(3);

@@ -143,9 +143,9 @@ test.describe('The Ready Hunt and the multi-day bosses (W1039)', () => {
     await boot(page);
     await scan(page, { steps: { [T1]: 12000, [T0]: 3000 }, flights: { [T1]: 6, [T0]: 1 } });
     const w = await watchOf(page);
-    expect(w).toContainEqual({ id: 'the_patient_flame', metric: 'steps', bar: 8000, day: T0, also: [] });   // W1182 ladder
-    expect(w).toContainEqual({ id: 'the_tideless_marcher', metric: 'steps', bar: 8500, day: T0, also: [{ metric: 'flights', bar: 4 }] });
-    expect(w).toContainEqual({ id: 'the_tideless_marcher', metric: 'flights', bar: 4, day: T0, also: [{ metric: 'steps', bar: 8500 }] });
+    expect(w).toContainEqual({ id: 'the_patient_flame', metric: 'steps', bar: 7000, day: T0, also: [] });   // W1186 ladder (B 7,000)
+    expect(w).toContainEqual({ id: 'the_tideless_marcher', metric: 'steps', bar: 7500, day: T0, also: [{ metric: 'flights', bar: 4 }] });
+    expect(w).toContainEqual({ id: 'the_tideless_marcher', metric: 'flights', bar: 4, day: T0, also: [{ metric: 'steps', bar: 7500 }] });
     expect(w.filter((h: any) => h.id === 'erebus_the_shadow_sovereign')).toHaveLength(0);   // needs two earlier days
     expect(w.filter((h: any) => h.day === tomorrow)).toHaveLength(0);                       // today is not done yet
   });
@@ -156,8 +156,8 @@ test.describe('The Ready Hunt and the multi-day bosses (W1039)', () => {
     await scan(page, { steps: { [T2]: 12000, [T1]: 12000, [T0]: 12000 }, flights: { [T2]: 10, [T1]: 10, [T0]: 10 } });
     const w = await watchOf(page);
     const flame = w.filter((h: any) => h.id === 'the_patient_flame');
-    expect(flame).toEqual([{ id: 'the_patient_flame', metric: 'steps', bar: 8000, day: tomorrow, also: [] }]);
-    expect(w).toContainEqual({ id: 'erebus_the_shadow_sovereign', metric: 'steps', bar: 9000, day: tomorrow, also: [{ metric: 'flights', bar: 4 }] });
+    expect(flame).toEqual([{ id: 'the_patient_flame', metric: 'steps', bar: 7000, day: tomorrow, also: [] }]);
+    expect(w).toContainEqual({ id: 'erebus_the_shadow_sovereign', metric: 'steps', bar: 8000, day: tomorrow, also: [{ metric: 'flights', bar: 4 }] });
   });
 
   test('the phone list: last night qualified → the Vow Keeper on sleep today; only tonight qualified → tomorrow', async ({ page }) => {
@@ -200,7 +200,7 @@ test.describe('The Ready Hunt and the multi-day bosses (W1039)', () => {
 
   test('W1167: today still short, or a hunter below B → the Flame stands', async ({ page }) => {
     await boot(page);
-    await scan(page, { steps: { [T1]: 12000, [T0]: 7900 } }, true);   // W1182 — the Flame's bar is 8,000
+    await scan(page, { steps: { [T1]: 12000, [T0]: 6900 } }, true);   // W1186 — the Flame's bar is 7,000
     await page.waitForTimeout(800);
     expect((await flame(page)).kill_count || 0).toBe(0);
     await page.evaluate(() => { localStorage.setItem('hb_points', '0'); });

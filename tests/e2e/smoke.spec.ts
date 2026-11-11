@@ -9832,7 +9832,7 @@ test.describe('CA · The ready hunt, groundwork (W1033)', () => {
   test('the ladders are the one-day, one-metric solo bosses, easiest first', async ({ page }) => {
     await freshApp(page);
     const l = await page.evaluate(() => { const r = (window as any).__readyHunt; return ['steps', 'flights', 'sleep'].map((m) => r.ladder(m).map((x: any) => x.bossId + ':' + x.rank + ':' + x.bar)); });
-    expect(l[0]).toEqual(['the_steel_wolf:E:5000', 'the_glass_strider:D:6000', 'the_marathon_wraith:C:7000']);   // W1182 ladder
+    expect(l[0]).toEqual(['the_steel_wolf:E:5000', 'the_glass_strider:D:6000', 'the_marathon_wraith:C:6500']);   // W1186 ladder (C 6,500)
     expect(l[1]).toEqual(['the_carouser:E:4', 'the_ascendant_colossus:C:6', 'the_unbroken_anvil:A:7']);
     expect(l[2]).toEqual(['the_insomniac:E:6.5', 'the_dream_tyrant:D:7']);
   });
@@ -10365,7 +10365,7 @@ test.describe('CB · The ready hunt (W1034 · W1039)', () => {
     expect(ids(w)).toEqual(['the_ascendant_colossus', 'the_carouser', 'the_dream_tyrant', 'the_glass_strider', 'the_insomniac', 'the_iron_warden', 'the_marathon_wraith', 'the_steel_wolf']);
     const by = Object.fromEntries(w.hunts.map((h) => [h.id, h]));
     expect(by.the_iron_warden).toMatchObject({ name: 'The Iron Warden', metric: 'workout', bar: 10 });
-    expect(by.the_marathon_wraith).toEqual({ id: 'the_marathon_wraith', name: 'The Marathon Wraith', metric: 'steps', bar: 7000, beaten: '', until: 0 });   // W1182 ladder
+    expect(by.the_marathon_wraith).toEqual({ id: 'the_marathon_wraith', name: 'The Marathon Wraith', metric: 'steps', bar: 6500, beaten: '', until: 0 });   // W1186 ladder (C 6,500)
     expect(by.the_ascendant_colossus).toMatchObject({ metric: 'flights', bar: 6 });
     expect(by.the_insomniac).toMatchObject({ metric: 'sleep', bar: 6.5 });
     expect(by.the_dream_tyrant).toMatchObject({ metric: 'sleep', bar: 7 });
@@ -11353,7 +11353,7 @@ test.describe('CF · Weekly step bosses (W1070)', () => {
       return c ? { mode: (c.querySelector('.bcard-mode') || {} as any).textContent, cond: (c.querySelector('.bcard-cond') || {} as any).textContent,
         label: (c.querySelector('.bcard-progress-label') || {} as any).textContent, bar: !!c.querySelector('.bcard-wk'), cleared: c.classList.contains('bcard--cleared') } : null;
     });
-    expect(await card()).toEqual({ mode: 'WEEKLY', cond: '31,240 / 49,000 steps this week', label: '31,240 / 49,000', bar: true, cleared: false });
+    expect(await card()).toEqual({ mode: 'WEEKLY', cond: '31,240 / 45,500 steps this week', label: '31,240 / 45,500', bar: true, cleared: false });   // W1186 — the C week is 45,500
     await page.evaluate(() => {
       const s = JSON.parse(localStorage.getItem('hb_leaderboard') || '{}');
       s.steps_daily['2026-10-21'] = 33000;
