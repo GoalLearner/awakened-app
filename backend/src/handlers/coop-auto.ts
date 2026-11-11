@@ -16,8 +16,8 @@
  *                      ÷ (7 + days elapsed this week)            — from the weekly board
  *   pair pattern     = the sum
  *   boss             = the strongest steps-only duo boss both ranks allow whose printed goal
- *                      fits 0.9 × pair pattern (The Coursing Dread 18k, then The Twin Maw 14k);
- *                      if none fits, The Twin Maw with its goal sized to 0.9 × pair pattern
+ *                      fits AUTO_FIT × pair pattern (The Coursing Dread 14k, then The Twin Maw 10k);
+ *                      if none fits, The Twin Maw with its goal sized to AUTO_FIT × pair pattern
  *                      (nearest 100, floor 2,000). The instance row carries the goal, and
  *                      both isGoalMet and every client view read the row, not the catalog.
  *
@@ -77,7 +77,8 @@ export const AUTO_HUNT_MIN_W = 1097;
 /** Steps-only 24h duo bosses, strongest first. Flights and sleep duos wait for a pattern the
  *  phones do not send yet. */
 export const AUTO_BOSSES: readonly string[] = ['the_coursing_dread', 'the_twin_maw'];
-export const AUTO_FIT = 0.9;
+/** W1182 — 0.9 → 0.75: at 90% of a pair's usual walking, any slow day lost the hunt (39% lost). */
+export const AUTO_FIT = 0.75;
 export const AUTO_MIN_GOAL = 2000;
 export const AUTO_SIZED_BOSS = 'the_twin_maw';
 const MAX_CREATE_PER_RUN = 40;

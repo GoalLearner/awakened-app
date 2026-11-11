@@ -35,7 +35,7 @@ const TRIOS = [
   { id: 'the_crossroads_hound', name: 'The Crossroads Hound', rank: 'D', goal: '16,000', fresh: true },
   { id: 'the_threefold_court',  name: 'The Threefold Court',  rank: 'C', goal: '21,000', fresh: false },
   { id: 'the_triune_sentinel',  name: 'The Triune Sentinel',  rank: 'B', goal: '24,000', fresh: true },
-  { id: 'the_trinity_colossus', name: 'The Trinity Colossus', rank: 'A', goal: '27,000', fresh: true },
+  { id: 'the_trinity_colossus', name: 'The Trinity Colossus', rank: 'A', goal: '25,500', fresh: true },   // W1182
 ];
 
 test.describe('A steps trio at every rank (W1104)', () => {

@@ -160,7 +160,7 @@
   const APP_VERSION = '3.0.24';   // W1169 — 3.0.23 APPROVED 2026-11-08 (submitted 2026-11-07 5:00 PM PST, LIVE 2:33 PM PST on the 8th; almost certainly build 628 = w1161: pins, the Wardrobe tap fix), so 3.0.24 opened carrying W1162-W1169 (the 3.0.23 store notes, the board update, matched hunt partners, Add as friend, late steps reach the board, The Patient Flame falls by itself, earned ultimates behind their flag). [history] W1134 — 3.0.22 APPROVED 2026-11-06 (submitted 4:53 AM PST from build 617 = w1132: the Shadowborn + the Elite Eight, the Rising redrawn, profile cards name the look, every open counted), so 3.0.23 opened carrying W1134 (the Worldgate counts a hunter's steps only after 2 days in the app that week). [history] W1127 — 3.0.21 LIVE on the App Store 2026-11-05 9:34 AM PST (built from w1126: no memberships, kill stamps without a title, the tier crests, the onboarding's "How did you find the Gate?"), so 3.0.22 opened carrying W1127 (the app-open ping says when it is a real open; the server counts every one per Pacific day). [history] W1124 — 3.0.20 LIVE on the App Store 2026-11-01 12:50 PM PST (built from w1120: final standings Sunday, shadows in the public feed, Shadow Army on Status); 3.0.21 opened carrying W1121 (its What's New, never shown: re-keyed to 3.0.21), W1122 (no memberships), W1124 (kill stamp without a title, inlined tier crests) and W1125 (the onboarding's last screen asks how the hunter found the app; W1126 keeps it in place when the keyboard opens). [history] W1114 — 3.0.19 approved 2026-10-30 (submitted 1:45 AM PST, w1113: shadows 1 in 5, armor upgrades, relic power by boss rank, relic cards three across); 3.0.20 opened with the feed's boss rank chips, no What's New entry yet. W1107 — 3.0.18 approved and LIVE 2026-10-28 8:02 AM PST (submitted 2026-10-27 7:41 PM PST, build 602 = w1106: the four steps trios, the Rising's nine looks, the earned line in the Wardrobe, the richer-backup offer); 3.0.19 opened at approval. [history] W1103 — 3.0.17 approved 2026-10-27 (build 600, submitted 2026-10-26 6:21 PM PST: the automatic friend hunts, the earned looks, the two-tab Wardrobe); 3.0.18 opened at approval, carrying W1102 (the app offers back a richer cloud backup). [history] W1097 — 3.0.16 approved + live 2026-10-26 (build 599, the iOS 27 fix); 3.0.17 opened at approval. Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.16 = the post-3.0.15 train, opened 2026-10-23 (W1085): 3.0.15 was submitted 2026-10-22 2:55 PM PST from build 595 (w1083: the tally, the preview row, the security pass) and approved the same day, so the train closed under it. It carries W1084 (the tally leads the 3.0.15 What's New) forward. [history] 3.0.15 = the post-3.0.14 train, opened 2026-10-22 (W1080): 3.0.14 was approved and LIVE 2026-10-21 5:08 PM PST from build 591 (w1074) — the first 592 upload was refused ("train closed"), the sixth time an approval closed a train under a build. It carries W1077/W1078 (sign-out ends the session, cloud save checksum + gzip, socket token out of the URL, invite links ask first) forward. [history] 3.0.14 = the post-3.0.13 train, opened 2026-10-21 (W1074): 3.0.13 was approved and went LIVE 2026-10-20 3:50 AM PST from build 587 (w1068), so it carries W1069 (the floor 100 curve), W1070-W1073 (the ten weekly step and sleep bosses and their drops) and the real-screen screenshots and header Apple asked for (App Review 2.3.3) forward. [history] 3.0.11 = the post-3.0.10 train, opened 2026-10-05: Apple's store lookup showed 3.0.10 LIVE (released 11:35 AM PST that day, built from w1024, so it carried W1023 the 9:45 PM finish-strong reminder and nothing after). It carries forward W1025 (Myrmidon King art), W1026 (one request for every co-op hunt) and W1027 (steps 'today' = the device's day), all pushed under the 3.0.10 tag after that build was cut. [history] 3.0.10 = the post-3.0.9 train, opened 2026-10-04 when the owner passed on Apple's approval of 3.0.9 (submitted 2026-10-02 12:41 PM PST, approved 2026-10-03; carried W1002–W1022: weekly to-do planner, to-dos first in the briefing, the Monday recap, times-a-week vows, the interactive Status tab, the Jump Manual program, the flights-hunt result fix). It carries W1023 (the 9:45 PM finish-strong reminder) forward. First TWO-DIGIT patch: every version compare in the app is numeric (_updVersionNewer, the What's New compare), never a string compare. [history] 3.0.9 = the post-3.0.8 train, opened 2026-09-25 the moment Apple approved 3.0.8 (submitted 4:57 PM PST, approved the same evening; carried W989–W1001: Items overhaul, Resolved + mod view counts, the sectioned Habits tab + to-dos v2, topic edit). [history] 3.0.8 = the post-3.0.7 train, opened 2026-09-24 the moment Apple approved 3.0.7 (build 543, submitted 1:15 AM PST, approved same day; the Worldgate In-App Event was approved in the same hour). Carries forward: the three description corrections (Ranked PvP / Streak Shields / five-hunter raid = Premium) go out WITH this version, since a description only changes with a new version. [history] 3.0.7 carried W968–W987 (vows yours + glory verified, morning briefing v2, hunt results, Worldgate MVPs + weekly line + strike freeze, Community Updates + briefing line, mod preview rows, awakened:// scheme). [history] 3.0.7 = the post-3.0.6 train, opened 2026-09-20 the moment Apple approved 3.0.6 (submitted 3:14 AM PST that day, approved same day) — an approval CLOSES a train, and uploading under the approved number is refused (CFBundleShortVersionString must exceed it). This has now bitten FOUR times; the bump is done at approval, not at upload. [history] 3.0.6 carried W960–W967 (Manage Vows fix, rank-bar hairline, Worldgate kill ceremony, division-up celebration, owner preview row, 3.0.6 release notes). [history] 3.0.4 = the post-3.0.3 train, opened 2026-09-11 because Apple approved 3.0.3 (live 2026-09-09) and an approval closes a train — carries W935 (weekly-board upload fix + Apple Health asked on every onboarding path). [history] 3.0.3 = the post-3.0.2 train, opened 2026-09-07 the morning after Apple approved 3.0.2 (submitted 2026-09-06 4:41 PM PT; approval closes a train — twice-bitten lesson) — carries W917-W919b (Ledger view, Streak Shields deleted, handoff 29) forward under the new number. [history] 3.0.2 = the post-release train, opened 2026-09-04 because Apple closes a train on approval (build 493 under 3.0.1 was refused: CFBundleShortVersionString must exceed the approved 3.0.1) — carries W903 (boss-sheet hotfix) + W905 (Status is the hunter profile again). 3.0.1 "MAKE IT LAND" = the repair release (W882-W890): Wave-2 progression joins cloud sync, the activation funnel is instrumented end to end, silent Wave-2 server failures leave breadcrumbs, the altar routes to a same-day first kill, the Double Dungeon stops reporting false failures and yields when the stair is unavailable, the beat What's New used to eat is chained, and every banked free engage is visible before the tap. 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.24-w1181'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '3.0.24-w1182'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -779,10 +779,10 @@
       archetype:    'sustainer',
       flavorShort:  'A creature born from restless nights.',
       flavorLong:   'A creature born from restless nights. It feeds on the hours you should have slept.',
-      killCondShort:'Sleep 7+ hours in a single night',
-      killCondLong: 'Sleep at least 7 hours in a single night. Any night you hit this threshold defeats the boss for that hunt.',
+      killCondShort:'Sleep 6.5+ hours in a single night',
+      killCondLong: 'Sleep at least 6.5 hours in a single night. Any night you hit this threshold defeats the boss for that hunt.',
       streakTarget: 1,
-      sleepHours:   7,
+      sleepHours:   6.5,
       cadence:      'daily',
       statDomain:   'VIT',
     },
@@ -796,10 +796,10 @@
       archetype:        'sustainer', // 1z.277C — step endurance → Sustainer
       flavorShort:      'A wolf forged from miles.',
       flavorLong:       "It paces the borderlands of every distance you've ever walked. Move enough, and you walk beside it. Stop, and you fall behind.",
-      killCondShort:    'Walk 6,000+ steps in a single day',
-      killCondLong:     'Walk at least 6,000 steps in a single day. Any day you hit the threshold defeats the boss for that hunt.',
+      killCondShort:    'Walk 5,000+ steps in a single day',
+      killCondLong:     'Walk at least 5,000 steps in a single day. Any day you hit the threshold defeats the boss for that hunt.',
       streakTarget:     1,
-      stepThreshold:    6000, // semantic-specific, parallel to Insomniac's sleepHours
+      stepThreshold:    5000, // semantic-specific, parallel to Insomniac's sleepHours
       cadence:          'daily',
       statDomain:       'VIT',
     },
@@ -986,12 +986,12 @@
       // end-of-Sunday expiry are all retired. Stat domain stays WILL —
       // the boss is still about refusing the easy way.
       flavorShort:      'He keeps a long table, and his guests rarely leave.',
-      flavorLong:       'He holds court at the bottom of every stairwell, pouring reasons to take the easy way up. Climb past him — five flights, any day — and the table sits empty.',
-      killCondShort:    'Climb 5+ verified flights today',
-      killCondLong:     'Climb at least 5 verified flights of stairs (Apple Health) during the 24-hour hunt window. Cumulative — every flight counts.',
+      flavorLong:       'He holds court at the bottom of every stairwell, pouring reasons to take the easy way up. Climb past him — four flights, any day — and the table sits empty.',
+      killCondShort:    'Climb 4+ verified flights today',
+      killCondLong:     'Climb at least 4 verified flights of stairs (Apple Health) during the 24-hour hunt window. Cumulative — every flight counts.',
       failedCopy:       'The table won. The stairs went unclimbed.',
       streakTarget:     1,
-      flightThreshold:  5,
+      flightThreshold:  4,
       cadence:          'daily',
       statDomain:       'WILL',
     },
@@ -1026,10 +1026,10 @@
       archetype:        'sustainer', // 1z.277C — step endurance → Sustainer
       flavorShort:      'Each step it takes, it asks for one more from you.',
       flavorLong:       'A long-legged thing of pale glass that walks the road ahead of you. Match its pace today and it lets you pass. Fall short and it walks on without you.',
-      killCondShort:    '7,500+ steps today',
-      killCondLong:     'Reach at least 7,500 steps today (Apple Health verified). Any day you hit the threshold defeats the boss for that day.',
+      killCondShort:    '6,000+ steps today',
+      killCondLong:     'Reach at least 6,000 steps today (Apple Health verified). Any day you hit the threshold defeats the boss for that day.',
       streakTarget:     1,
-      stepThreshold:    7500,
+      stepThreshold:    6000,
       cadence:          'daily',
       statDomain:       'VIT',
     },
@@ -1039,11 +1039,11 @@
       rank:             'D',
       archetype:        'sustainer', // 1z.277C — sleep recovery → Sustainer
       flavorShort:      'He rules the hours you give him. Give him fewer and he rules less.',
-      flavorLong:       'A crowned figure who collects every night the user surrenders. The price of his retreat is the deep rest you owed yourself — at least seven and a half hours of it.',
-      killCondShort:    '7.5+ hours of sleep last night',
-      killCondLong:     'Sleep at least 7.5 hours in a single night (Apple Health verified). Any night you cross the threshold defeats the boss for that night.',
+      flavorLong:       'A crowned figure who collects every night the user surrenders. The price of his retreat is the deep rest you owed yourself — at least seven hours of it.',
+      killCondShort:    '7+ hours of sleep last night',
+      killCondLong:     'Sleep at least 7 hours in a single night (Apple Health verified). Any night you cross the threshold defeats the boss for that night.',
       streakTarget:     1,
-      sleepHours:       7.5,
+      sleepHours:       7,
       cadence:          'daily',
       statDomain:       'VIT',
     },
@@ -1076,11 +1076,11 @@
       archetype:        'sustainer', // 1z.277C — high-volume step endurance → Sustainer
       flavorShort:      "A ghost that follows every road you've failed to finish.",
       flavorLong:       "A ghost that follows every road you've failed to finish. It fades only when your steps outlast its shadow.",
-      killCondShort:    'Walk 10,000+ verified steps before the hunt expires',
-      killCondLong:     'Walk at least 10,000 Apple Health verified steps during the 24-hour hunt window. Any device-local day inside the window that reaches the threshold defeats the boss.',
+      killCondShort:    'Walk 7,000+ verified steps before the hunt expires',
+      killCondLong:     'Walk at least 7,000 Apple Health verified steps during the 24-hour hunt window. Any device-local day inside the window that reaches the threshold defeats the boss.',
       failedCopy:       'The road vanished before the distance was claimed.',
       streakTarget:     1,
-      stepThreshold:    10000,
+      stepThreshold:    7000,
       cadence:          'daily',
       statDomain:       'VIT',
     },
@@ -1103,14 +1103,14 @@
       archetype:        'aggressor', // 1z.277C — workout + kcal direct output → Aggressor
       flavorShort:      'A knight sealed inside a living forge.',
       flavorLong:       'A knight sealed inside a living forge. It only yields to those who lift under fire and burn through the trial.',
-      killCondShort:    'Verified strength workout AND 300+ active kcal before the hunt expires',
-      killCondLong:     'Complete a verified Strength Training workout and burn at least 300 Active Energy kcal during the 24-hour hunt window. Both conditions are required.',
+      killCondShort:    'Verified strength workout AND 150+ active kcal before the hunt expires',
+      killCondLong:     'Complete a verified Strength Training workout and burn at least 150 Active Energy kcal during the 24-hour hunt window. Both conditions are required.',
       failedCopy:       'The forge cooled before the trial was complete.',
       streakTarget:     1,
       // Dual-condition gate. The resolver checks BOTH fields and
       // only awards the kill when both pass inside the hunt window.
       workoutMinutes:   10,
-      activeEnergyKcal: 300,
+      activeEnergyKcal: 150,
       cadence:          'daily',
       statDomain:       'STR',
     },
@@ -1122,11 +1122,11 @@
       archetype:        'aggressor', // 1z.277C — vertical kinetic output → Aggressor
       flavorShort:      'A giant chained above the stairwell between earth and sky.',
       flavorLong:       'A giant chained above the stairwell between earth and sky. It weakens only when you ascend.',
-      killCondShort:    'Climb 10+ verified flights before the hunt expires',
-      killCondLong:     'Climb at least 10 verified flights of stairs (Apple Health) during the 24-hour hunt window. Cumulative — every flight counts.',
+      killCondShort:    'Climb 6+ verified flights before the hunt expires',
+      killCondLong:     'Climb at least 6 verified flights of stairs (Apple Health) during the 24-hour hunt window. Cumulative — every flight counts.',
       failedCopy:       'The tower sealed before you reached the summit.',
       streakTarget:     1,
-      flightThreshold:  10,
+      flightThreshold:  6,
       cadence:          'daily',
       statDomain:       'VIT',
     },
@@ -1153,11 +1153,11 @@
       archetype:        'sustainer',
       flavorShort:      'It crosses the world in seven days. Climb to meet it before it passes.',
       flavorLong:       'Once every span of days a gray figure crosses the horizon, and everything it passes goes quiet. It cannot be outrun and it cannot be rushed — only met, stair by stair, over the whole of its crossing. Those who climb enough of the world before the seventh day earn what the Pilgrim carries: it never leaves empty-handed, and it never rewards the idle.',
-      killCondShort:    '56 verified flights across the 7-day hunt',
-      killCondLong:     'Climb at least 56 verified flights of stairs (Apple Health) across seven days in a row. Cumulative — every flight counts. It falls on its own the moment your seven days get there. The Pilgrim never drops nothing: every kill pays a relic.',   // W1176
+      killCondShort:    '42 verified flights across the 7-day hunt',
+      killCondLong:     'Climb at least 42 verified flights of stairs (Apple Health) across seven days in a row. Cumulative — every flight counts. It falls on its own the moment your seven days get there. The Pilgrim never drops nothing: every kill pays a relic.',   // W1176
       failedCopy:       'The Pilgrim crossed the horizon, and the week went with it.',
       streakTarget:     1,
-      flightThreshold:  56,
+      flightThreshold:  42,
       cadence:          'weekly',
       autoKill:         true,   // W1176 — falls by itself, like the Patient Flame (_rhAutoKill)
       statDomain:       'VIT',
@@ -1191,14 +1191,14 @@
       archetype:        'aggressor', // inert metadata for future combat triangle
       flavorShort:      'A god-forge that opens only for the hammer that never falls.',
       flavorLong:       'A god-forge sealed since the second age. Its doors part only for those who lift on the days they do not want to. Stop, and the forge cools. Continue, and the steel between you and the world grows thinner with every blow.',
-      killCondShort:    '30+ workout minutes, 2 days back-to-back',
-      killCondLong:     'Complete at least 30 verified workout minutes on two days in a row. Any Apple Health workout type counts. It falls on its own the moment the second day gets there.',   // W1176
+      killCondShort:    '20+ workout minutes, 2 days back-to-back',
+      killCondLong:     'Complete at least 20 verified workout minutes on two days in a row. Any Apple Health workout type counts. It falls on its own the moment the second day gets there.',   // W1176
       failedCopy:       'The hammer went silent. The forge sealed.',
       // consecutiveDays = back-to-back days inside the window that must
       // hit the workoutMinutes threshold (W262 — was 5-of-7 qualifying
       // days). streakTarget mirrors it so _bossProgressNoun renders
       // "days" cleanly.
-      workoutMinutes:   30,
+      workoutMinutes:   20,
       consecutiveDays:  2,
       streakTarget:     2,
       cadence:          'daily',
@@ -1231,10 +1231,10 @@
       archetype:        'caster',
       flavorShort:      'A quiet flame that waits for discipline measured in steps.',
       flavorLong:       'It does not burn loudly. It does not chase. It waits, and watches, and weighs the road you cover for seven days. Walk the distance two days running, and it warms your hand. Break the chain, and the wick darkens.',
-      killCondShort:    '10,000 steps, 2 days back-to-back',
-      killCondLong:     'Walk at least 10,000 verified steps on two days in a row. It falls on its own the moment the second day gets there. Steady ground beats sudden distance.',   // W1167
+      killCondShort:    '8,000 steps, 2 days back-to-back',
+      killCondLong:     'Walk at least 8,000 verified steps on two days in a row. It falls on its own the moment the second day gets there. Steady ground beats sudden distance.',   // W1167
       failedCopy:       'The flame waited longer than you held.',
-      stepThreshold:    10000,
+      stepThreshold:    8000,
       consecutiveDays:  2,
       streakTarget:     2,
       cadence:          'daily',
@@ -1260,12 +1260,12 @@
       archetype:        'sustainer',
       flavorShort:      'He has not stopped walking since the world was young.',
       flavorLong:       'A figure of endless motion, bound to the road itself. He does not tire and does not slow — to match him you must cover ground both flat and rising, two days running. Break stride once, and he leaves you behind.',
-      killCondShort:    '10,000 steps + 5 flights, 2 days back-to-back',
-      killCondLong:     'Reach BOTH 10,000 verified steps and 5 flights of stairs on two days in a row. It falls on its own the moment the second day gets there. Miss either on either day and the march resets.',   // W1176
+      killCondShort:    '8,500 steps + 4 flights, 2 days back-to-back',
+      killCondLong:     'Reach BOTH 8,500 verified steps and 4 flights of stairs on two days in a row. It falls on its own the moment the second day gets there. Miss either on either day and the march resets.',   // W1176
       failedCopy:       'You dropped behind. The march went on without you.',
       dailyAllOf:       true,
-      stepThreshold:    10000,
-      flightThreshold:  5,
+      stepThreshold:    8500,
+      flightThreshold:  4,
       consecutiveDays:  2,
       streakTarget:     2,
       cadence:          'daily',
@@ -1281,11 +1281,11 @@
       archetype:        'caster',
       flavorShort:      'It demands you spend yourself by day and restore yourself by night.',
       flavorLong:       'An endless ascent that tests not just effort but recovery — for none reach the summit running on empty. Train hard and sleep deep, two days running, and the way opens. The one trial that asks for a tracked night of rest.',
-      killCondShort:    '30min workout + 7h sleep, 2 days back-to-back',
-      killCondLong:     'On two days in a row, complete BOTH a 30-minute workout and 7 hours of sleep. Any Apple Health workout type counts. It falls on its own the moment the second day gets there. Miss either pillar on either day and the ascent resets. Note: tracking a workout and sleep needs a wearable — this is the wearable-only elite of the dungeon.',   // W1176
+      killCondShort:    '20min workout + 7h sleep, 2 days back-to-back',
+      killCondLong:     'On two days in a row, complete BOTH a 20-minute workout and 7 hours of sleep. Any Apple Health workout type counts. It falls on its own the moment the second day gets there. Miss either pillar on either day and the ascent resets. Note: tracking a workout and sleep needs a wearable — this is the wearable-only elite of the dungeon.',   // W1176
       failedCopy:       'The stair went dark. Effort without rest, or rest without effort — the climb demands both.',
       dailyAllOf:       true,
-      workoutMinutes:   30,
+      workoutMinutes:   20,
       sleepHours:       7,
       consecutiveDays:  2,
       streakTarget:     2,
@@ -1301,11 +1301,11 @@
       rank:             'A',
       archetype:        'aggressor',
       flavorShort:      'It is moved only by those who climb to reach it.',
-      flavorLong:       'An anvil that has swallowed ten thousand strikes and never cracked. It sits at the top of a long ascent, and answers only to those who make the climb in earnest — fifteen flights of stairs in a single day, no fewer.',
-      killCondShort:    '15 flights of stairs in one day',
-      killCondLong:     'Climb at least 15 verified flights of stairs in a single day inside the hunt window. One honest day of climbing and the anvil yields.',
+      flavorLong:       'An anvil that has swallowed ten thousand strikes and never cracked. It sits at the top of a long ascent, and answers only to those who make the climb in earnest — seven flights of stairs in a single day, no fewer.',
+      killCondShort:    '7 flights of stairs in one day',
+      killCondLong:     'Climb at least 7 verified flights of stairs in a single day inside the hunt window. One honest day of climbing and the anvil yields.',
       failedCopy:       'The climb came up short. The anvil stayed sealed.',
-      flightThreshold:  15,
+      flightThreshold:  7,
       streakTarget:     1,
       cadence:          'daily',
       dropTable:        { ultra_rare: 0.08, rare: 0.25 },
@@ -1327,13 +1327,13 @@
       archetype:        'caster',
       flavorShort:      'The crowned dark that waits at the summit of the climb.',
       flavorLong:       'A sovereign wreathed in living shadow, throned above every lesser terror in the dungeon. He does not test one virtue but all at once — body, will, and rest, held together without falter. Master every discipline for three days unbroken, and the shadow yields what nothing else will: the regalia of the Sovereign himself.',
-      killCondShort:    '10k steps + 10 flights — both, 3 days back-to-back',
-      killCondLong:     'On three days in a row, reach BOTH 10,000 verified steps and 10 flights of stairs climbed. It falls on its own the moment the third day gets there. Miss either on any day and the run resets to zero. The summit of the dungeon, and the only source of the Mythic blade Nightfall.',   // W1176
+      killCondShort:    '9k steps + 4 flights — both, 3 days back-to-back',
+      killCondLong:     'On three days in a row, reach BOTH 9,000 verified steps and 4 flights of stairs climbed. It falls on its own the moment the third day gets there. Miss either on any day and the run resets to zero. The summit of the dungeon, and the only source of the Mythic blade Nightfall.',   // W1176
       failedCopy:       'One day came up short, and the whole climb with it. The shadow keeps its crown.',
       dailyAllOf:       true,
       dropTable:        { mythic: 0.01, ultra_rare: 0.30 },
-      stepThreshold:    10000,
-      flightThreshold:  10,
+      stepThreshold:    9000,
+      flightThreshold:  4,
       consecutiveDays:  3,
       streakTarget:     3,
       cadence:          'daily',
@@ -1359,12 +1359,12 @@
       archetype:        'sustainer',
       flavorShort:      'It has kept the long watch for centuries, and hungers for those who cannot.',
       flavorLong:       'The Sovereign’s first consort keeps the watch he is too proud to keep — night after night, road after road. It does not respect effort spent in a single burst; it respects the ones who restore themselves in the dark and spend it all again by daylight. Hold the watch for three days unbroken, and it will open its hands.',
-      killCondShort:    '7h sleep + 8,000 steps — both, 3 days back-to-back',
-      killCondLong:     'On three days in a row, reach BOTH 7 hours of verified sleep and 8,000 verified steps. It falls on its own the moment the third day gets there. Miss either on any day and the watch resets. Sleep tracking needs a wearable — this trial belongs to the wearable elite.',   // W1176
+      killCondShort:    '6.5h sleep + 5,000 steps — both, 3 days back-to-back',
+      killCondLong:     'On three days in a row, reach BOTH 6.5 hours of verified sleep and 5,000 verified steps. It falls on its own the moment the third day gets there. Miss either on any day and the watch resets. Sleep tracking needs a wearable — this trial belongs to the wearable elite.',   // W1176
       failedCopy:       'The watch broke, and the Sentinel kept its regalia.',
       dailyAllOf:       true,
-      sleepHours:       7,
-      stepThreshold:    8000,
+      sleepHours:       6.5,
+      stepThreshold:    5000,
       consecutiveDays:  3,
       streakTarget:     3,
       cadence:          'daily',
@@ -1379,18 +1379,18 @@
       name:             'The Worldspine',
       rank:             'S',
       archetype:        'aggressor',
-      flavorShort:      'The mountain that walks. It is climbed in a day or not at all.',
-      flavorLong:       'The Sovereign’s second consort is not a creature but a burden — a mountain’s worth of ground and stairs pressed into a single turning of the sun. There is no pacing yourself against the Worldspine, no second day to make up the first. One dawn, one summit, everything at once.',
-      killCondShort:    '15,000 steps + 20 flights in one day',
-      killCondLong:     'In a single day inside the hunt window, reach BOTH 15,000 verified steps and 20 flights of stairs climbed. All iPhone-native — no wearable required. One colossal day, and the mountain kneels.',
-      failedCopy:       'The sun set with the summit still above you.',
+      flavorShort:      'The mountain that walks. It is climbed a day at a time, three days running.',   // W1182
+      flavorLong:       'The Sovereign’s second consort is not a creature but a burden — a mountain’s worth of ground laid end to end. No one crosses it in a single burst. It yields to the hunter who walks every day, three days without a gap, and never to the one who walks far once and stops.',
+      killCondShort:    '9,000 steps, 3 days back-to-back',
+      killCondLong:     'Walk at least 9,000 verified steps on three days in a row. All iPhone-native — no wearable required. It falls on its own the moment the third day gets there. Miss a day and the climb starts again.',   // W1182 (was 12,000 steps + 10 flights in one day)
+      failedCopy:       'A day went quiet, and the mountain waited for you to start again.',
       dailyAllOf:       true,
-      stepThreshold:    15000,
-      flightThreshold:  20,
-      consecutiveDays:  1,
-      streakTarget:     1,
+      stepThreshold:    9000,
+      consecutiveDays:  3,
+      streakTarget:     3,
       cadence:          'daily',
-      huntWindowDays:   1,
+      huntWindowDays:   3,
+      autoKill:         true,   // W1182 — S is consistency: it falls by itself like the other run bosses (_rhAutoKill)
       dropTable:        { ultra_rare: 0.20 },
       pool:             { ultra_rare: ['crown_of_eternal_night', 'mantle_of_the_sovereign', 'greaves_of_the_umbral_throne'] },
       statDomain:       'STR',
@@ -1399,7 +1399,9 @@
     // ── W1070 (owner 2026-10-17) — THE WEEKLY BOSSES. "From Sunday to end of Saturday if a person
     // walks over 70K that would complete an S-Tier boss. Then scale down all the way down to
     // E-Tier." One per gate, beaten by the WEEK's verified steps (the walking board's own total):
-    // E 35,000 · D 42,000 · C 49,000 · B 56,000 · A 63,000 · S 70,000 (5,000 to 10,000 a day on
+    // W1182 (owner 2026-11-11: "9,000 steps is the highest the S-tier will go ... E-tier should be good at
+    // 5000") — seven days of the rank's bar: E 35,000 · D 42,000 · C 49,000 · B 56,000 · A 60,000 · S 63,000.
+    // Was: E 35,000 · D 42,000 · C 49,000 · B 56,000 · A 63,000 · S 70,000 (5,000 to 10,000 a day on
     // average). Never engaged: _weekBossTick kills each by itself, once a week, rank lock kept.
     // Drops: "use the relevant items within their tier bracket ... more ultra rares and rares
     // for them because these are 7-day long tasks" — `poolOfRank` draws from the gate's own
@@ -1486,10 +1488,10 @@
       archetype:        'caster',
       flavorShort:      'Not a creature but the road itself, rising to test whoever walks it.',
       flavorLong:       'It begins at your door on Sunday and does not end until Saturday night. Walk it far enough and the road finally stops moving.',
-      killCondShort:    '63,000 steps this week',
-      killCondLong:     'Walk 63,000 verified steps between Sunday and Saturday (the week resets Sunday 12:00 AM Pacific). There is no hunt to start: it falls on its own the moment your week gets there, once a week.',
+      killCondShort:    '60,000 steps this week',
+      killCondLong:     'Walk 60,000 verified steps between Sunday and Saturday (the week resets Sunday 12:00 AM Pacific). There is no hunt to start: it falls on its own the moment your week gets there, once a week.',
       failedCopy:       'The week ended first.',
-      weekSteps:        63000,
+      weekSteps:        60000,
       streakTarget:     1,
       cadence:          'weekly',
       dropTable:        { ultra_rare: 0.25, rare: 0.75 },
@@ -1503,11 +1505,11 @@
       rank:             'S',
       archetype:        'aggressor',
       flavorShort:      'A giant built from seven days of distance. It wakes every Sunday.',
-      flavorLong:       'Seven suns rise and set across its shoulders. It cannot be beaten in a day or by luck, only by ten thousand steps a day held for a whole week. Bring the week and it kneels.',
-      killCondShort:    '70,000 steps this week',
-      killCondLong:     'Walk 70,000 verified steps between Sunday and Saturday (the week resets Sunday 12:00 AM Pacific). There is no hunt to start: it falls on its own the moment your week gets there, once a week.',
+      flavorLong:       'Seven suns rise and set across its shoulders. It cannot be beaten in a day or by luck, only by nine thousand steps a day held for a whole week. Bring the week and it kneels.',
+      killCondShort:    '63,000 steps this week',
+      killCondLong:     'Walk 63,000 verified steps between Sunday and Saturday (the week resets Sunday 12:00 AM Pacific). There is no hunt to start: it falls on its own the moment your week gets there, once a week.',
       failedCopy:       'The week ended first.',
-      weekSteps:        70000,
+      weekSteps:        63000,
       streakTarget:     1,
       cadence:          'weekly',
       dropTable:        { ultra_rare: 0.30 },
@@ -1516,6 +1518,8 @@
       statDomain:       'STR',
     },
 
+    // W1182 — now the healthy 7 h on 3 / 4 / 5 / all 7 nights: the rank is the consistency (8 h on 5+
+    // nights happened in 0 of 12 tracked weeks). The original W1071 note follows.
     // ── W1071 (owner 2026-10-17) — THE WEEKLY SLEEP BOSSES. 8 verified hours a night, counted on ANY
     // nights of the Sunday–Saturday week (his call: "any nights in that week until the reset"), a
     // night dated by the morning you wake (as sleep_hours_daily already is): C 4 · B 5 · A 6 · S 7.
@@ -1528,11 +1532,11 @@
       rank:             'C',
       archetype:        'caster',
       flavorShort:      'It hums the village to sleep, and keeps the ones who listen.',
-      flavorLong:       'A drifting wraith that sings over the rooftops at dusk. It does not frighten the restless; it waits for them. Give it four true nights of rest in a week and its song turns to silence.',
-      killCondShort:    '8h sleep, 4 nights this week',
-      killCondLong:     'Sleep 8 verified hours on any 4 nights between Sunday and Saturday (a night counts for the morning you wake; the week resets Sunday 12:00 AM Pacific). There is no hunt to start: it falls on its own the moment your week gets there, once a week.',
+      flavorLong:       'A drifting wraith that sings over the rooftops at dusk. It does not frighten the restless; it waits for them. Give it three true nights of rest in a week and its song turns to silence.',
+      killCondShort:    '7h sleep, 3 nights this week',
+      killCondLong:     'Sleep 7 verified hours on any 3 nights between Sunday and Saturday (a night counts for the morning you wake; the week resets Sunday 12:00 AM Pacific). There is no hunt to start: it falls on its own the moment your week gets there, once a week.',
       failedCopy:       'The week ended first.',
-      weekSleep:        { hours: 8, nights: 4 },
+      weekSleep:        { hours: 7, nights: 3 },
       streakTarget:     1,
       cadence:          'weekly',
       dropTable:        { ultra_rare: 0.18, rare: 0.37, common: 0.45 },
@@ -1546,11 +1550,11 @@
       rank:             'B',
       archetype:        'sustainer',
       flavorShort:      'It guards the well where the moon goes to rest.',
-      flavorLong:       'Each night the moon lowers itself into the old well, and the Keeper turns the key. It opens the well only to those who rest as deeply as the moon does, five nights in a single week.',
-      killCondShort:    '8h sleep, 5 nights this week',
-      killCondLong:     'Sleep 8 verified hours on any 5 nights between Sunday and Saturday (a night counts for the morning you wake; the week resets Sunday 12:00 AM Pacific). There is no hunt to start: it falls on its own the moment your week gets there, once a week.',
+      flavorLong:       'Each night the moon lowers itself into the old well, and the Keeper turns the key. It opens the well only to those who rest as deeply as the moon does, four nights in a single week.',
+      killCondShort:    '7h sleep, 4 nights this week',
+      killCondLong:     'Sleep 7 verified hours on any 4 nights between Sunday and Saturday (a night counts for the morning you wake; the week resets Sunday 12:00 AM Pacific). There is no hunt to start: it falls on its own the moment your week gets there, once a week.',
       failedCopy:       'The week ended first.',
-      weekSleep:        { hours: 8, nights: 5 },
+      weekSleep:        { hours: 7, nights: 4 },
       streakTarget:     1,
       cadence:          'weekly',
       dropTable:        { ultra_rare: 0.15, rare: 0.35, common: 0.50 },
@@ -1564,11 +1568,11 @@
       rank:             'A',
       archetype:        'caster',
       flavorShort:      'It counts the hours you sleep, and reads your days in them.',
-      flavorLong:       'Above a sea of night cloud the Oracle turns its glass. Every hour of true sleep is a grain it can read. Bring it six full nights in a week and it tells you what the waking world could not.',
-      killCondShort:    '8h sleep, 6 nights this week',
-      killCondLong:     'Sleep 8 verified hours on any 6 nights between Sunday and Saturday (a night counts for the morning you wake; the week resets Sunday 12:00 AM Pacific). There is no hunt to start: it falls on its own the moment your week gets there, once a week.',
+      flavorLong:       'Above a sea of night cloud the Oracle turns its glass. Every hour of true sleep is a grain it can read. Bring it five full nights in a week and it tells you what the waking world could not.',
+      killCondShort:    '7h sleep, 5 nights this week',
+      killCondLong:     'Sleep 7 verified hours on any 5 nights between Sunday and Saturday (a night counts for the morning you wake; the week resets Sunday 12:00 AM Pacific). There is no hunt to start: it falls on its own the moment your week gets there, once a week.',
       failedCopy:       'The week ended first.',
-      weekSleep:        { hours: 8, nights: 6 },
+      weekSleep:        { hours: 7, nights: 5 },
       streakTarget:     1,
       cadence:          'weekly',
       dropTable:        { ultra_rare: 0.25, rare: 0.75 },
@@ -1582,11 +1586,11 @@
       rank:             'S',
       archetype:        'sustainer',
       flavorShort:      'A titan that wakes only for those who rested every night of the week.',
-      flavorLong:       'Seven moons cross its shoulders, one for each night. It sleeps until a hunter has slept eight hours on all seven of them. Then it opens its eyes, and kneels.',
-      killCondShort:    '8h sleep, 7 nights this week',
-      killCondLong:     'Sleep 8 verified hours on any 7 nights between Sunday and Saturday (a night counts for the morning you wake; the week resets Sunday 12:00 AM Pacific). There is no hunt to start: it falls on its own the moment your week gets there, once a week.',
+      flavorLong:       'Seven moons cross its shoulders, one for each night. It sleeps until a hunter has slept seven hours on all seven of them. Then it opens its eyes, and kneels.',
+      killCondShort:    '7h sleep, 7 nights this week',
+      killCondLong:     'Sleep 7 verified hours on all 7 nights between Sunday and Saturday (a night counts for the morning you wake; the week resets Sunday 12:00 AM Pacific). There is no hunt to start: it falls on its own the moment your week gets there, once a week.',
       failedCopy:       'The week ended first.',
-      weekSleep:        { hours: 8, nights: 7 },
+      weekSleep:        { hours: 7, nights: 7 },
       streakTarget:     1,
       cadence:          'weekly',
       dropTable:        { ultra_rare: 0.30 },
@@ -25257,12 +25261,12 @@
   // overlay's gold-bordered VERIFIED row. Falls back to cfg.killCondShort
   // when no map entry exists.
   const BOSS_DEFEAT_CONDITIONS = {
-    the_insomniac:     'Sleep goal achieved: 7+ hours',
-    the_carouser:      '5 verified flights climbed',
-    the_steel_wolf:    '6,000 verified steps',
+    the_insomniac:     'Sleep goal achieved: 6.5+ hours',   // W1182 — the conditions came down to real days
+    the_carouser:      '4 verified flights climbed',
+    the_steel_wolf:    '5,000 verified steps',
     the_iron_warden:   'Workout verified (10+ min)',
-    the_glass_strider: '7,500 verified steps',
-    the_dream_tyrant:  '7.5 hours of sleep',
+    the_glass_strider: '6,000 verified steps',
+    the_dream_tyrant:  '7 hours of sleep',
   };
 
   function _bossResultSeenKey(bossId, killCount) {
@@ -28714,7 +28718,7 @@
     // last_eval_date alone gates idempotency. Nothing to reset.
   }
 
-  // ── Glass Strider — 7,500 steps ──────────────────────────────
+  // ── Glass Strider — cfg.stepThreshold steps (6,000 since W1182) ──────────────────────────────
   // Fed by autoVerifyWalk's existing step-count fetch. Same data
   // path that powers the Daily walk habit, Steel Wolf eval, and the
   // leaderboard step recording. No extra HealthKit roundtrip.
@@ -28740,7 +28744,7 @@
     // Same as Iron Warden: no streak to preserve.
   }
 
-  // ── Dream Tyrant — 7.5 hours of sleep ────────────────────────
+  // ── Dream Tyrant — cfg.sleepHours of sleep (7 since W1182) ────────────────────────
   // Fed by autoVerifySleep's existing sleep-data fetch. Same data
   // path that powers Sleep / Sleep before midnight habit auto-verify,
   // the Insomniac eval, and leaderboard sleep recording.
@@ -30405,6 +30409,7 @@
       items: [
         { emoji: '', title: 'Eight new ultimates', description: "Earn them from boss kills, your shadows and the summit, then choose one in the Wardrobe. Each hits differently and has its own moment." },
         { emoji: '', title: 'Watch before you choose', description: "Every ultimate in the Wardrobe has a Preview." },
+        { emoji: '', title: 'Every boss, set by real days', description: "Boss goals now climb one clear ladder: 5,000 steps a day at E up to 9,000 at S. Most are easier than before, and the sleep bosses ask for 7 hours, not 8." },   // W1182
         { emoji: '', title: 'A new morning briefing', description: "Your pact flames, your steps against the world average, the latest update or a health fact, and a way to review the app." },   // W1178, W1179
         { emoji: '', title: 'Multi-day bosses fall by themselves', description: "Two or three days in a row of sleep, steps or stairs, and the boss is yours, even if you open the app days later. No tap needed." },   // W1176 (was W1167, the Patient Flame alone)
         { emoji: '', title: 'A partner for every hunter', description: "No friends yet? You are paired with another active hunter for a daily hunt, and your Pact Flame grows each day you both walk." },   // W1179
@@ -39054,13 +39059,14 @@
   // STRIKE ALL, then one boss and STRIKE. The strike plays and a sample result follows, but
   // no hunt is started, no kill is recorded, no souls move. Closing the sheet ends it.
   function previewReadyHunt() {
+    const bar = function (id, k) { return (BOSSES[id] || {})[k]; };   // W1182 — the samples read the live bars, so they never drift
     const many = [
-      { bossId: 'the_marathon_wraith', rank: 'C', metric: 'steps', value: 10412, bar: 10000 },
-      { bossId: 'the_glass_strider', rank: 'D', metric: 'steps', value: 10412, bar: 7500 },
+      { bossId: 'the_marathon_wraith', rank: 'C', metric: 'steps', value: 10412, bar: bar('the_marathon_wraith', 'stepThreshold') },
+      { bossId: 'the_glass_strider', rank: 'D', metric: 'steps', value: 10412, bar: bar('the_glass_strider', 'stepThreshold') },
       { bossId: 'the_iron_warden', rank: 'D' },
-      { bossId: 'the_insomniac', rank: 'E', metric: 'sleep', value: 7 + 40 / 60, bar: 7 },
+      { bossId: 'the_insomniac', rank: 'E', metric: 'sleep', value: 7 + 40 / 60, bar: bar('the_insomniac', 'sleepHours') },
     ];
-    const one = [{ bossId: 'the_steel_wolf', rank: 'E', metric: 'steps', value: 9632, bar: 6000 }];
+    const one = [{ bossId: 'the_steel_wolf', rank: 'E', metric: 'steps', value: 9632, bar: bar('the_steel_wolf', 'stepThreshold') }];
     return openReadyHunt(many, { preview: true, then: function () { openReadyHunt(one, { preview: true }); } });
   }
   function _rhPreviewStrike() {
@@ -62553,7 +62559,7 @@
       rank:            'E',
       artId:           'the_twin_maw',     // its own dedicated art (assets/bosses/the-twin-maw.png)
       dropSourceBoss:  'the_twin_maw',     // W375 — its own co-op-exclusive weapon pool
-      coopGoalSteps:   14000,   // W765 — owner tuned 16k→14k (must match backend COOP_BOSS_CFG)
+      coopGoalSteps:   10000,   // W1182 — 14k → 10k (W765 was 16k → 14k) (must match backend COOP_BOSS_CFG)
       coopMetric:      'steps',
       coopUnit:        'steps',            // unit label shown in the hunt UI
       // W648 — normalized to HALF the solo kill table for the rank (the owner's
@@ -62565,8 +62571,8 @@
       statDomain:      'VIT',
       flavorShort:     'A beast with two heads, and no blind side.',
       flavorLong:      'It coils across the old border road, one head watching the way ahead, the other the way behind. No lone traveler slips past both. Hunt it with an ally, and split its gaze between you.',
-      killCondShort:   'Two hunters: 14,000 combined steps in 24h',
-      killCondLong:    'Team up with a fellow hunter. Within 24 hours of your ally joining, walk 14,000 verified steps between you, one road for each head. Both hunters are credited the kill.',
+      killCondShort:   'Two hunters: 10,000 combined steps in 24h',
+      killCondLong:    'Team up with a fellow hunter. Within 24 hours of your ally joining, walk 10,000 verified steps between you, one road for each head. Both hunters are credited the kill.',
       coopVictoryTitle:'BOTH HEADS FALL',
       coopDefeatTitle: 'THE MAW STILL HUNGERS',
     },
@@ -62581,7 +62587,7 @@
       rank:            'D',
       artId:           'the_unresting_march',
       dropSourceBoss:  'the_unresting_march',
-      coopGoalSteps:   28000,
+      coopGoalSteps:   24000,
       coopMetric:      'steps',
       coopUnit:        'steps',
       coopRewardSouls: 50,
@@ -62589,8 +62595,8 @@
       statDomain:      'VIT',
       flavorShort:     'It does not stop to sleep. Neither will you.',
       flavorLong:      'A column of armored shades that has walked the border road since the old war ended — never resting, never arriving. It cannot be run down in a single day. Bring an ally, and walk it into the ground across two.',
-      killCondShort:   'Two hunters: 28,000 combined steps in 48h',
-      killCondLong:    'Team up with a fellow hunter. Within 48 hours of your ally joining, walk 28,000 verified steps between you — outlast the column that never rests. Both hunters are credited the kill.',
+      killCondShort:   'Two hunters: 24,000 combined steps in 48h',
+      killCondLong:    'Team up with a fellow hunter. Within 48 hours of your ally joining, walk 24,000 verified steps between you — outlast the column that never rests. Both hunters are credited the kill.',
       coopVictoryTitle:'THE MARCH HALTS',
       coopDefeatTitle: 'THE COLUMN MARCHES ON',
     },
@@ -62624,7 +62630,7 @@
       rank:            'C',
       artId:           'the_coursing_dread',
       dropSourceBoss:  'the_coursing_dread',
-      coopGoalSteps:   18000,
+      coopGoalSteps:   14000,
       coopMetric:      'steps',
       coopUnit:        'steps',
       coopRewardSouls: 100,
@@ -62632,8 +62638,8 @@
       statDomain:      'STR',
       flavorShort:     'It runs down whatever runs. So stop running — and outpace it together.',
       flavorLong:      'A long, low thing that lives for the chase: it never sprints, it never tires, it simply keeps coming until the quarry falls. One hunter it wears down to nothing. Two, trading the lead and never breaking stride, run it into the ground instead.',
-      killCondShort:   'Two hunters: 18,000 combined steps in 24h',
-      killCondLong:    'Team up with a fellow hunter. Within 24 hours of your ally joining, cover 18,000 verified steps between you — keep moving, keep ahead of it, and run the Dread down. Both hunters are credited the kill.',
+      killCondShort:   'Two hunters: 14,000 combined steps in 24h',
+      killCondLong:    'Team up with a fellow hunter. Within 24 hours of your ally joining, cover 14,000 verified steps between you — keep moving, keep ahead of it, and run the Dread down. Both hunters are credited the kill.',
       coopVictoryTitle:'THE DREAD IS RUN DOWN',
       coopDefeatTitle: 'THE DREAD RUNS ON',
     },
@@ -62646,7 +62652,7 @@
       rank:            'B',
       artId:           'the_hollow_monarch',
       dropSourceBoss:  'the_hollow_monarch',
-      coopGoalSteps:   20,                 // metric-generic goal column: 20 FLIGHTS
+      coopGoalSteps:   12,                 // metric-generic goal column: 12 FLIGHTS (W1182, was 20)
       coopMetric:      'flights',
       coopUnit:        'flights',
       coopRewardSouls: 200,
@@ -62654,8 +62660,8 @@
       statDomain:      'WILL',
       flavorShort:     'A crown waits at the top of the last stair. Climb to take it.',
       flavorLong:      'It does not descend. It has never once come down. The Hollow Monarch keeps its throne at the head of an endless stair and lets the climb cull everyone who would reach it. Ascend together — flight after flight — until you stand level with the crown, and pull it down.',
-      killCondShort:   'Two hunters: 20 combined flights of stairs in 24h',
-      killCondLong:    'Team up with a fellow hunter. Within 24 hours of your ally joining, climb 20 verified flights of stairs between you — each flight is roughly ten steps up. Ascend to the throne together; both hunters are credited the kill.',
+      killCondShort:   'Two hunters: 12 combined flights of stairs in 24h',
+      killCondLong:    'Team up with a fellow hunter. Within 24 hours of your ally joining, climb 12 verified flights of stairs between you — each flight is roughly ten steps up. Ascend to the throne together; both hunters are credited the kill.',
       coopVictoryTitle:'THE THRONE IS TAKEN',
       coopDefeatTitle: 'THE THRONE KEEPS ITS KING',
     },
@@ -62691,7 +62697,7 @@
       dropSourceBoss:  'the_sundered_choir',
       coopMetric:      'both',
       coopGoalSteps:   12000,
-      coopGoalFlights: 10,
+      coopGoalFlights: 8,
       coopUnit:        'steps',
       coopUnitFlights: 'flights',
       coopRewardSouls: 200,   // W648 — half the solo B kill (was 240); mirrors server
@@ -62699,8 +62705,8 @@
       statDomain:      'INT',
       flavorShort:     'One voice walks, one voice climbs. Silence both to end the song.',
       flavorLong:      'It sings in two voices that never meet — one that paces the long flat dark, one that spirals the endless stair. Answer only one and the other sings louder. Walk down the first AND climb out the second, together, and the Sundered Choir finally falls quiet.',
-      killCondShort:   'Two hunters: 12,000 steps AND 10 flights in 24h',
-      killCondLong:    'Team up with a fellow hunter. Within 24 hours of your ally joining, cover 12,000 verified steps AND climb 10 verified flights of stairs between you. BOTH goals must be met. Both hunters are credited the kill.',
+      killCondShort:   'Two hunters: 12,000 steps AND 8 flights in 24h',
+      killCondLong:    'Team up with a fellow hunter. Within 24 hours of your ally joining, cover 12,000 verified steps AND climb 8 verified flights of stairs between you. BOTH goals must be met. Both hunters are credited the kill.',
       coopVictoryTitle:'THE CHOIR IS SILENCED',
       coopDefeatTitle: 'THE CHOIR HOLDS',
     },
@@ -62738,7 +62744,7 @@
       dropSourceBoss:  'the_cloven_titan',
       coopMetric:      'both',
       coopGoalSteps:   28000,
-      coopGoalFlights: 20,
+      coopGoalFlights: 16,
       coopUnit:        'steps',
       coopUnitFlights: 'flights',
       coopRewardSouls: 400,   // half the solo A kill (800) — the W648 duo split; mirrors server
@@ -62746,8 +62752,8 @@
       statDomain:      'STR',
       flavorShort:     'One titan, cloven in two. Each half walks a different horizon.',
       flavorLong:      'Long before the gates opened, something split a titan clean down the middle — and both halves kept walking. They stride apart, one wearing down the roads, one wearing down the stairs, and the ground between them never heals. No hunter brings down half a titan. Bring a partner, take a horizon each, and close the wound in two days.',
-      killCondShort:   'Two hunters: 28,000 steps AND 20 flights in 48h',
-      killCondLong:    'Team up with a fellow hunter. Within 48 hours of your ally joining, cover 28,000 verified steps AND climb 20 verified flights of stairs between you. BOTH goals must be met. Both hunters are credited the kill.',
+      killCondShort:   'Two hunters: 28,000 steps AND 16 flights in 48h',
+      killCondLong:    'Team up with a fellow hunter. Within 48 hours of your ally joining, cover 28,000 verified steps AND climb 16 verified flights of stairs between you. BOTH goals must be met. Both hunters are credited the kill.',
       coopVictoryTitle:'THE WOUND IS CLOSED',
       coopDefeatTitle: 'THE HALVES STILL WALK',
     },
@@ -62761,7 +62767,7 @@
       partySize:       3,
       artId:           'the_trinity_colossus',
       dropSourceBoss:  'the_trinity_colossus',
-      coopGoalSteps:   27000,
+      coopGoalSteps:   25500,
       coopMetric:      'steps',
       coopUnit:        'steps',
       coopRewardSouls: 266,
@@ -62769,8 +62775,8 @@
       statDomain:      'STR',
       flavorShort:     'Three giants, one body. Keep pace with all three.',
       flavorLong:      'Three giants were bound into one body to hold the last gate shut. Each still walks its own way inside it, and no lone hunter can keep pace with all three. Bring two allies, match it stride for stride, and it comes apart.',
-      killCondShort:   'Three hunters: 27,000 combined steps in 24h',
-      killCondLong:    'Summon TWO allies. Within 24 hours of your full party assembling, cover 27,000 verified steps between the three of you. All three hunters are credited the kill.',
+      killCondShort:   'Three hunters: 25,500 combined steps in 24h',
+      killCondLong:    'Summon TWO allies. Within 24 hours of your full party assembling, cover 25,500 verified steps between the three of you. All three hunters are credited the kill.',
       coopVictoryTitle:'THE COLOSSUS COMES APART',
       coopDefeatTitle: 'THE COLOSSUS STILL STANDS',
     },
@@ -62787,7 +62793,7 @@
       partySize:       3,
       artId:           'the_threefold_court',
       dropSourceBoss:  'the_threefold_court',
-      coopGoalSteps:   21000,   // W1104 — owner 2026-10-27: 27,000 → 21,000 (mirrors the server)
+      coopGoalSteps:   21000,   // W1182 — the C bar (7,000 a hunter) keeps 21,000 (W1104 was 27,000 → 21,000; mirrors the server)
       coopMetric:      'steps',
       coopUnit:        'steps',
       coopRewardSouls: 66,
@@ -62817,8 +62823,8 @@
       rank:            'S',
       artId:           'the_myrmidon_king',
       dropSourceBoss:  'the_sleepless_crown',
-      coopGoalSteps:   60000,
-      coopGoalSleepMinutes: 2520,
+      coopGoalSteps:   54000,
+      coopGoalSleepMinutes: 2340,
       coopMetric:      'steps_sleep',
       coopUnit:        'steps',
       coopUnitSleep:   'sleep',
@@ -62827,14 +62833,14 @@
       statDomain:      'VIT',
       flavorShort:     'The colony has never slept. Its king has never fallen.',
       flavorLong:      'Deep beneath the gate the colony works without end — a million legs, no dawn, no rest, and on its throne a king in violet chitin who has never closed his eyes. His swarm cannot be outnumbered and his court cannot be outworked. Two hunters remain his only blind spot: out-march the colony by day, then do the one thing the King cannot — sleep, truly, and wake stronger than the swarm.',
-      killCondShort:   'Two hunters: 60,000 steps + 42h sleep in 72h',
-      killCondLong:    'Team up with a fellow hunter. Within 72 hours of your ally joining, walk 60,000 verified steps AND bank 42 hours of verified sleep between you — that is 10,000 steps and a true 7-hour night from each of you, every day for three days. Both hunters are credited the kill.',
+      killCondShort:   'Two hunters: 54,000 steps + 39h sleep in 72h',
+      killCondLong:    'Team up with a fellow hunter. Within 72 hours of your ally joining, walk 54,000 verified steps AND bank 39 hours of verified sleep between you — that is 9,000 steps and a 6.5-hour night from each of you, every day for three days. Both hunters are credited the kill.',
       coopVictoryTitle:'THE COLONY KNEELS',
       coopDefeatTitle: 'THE KING NEVER SLEEPS',
     },
     // W693 — THE GRINNING GOD: the members-only apex raid (Monarch / "state of god"
-    // homage — legally distinct, not a copy). Party of 2–5 (brutal below 5, but the
-    // goal never shrinks). Drops the three mythics (Nightfall/Reverie/Vigil) at ~1%
+    // homage — legally distinct, not a copy). Party of 4–6 (W1182, owner 2026-11-11; was 2–5): the goal never
+    // shrinks, sized so a party of 4 walks the S bar (9,000 a day each) and 6 walk about 6,000. Drops the three mythics (Nightfall/Reverie/Vigil) at ~1%
     // each. `special:true` keeps it OUT of the rank-dungeon card list — it is summoned
     // ONLY from the members gate (_openMembersRaid). Mirrors the server COOP_BOSS_CFG.
     the_grinning_god: {
@@ -62847,10 +62853,10 @@
       membersOnly:     true,
       brutalBelowFull: true,
       matchmaking:     true,
-      minParty:        2,
-      maxParty:        5,
-      coopGoalSteps:   150000,
-      coopGoalFlights: 75,
+      minParty:        4,
+      maxParty:        6,
+      coopGoalSteps:   120000,
+      coopGoalFlights: 50,
       coopMetric:      'both',
       coopUnit:        'steps',
       coopRewardSouls: 800,
@@ -62858,8 +62864,8 @@
       statDomain:      'VIT',
       flavorShort:     'A god that grins because it has already counted you.',
       flavorLong:      'Behind the last seal waits a thing that was worshipped long before it was feared — a monarch of the deepest floors wearing a wide, patient smile, certain no party of hunters has ever been enough. It does not rage. It does not hurry. It simply outlasts. Five hunters, three days, and a mountain of ground covered together is the one thing its grin has never accounted for. Bring everyone; leave nothing in reserve.',
-      killCondShort:   'Up to 5 hunters: 150,000 steps + 75 flights in 80h',
-      killCondLong:    'Assemble a party of up to five hunters. Within 80 hours of the party forming, cover 150,000 verified steps AND climb 75 verified flights between you — the goal never shrinks, so a smaller party each carries a heavier share. Every hunter standing at the kill is credited, and the God may yield one of its three mythic weapons.',
+      killCondShort:   '4 to 6 hunters: 120,000 steps + 50 flights in 80h',
+      killCondLong:    'Assemble a party of four to six hunters. Within 80 hours of the party forming, cover 120,000 verified steps AND climb 50 verified flights between you — the goal never shrinks, so a smaller party each carries a heavier share. Every hunter standing at the kill is credited, and the God may yield one of its three mythic weapons.',
       coopVictoryTitle:'THE GRIN FALLS',
       coopDefeatTitle: 'IT WAS ALWAYS SMILING',
     },

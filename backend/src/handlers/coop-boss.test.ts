@@ -305,7 +305,7 @@ describe('W677 — trio create validation', () => {
 
 // ── W1104 — a steps trio at every rank D to A (owner 2026-10-27) ─────────────
 describe('W1104 — the steps trios', () => {
-  it('D 16,000 · C 21,000 · B 24,000 · A 27,000 in 24h, three hunters, a third of the solo kill each', () => {
+  it('D 16,000 · C 21,000 · B 24,000 · A 25,500 in 24h (W1182 ladder), three hunters, a third of the solo kill each', () => {
     const trios = Object.entries(COOP_BOSS_CFG)
       .filter(([, c]) => c.partySize === 3)
       .map(([id, c]) => [id, c.rank, c.goalSteps, c.rewardSouls, c.windowHours, c.metric]);
@@ -313,7 +313,7 @@ describe('W1104 — the steps trios', () => {
       ['the_crossroads_hound', 'D', 16000, 33, 24, 'steps'],
       ['the_threefold_court', 'C', 21000, 66, 24, 'steps'],
       ['the_triune_sentinel', 'B', 24000, 133, 24, 'steps'],
-      ['the_trinity_colossus', 'A', 27000, 266, 24, 'steps'],
+      ['the_trinity_colossus', 'A', 25500, 266, 24, 'steps'],
     ]);
     for (const [id] of trios) expect(COOP_BOSS_NAMES[id as string]).toBeTruthy();
   });
@@ -388,25 +388,30 @@ describe('W693 — Grinning God members-only gate + N-hunter party bounds', () =
 
   it('403 MEMBERS_ONLY when a non-member tries to summon the raid', async () => {
     const res = await handleCoopBossCreate(
-      raidReq({ ally_user_ids: ['u2'], boss_id: 'the_grinning_god' }),
+      raidReq({ ally_user_ids: ['u2', 'u3', 'u4'], boss_id: 'the_grinning_god' }),
       makeEnv(makeDb({})), session('u1')); // no premiumExpiresAt → free hunter
     const body = (await res.json()) as { error: string };
     expect(res.status).toBe(403);
     expect(body.error).toBe('MEMBERS_ONLY');
   });
 
-  it('a member summons the raid with an ally array (2-of-5 party allowed)', async () => {
+  it('a member summons the raid with an ally array (a party of 4, the W1182 minimum)', async () => {
     const res = await handleCoopBossCreate(
-      raidReq({ ally_user_ids: ['u2'], boss_id: 'the_grinning_god' }),
+      raidReq({ ally_user_ids: ['u2', 'u3', 'u4'], boss_id: 'the_grinning_god' }),
       makeEnv(makeDb({ premiumExpiresAt: Date.now() + 86_400_000 })), session('u1'));
     const body = (await res.json()) as { ok?: boolean };
     expect(res.status).toBe(200);
     expect(body.ok).toBe(true);
   });
 
-  it('400 PARTY_SIZE when a raid gets more than four allies (party > 5)', async () => {
+  it('400 MISSING_PARTNER below the minimum party, and 400 PARTY_SIZE above six (W1182: 4–6)', async () => {
+    const few = await handleCoopBossCreate(
+      raidReq({ ally_user_ids: ['u2', 'u3'], boss_id: 'the_grinning_god' }),
+      makeEnv(makeDb({ premiumExpiresAt: Date.now() + 86_400_000 })), session('u1'));
+    expect(few.status).toBe(400);
+    expect(((await few.json()) as { error: string }).error).toBe('MISSING_PARTNER');
     const res = await handleCoopBossCreate(
-      raidReq({ ally_user_ids: ['u2', 'u3', 'u4', 'u5', 'u6'], boss_id: 'the_grinning_god' }),
+      raidReq({ ally_user_ids: ['u2', 'u3', 'u4', 'u5', 'u6', 'u7'], boss_id: 'the_grinning_god' }),
       makeEnv(makeDb({ premiumExpiresAt: Date.now() + 86_400_000 })), session('u1'));
     const body = (await res.json()) as { error: string };
     expect(res.status).toBe(400);
@@ -427,7 +432,7 @@ describe('W699 — members-only raid: rank gate lifted for members', () => {
 
   it('a SUB-S member (rank A) summons the Grinning God — no INSUFFICIENT_RANK', async () => {
     const res = await handleCoopBossCreate(
-      raidReq({ ally_user_ids: ['u2'], boss_id: 'the_grinning_god' }),
+      raidReq({ ally_user_ids: ['u2', 'u3', 'u4'], boss_id: 'the_grinning_god' }),
       makeEnv(makeDb({ premiumExpiresAt: member, rankTier: 'A' })), session('u1'));
     const body = (await res.json()) as { ok?: boolean; error?: string };
     expect(res.status).toBe(200);
@@ -446,7 +451,7 @@ describe('W699 — members-only raid: rank gate lifted for members', () => {
 
   it('membership is STILL required — a sub-S non-member is refused MEMBERS_ONLY, not rank', async () => {
     const res = await handleCoopBossCreate(
-      raidReq({ ally_user_ids: ['u2'], boss_id: 'the_grinning_god' }),
+      raidReq({ ally_user_ids: ['u2', 'u3', 'u4'], boss_id: 'the_grinning_god' }),
       makeEnv(makeDb({ rankTier: 'A' })), session('u1')); // rank A but no premium
     const body = (await res.json()) as { error: string };
     expect(res.status).toBe(403);
@@ -522,14 +527,14 @@ describe('W695 — Summon & Fill gates', () => {
 
   it('400 PARTY_FULL when a full pick also asks to fill', async () => {
     const res = await handleCoopBossCreate(
-      raidReq({ ally_user_ids: ['u2', 'u3', 'u4', 'u5'], boss_id: 'the_grinning_god', fill_from_finder: true }),
+      raidReq({ ally_user_ids: ['u2', 'u3', 'u4', 'u5', 'u6'], boss_id: 'the_grinning_god', fill_from_finder: true }),
       makeEnv(makeDb({ premiumExpiresAt: Date.now() + 86_400_000 })), session('u1'));
     const body = (await res.json()) as { error: string };
     expect(res.status).toBe(400);
     expect(body.error).toBe('PARTY_FULL');
   });
 
-  it('a member summons an under-full party WITH fill (fill_target rides the INSERT)', async () => {
+  it('a member summons an under-full party WITH fill, even below the minimum (fill_target rides the INSERT)', async () => {
     const log: string[] = [];
     const res = await handleCoopBossCreate(
       raidReq({ ally_user_ids: ['u2'], boss_id: 'the_grinning_god', fill_from_finder: true }),

@@ -24,6 +24,7 @@ import {
   pickMatchedPairs,
   sweepCoopAutoHunts,
   sweepCoopResolve,
+  AUTO_FIT,
 } from './coop-auto';
 import { getAccoladeWeekStart, priorWeekStart } from '../lib/accolade-week';
 import { ptDayKey, ptMidnightIso, nextDay, prevDay } from '../lib/pact-streak';
@@ -36,21 +37,23 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 
-describe('pickAutoBoss — the strongest boss both ranks allow whose printed goal fits 0.9 × pattern', () => {
+// W1182 — AUTO_FIT 0.9 → 0.75 and the goals came down (Coursing Dread 14k, Twin Maw 10k).
+describe('pickAutoBoss — the strongest boss both ranks allow whose printed goal fits AUTO_FIT (0.75) × pattern', () => {
   it('a C pair walking 20,000 a day faces The Coursing Dread at its real goal', () => {
-    expect(pickAutoBoss('C', 'B', 20000)).toEqual({ bossId: 'the_coursing_dread', goalSteps: 18000 });
+    expect(AUTO_FIT).toBe(0.75);
+    expect(pickAutoBoss('C', 'B', 20000)).toEqual({ bossId: 'the_coursing_dread', goalSteps: 14000 });
   });
-  it('the boundary: 18,000 fits at exactly 20,000; a step less drops to the Twin Maw at 14,000', () => {
-    expect(pickAutoBoss('C', 'C', 20000).bossId).toBe('the_coursing_dread');
-    expect(pickAutoBoss('C', 'C', 19999)).toEqual({ bossId: 'the_twin_maw', goalSteps: 14000 });
+  it('the boundary: 14,000 fits at 18,667; a step less drops to the Twin Maw at 10,000', () => {
+    expect(pickAutoBoss('C', 'C', 18667).bossId).toBe('the_coursing_dread');
+    expect(pickAutoBoss('C', 'C', 18666)).toEqual({ bossId: 'the_twin_maw', goalSteps: 10000 });
   });
   it('an E hunter caps the pair at the Twin Maw however far they walk', () => {
-    expect(pickAutoBoss('E', 'S', 40000)).toEqual({ bossId: 'the_twin_maw', goalSteps: 14000 });
+    expect(pickAutoBoss('E', 'S', 40000)).toEqual({ bossId: 'the_twin_maw', goalSteps: 10000 });
   });
-  it('a pair under the Twin Maw gets it sized to them: 0.9 × pattern to the nearest 100, floor 2,000', () => {
-    expect(pickAutoBoss('E', 'E', 10000)).toEqual({ bossId: 'the_twin_maw', goalSteps: 9000 });
-    expect(pickAutoBoss('E', 'E', 15555)).toEqual({ bossId: 'the_twin_maw', goalSteps: 14000 });   // 13,999.5 → sized 14,000; the real goal is 14,000 and does not fit
-    expect(pickAutoBoss('E', 'E', 15556).goalSteps).toBe(14000);                                   // 14,000.4 fits the real boss
+  it('a pair under the Twin Maw gets it sized to them: 0.75 × pattern to the nearest 100, floor 2,000', () => {
+    expect(pickAutoBoss('E', 'E', 10000)).toEqual({ bossId: 'the_twin_maw', goalSteps: 7500 });
+    expect(pickAutoBoss('E', 'E', 13333)).toEqual({ bossId: 'the_twin_maw', goalSteps: 10000 });   // 9,999.75 → sized 10,000; the real goal is 10,000 and does not fit
+    expect(pickAutoBoss('E', 'E', 13334).goalSteps).toBe(10000);                                   // 10,000.5 fits the real boss
     expect(pickAutoBoss('E', 'E', 1000)).toEqual({ bossId: 'the_twin_maw', goalSteps: 2000 });
     expect(pickAutoBoss('E', 'E', 0).goalSteps).toBe(2000);
   });
@@ -177,12 +180,12 @@ describe('sweepCoopAutoHunts — one sized hunt per walking friend pair per day'
       expect(ins.args[10]).toBe(today);                         // hunt_day
     }
     const byPair = new Map(inserts.map((c) => [c.args[11], c]));
-    // u1 (C) + u2 (E): the E hunter caps it at the Twin Maw; pattern ≈ (70k+30k)/(7+e) + (35k+15k)/(7+e) ≥ 15.6k → the real 14,000
+    // u1 (C) + u2 (E): the E hunter caps it at the Twin Maw; pattern ≈ 100k/9 + 50k/9 = 16.7k, × 0.75 = 12.5k → the real 10,000
     expect(byPair.get('u1|u2')!.args[1]).toBe('the_twin_maw');
-    expect(byPair.get('u1|u2')!.args[6]).toBe(14000);
-    // u1 (C) + u3 (C): pattern ≥ 28k → The Coursing Dread at 18,000
+    expect(byPair.get('u1|u2')!.args[6]).toBe(10000);
+    // u1 (C) + u3 (C): pattern ≈ 24.4k, × 0.75 = 18.3k → The Coursing Dread at 14,000
     expect(byPair.get('u1|u3')!.args[1]).toBe('the_coursing_dread');
-    expect(byPair.get('u1|u3')!.args[6]).toBe(18000);
+    expect(byPair.get('u1|u3')!.args[6]).toBe(14000);
     // the participant row is guarded on the instance existing
     const parts = calls.filter((c) => c.sql.includes('INTO coop_boss_participants'));
     expect(parts.length).toBe(3);

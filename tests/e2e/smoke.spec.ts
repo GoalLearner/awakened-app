@@ -3067,13 +3067,13 @@ test.describe('AC · Onboarding v4 (W936 → W1050)', () => {
     const part  = page.locator(OB + ' .ob4-wolves .ob4-wolfhead.is-part');
     const line  = page.locator('#cn-revealLine');
 
-    // 31,204 = five whole Wolves (6,000 each) and a part of a sixth.
+    // 31,204 = six whole Wolves (5,000 each since W1182) and a part of a seventh.
     await expect(strikeOne).not.toHaveClass(/is-off/, { timeout: 8_000 });
     await expect(page.locator('#cn-steps7')).toHaveText('31,204');
-    await expect(line).toHaveText('That is five Steel Wolves.');
-    await expect(heads).toHaveCount(6);
+    await expect(line).toHaveText('That is six Steel Wolves.');
+    await expect(heads).toHaveCount(7);
     await expect(part).toHaveCount(1);
-    expect(await part.evaluate((e) => (e as HTMLElement).style.getPropertyValue('--ob4-f'))).toBe('20%');   // 1,204 of 6,000
+    expect(await part.evaluate((e) => (e as HTMLElement).style.getPropertyValue('--ob4-f'))).toBe('24%');   // 1,204 of 5,000
     await expect(strikeOne).toHaveText('Strike one');
 
     // The same screen, told other weeks.
@@ -3093,13 +3093,13 @@ test.describe('AC · Onboarding v4 (W936 → W1050)', () => {
     await expect(heads).toHaveCount(1);
     await expect(part).toHaveCount(1);
 
-    await show(6000, 900);
+    await show(5000, 900);
     await expect(line).toHaveText('That is one Steel Wolf.');
     await expect(heads).toHaveCount(1);
     await expect(part).toHaveCount(0);
 
     // More than seven do not fit: seven heads and the count.
-    await show(61000, 9000);
+    await show(51000, 9000);
     await expect(line).toHaveText('That is ten Steel Wolves.');
     await expect(heads).toHaveCount(7);
     await expect(page.locator(OB + ' .ob4-wolves .ob4-num')).toHaveText('×10');
@@ -3122,7 +3122,7 @@ test.describe('AC · Onboarding v4 (W936 → W1050)', () => {
 
     // The reveal is the hunter's own seven days.
     expect(r.reveal.total).toBe('31,204');
-    expect(r.reveal.line).toBe('That is five Steel Wolves.');
+    expect(r.reveal.line).toBe('That is six Steel Wolves.');
 
     // The board carries the rank the SERVER gave, positioned by the number walked.
     const me = r.board.rows.find((x) => x.me);
@@ -3134,7 +3134,7 @@ test.describe('AC · Onboarding v4 (W936 → W1050)', () => {
 
     // The hunt reads its goal and its drop pool out of the game's own tables.
     expect(r.hunt.kicker).toBe('The hunt · E-rank · Duo');
-    expect(r.hunt.line).toContain('14,000');
+    expect(r.hunt.line).toContain('10,000');   // W1182 — the Twin Maw's goal
     expect(r.hunt.drops).toEqual(['Twin-Fang Cleaver', 'The Twofold Gaze', 'Bothsight, the Long Hunt']);
 
     // The paths are the real packs with their real vow counts, and none is
@@ -3145,14 +3145,14 @@ test.describe('AC · Onboarding v4 (W936 → W1050)', () => {
     expect([r.paths.swear, r.paths.swearOn]).toEqual(['Swear it', false]);
   });
 
-  test('a day already past 6,000 steps kills the Steel Wolf for real, once', async ({ page }) => {
+  test('a day already past 5,000 steps kills the Steel Wolf for real, once', async ({ page }) => {
     await obFirstRun(page);
     const r = await walkToStrike(page, 7318, 31204);
 
-    expect(r.beforeStrike).toMatchObject({ sub: '6,000 steps in a day', today: '7,318', outcome: null, carryOn: false, engaged: false });
+    expect(r.beforeStrike).toMatchObject({ sub: '5,000 steps in a day', today: '7,318', outcome: null, carryOn: false, engaged: false });
     expect(r.outcome).toBe('beaten');
     expect(r.wolf.stamp).toBe('Beaten');
-    expect(r.wolf.sub).toBe('7,318 of 6,000 · beaten today');
+    expect(r.wolf.sub).toBe('7,318 of 5,000 · beaten today');
     expect(r.wolf.bar).toBe(0);
 
     // Real kill: the boss ledger moved, the once-per-(boss, day) reward was
@@ -3173,7 +3173,7 @@ test.describe('AC · Onboarding v4 (W936 → W1050)', () => {
     expect(r.wolf.queuedBossResult).toBeNull();
   });
 
-  test('a day still short of 6,000 engages the Wolf and says how far it is; Make Your Own starts with an empty list', async ({ page }) => {
+  test('a day still short of 5,000 engages the Wolf and says how far it is; Make Your Own starts with an empty list', async ({ page }) => {
     test.slow();   // the one walk that goes from the name all the way into the app
     await obFirstRun(page);
     const r = await walkToStrike(page, 3860, 18860);
@@ -3181,9 +3181,9 @@ test.describe('AC · Onboarding v4 (W936 → W1050)', () => {
 
     expect(r.outcome).toBe('bleeds');
     expect(r.wolf.stamp).toBe('It bleeds');
-    expect(r.wolf.sub).toBe('2,140 steps left today');
-    expect(r.wolf.bar).toBeCloseTo(35.67, 1);   // 3,860 of 6,000 struck, the rest stands
-    expect(r.wolf.body).toBe('Walk 2,140 more today and it is beaten tonight.');
+    expect(r.wolf.sub).toBe('1,140 steps left today');
+    expect(r.wolf.bar).toBeCloseTo(22.8, 1);   // 3,860 of 5,000 struck, the rest (1,140 = 22.8%) stands
+    expect(r.wolf.body).toBe('Walk 1,140 more today and it is beaten tonight.');
     expect(r.wolf.state.engaged).toBe(true);
     expect(r.wolf.state.kill_count).toBe(0);
     expect(r.wolf.killClaim.length).toBe(0);
@@ -4995,7 +4995,7 @@ test.describe('AM · Onboarding v4, the touches (W947 → W1050)', () => {
     await boot(page);
     await toWolf(page, 3860);
     const hold = page.locator('#cn-wolf'), next = page.locator('#cn-wolfNext');
-    await expect(page.locator('#cn-wolfSub')).toHaveText('6,000 steps in a day');
+    await expect(page.locator('#cn-wolfSub')).toHaveText('5,000 steps in a day');
     await expect(page.locator(OB + ' .ob4-today')).toHaveText('3,860');
     await expect(page.locator(OB + ' .ob4-hold-l')).toHaveText('Hold to strike');
     await expect(next).toBeDisabled();
@@ -5028,14 +5028,14 @@ test.describe('AM · Onboarding v4, the touches (W947 → W1050)', () => {
     await page.mouse.up();
     await expect(page.locator(WOLF)).toHaveAttribute('data-outcome', 'bleeds', { timeout: 5_000 });
     await expect(page.locator('#cn-wolfStamp')).toHaveText('It bleeds');
-    await expect(page.locator('#cn-wolfSub')).toHaveText('2,140 steps left today');
-    await expect(page.locator('#cn-pactBody')).toHaveText('Walk 2,140 more today and it is beaten tonight.');
+    await expect(page.locator('#cn-wolfSub')).toHaveText('1,140 steps left today');   // W1182 — 3,860 of 5,000
+    await expect(page.locator('#cn-pactBody')).toHaveText('Walk 1,140 more today and it is beaten tonight.');
     const done = await page.evaluate(() => ({
       width: parseFloat((document.querySelector('#cn-hpi') as HTMLElement).style.width),
       engaged: !!((JSON.parse(localStorage.getItem('hb_bosses') || '{}').the_steel_wolf || {}).engaged),
       kills: Object.keys(localStorage).filter((k) => k.indexOf('hb_kill_reward_') === 0).length,
     }));
-    expect(done.width).toBeCloseTo(35.67, 1);   // 3,860 of 6,000 struck, the rest stands
+    expect(done.width).toBeCloseTo(22.8, 1);   // W1182 — 3,860 of 5,000 struck, the rest (1,140) stands
     expect(done.engaged).toBe(true);
     expect(done.kills).toBe(0);
     await expect(next).toBeEnabled();
@@ -5065,7 +5065,7 @@ test.describe('AM · Onboarding v4, the touches (W947 → W1050)', () => {
     await expect(page.locator(WOLF)).toHaveAttribute('data-outcome', 'unmoved', { timeout: 5_000 });
     await expect(page.locator('#cn-wolfStamp')).toHaveText('Unmoved');
     await expect(page.locator('#cn-pactBody')).toHaveText('Nothing landed. Walk, then come back.');
-    await expect(page.locator('#cn-wolfSub')).toHaveText('6,000 steps left today');
+    await expect(page.locator('#cn-wolfSub')).toHaveText('5,000 steps left today');
     expect(await page.evaluate(() => (document.querySelector('#cn-hpi') as HTMLElement).style.width)).toBe('100%');
     await expect(page.locator(OB + ' .ob4-dmg')).toHaveCount(0);   // no damage number for no damage
     // The hunt is on all the same: the walk still counts tonight.
@@ -5097,7 +5097,7 @@ test.describe('AM · Onboarding v4, the touches (W947 → W1050)', () => {
     await page.evaluate(() => { Math.random = () => 0; });   // a roll, if one were made, would land
     expect(await obStrike(page)).toBe('claimed');
     await expect(page.locator('#cn-wolfStamp')).toHaveText('Beaten');
-    await expect(page.locator('#cn-wolfSub')).toHaveText('7,318 of 6,000 · beaten today');
+    await expect(page.locator('#cn-wolfSub')).toHaveText('7,318 of 5,000 · beaten today');
     await expect(page.locator('#cn-pactBody')).toHaveText('Today’s kill is already claimed. It returns tomorrow.');
     await expect(page.locator('#cn-pactBody .ob4-relic-card')).toHaveCount(0);
     expect(await purse()).toEqual(before);
@@ -5113,7 +5113,7 @@ test.describe('AM · Onboarding v4, the touches (W947 → W1050)', () => {
     expect(await fxLog(page)).toContain('snd:arrive');
     await expect(page.locator(OB + ' .ob4-s-hunt .ob4-boss')).toHaveText('The Twin Maw');
     // The real goal and the real drop pool, out of the game's own tables.
-    await expect(page.locator('#cn-mawLine')).toHaveText('14,000 combined steps. The relic drops for both.');
+    await expect(page.locator('#cn-mawLine')).toHaveText('10,000 combined steps. The relic drops for both.');
     const relics = page.locator('#cn-drops .ob4-relic');
     await expect(relics).toHaveCount(3);
     expect(await page.evaluate(() => Array.from(document.querySelectorAll('#cn-drops .ob4-relic-front')).map((f) => ({
@@ -5169,7 +5169,7 @@ test.describe('AM · Onboarding v4, the touches (W947 → W1050)', () => {
     const sent = await page.evaluate(() => (window as any).__shared[0] as { title: string; text: string });
     expect(sent.title).toBe('Awakened');
     expect(sent.text).toContain('Hunt The Twin Maw with me on Awakened');
-    expect(sent.text).toContain('14,000 combined steps');
+    expect(sent.text).toContain('10,000 combined steps');
     q = await page.evaluate(() => localStorage.getItem('hb_funnel_queue') || '');
     expect(q).toContain('onboarding_summon_sent');
     await summon.click();
@@ -5625,13 +5625,13 @@ test.describe('AP · The hunt row (W951)', () => {
     await expect(row).toBeVisible();
     await expect(page.locator('#dungeon-tease-pointer')).toHaveCount(0);   // the old banner is gone for good
     await expect(row.locator('.hunt-row-name')).toHaveText('The Steel Wolf');
-    await expect(row.locator('.hunt-row-line')).toHaveText('1,100 / 6,000 steps');
+    await expect(row.locator('.hunt-row-line')).toHaveText('1,100 / 5,000 steps');
     await expect(row.locator('.hunt-row-meta')).toContainText('E-RANK');
     await expect(row.locator('.hunt-row-more')).toHaveCount(0);            // only one hunt: no count chip
     // The bar is the share walked, not a guess.
     const pct = await row.locator('.hunt-row-bar i').evaluate((el) => parseFloat((el as HTMLElement).style.width));
-    expect(pct).toBeGreaterThan(15);
-    expect(pct).toBeLessThan(21);
+    expect(pct).toBeGreaterThan(19);   // W1182 — 1,100 of 5,000 = 22%
+    expect(pct).toBeLessThan(25);
     // It sits above the vows, where the old banner was.
     expect(await page.evaluate(() => {
       const r = document.getElementById('hunt-row'), h = document.getElementById('vows-header');
@@ -5661,7 +5661,7 @@ test.describe('AP · The hunt row (W951)', () => {
     await expect(sheet).toBeVisible();
     expect(await sheet.locator('.hunt-row-name').allTextContents()).toEqual(['The Steel Wolf', 'The Insomniac', 'The Gray Pilgrim']);
     expect(await sheet.locator('.hunt-row-line').allTextContents()).toEqual([
-      '1,100 / 6,000 steps', 'Sleep 7+ hours in a single night', '31 / 56 flights',
+      '1,100 / 5,000 steps', 'Sleep 6.5+ hours in a single night', '31 / 42 flights',
     ]);
     await sheet.locator('.hunt-row', { hasText: 'The Gray Pilgrim' }).click();
     await expect(sheet).toHaveCount(0);
@@ -5700,7 +5700,7 @@ test.describe('AP · The hunt row (W951)', () => {
       (window as any).__renderHuntRow();
     }, wolf());
     await expect(page.locator('#hunt-row')).toBeVisible();
-    await expect(page.locator('#hunt-row .hunt-row-line')).toHaveText('1,100 / 6,000 steps');
+    await expect(page.locator('#hunt-row .hunt-row-line')).toHaveText('1,100 / 5,000 steps');
   });
 });
 
@@ -5886,7 +5886,7 @@ test.describe('AR \u00b7 A second hunt, one tap away (W953)', () => {
     const add = sheet.locator('.hunt-add');
     await expect(add.locator('.hunt-add-name')).toHaveText('HUNT THE CAROUSER');
     await expect(add.locator('.hunt-add-meta')).toHaveText('E-RANK');
-    await expect(add.locator('.hunt-add-line')).toHaveText('Climb 5+ verified flights today \u00b7 25 SOULS');
+    await expect(add.locator('.hunt-add-line')).toHaveText('Climb 4+ verified flights today \u00b7 25 SOULS');
 
     await add.click();
     // The hunt starts and the list rebuilds around it (same id, a new element):
@@ -5982,7 +5982,7 @@ test.describe('AS · Day one shows the hunt (W954)', () => {
     const row = page.locator('#hunt-row');
     await expect(row).toBeVisible({ timeout: 10_000 });
     await expect(row.locator('.hunt-row-name')).toHaveText('The Steel Wolf');
-    await expect(row.locator('.hunt-row-line')).toHaveText('0 / 6,000 steps');
+    await expect(row.locator('.hunt-row-line')).toHaveText('0 / 5,000 steps');
     // The first vow is still the day's job, so it keeps the top slot.
     await expect(page.locator('#first-vow-pointer')).toBeVisible();
     expect(await page.evaluate(() => {
@@ -9281,7 +9281,7 @@ test.describe('BH · Hunt results (W980)', () => {
   });
 
   test('solo escape: the best day and how short, never a tap-away — Not now leaves', async ({ page }) => {
-    await seed(page, { hb_leaderboard: JSON.stringify({ sleep_hours_daily: days({ 1: 6.3, 2: 5.1 }) }) });
+    await seed(page, { hb_leaderboard: JSON.stringify({ sleep_hours_daily: days({ 1: 5.85, 2: 5.1 }) }) });   // W1182 — 90% of the Insomniac's 6.5 h
     await page.evaluate(() => (window as any).__queueBossResult({ outcome: 'failed', bossId: 'the_insomniac', bossName: 'The Insomniac', rank: 'D', conditionLabel: 'Sleep 7+ hours', hunt_started_at: Date.now() - 3 * 86400000 }));
     await expect.poll(() => view(page).then((v) => v.kind), { timeout: 5_000 }).toBe('defeat');
     await tap(page);   // skip; a defeat never closes on a tap
@@ -9289,7 +9289,7 @@ test.describe('BH · Hunt results (W980)', () => {
     expect(v.stamp.toUpperCase()).toBe('ESCAPED');
     expect(v.pct).toMatch(/^90 ?%/);
     expect(v.rl.toUpperCase()).toMatch(/BEST NIGHT/);
-    expect(v.rows[0]).toMatch(/6h 18m/);
+    expect(v.rows[0]).toMatch(/5h 51m/);
     expect(v.mood).toBe('So close it hurts.');
     expect(v.call).toBe('Hunt again');
     await tap(page);
@@ -9832,16 +9832,16 @@ test.describe('CA · The ready hunt, groundwork (W1033)', () => {
   test('the ladders are the one-day, one-metric solo bosses, easiest first', async ({ page }) => {
     await freshApp(page);
     const l = await page.evaluate(() => { const r = (window as any).__readyHunt; return ['steps', 'flights', 'sleep'].map((m) => r.ladder(m).map((x: any) => x.bossId + ':' + x.rank + ':' + x.bar)); });
-    expect(l[0]).toEqual(['the_steel_wolf:E:6000', 'the_glass_strider:D:7500', 'the_marathon_wraith:C:10000']);
-    expect(l[1]).toEqual(['the_carouser:E:5', 'the_ascendant_colossus:C:10', 'the_unbroken_anvil:A:15']);
-    expect(l[2]).toEqual(['the_insomniac:E:7', 'the_dream_tyrant:D:7.5']);
+    expect(l[0]).toEqual(['the_steel_wolf:E:5000', 'the_glass_strider:D:6000', 'the_marathon_wraith:C:7000']);   // W1182 ladder
+    expect(l[1]).toEqual(['the_carouser:E:4', 'the_ascendant_colossus:C:6', 'the_unbroken_anvil:A:7']);
+    expect(l[2]).toEqual(['the_insomniac:E:6.5', 'the_dream_tyrant:D:7']);
   });
 
   test('a new hunter is offered only what their rank can start; nothing below the bar', async ({ page }) => {
     await freshApp(page);
-    const r = await page.evaluate(() => { const p = (window as any).__readyHunt.pick; return [p('steps', 5999), p('steps', 6000), p('steps', 25000), p('sleep', 8), p('flights', 0), p('steps', NaN)]; });
+    const r = await page.evaluate(() => { const p = (window as any).__readyHunt.pick; return [p('steps', 4999), p('steps', 5000), p('steps', 25000), p('sleep', 8), p('flights', 0), p('steps', NaN)]; });
     expect(r[0]).toBeNull();
-    expect(r[1]).toMatchObject({ bossId: 'the_steel_wolf', bar: 6000, value: 6000, also: [] });
+    expect(r[1]).toMatchObject({ bossId: 'the_steel_wolf', bar: 5000, value: 5000, also: [] });
     expect(r[2].bossId).toBe('the_steel_wolf');          // E-rank hunter: the D and C gates are shut
     expect(r[3].bossId).toBe('the_insomniac');
     expect(r[4]).toBeNull();
@@ -9957,7 +9957,7 @@ test.describe('CB · The ready hunt (W1034 · W1039)', () => {
     await expect(sheet(page)).toBeVisible({ timeout: 8000 });
     await expect(sheet(page).locator('.rh-name')).toHaveText('The Steel Wolf');
     await expect(sheet(page).locator('.rh-chip')).toHaveText(/E rank/i);
-    await expect(sheet(page).locator('.rh-pl')).toHaveText(/9,632\s*\/\s*6,000 steps today/i, { timeout: 4000 });
+    await expect(sheet(page).locator('.rh-pl')).toHaveText(/9,632\s*\/\s*5,000 steps today/i, { timeout: 4000 });
     await expect(sheet(page).locator('.rh-call')).toHaveText(/^strike$/i);
     await expect(sheet(page).locator('.rh-quiet')).toHaveText('Your first hunt is free');
     await expect(sheet(page).locator('.rh-row')).toHaveCount(0);            // one boss: no list
@@ -10115,7 +10115,7 @@ test.describe('CB · The ready hunt (W1034 · W1039)', () => {
   test('W1039 — three days and a week: Erebus on three full days, the Gray Pilgrim on 56 flights in seven', async ({ page }) => {
     const d = { steps: 10400, flights: 10 };
     await hunter(page, { ...GATE.C, ...GATE.S });
-    await page.evaluate(() => { ['the_patient_flame', 'the_vow_keeper', 'the_tideless_marcher', 'the_forge_of_ten_thousand_days', 'the_sleepless_ascent', 'erebus_the_shadow_sovereign', 'the_starved_sentinel', 'the_gray_pilgrim'].forEach((id) => { (window as any).Bosses.BOSSES[id].autoKill = false; }); });   // W1176 — every multi-day boss falls by itself now; this is the judge alone
+    await page.evaluate(() => { ['the_patient_flame', 'the_vow_keeper', 'the_tideless_marcher', 'the_forge_of_ten_thousand_days', 'the_sleepless_ascent', 'erebus_the_shadow_sovereign', 'the_starved_sentinel', 'the_gray_pilgrim', 'the_worldspine'].forEach((id) => { (window as any).Bosses.BOSSES[id].autoKill = false; }); });   // W1176 — every multi-day boss falls by itself now; this is the judge alone
     await health(page, { days: { 0: d, 1: d, 2: d, 3: { flights: 9 }, 4: { flights: 9 }, 5: { flights: 9 }, 6: { flights: 9 } } });   // 66 flights this week
     const o = await offers(page);
     expect(o).toContain('erebus_the_shadow_sovereign');
@@ -10130,7 +10130,7 @@ test.describe('CB · The ready hunt (W1034 · W1039)', () => {
   test('W1039 — asking changes nothing: a scan with a dozen bosses ready leaves bosses and souls untouched', async ({ page }) => {
     const d = { steps: 15400, flights: 22, sleepH: 8, workoutMin: 45, kcal: 600 };
     await hunter(page, { ...GATE.D, ...GATE.C, ...GATE.B, ...GATE.A, ...GATE.S });
-    await page.evaluate(() => { ['the_patient_flame', 'the_vow_keeper', 'the_tideless_marcher', 'the_forge_of_ten_thousand_days', 'the_sleepless_ascent', 'erebus_the_shadow_sovereign', 'the_starved_sentinel', 'the_gray_pilgrim'].forEach((id) => { (window as any).Bosses.BOSSES[id].autoKill = false; }); });   // W1167/W1176 — an automated boss is meant to fall; the rest only ask
+    await page.evaluate(() => { ['the_patient_flame', 'the_vow_keeper', 'the_tideless_marcher', 'the_forge_of_ten_thousand_days', 'the_sleepless_ascent', 'erebus_the_shadow_sovereign', 'the_starved_sentinel', 'the_gray_pilgrim', 'the_worldspine'].forEach((id) => { (window as any).Bosses.BOSSES[id].autoKill = false; }); });   // W1167/W1176 — an automated boss is meant to fall; the rest only ask
     const snap = () => page.evaluate(() => [localStorage.getItem('hb_bosses'), localStorage.getItem('hb_souls'), localStorage.getItem('hb_souls_ledger'), localStorage.getItem('hb_hunt_history')]);
     const before = await snap();
     await health(page, { days: { 0: d, 1: d, 2: d, 3: d, 4: d, 5: d, 6: d } });
@@ -10146,12 +10146,12 @@ test.describe('CB · The ready hunt (W1034 · W1039)', () => {
     await hunter(page, {});
     await health(page, { sleepH: 7 + 40 / 60 });
     await expect(sheet(page).locator('.rh-name')).toHaveText('The Insomniac', { timeout: 8000 });
-    await expect(sheet(page).locator('.rh-pl')).toHaveText(/7 h 40 m\s*\/\s*7 h last night/i, { timeout: 4000 });
+    await expect(sheet(page).locator('.rh-pl')).toHaveText(/7 h 40 m\s*\/\s*6 h 30 m last night/i, { timeout: 4000 });   // W1182 — the Insomniac's bar is 6.5 h
     await expect(page.locator('#hunt-row.hunt-row--ready')).toContainText('7 h 40 m last night');
     await page.locator('#rh-sheet [data-rh-close]').click();
     await health(page, { flights: 6 });
     await expect(sheet(page).locator('.rh-name')).toHaveText('The Carouser', { timeout: 8000 });      // new today: it rises by itself
-    await expect(sheet(page).locator('.rh-pl')).toHaveText(/6\s*\/\s*5 flights today/i, { timeout: 4000 });
+    await expect(sheet(page).locator('.rh-pl')).toHaveText(/6\s*\/\s*4 flights today/i, { timeout: 4000 });
   });
 
   test('W1039 — it rises again for a boss that becomes ready later, and not twice for the same one', async ({ page }) => {
@@ -10173,7 +10173,7 @@ test.describe('CB · The ready hunt (W1034 · W1039)', () => {
 
   test('nothing is offered: below the bar, Health not granted, beaten today, already engaged', async ({ page }) => {
     await hunter(page, {});
-    await health(page, { steps: 5999, flights: 4, sleepH: 6.9 });
+    await health(page, { steps: 4999, flights: 3, sleepH: 6.4 });   // W1182 — one under each E bar
     expect(await offers(page)).toEqual([]);
     await health(page, { steps: 9632, granted: false });
     expect(await offers(page)).toEqual([]);
@@ -10191,8 +10191,8 @@ test.describe('CB · The ready hunt (W1034 · W1039)', () => {
     await hunter(page, { ...GATE.D });
     await health(page, { steps: 9632 });
     await expect(sheet(page).locator('.rh-many')).toHaveText('2 hunts are ready', { timeout: 8000 });
-    // at the strike Health now reports 7,000: the Wolf still dies, the Strider (7,500) does not
-    await page.evaluate(() => { (window as any).Health.getStepsBetween = async () => 7000; });
+    // at the strike Health now reports 5,500: the Wolf (5,000) still dies, the Strider (6,000) does not
+    await page.evaluate(() => { (window as any).Health.getStepsBetween = async () => 5500; });
     const before = await souls(page);
     await sheet(page).locator('[data-rh-strike]').click();
     await expect(page.locator('#boss-result-overlay .hr-boss')).toHaveText('The Steel Wolf', { timeout: 6000 });
@@ -10312,7 +10312,7 @@ test.describe('CB · The ready hunt (W1034 · W1039)', () => {
     ]);
     // then the single-boss sheet
     await expect(sheet(page).locator('.rh-name')).toHaveText('The Steel Wolf', { timeout: 6000 });
-    await expect(sheet(page).locator('.rh-pl')).toHaveText(/9,632\s*\/\s*6,000 steps today/i, { timeout: 4000 });
+    await expect(sheet(page).locator('.rh-pl')).toHaveText(/9,632\s*\/\s*5,000 steps today/i, { timeout: 4000 });
     await page.locator('#rh-sheet [data-rh-close]').click();
     await expect(page.locator('.rh-sheet--on')).toHaveCount(0);
     expect(await snap()).toEqual(before);                    // no hunt, no kill, no souls, nothing marked as announced
@@ -10365,10 +10365,10 @@ test.describe('CB · The ready hunt (W1034 · W1039)', () => {
     expect(ids(w)).toEqual(['the_ascendant_colossus', 'the_carouser', 'the_dream_tyrant', 'the_glass_strider', 'the_insomniac', 'the_iron_warden', 'the_marathon_wraith', 'the_steel_wolf']);
     const by = Object.fromEntries(w.hunts.map((h) => [h.id, h]));
     expect(by.the_iron_warden).toMatchObject({ name: 'The Iron Warden', metric: 'workout', bar: 10 });
-    expect(by.the_marathon_wraith).toEqual({ id: 'the_marathon_wraith', name: 'The Marathon Wraith', metric: 'steps', bar: 10000, beaten: '', until: 0 });
-    expect(by.the_ascendant_colossus).toMatchObject({ metric: 'flights', bar: 10 });
-    expect(by.the_insomniac).toMatchObject({ metric: 'sleep', bar: 7 });
-    expect(by.the_dream_tyrant).toMatchObject({ metric: 'sleep', bar: 7.5 });
+    expect(by.the_marathon_wraith).toEqual({ id: 'the_marathon_wraith', name: 'The Marathon Wraith', metric: 'steps', bar: 7000, beaten: '', until: 0 });   // W1182 ladder
+    expect(by.the_ascendant_colossus).toMatchObject({ metric: 'flights', bar: 6 });
+    expect(by.the_insomniac).toMatchObject({ metric: 'sleep', bar: 6.5 });
+    expect(by.the_dream_tyrant).toMatchObject({ metric: 'sleep', bar: 7 });
     expect(by.the_steel_wolf.beaten).toBe(day);                       // beaten today: the watcher leaves it alone
     expect(by.the_carouser.until).toBeGreaterThan(Date.now() + 19 * 3600_000);   // running: it resolves on its own
   });
@@ -11081,7 +11081,7 @@ test.describe('CC · The Shadow Army drops like a pet (W1035 · W1047)', () => {
     // the open window is untouched, and its boss still says so
     expect(await page.evaluate(() => Object.keys((window as any).__shadows().windows))).toEqual(['the_steel_wolf']);
     await page.evaluate(() => (window as any).__readyHunt.open('the_steel_wolf'));
-    await expect(page.locator('#bfs-shadow-line')).toHaveText(/EXTRACTION OPEN — 3,000 steps within \d+h, and it rises\./, { timeout: 8000 });
+    await expect(page.locator('#bfs-shadow-line')).toHaveText(/EXTRACTION OPEN — 2,500 steps within \d+h, and it rises\./, { timeout: 8000 });
   });
 });
 
@@ -11374,11 +11374,11 @@ test.describe('CF · Weekly step bosses (W1070)', () => {
     localStorage.setItem('hb_leaderboard', JSON.stringify(s));
   }, nights);
 
-  test('W1071 — a C-rank week of four 8h nights brings the Lullaby Wraith down by itself; a 7.9h night does not count; B, A and S stand', async ({ page }) => {
-    await week(page, { points: 600, sleep: { '2026-10-18': 8, '2026-10-19': 8.2, '2026-10-20': 9, '2026-10-21': 7.9 } });
-    expect(await page.evaluate(() => (window as any).__weekBoss.nights(null, 8))).toBe(3);
+  test('W1071/W1182 — a C-rank week of three 7h nights brings the Lullaby Wraith down by itself; a 6.9h night does not count; B, A and S stand', async ({ page }) => {
+    await week(page, { points: 600, sleep: { '2026-10-18': 7, '2026-10-19': 7.2, '2026-10-20': 6.9 } });
+    expect(await page.evaluate(() => (window as any).__weekBoss.nights(null, 7))).toBe(2);
     expect(await sleepKills(page)).toEqual([0, 0, 0, 0]);
-    await setSleep(page, { '2026-10-21': 8 });
+    await setSleep(page, { '2026-10-20': 7 });
     expect(await tick(page)).toBe(1);
     expect(await sleepKills(page)).toEqual([1, 0, 0, 0]);
     expect(await kills(page)).toEqual([0, 0, 0, 0, 0, 0]);   // no steps: the step bosses stand
@@ -11407,7 +11407,7 @@ test.describe('CF · Weekly step bosses (W1070)', () => {
   });
 
   test('W1071 — a morning without the app: the sleep re-read finds Monday\'s night in Apple Health and the Wraith falls', async ({ page }) => {
-    await week(page, { points: 600, sleep: { '2026-10-18': 8.5, '2026-10-20': 8.1, '2026-10-21': 8.3 } });
+    await week(page, { points: 600, sleep: { '2026-10-18': 8.5, '2026-10-20': 6.5, '2026-10-21': 8.3 } });   // W1182 — two 7 h nights; Monday's is the third
     expect(await sleepKills(page)).toEqual([0, 0, 0, 0]);
     await page.evaluate(async () => {
       const w = window as any, H = w.Health;
@@ -11418,12 +11418,12 @@ test.describe('CF · Weekly step bosses (W1070)', () => {
       await w.__lbBackfillSleep();
     });
     const night = await page.evaluate(() => JSON.parse(localStorage.getItem('hb_leaderboard') || '{}').sleep_hours_daily);
-    expect([night['2026-10-19'], night['2026-10-20']]).toEqual([8.4, 8.1]);   // raised, never lowered
+    expect([night['2026-10-19'], night['2026-10-20']]).toEqual([8.4, 6.5]);   // raised, never lowered
     expect(await sleepKills(page)).toEqual([1, 0, 0, 0]);
   });
 
   test('W1071 — the card counts nights, then Beaten this week; the sheet asks for a wearable', async ({ page }) => {
-    await week(page, { points: 600, sleep: { '2026-10-18': 8, '2026-10-19': 8, '2026-10-20': 8 } });
+    await week(page, { points: 600, sleep: { '2026-10-18': 8, '2026-10-19': 8 } });
     const card = async () => page.evaluate(() => {
       const w = window as any;
       w.__test_setDungeonRank('C');
@@ -11432,7 +11432,7 @@ test.describe('CF · Weekly step bosses (W1070)', () => {
       return c ? { mode: (c.querySelector('.bcard-mode') || {} as any).textContent, cond: (c.querySelector('.bcard-cond') || {} as any).textContent,
         label: (c.querySelector('.bcard-progress-label') || {} as any).textContent, bar: !!c.querySelector('.bcard-wk') } : null;
     });
-    expect(await card()).toEqual({ mode: 'WEEKLY', cond: '3 / 4 nights of 8h this week', label: '3 / 4 nights', bar: true });
+    expect(await card()).toEqual({ mode: 'WEEKLY', cond: '2 / 3 nights of 7h this week', label: '2 / 3 nights', bar: true });
     const note = await page.evaluate(async () => {
       (document.querySelector('#bosses-list .bcard[data-boss="the_lullaby_wraith"]') as HTMLElement).click();
       await new Promise((r) => setTimeout(r, 400));

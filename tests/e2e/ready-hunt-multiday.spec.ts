@@ -6,7 +6,7 @@
  * back-to-back). Apple Health is replaced by a fixture on window.Health (the same object app.js reads), the
  * hunter is S+ so every gate is open, and window.__readyHunt.scan() is the real scan. Pinned here:
  *   - two qualifying days in a row → the Patient Flame and the Marcher are offered; the 3-day Erebus is not;
- *   - the Marcher needs BOTH numbers on BOTH days: four flights on one of them and it stays quiet;
+ *   - the Marcher needs BOTH numbers on BOTH days: three flights on one of them and it stays quiet (W1182: the bar is 4);
  *   - today still short → nothing yet (today is pending, never run-breaking);
  *   - a day is spent once per boss: the day of the last kill never counts again;
  *   - three qualifying days → Erebus the Shadow Sovereign is offered; one short day breaks the run;
@@ -18,7 +18,7 @@ type Fix = { steps?: Record<string, number>; flights?: Record<string, number>; s
 
 // W1176 — every multi-day boss is automated now; the judge tests below switch them all off unless `auto` is set.
 const AUTO = ['the_patient_flame', 'the_vow_keeper', 'the_tideless_marcher', 'the_forge_of_ten_thousand_days', 'the_sleepless_ascent',
-  'erebus_the_shadow_sovereign', 'the_starved_sentinel', 'the_gray_pilgrim'];
+  'erebus_the_shadow_sovereign', 'the_starved_sentinel', 'the_gray_pilgrim', 'the_worldspine'];   // W1182 — the Worldspine is a 9k × 3 run now
 
 async function boot(page: Page, bosses?: Record<string, unknown>, points = '40000') {
   await page.addInitScript(([b, pts]: string[]) => {
@@ -90,9 +90,9 @@ test.describe('The Ready Hunt and the multi-day bosses (W1039)', () => {
     expect(ids).not.toContain('erebus_the_shadow_sovereign');
   });
 
-  test('the Marcher needs both numbers on both days: four flights yesterday and it stays quiet (the Flame still comes)', async ({ page }) => {
+  test('the Marcher needs both numbers on both days: three flights yesterday and it stays quiet (the Flame still comes)', async ({ page }) => {
     await boot(page);
-    const ids = await scan(page, { steps: { [T1]: 12000, [T0]: 10500 }, flights: { [T1]: 4, [T0]: 9 } });
+    const ids = await scan(page, { steps: { [T1]: 12000, [T0]: 10500 }, flights: { [T1]: 3, [T0]: 9 } });   // W1182 — the Marcher's bar is 4 flights
     expect(ids).toContain('the_patient_flame');
     expect(ids).not.toContain('the_tideless_marcher');
   });
@@ -112,11 +112,11 @@ test.describe('The Ready Hunt and the multi-day bosses (W1039)', () => {
     expect(ids).toContain('the_tideless_marcher');   // never beaten: its two days are untouched
   });
 
-  test('three 10k + 10-flight days → Erebus the Shadow Sovereign; nine flights on the middle day breaks the run', async ({ page }) => {
+  test('three 9k + 4-flight days → Erebus the Shadow Sovereign; three flights on the middle day breaks the run (W1182)', async ({ page }) => {
     await boot(page);
     let ids = await scan(page, { steps: { [T2]: 12000, [T1]: 12000, [T0]: 12000 }, flights: { [T2]: 10, [T1]: 10, [T0]: 10 } });
     expect(ids).toContain('erebus_the_shadow_sovereign');
-    ids = await scan(page, { steps: { [T2]: 12000, [T1]: 12000, [T0]: 12000 }, flights: { [T2]: 10, [T1]: 9, [T0]: 10 } });
+    ids = await scan(page, { steps: { [T2]: 12000, [T1]: 12000, [T0]: 12000 }, flights: { [T2]: 10, [T1]: 3, [T0]: 10 } });
     expect(ids).not.toContain('erebus_the_shadow_sovereign');
   });
 
@@ -143,9 +143,9 @@ test.describe('The Ready Hunt and the multi-day bosses (W1039)', () => {
     await boot(page);
     await scan(page, { steps: { [T1]: 12000, [T0]: 3000 }, flights: { [T1]: 6, [T0]: 1 } });
     const w = await watchOf(page);
-    expect(w).toContainEqual({ id: 'the_patient_flame', metric: 'steps', bar: 10000, day: T0, also: [] });
-    expect(w).toContainEqual({ id: 'the_tideless_marcher', metric: 'steps', bar: 10000, day: T0, also: [{ metric: 'flights', bar: 5 }] });
-    expect(w).toContainEqual({ id: 'the_tideless_marcher', metric: 'flights', bar: 5, day: T0, also: [{ metric: 'steps', bar: 10000 }] });
+    expect(w).toContainEqual({ id: 'the_patient_flame', metric: 'steps', bar: 8000, day: T0, also: [] });   // W1182 ladder
+    expect(w).toContainEqual({ id: 'the_tideless_marcher', metric: 'steps', bar: 8500, day: T0, also: [{ metric: 'flights', bar: 4 }] });
+    expect(w).toContainEqual({ id: 'the_tideless_marcher', metric: 'flights', bar: 4, day: T0, also: [{ metric: 'steps', bar: 8500 }] });
     expect(w.filter((h: any) => h.id === 'erebus_the_shadow_sovereign')).toHaveLength(0);   // needs two earlier days
     expect(w.filter((h: any) => h.day === tomorrow)).toHaveLength(0);                       // today is not done yet
   });
@@ -156,8 +156,8 @@ test.describe('The Ready Hunt and the multi-day bosses (W1039)', () => {
     await scan(page, { steps: { [T2]: 12000, [T1]: 12000, [T0]: 12000 }, flights: { [T2]: 10, [T1]: 10, [T0]: 10 } });
     const w = await watchOf(page);
     const flame = w.filter((h: any) => h.id === 'the_patient_flame');
-    expect(flame).toEqual([{ id: 'the_patient_flame', metric: 'steps', bar: 10000, day: tomorrow, also: [] }]);
-    expect(w).toContainEqual({ id: 'erebus_the_shadow_sovereign', metric: 'steps', bar: 10000, day: tomorrow, also: [{ metric: 'flights', bar: 10 }] });
+    expect(flame).toEqual([{ id: 'the_patient_flame', metric: 'steps', bar: 8000, day: tomorrow, also: [] }]);
+    expect(w).toContainEqual({ id: 'erebus_the_shadow_sovereign', metric: 'steps', bar: 9000, day: tomorrow, also: [{ metric: 'flights', bar: 4 }] });
   });
 
   test('the phone list: last night qualified → the Vow Keeper on sleep today; only tonight qualified → tomorrow', async ({ page }) => {
@@ -173,7 +173,7 @@ test.describe('The Ready Hunt and the multi-day bosses (W1039)', () => {
     await boot(page);
     let ids = await scan(page, { sleep: { [T1]: 7.47, [T0]: 7.47 } });
     expect(ids).toContain('the_vow_keeper');
-    expect(ids).not.toContain('the_dream_tyrant');   // 7.5 last night: 7.47 is short
+    expect(ids).toContain('the_dream_tyrant');       // W1182 — the Dream Tyrant's bar is 7 h now too (was 7.5)
     ids = await scan(page, { sleep: { [T1]: 7.47, [T0]: 6.5 } });
     expect(ids).not.toContain('the_vow_keeper');
   });
@@ -200,7 +200,7 @@ test.describe('The Ready Hunt and the multi-day bosses (W1039)', () => {
 
   test('W1167: today still short, or a hunter below B → the Flame stands', async ({ page }) => {
     await boot(page);
-    await scan(page, { steps: { [T1]: 12000, [T0]: 9900 } }, true);
+    await scan(page, { steps: { [T1]: 12000, [T0]: 7900 } }, true);   // W1182 — the Flame's bar is 8,000
     await page.waitForTimeout(800);
     expect((await flame(page)).kill_count || 0).toBe(0);
     await page.evaluate(() => { localStorage.setItem('hb_points', '0'); });
@@ -257,12 +257,12 @@ test.describe('The Ready Hunt and the multi-day bosses (W1039)', () => {
     expect((await flame(page)).kill_count).toBe(1);
   });
 
-  test('W1176: the Gray Pilgrim counts seven days of stairs — 55 and it stands, 56 and it falls', async ({ page }) => {
+  test('W1176: the Gray Pilgrim counts seven days of stairs — 41 and it stands, 42 and it falls (W1182)', async ({ page }) => {
     await boot(page);
-    await scan(page, { flights: { ...days(6, 8), [dayKey(6)]: 7 } }, true);   // 6 × 8 + 7 = 55
+    await scan(page, { flights: { ...days(6, 6), [dayKey(6)]: 5 } }, true);   // 6 × 6 + 5 = 41
     await page.waitForTimeout(1500);
     expect(await kills(page, ['the_gray_pilgrim'])).toEqual([0]);
-    await scan(page, { flights: { ...days(6, 8), [dayKey(6)]: 8 } }, true);   // 56
+    await scan(page, { flights: { ...days(6, 6), [dayKey(6)]: 6 } }, true);   // 42
     await expect.poll(() => kills(page, ['the_gray_pilgrim']), { timeout: 10_000 }).toEqual([1]);
   });
 });
