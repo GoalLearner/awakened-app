@@ -36961,3 +36961,45 @@ button.mx-sh { cursor: pointer; min-height: 40px; }
 .us-arr:disabled{opacity:.22;cursor:default;}
 .us-n{min-width:52px;text-align:center;font:800 12px/1 'JetBrains Mono',ui-monospace,monospace;letter-spacing:.14em;color:#b9b2cf;}
 @media (prefers-reduced-motion:reduce){.us-panel,.us-back{transition:none;}.us-in-r,.us-in-l{animation:none;}}
+
+/* ── W1188 · battle FX from the free packs: Kenney particles (masked + tinted) and Lottie bursts, over the .pkb stage ── */
+.bfx-layer { position: absolute; inset: 0; z-index: 7; pointer-events: none; overflow: visible; }
+.bfx-p { position: absolute; width: var(--s); height: var(--s); margin: calc(var(--s) / -2) 0 0 calc(var(--s) / -2); transform: rotate(var(--r)) scale(.55); opacity: 0;
+  filter: drop-shadow(0 0 7px var(--c)) drop-shadow(0 0 2px rgba(255,255,255,.6)); will-change: transform, opacity; }
+.bfx-p b { position: absolute; inset: 0; background: var(--c); -webkit-mask-size: contain; mask-size: contain; -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat; -webkit-mask-position: center; mask-position: center; }
+.bfx-p.bfx-acc b { background: radial-gradient(circle, #fff 30%, var(--c) 100%); }
+.bfx-main { animation: bfx-slash calc(380ms * var(--spd, 1)) cubic-bezier(.2,.9,.3,1) forwards; }
+.bfx-acc  { animation: bfx-pop calc(320ms * var(--spd, 1)) ease-out forwards; }
+.bfx-ring { animation: bfx-ring calc(460ms * var(--spd, 1)) cubic-bezier(.15,.8,.3,1) forwards; }
+@keyframes bfx-slash { 0% { opacity: 0; transform: rotate(var(--r)) scale(.55); } 16% { opacity: 1; transform: rotate(var(--r)) scale(1.04); } 100% { opacity: 0; transform: rotate(calc(var(--r) + 8deg)) scale(1.16); } }
+@keyframes bfx-pop { 0% { opacity: 0; transform: rotate(var(--r)) scale(.3); } 25% { opacity: 1; transform: rotate(var(--r)) scale(1.15); } 100% { opacity: 0; transform: rotate(calc(var(--r) + 25deg)) scale(.7); } }
+@keyframes bfx-ring { 0% { opacity: .95; transform: scale(.35); } 100% { opacity: 0; transform: scale(1.55); } }
+.bfx-lot { position: absolute; transform: translate(-50%, -50%); pointer-events: none; }
+.bfx-lot svg { display: block; width: 100% !important; height: 100% !important; overflow: visible; }
+@media (prefers-reduced-motion: reduce) { .bfx-main, .bfx-acc, .bfx-ring { animation: bfx-fade 300ms ease-out forwards; } }
+@keyframes bfx-fade { 0% { opacity: .9; transform: rotate(var(--r)) scale(1); } 100% { opacity: 0; transform: rotate(var(--r)) scale(1); } }
+
+/* ── W1188 · Settings › Credits & licenses ── */
+.cr-ov { position: fixed; inset: 0; z-index: 12460; }
+.cr-back { position: absolute; inset: 0; background: rgba(4,4,14,0); transition: background .3s; }
+.cr-open .cr-back { background: rgba(4,4,14,.72); }
+.cr-panel { position: absolute; left: 0; right: 0; bottom: 0; max-height: 88vh; display: flex; flex-direction: column; border-radius: 26px 26px 0 0; background: linear-gradient(180deg,#1b1841 0%,#100e29 55%,#0a0a1c 100%); border-top: 1px solid rgba(245,184,66,.35); box-shadow: 0 -30px 80px rgba(0,0,0,.55); transform: translateY(104%); transition: transform .42s cubic-bezier(.2,.9,.25,1); }
+.cr-open .cr-panel { transform: none; }
+.cr-closing .cr-panel { transform: translateY(104%); transition-duration: .28s; }
+.cr-closing .cr-back { background: rgba(4,4,14,0); }
+.cr-top { position: relative; height: 50px; flex: none; display: flex; justify-content: center; }
+.cr-grab { width: 40px; height: 5px; margin-top: 10px; border-radius: 3px; background: rgba(255,255,255,.18); }
+.cr-x { position: absolute; right: 16px; top: 12px; width: 40px; height: 40px; border-radius: 12px; border: 1px solid rgba(255,255,255,.14); background: rgba(255,255,255,.04); color: #d9d6ea; display: grid; place-items: center; cursor: pointer; }
+.cr-body { overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 0 20px calc(26px + env(safe-area-inset-bottom, 0px)); color: #c9c9dc; }
+.cr-h { margin: 0 0 6px; font: 700 22px/1.15 'Cinzel', Georgia, serif; color: #fff; }
+.cr-k { margin: 20px 0 8px; font: 800 10px/1 'JetBrains Mono', ui-monospace, monospace; letter-spacing: .22em; text-transform: uppercase; color: #f5b842; }
+.cr-p { margin: 0 0 10px; font-size: 14.5px; line-height: 1.45; }
+.cr-p b { color: #fff; font-weight: 650; }
+.cr-list { list-style: none; margin: 0 0 12px; padding: 0; border: 1px solid rgba(255,255,255,.08); border-radius: 14px; overflow: hidden; }
+.cr-list li { display: flex; justify-content: space-between; gap: 12px; padding: 9px 13px; font-size: 13.5px; border-top: 1px solid rgba(255,255,255,.06); }
+.cr-list li:first-child { border-top: 0; }
+.cr-list span { color: #ecebf6; }
+.cr-list i { font-style: normal; color: #9b98b8; text-align: right; }
+.cr-d { margin: 0 0 10px; border: 1px solid rgba(255,255,255,.08); border-radius: 14px; background: rgba(255,255,255,.03); }
+.cr-d summary { padding: 12px 14px; font-weight: 600; color: #fff; cursor: pointer; }
+.cr-d pre { margin: 0; padding: 0 14px 14px; white-space: pre-wrap; word-break: break-word; font: 12px/1.5 -apple-system, BlinkMacSystemFont, system-ui, sans-serif; color: #b9b6d2; }

@@ -152,6 +152,12 @@ fi
 # W251 — generated NPC battle sprites (foe_<archKey> covers the 90 procedural
 # floors; boss_<floor> portraits drop in as they land). Missing files fall
 # back to silhouettes in-app, but anything PRESENT here must ship.
+# W1188 — the battle FX: Kenney particles + LottieFiles effects, and the Lottie player (loaded on demand, so it is not
+# in index.html's <script> graph above and must be copied by name)
+mkdir -p www/assets/fx/lottie www/lib
+cp assets/fx/*.png www/assets/fx/
+cp assets/fx/lottie/*.json www/assets/fx/lottie/
+cp lib/lottie_light.min.js www/lib/
 mkdir -p www/assets/arena
 if compgen -G "assets/arena/*.webp" > /dev/null; then
   cp assets/arena/*.webp www/assets/arena/

@@ -160,7 +160,7 @@
   const APP_VERSION = '3.0.24';   // W1169 — 3.0.23 APPROVED 2026-11-08 (submitted 2026-11-07 5:00 PM PST, LIVE 2:33 PM PST on the 8th; almost certainly build 628 = w1161: pins, the Wardrobe tap fix), so 3.0.24 opened carrying W1162-W1169 (the 3.0.23 store notes, the board update, matched hunt partners, Add as friend, late steps reach the board, The Patient Flame falls by itself, earned ultimates behind their flag). [history] W1134 — 3.0.22 APPROVED 2026-11-06 (submitted 4:53 AM PST from build 617 = w1132: the Shadowborn + the Elite Eight, the Rising redrawn, profile cards name the look, every open counted), so 3.0.23 opened carrying W1134 (the Worldgate counts a hunter's steps only after 2 days in the app that week). [history] W1127 — 3.0.21 LIVE on the App Store 2026-11-05 9:34 AM PST (built from w1126: no memberships, kill stamps without a title, the tier crests, the onboarding's "How did you find the Gate?"), so 3.0.22 opened carrying W1127 (the app-open ping says when it is a real open; the server counts every one per Pacific day). [history] W1124 — 3.0.20 LIVE on the App Store 2026-11-01 12:50 PM PST (built from w1120: final standings Sunday, shadows in the public feed, Shadow Army on Status); 3.0.21 opened carrying W1121 (its What's New, never shown: re-keyed to 3.0.21), W1122 (no memberships), W1124 (kill stamp without a title, inlined tier crests) and W1125 (the onboarding's last screen asks how the hunter found the app; W1126 keeps it in place when the keyboard opens). [history] W1114 — 3.0.19 approved 2026-10-30 (submitted 1:45 AM PST, w1113: shadows 1 in 5, armor upgrades, relic power by boss rank, relic cards three across); 3.0.20 opened with the feed's boss rank chips, no What's New entry yet. W1107 — 3.0.18 approved and LIVE 2026-10-28 8:02 AM PST (submitted 2026-10-27 7:41 PM PST, build 602 = w1106: the four steps trios, the Rising's nine looks, the earned line in the Wardrobe, the richer-backup offer); 3.0.19 opened at approval. [history] W1103 — 3.0.17 approved 2026-10-27 (build 600, submitted 2026-10-26 6:21 PM PST: the automatic friend hunts, the earned looks, the two-tab Wardrobe); 3.0.18 opened at approval, carrying W1102 (the app offers back a richer cloud backup). [history] W1097 — 3.0.16 approved + live 2026-10-26 (build 599, the iOS 27 fix); 3.0.17 opened at approval. Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.16 = the post-3.0.15 train, opened 2026-10-23 (W1085): 3.0.15 was submitted 2026-10-22 2:55 PM PST from build 595 (w1083: the tally, the preview row, the security pass) and approved the same day, so the train closed under it. It carries W1084 (the tally leads the 3.0.15 What's New) forward. [history] 3.0.15 = the post-3.0.14 train, opened 2026-10-22 (W1080): 3.0.14 was approved and LIVE 2026-10-21 5:08 PM PST from build 591 (w1074) — the first 592 upload was refused ("train closed"), the sixth time an approval closed a train under a build. It carries W1077/W1078 (sign-out ends the session, cloud save checksum + gzip, socket token out of the URL, invite links ask first) forward. [history] 3.0.14 = the post-3.0.13 train, opened 2026-10-21 (W1074): 3.0.13 was approved and went LIVE 2026-10-20 3:50 AM PST from build 587 (w1068), so it carries W1069 (the floor 100 curve), W1070-W1073 (the ten weekly step and sleep bosses and their drops) and the real-screen screenshots and header Apple asked for (App Review 2.3.3) forward. [history] 3.0.11 = the post-3.0.10 train, opened 2026-10-05: Apple's store lookup showed 3.0.10 LIVE (released 11:35 AM PST that day, built from w1024, so it carried W1023 the 9:45 PM finish-strong reminder and nothing after). It carries forward W1025 (Myrmidon King art), W1026 (one request for every co-op hunt) and W1027 (steps 'today' = the device's day), all pushed under the 3.0.10 tag after that build was cut. [history] 3.0.10 = the post-3.0.9 train, opened 2026-10-04 when the owner passed on Apple's approval of 3.0.9 (submitted 2026-10-02 12:41 PM PST, approved 2026-10-03; carried W1002–W1022: weekly to-do planner, to-dos first in the briefing, the Monday recap, times-a-week vows, the interactive Status tab, the Jump Manual program, the flights-hunt result fix). It carries W1023 (the 9:45 PM finish-strong reminder) forward. First TWO-DIGIT patch: every version compare in the app is numeric (_updVersionNewer, the What's New compare), never a string compare. [history] 3.0.9 = the post-3.0.8 train, opened 2026-09-25 the moment Apple approved 3.0.8 (submitted 4:57 PM PST, approved the same evening; carried W989–W1001: Items overhaul, Resolved + mod view counts, the sectioned Habits tab + to-dos v2, topic edit). [history] 3.0.8 = the post-3.0.7 train, opened 2026-09-24 the moment Apple approved 3.0.7 (build 543, submitted 1:15 AM PST, approved same day; the Worldgate In-App Event was approved in the same hour). Carries forward: the three description corrections (Ranked PvP / Streak Shields / five-hunter raid = Premium) go out WITH this version, since a description only changes with a new version. [history] 3.0.7 carried W968–W987 (vows yours + glory verified, morning briefing v2, hunt results, Worldgate MVPs + weekly line + strike freeze, Community Updates + briefing line, mod preview rows, awakened:// scheme). [history] 3.0.7 = the post-3.0.6 train, opened 2026-09-20 the moment Apple approved 3.0.6 (submitted 3:14 AM PST that day, approved same day) — an approval CLOSES a train, and uploading under the approved number is refused (CFBundleShortVersionString must exceed it). This has now bitten FOUR times; the bump is done at approval, not at upload. [history] 3.0.6 carried W960–W967 (Manage Vows fix, rank-bar hairline, Worldgate kill ceremony, division-up celebration, owner preview row, 3.0.6 release notes). [history] 3.0.4 = the post-3.0.3 train, opened 2026-09-11 because Apple approved 3.0.3 (live 2026-09-09) and an approval closes a train — carries W935 (weekly-board upload fix + Apple Health asked on every onboarding path). [history] 3.0.3 = the post-3.0.2 train, opened 2026-09-07 the morning after Apple approved 3.0.2 (submitted 2026-09-06 4:41 PM PT; approval closes a train — twice-bitten lesson) — carries W917-W919b (Ledger view, Streak Shields deleted, handoff 29) forward under the new number. [history] 3.0.2 = the post-release train, opened 2026-09-04 because Apple closes a train on approval (build 493 under 3.0.1 was refused: CFBundleShortVersionString must exceed the approved 3.0.1) — carries W903 (boss-sheet hotfix) + W905 (Status is the hunter profile again). 3.0.1 "MAKE IT LAND" = the repair release (W882-W890): Wave-2 progression joins cloud sync, the activation funnel is instrumented end to end, silent Wave-2 server failures leave breadcrumbs, the altar routes to a same-day first kill, the Double Dungeon stops reporting false failures and yields when the stair is unavailable, the beat What's New used to eat is chained, and every banked free engage is visible before the tap. 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.24-w1186'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '3.0.24-w1188'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -17595,6 +17595,7 @@
   // band; bg_s is inverted (focal at 67%) so it pushes up instead.
   const _PKB_BG_FOCAL = { e: '12%', d: '6%', c: '0%', b: '0%', a: '10%', s: '100%' };
   function _pkbMountBg(floor) {
+    try { _bfxWarm(); } catch (_) {}   // W1188 — the battle FX player and files, loaded once
     const stage = _pkbEl('pkb-stage'); if (!stage) return;
     const wrap = stage.querySelector('.pkb-bgwrap'); if (!wrap) return;
     const ORDER = ['e', 'd', 'c', 'b', 'a', 's'];
@@ -18801,6 +18802,7 @@
     });
     if (p.vfxClear) _pkbMvClearFx(L);
     if (p.vfxAdd) p.vfxAdd.forEach((v) => _pkbMvMount(v, L));
+    if (p.bfx) { try { _bfxPlayUlt(p.bfx); } catch (_) {} }   // W1188 — an ultimate's element (Lottie)
     if (p.vfxbClear && L && L.bsvg) { try { L.bsvg.innerHTML = ''; L.bdom.innerHTML = ''; } catch (_) {} }   // W1171
     if (p.vfxbAdd) p.vfxbAdd.forEach((v) => _pkbMvMount(v, L, true));
     if (p.grade !== undefined) { _pkbMvStrip(stage, 'gr-'); if (p.grade) stage.classList.add('gr-' + p.grade); }   // W1171 — qs: time stops (the foe greys) · mono: the reaper's window
@@ -19045,9 +19047,10 @@
       reaper: (hit ? !!e.exe : low) ? 'window' : 'normal', stance }, extra || {});
   }
   function _pkbUltSeqFor(e, s, c, extra) {
-    const id = e && e.ultId, fn = id && _PKB_ULT_SEQ[id];
-    if (fn) return fn(c, _pkbUltOpts(e, s, extra));
-    return _pkbUltSeq(_PKB_ULT_STYLE[id] || _arUltStyle(s), c);
+    const id = e && e.ultId, fn = id && _PKB_ULT_SEQ[id], o = _pkbUltOpts(e, s, extra);
+    const seq = fn ? fn(c, o) : _pkbUltSeq(_PKB_ULT_STYLE[id] || _arUltStyle(s), c);
+    try { const st = _bfxUltStep(id, o); if (st && seq && seq.steps) seq.steps.push([seq.T || 0, st]); } catch (_) {}   // W1188 — its element lands with the blow
+    return seq;
   }
   // W1170 — PREVIEW (owner 2026-11-09: "can you put previews" → a button on each ultimate's Wardrobe page): the real
   // battle stage in a full-screen layer — the hunter's own look against a training foe — playing the real cut-in and
@@ -19570,6 +19573,7 @@
       const lethal = (_pkbHPm[defSide] - (dmgShown || 0)) <= 0;
       _pkbReactFx(defSide, e.crit ? 'crit' : (guarded && !lethal ? 'resist' : 'hit'));
     } catch (_) { try { _pkbReactFx(defSide, e.crit ? 'crit' : 'hit'); } catch (_2) {} }
+    try { _bfxHit(e, defSide, !!stop && (_pkbHPm[defSide] - (e.dmg || 0)) <= 0); } catch (_) {}   // W1188 — the pack's slash/spark, crit + KO bursts
     _pkbFloat(e.side, '−' + dmgShown, !!e.crit);
   }
   // W752 — finisher beat: the hit that ENDS a fighter gets a longer freeze, a
@@ -19587,6 +19591,152 @@
       _pkbAfter(700, () => { try { stage.classList.remove('finisher'); } catch (_) {} });
     } catch (_) {}
   }
+  // ── W1188 · BATTLE FX from free asset packs (owner 2026-11-11: "Are there assets online that could change the battle
+  // graphics" → "Yes do all of them"). On the shared .pkb stage (Ascent, PvP and the ultimate Preview), presentation only:
+  //   - every hit: a slash, streak, ring or flame from Kenney's Particle Pack (CC0) at the defender, tinted to the
+  //     move's family (the W428 strike tints) through a CSS mask, plus a small accent spark;
+  //   - a crit adds a shockwave ring (LottieFiles "Poof"), a hit on the hunter adds red particles, an execute a red
+  //     burst, and a killing blow a fiery boom;
+  //   - each ultimate lands with its own element at its blow (T): Hellfire a fire pillar, Storm of Blades lightning,
+  //     Worldbreaker dust and a boom, Reaper's Due a red burst, Crimson Feast red particles, Quicksilver a teal ring,
+  //     Arise a violet fog, Dawnbreaker a gold ward on the hunter, the Signatures a boom, sparkles or dust.
+  // The Lottie player (lib/lottie_light.min.js, lottie-web, MIT) and the effect files load when a fight's stage first
+  // mounts; until they arrive an effect is simply skipped, never waited on. Reduced motion: no Lottie, the particles
+  // only fade. Credits and the license texts: Settings › Help & About › Credits & licenses (openCredits).
+  const BFX_DIR = 'assets/fx/';
+  const BFX_FAM = {   // a W428 strike family → its particle shapes (assets/fx/k-<name>.png) and their size on the stage
+    sword:   { main: ['slash_01', 'slash_02', 'slash_03', 'slash_04'], acc: ['star_06', 'star_07'], size: 150, spin: 70 },
+    dagger:  { main: ['scratch_01', 'trace_06', 'trace_07'], acc: ['star_08'], size: 120, spin: 50 },
+    blunt:   { main: ['circle_03', 'dirt_02'], acc: ['star_09'], size: 150, spin: 180 },
+    arrow:   { main: ['trace_06', 'trace_07'], acc: ['star_08', 'spark_07'], size: 120, spin: 30 },
+    bolt:    { main: ['trace_06', 'spark_01'], acc: ['star_08'], size: 120, spin: 30 },
+    fire:    { main: ['fire_01', 'fire_02', 'scorch_02'], acc: ['muzzle_02'], size: 140, spin: 180 },
+    arcane:  { main: ['magic_03', 'twirl_01', 'twirl_02'], acc: ['light_02'], size: 140, spin: 180 },
+    frost:   { main: ['magic_05', 'twirl_02'], acc: ['star_06'], size: 130, spin: 180 },
+    execute: { main: ['slash_03', 'slash_04'], acc: ['star_09', 'spark_02'], size: 190, spin: 40 },
+  };
+  const BFX_PNG = ['slash_01', 'slash_02', 'slash_03', 'slash_04', 'scratch_01', 'twirl_01', 'twirl_02', 'trace_06', 'trace_07', 'spark_01', 'spark_02', 'spark_07',
+    'star_06', 'star_07', 'star_08', 'star_09', 'circle_02', 'circle_03', 'magic_03', 'magic_05', 'light_02', 'fire_01', 'fire_02', 'muzzle_02', 'scorch_02', 'dirt_02', 'smoke_10', 'flare_01'];
+  // each ultimate's element at its blow; at 'atk' = on the hunter (a ward), else on the foe. size = width in px; dy = px down.
+  const BFX_ULT = {
+    hellfire:     [{ id: 'fire-element', size: 230, dy: -40 }],
+    storm:        [{ id: 'thunder-element', size: 250, dy: -50 }],
+    worldbreaker: [{ id: 'smoke-dust', size: 300, dy: 30 }, { id: 'explosion-anisimov', size: 250, dy: -10 }],
+    reaper:       [{ id: 'red-explosion', size: 230 }],
+    feast:        [{ id: 'explosion-red-particles', size: 320 }],
+    quicksilver:  [{ id: 'poof', size: 230, filter: 'sepia(1) saturate(4) hue-rotate(130deg) brightness(1.1)' }],
+    arise:        [{ id: 'fog-smoke', size: 320, dy: 20, filter: 'brightness(.6) sepia(1) saturate(3.2) hue-rotate(215deg)' }],
+    dawnbreaker:  [{ id: 'golden-glow', size: 190, at: 'atk' }, { id: 'charge-aura', size: 260, at: 'atk', dy: -10 }],
+    verdict:      [{ id: 'explosion-anisimov', size: 260, dy: -10 }],
+    starfall:     [{ id: 'sparkles-burst', size: 280 }],
+    rain:         [{ id: 'smoke-dust', size: 290, dy: 30 }],
+  };
+  const BFX_LOTTIE = ['poof', 'explosion-red-particles', 'red-explosion', 'explosion-anisimov', 'fire-element', 'thunder-element', 'smoke-dust',
+    'sparkles-burst', 'golden-glow', 'charge-aura', 'fog-smoke'];
+  let _bfxLib = '';   // '' · 'loading' · 'ready' · 'failed'
+  const _bfxJson = {};   // id → the file's text (parsed fresh for each play: the player writes into its data)
+  function _bfxReduced() { try { return _arReduceMotion(); } catch (_) { return false; } }
+  /** Load the Lottie player and the effect files once, the first time a fight's stage mounts. */
+  function _bfxWarm() {
+    if (!_bfxLib) {
+      if (window.lottie) _bfxLib = 'ready';
+      else {
+        _bfxLib = 'loading';
+        try {
+          const s = document.createElement('script');
+          s.src = 'lib/lottie_light.min.js?v=1'; s.async = true;
+          s.onload = function () { _bfxLib = window.lottie ? 'ready' : 'failed'; };
+          s.onerror = function () { _bfxLib = 'failed'; };
+          document.head.appendChild(s);
+        } catch (_) { _bfxLib = 'failed'; }
+      }
+    }
+    if (!_bfxWarm.png) {   // the particle masks, cached before the first hit needs one
+      _bfxWarm.png = true;
+      BFX_PNG.forEach(function (n) { try { const im = new Image(); im.src = BFX_DIR + 'k-' + n + '.png'; } catch (_) {} });
+    }
+    BFX_LOTTIE.forEach(function (id) {
+      if (_bfxJson[id] !== undefined) return;
+      _bfxJson[id] = 0;   // loading
+      try {
+        fetch(BFX_DIR + 'lottie/' + id + '.json').then(function (r) { return r.ok ? r.text() : null; })
+          .then(function (t) { _bfxJson[id] = t || null; }).catch(function () { _bfxJson[id] = null; });
+      } catch (_) { _bfxJson[id] = null; }
+    });
+  }
+  function _bfxLayer() {
+    const stage = _pkbEl('pkb-stage'); if (!stage) return null;
+    let L = stage.querySelector(':scope > .bfx-layer');
+    if (!L) { L = document.createElement('div'); L.className = 'bfx-layer'; stage.appendChild(L); }
+    return L;
+  }
+  // the centre of a fighter's spot, in the stage's own coordinates
+  function _bfxAt(side) {
+    const stage = _pkbEl('pkb-stage'), spot = _pkbEl('pkb-spot-' + side);
+    if (!stage || !spot) return null;
+    const r = spot.getBoundingClientRect(), sr = stage.getBoundingClientRect();
+    if (!r.width || !sr.width) return null;
+    return { x: r.left - sr.left + r.width / 2, y: r.top - sr.top + r.height * 0.48 };
+  }
+  const _bfxPick = function (a) { return a[Math.floor(Math.random() * a.length)]; };
+  function _bfxPart(L, name, x, y, size, rot, tint, kind, delay) {
+    const w = document.createElement('i');
+    w.className = 'bfx-p bfx-' + kind;
+    w.style.cssText = 'left:' + x.toFixed(1) + 'px;top:' + y.toFixed(1) + 'px;--s:' + Math.round(size) + 'px;--r:' + Math.round(rot) + 'deg;--c:' + tint + (delay ? ';animation-delay:calc(' + delay + 'ms * var(--spd,1))' : '');
+    w.innerHTML = '<b style="-webkit-mask-image:url(' + BFX_DIR + 'k-' + name + '.png);mask-image:url(' + BFX_DIR + 'k-' + name + '.png)"></b>';
+    L.appendChild(w);
+    _pkbAfter(900, function () { try { w.remove(); } catch (_) {} });
+    return w;
+  }
+  /** Play one Lottie effect at a fighter. Skipped (never waited on) while the player or the file is still loading. */
+  function _bfxLottie(id, side, o) {
+    o = o || {};
+    if (_bfxReduced() || _bfxLib !== 'ready' || !window.lottie || typeof _bfxJson[id] !== 'string') return null;
+    const L = _bfxLayer(), at = _bfxAt(side); if (!L || !at) return null;
+    let data; try { data = JSON.parse(_bfxJson[id]); } catch (_) { return null; }
+    const w = o.size || 220, h = Math.round(w * ((data.h || 1) / (data.w || 1)));
+    const box = document.createElement('div');
+    box.className = 'bfx-lot'; box.setAttribute('data-bfx', id);
+    box.style.cssText = 'left:' + (at.x + (o.dx || 0)).toFixed(1) + 'px;top:' + (at.y + (o.dy || 0)).toFixed(1) + 'px;width:' + w + 'px;height:' + h + 'px' + (o.filter ? ';filter:' + o.filter : '');
+    L.appendChild(box);
+    let an = null, gone = false;
+    const end = function () { if (gone) return; gone = true; try { if (an) an.destroy(); } catch (_) {} try { box.remove(); } catch (_) {} };
+    try {
+      an = window.lottie.loadAnimation({ container: box, renderer: 'svg', loop: false, autoplay: true, animationData: data, rendererSettings: { preserveAspectRatio: 'xMidYMid meet' } });
+      an.setSpeed(_pkbFF ? 2 : 1);
+      an.addEventListener('complete', end);
+    } catch (_) { end(); return null; }
+    setTimeout(end, Math.min(6000, Math.round(((data.op - data.ip) / (data.fr || 30)) * 1000) + 600));   // a safety net
+    return box;
+  }
+  /** Every hit: the family's particle at the defender (+ crit / execute / KO bursts). Ultimates bring their own (_bfxUltStep). */
+  function _bfxHit(e, defSide, lethal) {
+    if (!e || e.ult) return;
+    const L = _bfxLayer(), at = _bfxAt(defSide); if (!L || !at) return;
+    const famKey = e.exe ? 'execute' : (_PKB_GL_TO_FX[e.gl] || 'sword');
+    const F = BFX_FAM[famKey] || BFX_FAM.sword, tint = ((_PKB_FX[famKey] || _PKB_FX.sword).tint) || '#f5b842';
+    const k = e.crit ? 1.3 : 1, jx = (Math.random() - 0.5) * 24, jy = (Math.random() - 0.5) * 20;
+    const rot = (Math.random() - 0.5) * F.spin * 2 + (defSide === 'p' ? 180 : 0);
+    _bfxPart(L, _bfxPick(F.main), at.x + jx, at.y + jy, F.size * k, rot, tint, 'main', 0);
+    _bfxPart(L, _bfxPick(F.acc), at.x + jx * 0.5, at.y + jy * 0.5, F.size * 0.55 * k, Math.random() * 90, '#fff6dc', 'acc', 40);
+    if (e.crit) {
+      _bfxPart(L, _bfxPick(F.main), at.x - jx, at.y - jy, F.size * k, rot + 90, tint, 'main', 70);
+      _bfxPart(L, 'circle_02', at.x, at.y, F.size * 1.1, 0, tint, 'ring', 30);
+      _bfxLottie('poof', defSide, { size: 200 });
+    }
+    if (defSide === 'p' && (e.crit || lethal)) _bfxLottie('explosion-red-particles', 'p', { size: 260 });
+    if (e.exe) _bfxLottie('red-explosion', defSide, { size: 220 });
+    else if (lethal) _bfxLottie('explosion-anisimov', defSide, { size: 230, dy: -10 });
+  }
+  /** An ultimate's element, as a step at its blow (added by _pkbUltSeqFor, played by _pkbMvApply). */
+  function _bfxUltStep(ultId, opts) {
+    const list = BFX_ULT[ultId]; if (!list || !opts || !opts.land) return null;
+    return { bfx: list };
+  }
+  function _bfxPlayUlt(list) {
+    (list || []).forEach(function (o) { _bfxLottie(o.id, o.at === 'atk' ? 'p' : 'b', o); });
+  }
+  try { window.__bfx = { warm: _bfxWarm, hit: _bfxHit, lottie: _bfxLottie, ult: BFX_ULT, fam: BFX_FAM, png: BFX_PNG, files: BFX_LOTTIE, state: function () { const j = {}; BFX_LOTTIE.forEach(function (id) { j[id] = typeof _bfxJson[id] === 'string' ? 'ready' : _bfxJson[id] === 0 ? 'loading' : _bfxJson[id] === null ? 'failed' : 'idle'; }); return { lib: _bfxLib, json: j }; } }; } catch (_) {}   // QA
   // ── W260 Patch 2 — down-to-the-wire presentation. PURE READS of the HP
   // meters; the outcome is already decided by the engine. No rubber-banding —
   // this layer only changes pacing, light, and sound. Predicates are split out
@@ -30664,6 +30814,7 @@
     '3.0.24': {
       subtitle: 'Eight new ultimates.',
       items: [
+        { emoji: '', title: 'Hits that land', description: "New battle effects: every hit flashes in its weapon's colour, crits burst, and each ultimate strikes with its own element." },   // W1188
         { emoji: '', title: 'Eight ultimates to find', description: "Any boss you beat can drop one: 1 kill in 40, and never one you already have. They live on Items, and each one has a Preview." },   // W1183 (was earned from milestones, W1168)
         { emoji: '', title: 'Every boss, set by real days', description: "Boss goals now climb one clear ladder: 5,000 steps a day at E up to 8,000 at S. Most are easier than before, and the sleep bosses ask for 7 hours, not 8." },   // W1182
         { emoji: '', title: 'A new morning briefing', description: "Your pact flames, your steps against the world average, the latest update or a health fact, and a way to review the app." },   // W1178, W1179
@@ -54422,6 +54573,51 @@
     return 'mailto:' + BOARD_SUPPORT_EMAIL + '?subject=' + encodeURIComponent('Awakened: a problem') + '&body=' + encodeURIComponent(body);
   }
   try { window.__reportProblemMail = _reportProblemMail; } catch (_) {}   // QA
+  // ── W1188 · CREDITS & LICENSES (Settings › Help & About). Who made the battle effects, and the license texts their
+  // terms ask to travel with them: LottieFiles (Lottie Simple License: the same terms go wherever the files go),
+  // lottie-web (MIT: its notice must be included), Kenney (CC0: thanks, not required).
+  const CREDITS_LOTTIE = [
+    ['Fire Element Effect', 'Zoro'], ['Thunder Lightening Element Effect', 'Zoro'], ['Red Explosion', 'Vinzenz'],
+    ['Explosion Red Particles', 'MRouquin'], ['Explosion', 'Viktor Anisimov'], ['Poof', 'SMNV'], ['Fall Smoke Dust', 'Milad Ghiravani'],
+    ['Sparkles Burst', 'Souvik Sur'], ['Golden Glow', 'Whitesushi'], ['Charge Aura', 'Nareswara Widito'], ['Fog / Smoke', 'Ladon Sklyarov'],
+  ];
+  const LICENSE_LOTTIE_SIMPLE = 'Lottie Simple License (FL 9.13.21)\nCopyright © 2021 Design Barn Inc.\n\n' +
+    'Permission is hereby granted, free of charge, to any person obtaining a copy of the public animation files available for download at the LottieFiles site (“Files”) to download, reproduce, modify, publish, distribute, publicly display, and publicly digitally perform such Files, including for commercial purposes, provided that any display, publication, performance, or distribution of Files must contain (and be subject to) the same terms and conditions of this license. Modifications to Files are deemed derivative works and must also be expressly distributed under the same terms and conditions of this license. You may not purport to impose any additional or different terms or conditions on, or apply any technical measures that restrict exercise of, the rights granted under this license. This license does not include the right to collect or compile Files from LottieFiles to replicate or develop a similar or competing service.\n\n' +
+    'Use of Files without attributing the creator(s) of the Files is permitted under this license, though attribution is strongly encouraged. If attributions are included, such attributions should be visible to the end user.\n\n' +
+    'FILES ARE PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. EXCEPT TO THE EXTENT REQUIRED BY APPLICABLE LAW, IN NO EVENT WILL THE CREATOR(S) OF FILES OR DESIGN BARN, INC. BE LIABLE ON ANY LEGAL THEORY FOR ANY SPECIAL, INCIDENTAL, CONSEQUENTIAL, PUNITIVE, OR EXEMPLARY DAMAGES ARISING OUT OF THIS LICENSE OR THE USE OF SUCH FILES.';
+  const LICENSE_MIT_LOTTIE_WEB = 'The MIT License (MIT)\n\nCopyright (c) 2015 Bodymovin\n\n' +
+    'Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:\n\n' +
+    'The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.\n\n' +
+    'THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.';
+  function openCredits() {
+    closeCredits(true);
+    const el = document.createElement('div');
+    el.id = 'credits-sheet'; el.className = 'cr-ov';
+    el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'true'); el.setAttribute('aria-label', 'Credits and licenses');
+    el.innerHTML = '<div class="cr-back" data-cr="x"></div><div class="cr-panel">' +
+      '<div class="cr-top"><span class="cr-grab"></span><button type="button" class="cr-x" data-cr="x" aria-label="Close"><svg viewBox="0 0 14 14" width="14" height="14" aria-hidden="true"><path d="M2 2l10 10M12 2L2 12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button></div>' +
+      '<div class="cr-body">' +
+        '<h2 class="cr-h">Credits &amp; licenses</h2>' +
+        '<h3 class="cr-k">Battle effects</h3>' +
+        '<p class="cr-p"><b>Particles</b> · Particle Pack by Kenney (kenney.nl). Public domain (CC0). Thank you, Kenney.</p>' +
+        '<p class="cr-p"><b>Animations</b> · from LottieFiles (lottiefiles.com), under the Lottie Simple License:</p>' +
+        '<ul class="cr-list">' + CREDITS_LOTTIE.map(function (c) { return '<li><span>' + esc(c[0]) + '</span><i>' + esc(c[1]) + '</i></li>'; }).join('') + '</ul>' +
+        '<p class="cr-p"><b>Animation player</b> · lottie-web by Airbnb (MIT License).</p>' +
+        '<h3 class="cr-k">License texts</h3>' +
+        '<details class="cr-d"><summary>Lottie Simple License</summary><pre>' + esc(LICENSE_LOTTIE_SIMPLE) + '</pre></details>' +
+        '<details class="cr-d"><summary>lottie-web · MIT License</summary><pre>' + esc(LICENSE_MIT_LOTTIE_WEB) + '</pre></details>' +
+      '</div></div>';
+    document.body.appendChild(el);
+    requestAnimationFrame(function () { requestAnimationFrame(function () { el.classList.add('cr-open'); }); });
+    el.addEventListener('click', function (e) { const b = e.target.closest ? e.target.closest('[data-cr="x"]') : null; if (b) closeCredits(); });
+  }
+  function closeCredits(now) {
+    const el = document.getElementById('credits-sheet'); if (!el) return;
+    if (now) { try { el.remove(); } catch (_) {} return; }
+    el.classList.remove('cr-open'); el.classList.add('cr-closing');
+    setTimeout(function () { try { el.remove(); } catch (_) {} }, 320);
+  }
+  try { window.__credits = { open: openCredits, close: closeCredits }; } catch (_) {}   // QA
   const BOARD_TITLE_MAX = 80;
   const BOARD_BODY_MAX = 1000;
   const BOARD_UPDATE_BODY_MAX = 10000;   // W1086 — an UPDATE post is a changelog; the server allows the same
@@ -79616,6 +79812,9 @@
       if (repRow) repRow.addEventListener('click', function () {
         try { window.location.href = _reportProblemMail(); } catch (_) {}
       });
+      // W1188 — who made the battle effects, and the license texts that travel with them.
+      const crRow = document.getElementById('settings-credits');
+      if (crRow) crRow.addEventListener('click', function () { try { openCredits(); } catch (_) {} });
       // W937 — replay the opening without wiping the device to see it.
       const replayRow = document.getElementById('settings-replay-onboarding');
       if (replayRow) replayRow.addEventListener('click', function () {
