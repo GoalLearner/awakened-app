@@ -13,6 +13,10 @@
  *   - W1183 (owner 2026-11-11: "random drops from any monster kind of like a shiny pokemon"): ultimates are FOUND now,
  *     a 1-in-40 roll on every boss kill with a 60-kill safety net, never a duplicate; they lead Items › Archive; the old
  *     milestones carry over once for a hunter who had used the Ultimates tab.
+ *   - W1185 (owner 2026-11-11: "I don't like how it redirects to the wardrobe... take this out the wardrobe and put all
+ *     the information on the ultimates drops page"): no Ultimates tab; a card on Items opens the ultimate's own sheet
+ *     there (#ult-sheet: what it does, when to use it, EQUIP / EQUIPPED / how it drops, PREVIEW, n / 9 arrows). The
+ *     Ascent header's chip opens the same sheet on the equipped one.
  *
  * ULT_SHOTS=<dir> saves phone-size screenshots for the owner.
  */
@@ -72,6 +76,17 @@ const sheet = (page: Page) => page.locator('#wd-sheet');
 const openWardrobe = async (page: Page) => { await page.evaluate(() => (window as any).__openWardrobe()); await expect(sheet(page)).toBeVisible(); };
 const ult = (page: Page, id: string) => sheet(page).locator('.wx-sl-ult[data-ul="' + id + '"]');
 const page0 = (page: Page) => sheet(page).locator('.wx-dt.open .wx-pg').nth(0);
+// W1185 — the ultimate's sheet on Items
+const us = (page: Page) => page.locator('#ult-sheet');
+const usPg = (page: Page) => us(page).locator('.us-pg');
+async function itemsUlts(page: Page) {
+  await page.evaluate(() => (document.querySelector('[data-tab="items"]') as HTMLElement).click());
+  const sec = page.locator('#pokedex-sections .pokedex-section--ultimates');
+  await expect(sec).toBeVisible({ timeout: 6000 });
+  if (await sec.evaluate((n) => n.classList.contains('pokedex-section--collapsed'))) await sec.locator('[data-section-toggle="ultimates"]').click();
+  await expect(sec).not.toHaveClass(/pokedex-section--collapsed/);
+  return sec;
+}
 
 async function intoFight(page: Page, floor: number) {
   await page.evaluate(async (f) => {
@@ -90,12 +105,12 @@ async function intoFight(page: Page, floor: number) {
 test.use({ viewport: { width: 390, height: 844 } });
 
 test.describe('W1168/W1169 — earned ultimates', () => {
-  test('live (W1171): seven Wardrobe tabs without the preview switch, and the fight fires the chosen one', async ({ page }) => {
+  test('live (W1171): the Wardrobe keeps its six tabs (W1185: no Ultimates), and the fight fires the chosen one', async ({ page }) => {
     await boot(page, 37, Object.assign({}, EARNED, { hb_dev_ults: '0', hb_ult_choice: 'feast' }));
     expect(await page.evaluate(() => (window as any).Arena._battle.ultsLive())).toBe(true);
     await openWardrobe(page);
-    await expect(sheet(page).locator('.wx-tab')).toHaveCount(7);
-    await expect(sheet(page).locator('.wx-tab[data-tab="ults"]')).toHaveCount(1);
+    await expect(sheet(page).locator('.wx-tab')).toHaveCount(6);   // W1185
+    await expect(sheet(page).locator('.wx-tab[data-tab="ults"]')).toHaveCount(0);
     await page.evaluate(() => { const b = document.getElementById('wd-close'); if (b) (b as HTMLElement).click(); });
     await intoFight(page, 37);
     expect(await page.evaluate(() => (window as any).Arena._live.sess()._ultId)).toBe('feast');
@@ -112,44 +127,45 @@ test.describe('W1168/W1169 — earned ultimates', () => {
     await expect(page.locator('#pkb-stage .pkb-mvfxd .u-fis')).toHaveCount(1, { timeout: 3000 });
   });
 
-  test('the Ultimates tab: the found ones, locked ones say DROP ONLY, EQUIP wears one, NEW clears', async ({ page }) => {
-    await boot(page, 50, EARNED);
-    await openWardrobe(page);
-    await expect(sheet(page).locator('.wx-tab')).toHaveCount(7);
-    await sheet(page).locator('.wx-tab[data-tab="ults"]').click();
-    await expect(sheet(page).locator('.wx-pane[data-pane="ults"] .wx-sl-ult')).toHaveCount(9);
-    await expect(ult(page, 'signature')).toHaveClass(/is-worn/);
-    for (const id of ['feast', 'hellfire', 'arise']) await expect(ult(page, id)).toHaveClass(/is-earned/);
-    await expect(ult(page, 'feast').locator('.wx-chip-new')).toHaveCount(1);
-    await expect(ult(page, 'quicksilver')).toHaveClass(/is-locked/);
-    await expect(ult(page, 'quicksilver').locator('.wx-bt-st')).toHaveText('DROP ONLY');   // W1183
-    await expect(ult(page, 'dawnbreaker').locator('.wx-bt-st')).toHaveText('DROP ONLY');
-    await shot(page, 'ult-01-tab');
-    // an earned tile opens its page: effect, use, EQUIP
-    await ult(page, 'feast').click();
-    await expect(sheet(page).locator('.wx-dt')).toHaveClass(/open/);
-    const cur = sheet(page).locator('.wx-pg-ult[data-p]').filter({ has: page.locator('[data-ulequip="feast"]') });
-    await expect(cur).toHaveCount(1);
-    await expect(cur.locator('.wx-ms-c')).toContainText('heals 10% of your health');
-    await shot(page, 'ult-02-page');
-    await cur.locator('[data-ulequip="feast"]').click();
-    await expect(sheet(page).locator('.wx-dt')).not.toHaveClass(/open/);
-    await expect(ult(page, 'feast')).toHaveClass(/is-worn/);
-    await expect(ult(page, 'signature')).toHaveClass(/is-earned/);
-    await expect(sheet(page).locator('.wx-pane[data-pane="ults"] .wx-hl-nm')).toHaveText('Crimson Feast');
+  test('W1185: a card on Items opens its sheet right there — what it does, when to use it, EQUIP; arrows walk the nine; a locked one says how it drops', async ({ page }) => {
+    await boot(page, 50, Object.assign({}, EARNED, { hb_tour_items_v1: '1' }));
+    const sec = await itemsUlts(page);
+    await sec.locator('.ua-card[data-ua="feast"]').click();
+    await expect(us(page)).toBeVisible();
+    await expect(us(page)).toHaveClass(/us-open/);
+    await expect(sheet(page)).toBeHidden();   // never the Wardrobe
+    await expect(usPg(page).locator('.us-nm')).toHaveText('Crimson Feast');
+    await expect(usPg(page).locator('.us-kind')).toHaveText(/drain/i);
+    await expect(usPg(page).locator('.us-eff')).toContainText('heals 10% of your health');
+    await expect(usPg(page).locator('.us-how')).not.toHaveText('');
+    await expect(us(page).locator('.us-n')).toHaveText('2 / 9');   // the Signature first, then the found ones
+    await page.waitForTimeout(500);
+    await shot(page, 'ult-01-sheet');
+    await usPg(page).locator('[data-us="eq"]').click();
+    await expect(usPg(page).locator('.us-worn')).toHaveText(/EQUIPPED/);
+    await expect(usPg(page).locator('[data-us="eq"]')).toHaveCount(0);
     expect(await page.evaluate(() => localStorage.getItem('hb_ult_choice'))).toBe('feast');
-    await shot(page, 'ult-03-equipped');
-    // a locked tile opens its page too: the condition, no EQUIP
-    await ult(page, 'dawnbreaker').click();
-    const lockedPg = sheet(page).locator('.wx-pg-ult.is-locked').filter({ hasText: 'Dawnbreaker' });
-    await expect(lockedPg.locator('.wx-ult-cond')).toHaveText(/Drops from any boss you beat: 1 kill in 40/);
-    await expect(lockedPg.locator('[data-ulequip]')).toHaveCount(0);
-    // seen: the next visit has no NEW chip
-    expect(await page.evaluate(() => JSON.parse(localStorage.getItem('hb_ult_seen') || '[]'))).toEqual(expect.arrayContaining(['feast', 'hellfire', 'arise']));
-    await page.evaluate(() => { const b = document.getElementById('wd-close'); if (b) (b as HTMLElement).click(); });
-    await openWardrobe(page);
-    await sheet(page).locator('.wx-tab[data-tab="ults"]').click();
-    await expect(ult(page, 'feast').locator('.wx-chip-new')).toHaveCount(0);
+    await expect(sec.locator('.ua-card[data-ua="feast"] .ua-kd')).toHaveText('Equipped');   // the card behind follows
+    await expect(sec.locator('.ua-card[data-ua="signature"] .ua-kd')).toHaveText('Signature');
+    // back to the Signature (found: EQUIP), then onward
+    await us(page).locator('[data-us="prev"]').click();
+    await expect(usPg(page).locator('[data-us="eq"]')).toBeVisible();
+    await expect(us(page).locator('.us-n')).toHaveText('1 / 9');
+    await expect(us(page).locator('[data-us="prev"]')).toBeDisabled();
+    await us(page).locator('[data-us="next"]').click();
+    await us(page).locator('[data-us="next"]').click();
+    await expect(usPg(page).locator('.us-nm')).toHaveText('Hellfire');
+    // the close button ends it; a locked card opens the same sheet with how it drops, no EQUIP
+    await us(page).locator('.us-x').click();
+    await expect(us(page)).toHaveCount(0, { timeout: 2000 });
+    await sec.locator('.ua-lock').last().click();
+    await expect(us(page).locator('.us-n')).toHaveText('9 / 9');
+    await expect(usPg(page)).toHaveClass(/is-locked/);
+    await expect(usPg(page).locator('.us-cond')).toHaveText(/Drops from any boss you beat: 1 kill in 40/);
+    await expect(usPg(page).locator('[data-us="eq"]')).toHaveCount(0);
+    await expect(us(page).locator('[data-us="next"]')).toBeDisabled();
+    await page.waitForTimeout(500);
+    await shot(page, 'ult-02-sheet-locked');
   });
 
   test('the battle fires the chosen one: its name on the bar, BEST NOW at its moment, its kind and colour on the cut-in', async ({ page }) => {
@@ -177,12 +193,11 @@ test.describe('W1168/W1169 — earned ultimates', () => {
   });
 
   test('PREVIEW on any ultimate page plays it on the real stage (cut-in, then the sequence); REPLAY again; CLOSE ends it', async ({ page }) => {
-    await boot(page, 50, EARNED);
-    await openWardrobe(page);
-    await sheet(page).locator('.wx-tab[data-tab="ults"]').click();
-    await ult(page, 'quicksilver').click();   // locked: a hunter can still watch it
-    const pg = sheet(page).locator('.wx-pg-ult').filter({ hasText: 'Quicksilver' });
-    await pg.locator('[data-ulpv="quicksilver"]').click();
+    await boot(page, 50, Object.assign({}, EARNED, { hb_tour_items_v1: '1' }));
+    const sec = await itemsUlts(page);
+    await sec.locator('.ua-lock').first().click();   // not found yet: a hunter can still watch it
+    await expect(usPg(page).locator('.us-nm')).toHaveText('Quicksilver');
+    await usPg(page).locator('[data-us="pv"]').click();
     const pv = page.locator('.ult-pv');
     await expect(pv).toBeVisible();
     await expect(pv.locator('.ult-pv-nm .n')).toHaveText('Quicksilver');
@@ -199,10 +214,10 @@ test.describe('W1168/W1169 — earned ultimates', () => {
     await pv.locator('[data-pv="x"]').click();
     await expect(page.locator('.ult-pv')).toHaveCount(0);
     expect(await page.evaluate(() => (window as any).__ultPreview.live())).toBe(false);
-    await expect(sheet(page)).toBeVisible();   // back on the Wardrobe
+    await expect(us(page)).toBeVisible();   // back on the ultimate's sheet
   });
 
-  test('W1173 — the Ascent header wears the equipped ultimate beside POWER; a tap opens the Ultimates above the Ascent', async ({ page }) => {
+  test('W1173 — the Ascent header wears the equipped ultimate beside POWER; a tap opens its sheet above the Ascent (W1185)', async ({ page }) => {
     await boot(page, 37, EARNED);
     await page.evaluate(async () => {
       (document.querySelector('[data-tab="profile"]') as HTMLElement).click();
@@ -214,19 +229,20 @@ test.describe('W1168/W1169 — earned ultimates', () => {
     await expect(chip.locator('.nm')).toHaveText(/Sundering Verdict|Starfall|Heartpiercer Rain/);   // the Signature to start
     await shot(page, 'ult-08-ascent-chip');
     await chip.click();
-    await expect(sheet(page)).toBeVisible();
-    await expect(sheet(page)).toHaveClass(/wx-over/);
-    await expect(sheet(page).locator('.wx-tab[data-tab="ults"]')).toHaveClass(/\bon\b/);
-    // the Wardrobe sits above the Ascent: the tile is the top element where it is drawn
-    const onTop = await page.evaluate(() => { const t = document.querySelector('#wd-sheet .wx-sl-ult[data-ul="feast"]') as HTMLElement; const r = t.getBoundingClientRect(); const e = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); return !!(e && t.contains(e)); });
-    expect(onTop).toBe(true);
-    await ult(page, 'feast').click();
-    await sheet(page).locator('.wx-pg-ult [data-ulequip="feast"]').click();
-    await expect(ult(page, 'feast')).toHaveClass(/is-worn/);
-    await page.locator('#wd-close').click();
+    await expect(us(page)).toBeVisible();
     await expect(sheet(page)).toBeHidden();
-    await expect(chip.locator('.nm')).toHaveText('Crimson Feast');
-    await expect(page.locator('#wd-sheet')).not.toHaveClass(/wx-over/);
+    await expect(us(page).locator('.us-n')).toHaveText('1 / 9');   // on the equipped one
+    await expect(usPg(page).locator('.us-worn')).toHaveText(/EQUIPPED/);
+    await us(page).locator('[data-us="next"]').click();
+    await expect(usPg(page).locator('.us-nm')).toHaveText('Crimson Feast');
+    await page.waitForTimeout(450);
+    // the sheet sits above the Ascent: EQUIP is the top element where it is drawn
+    const onTop = await page.evaluate(() => { const t = document.querySelector('#ult-sheet [data-us="eq"]') as HTMLElement; const r = t.getBoundingClientRect(); const e = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); return !!(e && t.contains(e)); });
+    expect(onTop).toBe(true);
+    await usPg(page).locator('[data-us="eq"]').click();
+    await expect(chip.locator('.nm')).toHaveText('Crimson Feast');   // the chip follows at once
+    await us(page).locator('.us-x').click();
+    await expect(us(page)).toHaveCount(0, { timeout: 2000 });
   });
 
   // ── W1183 — the drops ──
@@ -285,9 +301,9 @@ test.describe('W1168/W1169 — earned ultimates', () => {
     await expect(sec.locator('.ua-card[data-ua="arise"] .ua-kd')).toHaveText('Equipped');
     await shot(page, 'ult-11-items');
     await sec.locator('.ua-card[data-ua="feast"]').click();
-    await expect(sheet(page)).toBeVisible();
-    await expect(sheet(page).locator('.wx-dt')).toHaveClass(/open/, { timeout: 3000 });
-    await expect(sheet(page).locator('[data-ulequip="feast"]')).toBeVisible();
+    await expect(us(page)).toBeVisible();   // W1185 — its sheet, right on Items
+    await expect(usPg(page).locator('[data-us="eq"]')).toBeVisible();
+    await expect(sheet(page)).toBeHidden();
   });
 
   test('W1183: the old milestones carry over once for a hunter who had used the Ultimates tab; a new hunter starts with none', async ({ page }) => {
