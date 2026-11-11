@@ -10,6 +10,9 @@
  *     its page, EQUIP wears an earned one (hb_ult_choice), a newly earned one wears NEW until the tab is seen;
  *   - the battle fires the chosen one: its name on the Surge bar, BEST NOW when a waiting ult meets its moment, its
  *     kind word and colour on the cut-in; a locked choice falls back to the Signature.
+ *   - W1183 (owner 2026-11-11: "random drops from any monster kind of like a shiny pokemon"): ultimates are FOUND now,
+ *     a 1-in-40 roll on every boss kill with a 60-kill safety net, never a duplicate; they lead Items › Archive; the old
+ *     milestones carry over once for a hunter who had used the Ultimates tab.
  *
  * ULT_SHOTS=<dir> saves phone-size screenshots for the owner.
  */
@@ -57,9 +60,10 @@ async function boot(page: Page, floor: number, extra?: Record<string, string>) {
   await page.goto('/');
   await page.waitForFunction(() => !!(window as any).Arena && !!document.querySelector('[data-tab="profile"]'));
 }
-// an E-rank solo kill, a C-rank co-op kill and one shadow raised: Crimson Feast, Hellfire and Arise are earned
+// W1183 — Crimson Feast, Hellfire and Arise found (the kills and the shadow stay: they no longer unlock anything by themselves)
 const EARNED = {
   hb_dev_ults: '1',
+  hb_ult_owned: JSON.stringify(['feast', 'hellfire', 'arise']),
   hb_bosses: JSON.stringify({ the_steel_wolf: { streak: 0, kill_count: 1, last_eval_date: null, engaged: false, engaged_at: null } }),
   hb_coop_kills: JSON.stringify({ the_coursing_dread: { count: 1 } }),
   hb_shadows_v1: JSON.stringify({ extracted: { the_steel_wolf: { at: 1, name: 'The Steel Wolf' } }, active: [], windows: {}, pending: {}, zeroDays: 0, dormant: false, loyaltyDay: '' }),
@@ -108,7 +112,7 @@ test.describe('W1168/W1169 — earned ultimates', () => {
     await expect(page.locator('#pkb-stage .pkb-mvfxd .u-fis')).toHaveCount(1, { timeout: 3000 });
   });
 
-  test('the Ultimates tab: earned from kills and a shadow, locked ones name their condition, EQUIP wears one, NEW clears', async ({ page }) => {
+  test('the Ultimates tab: the found ones, locked ones say DROP ONLY, EQUIP wears one, NEW clears', async ({ page }) => {
     await boot(page, 50, EARNED);
     await openWardrobe(page);
     await expect(sheet(page).locator('.wx-tab')).toHaveCount(7);
@@ -118,8 +122,8 @@ test.describe('W1168/W1169 — earned ultimates', () => {
     for (const id of ['feast', 'hellfire', 'arise']) await expect(ult(page, id)).toHaveClass(/is-earned/);
     await expect(ult(page, 'feast').locator('.wx-chip-new')).toHaveCount(1);
     await expect(ult(page, 'quicksilver')).toHaveClass(/is-locked/);
-    await expect(ult(page, 'quicksilver').locator('.wx-bt-st')).toHaveText('D-RANK KILL');
-    await expect(ult(page, 'dawnbreaker').locator('.wx-bt-st')).toHaveText('FLOOR 100');
+    await expect(ult(page, 'quicksilver').locator('.wx-bt-st')).toHaveText('DROP ONLY');   // W1183
+    await expect(ult(page, 'dawnbreaker').locator('.wx-bt-st')).toHaveText('DROP ONLY');
     await shot(page, 'ult-01-tab');
     // an earned tile opens its page: effect, use, EQUIP
     await ult(page, 'feast').click();
@@ -138,7 +142,7 @@ test.describe('W1168/W1169 — earned ultimates', () => {
     // a locked tile opens its page too: the condition, no EQUIP
     await ult(page, 'dawnbreaker').click();
     const lockedPg = sheet(page).locator('.wx-pg-ult.is-locked').filter({ hasText: 'Dawnbreaker' });
-    await expect(lockedPg.locator('.wx-ult-cond')).toHaveText(/Clear Floor 100 of the Ascent/);
+    await expect(lockedPg.locator('.wx-ult-cond')).toHaveText(/Drops from any boss you beat: 1 kill in 40/);
     await expect(lockedPg.locator('[data-ulequip]')).toHaveCount(0);
     // seen: the next visit has no NEW chip
     expect(await page.evaluate(() => JSON.parse(localStorage.getItem('hb_ult_seen') || '[]'))).toEqual(expect.arrayContaining(['feast', 'hellfire', 'arise']));
@@ -223,6 +227,86 @@ test.describe('W1168/W1169 — earned ultimates', () => {
     await expect(sheet(page)).toBeHidden();
     await expect(chip.locator('.nm')).toHaveText('Crimson Feast');
     await expect(page.locator('#wd-sheet')).not.toHaveClass(/wx-over/);
+  });
+
+  // ── W1183 — the drops ──
+  const owned = (page: Page) => page.evaluate(() => (window as any).__ultDrops.owned());
+  test('W1183: a kill rolls 1 in 40 — a hit drops one not owned, its reveal plays, EQUIP IT wears it; never a duplicate', async ({ page }) => {
+    await boot(page, 50, { hb_dev_ults: '1' });
+    expect(await page.evaluate(() => [(window as any).__ultDrops.oneIn, (window as any).__ultDrops.pityAt])).toEqual([40, 60]);
+    await page.evaluate(() => { (window as any).__ultDice = () => 0.024; (window as any).__ultPick = () => 0; (window as any).__ultDrops.roll('the_steel_wolf'); });   // 0.024 < 1/40
+    expect(await owned(page)).toEqual(['feast']);
+    const ov = page.locator('#ult-drop-overlay');
+    await expect(ov.locator('.ud-name')).toHaveText('Crimson Feast', { timeout: 5000 });
+    await expect(ov.locator('.ud-eyebrow')).toHaveText(/An ultimate dropped/i);
+    await page.waitForTimeout(1300);
+    await shot(page, 'ult-10-drop');
+    await ov.locator('[data-ud="equip"]').click();
+    await expect(ov).toHaveCount(0, { timeout: 3000 });
+    expect(await page.evaluate(() => [localStorage.getItem('hb_ult_choice'), (window as any).__ultDrops.pending().length])).toEqual(['feast', 0]);
+    // the same pick again lands on the next one: never a duplicate
+    await page.evaluate(() => (window as any).__ultDrops.roll('the_carouser'));
+    expect(await owned(page)).toEqual(['feast', 'quicksilver']);
+    await expect(ov.locator('.ud-name')).toHaveText('Quicksilver', { timeout: 5000 });
+    await page.waitForTimeout(900);
+    await ov.locator('[data-ud="later"]').click();
+    await expect(ov).toHaveCount(0, { timeout: 3000 });
+    expect(await page.evaluate(() => localStorage.getItem('hb_ult_choice'))).toBe('feast');   // Later leaves the choice alone
+  });
+
+  test('W1183: misses feed the safety net — at 60 the next kill drops one; all eight found and the roll stops', async ({ page }) => {
+    await boot(page, 50, { hb_dev_ults: '1' });
+    const n = await page.evaluate(() => { const d = (window as any).__ultDrops; (window as any).__ultDice = () => 0.99; for (let i = 0; i < 60; i++) d.roll('the_steel_wolf'); return [d.owned().length, d.pity()]; });
+    expect(n).toEqual([0, 60]);
+    await page.evaluate(() => (window as any).__ultDrops.roll('the_steel_wolf'));   // the 61st kill: the net catches it
+    expect(await page.evaluate(() => [(window as any).__ultDrops.owned().length, (window as any).__ultDrops.pity()])).toEqual([1, 0]);
+    await page.evaluate(() => { localStorage.setItem('hb_ult_owned', JSON.stringify(['feast', 'quicksilver', 'hellfire', 'storm', 'worldbreaker', 'reaper', 'arise', 'dawnbreaker'])); localStorage.removeItem('hb_ult_drop_pending'); (window as any).__ultDice = () => 0; (window as any).__ultDrops.roll('the_steel_wolf'); });
+    expect(await page.evaluate(() => [(window as any).__ultDrops.owned().length, (window as any).__ultDrops.pity(), (window as any).__ultDrops.pending().length])).toEqual([8, 0, 0]);
+  });
+
+  test('W1183: Items › Archive leads with the ultimates — found ones by name, the rest "?"; a card opens its page', async ({ page }) => {
+    await boot(page, 50, { hb_dev_ults: '1', hb_ult_owned: JSON.stringify(['feast', 'arise']), hb_ult_choice: 'arise', hb_tour_items_v1: '1' });   // the Items coachmark already seen
+    await page.evaluate(() => (document.querySelector('[data-tab="items"]') as HTMLElement).click());
+    const sec = page.locator('#pokedex-sections .pokedex-section--ultimates');
+    await expect(sec).toBeVisible({ timeout: 6000 });
+    expect(await page.evaluate(() => (document.querySelector('#pokedex-sections .pokedex-section') as HTMLElement).getAttribute('data-section-key'))).toBe('ultimates');   // first, above Mega Rare
+    await expect(sec.locator('.pokedex-section-count')).toHaveText('3 / 9');   // the Signature is always there
+    await expect(sec.locator('.ua-card')).toHaveCount(3);
+    await expect(sec.locator('.ua-card').first()).toHaveAttribute('data-ua', 'signature');
+    await expect(sec.locator('.ua-card[data-ua="signature"] .ua-kd')).toHaveText('Signature');
+    await expect(sec.locator('.ua-lock')).toHaveCount(6);
+    await expect(sec.locator('.ua-lock').first()).toContainText('Drops from any boss');
+    await expect(sec.locator('.ua-card[data-ua="arise"] .ua-kd')).toHaveText('Equipped');
+    await shot(page, 'ult-11-items');
+    await sec.locator('.ua-card[data-ua="feast"]').click();
+    await expect(sheet(page)).toBeVisible();
+    await expect(sheet(page).locator('.wx-dt')).toHaveClass(/open/, { timeout: 3000 });
+    await expect(sheet(page).locator('[data-ulequip="feast"]')).toBeVisible();
+  });
+
+  test('W1183: the old milestones carry over once for a hunter who had used the Ultimates tab; a new hunter starts with none', async ({ page }) => {
+    const kills = { hb_bosses: EARNED.hb_bosses, hb_coop_kills: EARNED.hb_coop_kills, hb_shadows_v1: EARNED.hb_shadows_v1 };
+    await boot(page, 50, Object.assign({ hb_dev_ults: '1', hb_ult_seen: JSON.stringify(['feast']) }, kills));
+    expect((await owned(page)).sort()).toEqual(['arise', 'feast', 'hellfire']);
+    expect(await page.evaluate(() => localStorage.getItem('hb_ult_seeded_v1'))).toBe('1');
+  });
+
+  test('W1183: every hunter has the surge ultimate in their kit — a new one sees the Signature, equipped, and eight to find', async ({ page }) => {
+    await boot(page, 50, { hb_dev_ults: '1', hb_tour_items_v1: '1' });
+    expect(await page.evaluate(() => (window as any).Arena._battle.ultEquipped())).toBe('signature');
+    await page.evaluate(() => (document.querySelector('[data-tab="items"]') as HTMLElement).click());
+    const sec = page.locator('#pokedex-sections .pokedex-section--ultimates');
+    await expect(sec.locator('.pokedex-section-count')).toHaveText('1 / 9', { timeout: 6000 });
+    await expect(sec.locator('.ua-card')).toHaveCount(1);
+    await expect(sec.locator('.ua-card[data-ua="signature"] .ua-kd')).toHaveText('Equipped');
+    await expect(sec.locator('.ua-card[data-ua="signature"] .ua-nm')).not.toHaveText('');
+    await expect(sec.locator('.ua-lock')).toHaveCount(8);
+  });
+
+  test('W1183: a hunter who never saw the old tab keeps nothing from the milestones', async ({ page }) => {
+    const kills = { hb_bosses: EARNED.hb_bosses, hb_coop_kills: EARNED.hb_coop_kills, hb_shadows_v1: EARNED.hb_shadows_v1 };
+    await boot(page, 50, Object.assign({ hb_dev_ults: '1' }, kills));
+    expect(await owned(page)).toEqual([]);
   });
 
   test('a locked choice falls back to the Signature', async ({ page }) => {

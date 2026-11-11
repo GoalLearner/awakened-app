@@ -160,7 +160,7 @@
   const APP_VERSION = '3.0.24';   // W1169 — 3.0.23 APPROVED 2026-11-08 (submitted 2026-11-07 5:00 PM PST, LIVE 2:33 PM PST on the 8th; almost certainly build 628 = w1161: pins, the Wardrobe tap fix), so 3.0.24 opened carrying W1162-W1169 (the 3.0.23 store notes, the board update, matched hunt partners, Add as friend, late steps reach the board, The Patient Flame falls by itself, earned ultimates behind their flag). [history] W1134 — 3.0.22 APPROVED 2026-11-06 (submitted 4:53 AM PST from build 617 = w1132: the Shadowborn + the Elite Eight, the Rising redrawn, profile cards name the look, every open counted), so 3.0.23 opened carrying W1134 (the Worldgate counts a hunter's steps only after 2 days in the app that week). [history] W1127 — 3.0.21 LIVE on the App Store 2026-11-05 9:34 AM PST (built from w1126: no memberships, kill stamps without a title, the tier crests, the onboarding's "How did you find the Gate?"), so 3.0.22 opened carrying W1127 (the app-open ping says when it is a real open; the server counts every one per Pacific day). [history] W1124 — 3.0.20 LIVE on the App Store 2026-11-01 12:50 PM PST (built from w1120: final standings Sunday, shadows in the public feed, Shadow Army on Status); 3.0.21 opened carrying W1121 (its What's New, never shown: re-keyed to 3.0.21), W1122 (no memberships), W1124 (kill stamp without a title, inlined tier crests) and W1125 (the onboarding's last screen asks how the hunter found the app; W1126 keeps it in place when the keyboard opens). [history] W1114 — 3.0.19 approved 2026-10-30 (submitted 1:45 AM PST, w1113: shadows 1 in 5, armor upgrades, relic power by boss rank, relic cards three across); 3.0.20 opened with the feed's boss rank chips, no What's New entry yet. W1107 — 3.0.18 approved and LIVE 2026-10-28 8:02 AM PST (submitted 2026-10-27 7:41 PM PST, build 602 = w1106: the four steps trios, the Rising's nine looks, the earned line in the Wardrobe, the richer-backup offer); 3.0.19 opened at approval. [history] W1103 — 3.0.17 approved 2026-10-27 (build 600, submitted 2026-10-26 6:21 PM PST: the automatic friend hunts, the earned looks, the two-tab Wardrobe); 3.0.18 opened at approval, carrying W1102 (the app offers back a richer cloud backup). [history] W1097 — 3.0.16 approved + live 2026-10-26 (build 599, the iOS 27 fix); 3.0.17 opened at approval. Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.16 = the post-3.0.15 train, opened 2026-10-23 (W1085): 3.0.15 was submitted 2026-10-22 2:55 PM PST from build 595 (w1083: the tally, the preview row, the security pass) and approved the same day, so the train closed under it. It carries W1084 (the tally leads the 3.0.15 What's New) forward. [history] 3.0.15 = the post-3.0.14 train, opened 2026-10-22 (W1080): 3.0.14 was approved and LIVE 2026-10-21 5:08 PM PST from build 591 (w1074) — the first 592 upload was refused ("train closed"), the sixth time an approval closed a train under a build. It carries W1077/W1078 (sign-out ends the session, cloud save checksum + gzip, socket token out of the URL, invite links ask first) forward. [history] 3.0.14 = the post-3.0.13 train, opened 2026-10-21 (W1074): 3.0.13 was approved and went LIVE 2026-10-20 3:50 AM PST from build 587 (w1068), so it carries W1069 (the floor 100 curve), W1070-W1073 (the ten weekly step and sleep bosses and their drops) and the real-screen screenshots and header Apple asked for (App Review 2.3.3) forward. [history] 3.0.11 = the post-3.0.10 train, opened 2026-10-05: Apple's store lookup showed 3.0.10 LIVE (released 11:35 AM PST that day, built from w1024, so it carried W1023 the 9:45 PM finish-strong reminder and nothing after). It carries forward W1025 (Myrmidon King art), W1026 (one request for every co-op hunt) and W1027 (steps 'today' = the device's day), all pushed under the 3.0.10 tag after that build was cut. [history] 3.0.10 = the post-3.0.9 train, opened 2026-10-04 when the owner passed on Apple's approval of 3.0.9 (submitted 2026-10-02 12:41 PM PST, approved 2026-10-03; carried W1002–W1022: weekly to-do planner, to-dos first in the briefing, the Monday recap, times-a-week vows, the interactive Status tab, the Jump Manual program, the flights-hunt result fix). It carries W1023 (the 9:45 PM finish-strong reminder) forward. First TWO-DIGIT patch: every version compare in the app is numeric (_updVersionNewer, the What's New compare), never a string compare. [history] 3.0.9 = the post-3.0.8 train, opened 2026-09-25 the moment Apple approved 3.0.8 (submitted 4:57 PM PST, approved the same evening; carried W989–W1001: Items overhaul, Resolved + mod view counts, the sectioned Habits tab + to-dos v2, topic edit). [history] 3.0.8 = the post-3.0.7 train, opened 2026-09-24 the moment Apple approved 3.0.7 (build 543, submitted 1:15 AM PST, approved same day; the Worldgate In-App Event was approved in the same hour). Carries forward: the three description corrections (Ranked PvP / Streak Shields / five-hunter raid = Premium) go out WITH this version, since a description only changes with a new version. [history] 3.0.7 carried W968–W987 (vows yours + glory verified, morning briefing v2, hunt results, Worldgate MVPs + weekly line + strike freeze, Community Updates + briefing line, mod preview rows, awakened:// scheme). [history] 3.0.7 = the post-3.0.6 train, opened 2026-09-20 the moment Apple approved 3.0.6 (submitted 3:14 AM PST that day, approved same day) — an approval CLOSES a train, and uploading under the approved number is refused (CFBundleShortVersionString must exceed it). This has now bitten FOUR times; the bump is done at approval, not at upload. [history] 3.0.6 carried W960–W967 (Manage Vows fix, rank-bar hairline, Worldgate kill ceremony, division-up celebration, owner preview row, 3.0.6 release notes). [history] 3.0.4 = the post-3.0.3 train, opened 2026-09-11 because Apple approved 3.0.3 (live 2026-09-09) and an approval closes a train — carries W935 (weekly-board upload fix + Apple Health asked on every onboarding path). [history] 3.0.3 = the post-3.0.2 train, opened 2026-09-07 the morning after Apple approved 3.0.2 (submitted 2026-09-06 4:41 PM PT; approval closes a train — twice-bitten lesson) — carries W917-W919b (Ledger view, Streak Shields deleted, handoff 29) forward under the new number. [history] 3.0.2 = the post-release train, opened 2026-09-04 because Apple closes a train on approval (build 493 under 3.0.1 was refused: CFBundleShortVersionString must exceed the approved 3.0.1) — carries W903 (boss-sheet hotfix) + W905 (Status is the hunter profile again). 3.0.1 "MAKE IT LAND" = the repair release (W882-W890): Wave-2 progression joins cloud sync, the activation funnel is instrumented end to end, silent Wave-2 server failures leave breadcrumbs, the altar routes to a same-day first kill, the Double Dungeon stops reporting false failures and yields when the stair is unavailable, the beat What's New used to eat is chained, and every banked free engage is visible before the tap. 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.24-w1182'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
+  const APP_BUILD_TAG = '3.0.24-w1183'; // Build tag. Full W-history changelog moved to CHANGELOG-buildtag.md (W659).
   // Expose for auth.js (backup metadata + diagnostics). Stays in lockstep
   // with the constant above; bump together when shipping a new train.
   try { window.__APP_VERSION = APP_VERSION; } catch (_) {}
@@ -8569,6 +8569,7 @@
   function _shadowTick() {
     try { _shFillSlots(); } catch (_) {}         // W1048 — a new rank's slots
     try { _shadowPendingTick(); } catch (_) {}   // W1047 — a drop won before the app was closed
+    try { _ultDropTick(); } catch (_) {}         // W1183 — an ultimate's reveal, the same way
     if (_shadowTickBusy) return;
     const s = _shLoad();
     const ids = Object.keys(s.windows);
@@ -14824,11 +14825,7 @@
     if (id === 'signature') return true;
     const u = ASCENT_ULTIMATES[id]; if (!u) return false;
     if (u.style) return true;
-    const c = ctx || _ultUnlockCtx(), k = u.unlock || {};
-    if (k.k === 'krank') return !!c.ranks[k.r];
-    if (k.k === 'shadow') return c.shadows >= 1;
-    if (k.k === 'summit') return c.floor >= ASCENT_FLOORS;
-    return false;
+    return ultOwnedList().indexOf(id) !== -1;   // W1183 — found as a drop (or carried over from the old milestones), never derived
   }
   function getEquippedUltimate(ctx) {
     let id = ''; try { id = localStorage.getItem(ULT_CHOICE_KEY) || ''; } catch (_) {}
@@ -14844,17 +14841,11 @@
   function _ultForFight() { try { return ultsLive() ? getEquippedUltimate() : 'signature'; } catch (_) { return 'signature'; } }
   // W1169 — the Wardrobe's words for each one, and what the hunter has already seen there (the NEW chip).
   const ULT_SEEN_KEY = 'hb_ult_seen';
-  function ultCondText(id) {
-    const u = ASCENT_ULTIMATES[id], k = (u && u.unlock) || {};
-    if (k.k === 'krank') return 'Defeat any ' + k.r + '-rank boss';
-    if (k.k === 'shadow') return 'Raise a shadow';
-    if (k.k === 'summit') return 'Clear Floor 100 of the Ascent';
-    return 'Yours from the start';
+  function ultCondText(id) {   // W1183 — every one but the Signature is a drop now
+    if (id === 'signature' || (ASCENT_ULTIMATES[id] || {}).style) return 'Yours from the start';
+    return 'Drops from any boss you beat: 1 kill in ' + ULT_DROP_ONE_IN;
   }
-  function ultCondShort(id) {
-    const u = ASCENT_ULTIMATES[id], k = (u && u.unlock) || {};
-    return k.k === 'krank' ? k.r + '-RANK KILL' : k.k === 'shadow' ? 'A SHADOW' : k.k === 'summit' ? 'FLOOR 100' : '';
-  }
+  function ultCondShort(id) { return (id === 'signature' || (ASCENT_ULTIMATES[id] || {}).style) ? '' : 'DROP ONLY'; }
   // the Signature this hunter's weapon gives right now (its name changes with the weapon's style)
   function ultSignatureId() { try { return _ULT_SIGNATURE[_arUltStyle({ pMoves: _arenaPlayerKit() })] || 'verdict'; } catch (_) { return 'verdict'; } }
   function ultSeenList() { try { const a = JSON.parse(localStorage.getItem(ULT_SEEN_KEY) || '[]'); return Array.isArray(a) ? a : []; } catch (_) { return []; } }
@@ -14864,6 +14855,156 @@
     try { localStorage.setItem(ULT_SEEN_KEY, JSON.stringify(have.concat(add))); } catch (_) {}
     _w2Sync('ult-seen');
   }
+  // ── W1183 · ULTIMATES DROP (owner 2026-11-11: "random drops from any monster kind of like a shiny pokemon just randomly
+  // appearing ... running into entei randomly"). Every confirmed boss kill, solo or co-op, any rank, rolls 1 in
+  // ULT_DROP_ONE_IN for an ultimate the hunter does not own yet: no duplicates, and once all eight are found the roll
+  // stops. The quiet safety net (owner: keep it): after ULT_PITY_AT kills with nothing, the next kill drops one. Day one
+  // stays quiet (W940). Owned ones are STORED now (W1168 derived them from milestones); a hunter who used the old
+  // Wardrobe tab keeps what the milestones gave (_ultSeed, once). The Signature stays free.
+  const ULT_OWNED_KEY = 'hb_ult_owned', ULT_PITY_KEY = 'hb_ult_pity', ULT_DROP_PENDING_KEY = 'hb_ult_drop_pending', ULT_SEEDED_KEY = 'hb_ult_seeded_v1';
+  const ULT_DROP_ONE_IN = 40, ULT_PITY_AT = 60;
+  const ULT_DROPS = ULT_ORDER.filter(function (id) { return id !== 'signature'; });
+  function _ultOldRule(id, c) {
+    const k = (ASCENT_ULTIMATES[id] || {}).unlock || {};
+    if (k.k === 'krank') return !!c.ranks[k.r];
+    if (k.k === 'shadow') return c.shadows >= 1;
+    if (k.k === 'summit') return c.floor >= ASCENT_FLOORS;
+    return false;
+  }
+  function _ultOwnedRaw() {
+    try { const a = JSON.parse(localStorage.getItem(ULT_OWNED_KEY) || '[]'); return Array.isArray(a) ? a.filter(function (id) { return ULT_DROPS.indexOf(id) !== -1; }) : []; } catch (_) { return []; }
+  }
+  function _ultSeed() {
+    try {
+      if (localStorage.getItem(ULT_SEEDED_KEY)) return;
+      localStorage.setItem(ULT_SEEDED_KEY, '1');
+      if (!ultSeenList().length) return;   // never opened the old Ultimates tab: nothing to carry over
+      const c = _ultUnlockCtx(), have = _ultOwnedRaw();
+      const add = ULT_DROPS.filter(function (id) { return have.indexOf(id) === -1 && _ultOldRule(id, c); });
+      if (add.length) { localStorage.setItem(ULT_OWNED_KEY, JSON.stringify(have.concat(add))); _w2Sync('ult-owned'); }
+    } catch (_) {}
+  }
+  function ultOwnedList() { _ultSeed(); return _ultOwnedRaw(); }
+  // The dice. window.__ultDice / __ultPick stand in for them in a spec; under automation they default to "never", so a
+  // kill in some other spec cannot raise the reveal by chance (a real phone is never under automation).
+  function _ultDice() {
+    if (typeof window.__ultDice === 'function') return window.__ultDice();
+    try { if (navigator.webdriver) return 1; } catch (_) {}
+    return Math.random();
+  }
+  function _ultPickDie() { return (typeof window.__ultPick === 'function') ? window.__ultPick() : Math.random(); }
+  function _ultPendingList() { try { const a = JSON.parse(localStorage.getItem(ULT_DROP_PENDING_KEY) || '[]'); return Array.isArray(a) ? a : []; } catch (_) { return []; } }
+  /** Called once per confirmed boss kill (every solo kill site, and a paid co-op win): the roll. */
+  function _ultOnBossKill(bossId) {
+    try {
+      if (!ultsLive()) return;
+      const owned = ultOwnedList(), pool = ULT_DROPS.filter(function (id) { return owned.indexOf(id) === -1; });
+      if (!pool.length) return;                         // all eight found: the roll stops
+      if (_newHunterQuiet()) return;                    // W940 — day one stays quiet
+      let pity = 0; try { pity = parseInt(localStorage.getItem(ULT_PITY_KEY) || '0', 10) || 0; } catch (_) {}
+      const hit = pity >= ULT_PITY_AT || _ultDice() < 1 / ULT_DROP_ONE_IN;
+      if (!hit) { try { localStorage.setItem(ULT_PITY_KEY, String(pity + 1)); } catch (_) {} _w2Sync('ult-pity'); return; }
+      const id = pool[Math.min(pool.length - 1, Math.floor(_ultPickDie() * pool.length))];
+      try {
+        localStorage.setItem(ULT_OWNED_KEY, JSON.stringify(owned.concat([id])));
+        localStorage.setItem(ULT_PITY_KEY, '0');
+        const q = _ultPendingList(); q.push(id); localStorage.setItem(ULT_DROP_PENDING_KEY, JSON.stringify(q));
+      } catch (_) {}
+      _w2Sync('ult-owned');
+      setTimeout(_ultDropTick, 0);                      // after the kill site has queued its own result screen
+    } catch (_) {}
+  }
+  // The kill's result screen (and a shadow's ARISE) come first; the reveal waits its turn, and survives a closed app.
+  let _ultDropTimer = 0;
+  function _ultDropTick() {
+    try {
+      const q = _ultPendingList(); if (!q.length) return;
+      if (document.getElementById('ult-drop-overlay')) return;
+      if (document.querySelector('.arise-overlay') || _bossResultBusy || _bossResultQueue.length || _rhHold) {
+        clearTimeout(_ultDropTimer); _ultDropTimer = setTimeout(_ultDropTick, 900); return;
+      }
+      _ultDropShow(q[0]);
+    } catch (_) {}
+  }
+  function _ultDropDone(id) {
+    try { const q = _ultPendingList().filter(function (x) { return x !== id; }); localStorage.setItem(ULT_DROP_PENDING_KEY, JSON.stringify(q)); } catch (_) {}
+    try { ultMarkSeen([id]); } catch (_) {}
+    try { renderPokedex(); } catch (_) {}
+    try { _twUltChipPaint(); } catch (_) {}
+    setTimeout(_ultDropTick, 500);
+  }
+  /** The reveal: a flash, the emblem, the name, what it does; EQUIP IT · SEE IT · Later. */
+  function _ultDropShow(id) {
+    const u = ASCENT_ULTIMATES[id]; if (!u) { _ultDropDone(id); return; }
+    const ov = document.createElement('div');
+    ov.id = 'ult-drop-overlay'; ov.className = 'ud-ov';
+    ov.style.setProperty('--ut', u.tint || '#f5b842');
+    ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-modal', 'true'); ov.setAttribute('aria-label', 'An ultimate dropped: ' + u.name);
+    let rays = ''; for (let i = 0; i < 12; i++) rays += '<i style="--a:' + (i * 30) + 'deg"></i>';
+    ov.innerHTML = '<div class="ud-flash"></div><div class="ud-rays" aria-hidden="true">' + rays + '</div>' +
+      '<div class="ud-card">' +
+        '<div class="ud-eyebrow">An ultimate dropped</div>' +
+        '<div class="ud-em">' + ultEmblem(id, 128) + '</div>' +
+        '<div class="ud-kind">Ultimate · ' + esc(u.kind) + '</div>' +
+        '<div class="ud-name">' + esc(u.name) + '</div>' +
+        '<p class="ud-eff">' + esc(u.eff) + '</p>' +
+        '<div class="ud-btns"><button type="button" class="ud-btn ud-btn--main" data-ud="equip">Equip it</button><button type="button" class="ud-btn" data-ud="see">See it</button></div>' +
+        '<button type="button" class="ud-later" data-ud="later">Later</button>' +
+      '</div>';
+    document.body.appendChild(ov);
+    requestAnimationFrame(function () { requestAnimationFrame(function () { ov.classList.add('ud-on'); }); });
+    try { _hapticTick('HEAVY'); } catch (_) {}
+    try { [523.25, 659.25, 783.99, 1046.5].forEach(function (f, i) { _tbTone(f, 0.15 + i * 0.09, 1.1, 0.07); }); } catch (_) {}
+    let done = false;
+    const close = function (then) {
+      if (done) return; done = true;
+      ov.classList.remove('ud-on'); ov.classList.add('ud-off');
+      setTimeout(function () { try { ov.remove(); } catch (_) {} _ultDropDone(id); if (then) { try { then(); } catch (_) {} } }, 260);
+    };
+    ov.addEventListener('click', function (e) {
+      const b = e.target.closest ? e.target.closest('[data-ud]') : null; if (!b) return;
+      const a = b.getAttribute('data-ud');
+      if (a === 'equip') { try { setEquippedUltimate(id); showHabitToast(u.name + ' is your ultimate now.'); } catch (_) {} close(); }
+      else if (a === 'see') close(function () { ultPreview(id); });
+      else close();
+    });
+  }
+  /** Items › Archive: the eight, found ones by name, the rest as "?" — Drops from any boss. */
+  function _ultArchiveHtml(collapsed) {
+    if (!ultsLive()) return '';
+    const owned = ultOwnedList(), eq = getEquippedUltimate(), isC = collapsed && collapsed.has('ultimates');
+    const order = ULT_DROPS.filter(function (id) { return owned.indexOf(id) !== -1; }).concat(ULT_DROPS.filter(function (id) { return owned.indexOf(id) === -1; }));   // found first, like the relics
+    const cells = order.map(function (id) {
+      const u = ASCENT_ULTIMATES[id];
+      if (owned.indexOf(id) === -1) {
+        return '<div class="pokedex-cell pokedex-cell--mystery"><button class="pokedex-card pokedex-card--undiscovered archive-mystery-card ua-lock" type="button" data-ua="' + id + '" aria-label="An ultimate not found yet">' +
+          '<div class="pokedex-card-art pokedex-card-art--undiscovered"><span class="pokedex-card-mystery archive-mystery-mark">?</span><span class="archive-slot-badge">Ultimate</span></div>' +
+          '<div class="archive-mystery-rarity">Ultimate</div><div class="archive-mystery-hint">Drops from any boss</div></button></div>';
+      }
+      return '<div class="pokedex-cell"><button class="ua-card' + (eq === id ? ' ua-card--worn' : '') + '" type="button" data-ua="' + id + '" style="--ut:' + (u.tint || '#f5b842') + '" aria-label="' + esc(u.name) + '">' +
+        '<div class="ua-em">' + ultEmblem(id, 76) + '</div><div class="ua-nm">' + esc(u.name) + '</div><div class="ua-kd">' + (eq === id ? 'Equipped' : esc(u.kind)) + '</div></button></div>';
+    }).join('');
+    // The Signature — the surge ultimate everyone has (owner: "make sure every user has the one surge ultimate in their kit"): always first, always found.
+    const sig = ultSignatureId(), su = ASCENT_ULTIMATES[sig] || {};
+    const sigCell = '<div class="pokedex-cell"><button class="ua-card' + (eq === 'signature' ? ' ua-card--worn' : '') + '" type="button" data-ua="signature" style="--ut:' + (su.tint || '#f5b842') + '" aria-label="' + esc(su.name || 'Signature') + '">' +
+      '<div class="ua-em">' + ultEmblem('signature', 76) + '</div><div class="ua-nm">' + esc(su.name || 'Signature') + '</div><div class="ua-kd">' + (eq === 'signature' ? 'Equipped' : 'Signature') + '</div></button></div>';
+    const n = owned.length + 1, all = ULT_DROPS.length + 1, pct = Math.round(n / all * 100);
+    return '<div class="pokedex-section pokedex-section--ultimates' + (isC ? ' pokedex-section--collapsed' : '') + '" data-section-key="ultimates" style="--ac:#f472b6;--acg:rgba(244,114,182,.5)">' +
+      '<button class="pokedex-section-header archive-rarity-header archive-rarity-header--mythic" type="button" data-section-toggle="ultimates" aria-expanded="' + (isC ? 'false' : 'true') + '">' +
+        '<span class="pdx-sec-accent" aria-hidden="true"></span>' +
+        '<svg class="pdx-sec-glyph" viewBox="0 0 22 22" aria-hidden="true"><path d="M11 2.5l1.9 5.6 5.6 1.9-5.6 1.9L11 17.5l-1.9-5.6L3.5 10l5.6-1.9z" stroke="currentColor" stroke-width="1.4" fill="none" stroke-linejoin="round"/><circle cx="11" cy="10" r="1.6" fill="currentColor"/></svg>' +
+        '<span class="pdx-sec-titlewrap"><span class="pokedex-section-label">ULTIMATES</span><span class="pdx-sec-sub">Any boss can drop one · 1 in ' + ULT_DROP_ONE_IN + '</span></span>' +
+        '<span class="pdx-sec-right"><span class="pokedex-section-count"><b>' + n + '</b> / ' + all + '</span><span class="pdx-sec-minibar"><i style="width:' + pct + '%"></i></span></span>' +
+        '<span class="pokedex-section-chevron" aria-hidden="true"><svg viewBox="0 0 9 14" width="9" height="14" fill="none"><path d="M1.5 1.5l6 5.5-6 5.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>' +
+      '</button>' +
+      '<div class="pokedex-section-body"><div class="pokedex-grid">' + sigCell + cells + '</div></div></div>';
+  }
+  /** A card on Items opens that ultimate's page (Preview, Equip) in the Wardrobe's pager. */
+  function _ultOpenFromItems(id) {
+    try { openWardrobe('ults'); } catch (_) { return; }
+    setTimeout(function () { try { if (_wx && _wx.openDetail) _wx.openDetail('ul', id, { instant: true }); } catch (_) {} }, 60);
+  }
+  try { window.__ultDrops = { owned: ultOwnedList, roll: _ultOnBossKill, pity: function () { return parseInt(localStorage.getItem(ULT_PITY_KEY) || '0', 10) || 0; }, pending: _ultPendingList, tick: _ultDropTick, oneIn: ULT_DROP_ONE_IN, pityAt: ULT_PITY_AT }; } catch (_) {}   // QA
   // W1171 — the eleven emblems from the Claude Design handoff (ult-emblems.jsx): one family — a dark well, a tinted ring
   // with four diamond mounts (the frames' language), one stroked glyph. Locked: the same disc dimmed to slate and
   // sealed with the Wardrobe's hex lock. Keyed by the handoff's ids; ULT_EM_ID maps ours onto them.
@@ -27766,7 +27907,7 @@
       );
     }).join('');
     // W450 — the archetype filter + PWR sort ride above the rarity sections (which are preserved).
-    root.innerHTML = _pokedexFilterBarHtml() + sectionsHtml;
+    root.innerHTML = _pokedexFilterBarHtml() + _ultArchiveHtml(collapsed) + sectionsHtml;   // W1183 — the ultimates lead the Archive
 
     // Attach error handlers to all card-art images so a 404 cleanly
     // falls back to the emoji + rarity gradient underneath. inline
@@ -27877,6 +28018,8 @@
         }
         return;
       }
+      const uaBtn = e.target.closest('[data-ua]');   // W1183 — an ultimate's card opens its page
+      if (uaBtn) { try { _audCue('ui_tap'); } catch (_) {} _ultOpenFromItems(uaBtn.getAttribute('data-ua')); return; }
       const btn = e.target.closest('.pokedex-card[data-card-id]');
       if (!btn) return;
       const id = btn.getAttribute('data-card-id');
@@ -28317,6 +28460,7 @@
         const _rgBonus_1 = (_firstKill && state._was_red_gate === true) ? killRewardSouls(cfg.rank) : 0;
         if (_rgBonus_1 > 0) earnSouls(_rgBonus_1, 'red_gate_kill_' + id);
         if (_firstKill) { try { _shadowOnBossKill(id); } catch (_) {} }   // W862 · W1047 — the roll for this boss's shadow
+        if (_firstKill) { try { _ultOnBossKill(id); } catch (_) {} }      // W1183 — and the roll for an ultimate
         // v2.0.1 DROPS: roll for a card drop. May return null (~70%
         // standard rate, less during first-common protection).
         let dropped = _firstKill ? rollBossDrop(id, isBossHungered(id) ? { luck: HUNGER_LUCK_MULT } : undefined) : null;
@@ -28444,6 +28588,7 @@
         const _rgBonus_3 = (_firstKill && state._was_red_gate === true) ? killRewardSouls(cfg.rank) : 0;
         if (_rgBonus_3 > 0) earnSouls(_rgBonus_3, 'red_gate_kill_' + id);
         if (_firstKill) { try { _shadowOnBossKill(id); } catch (_) {} }   // W862 · W1047 — the roll for this boss's shadow
+        if (_firstKill) { try { _ultOnBossKill(id); } catch (_) {} }      // W1183 — and the roll for an ultimate
         let dropped = _firstKill ? rollBossDrop(id, isBossHungered(id) ? { luck: HUNGER_LUCK_MULT } : undefined) : null;
         if (_firstKill && !dropped && state._was_red_gate === true) { try { dropped = rollBossDrop(id); } catch (_) {} }   // W869
         if (_firstKill) announceKillAndDrop(cfg, reward, dropped);
@@ -28562,6 +28707,7 @@
     const _rgBonus_4 = (state._was_red_gate === true) ? killRewardSouls(cfg.rank) : 0;
     if (_rgBonus_4 > 0) earnSouls(_rgBonus_4, 'red_gate_kill_' + id);
     try { _shadowOnBossKill(id); } catch (_) {}   // W862 · W1047 — the roll for this boss's shadow
+    try { _ultOnBossKill(id); } catch (_) {}      // W1183 — and the roll for an ultimate
     let dropped = rollBossDrop(id, isBossHungered(id) ? { luck: HUNGER_LUCK_MULT } : undefined);
     if (!dropped && state._was_red_gate === true) { try { dropped = rollBossDrop(id); } catch (_) {} }   // W869 — the seal's second roll
     // W762 — one history row per solo kill (the Kill Log History tab's solo feed;
@@ -30407,8 +30553,7 @@
     '3.0.24': {
       subtitle: 'Eight new ultimates.',
       items: [
-        { emoji: '', title: 'Eight new ultimates', description: "Earn them from boss kills, your shadows and the summit, then choose one in the Wardrobe. Each hits differently and has its own moment." },
-        { emoji: '', title: 'Watch before you choose', description: "Every ultimate in the Wardrobe has a Preview." },
+        { emoji: '', title: 'Eight ultimates to find', description: "Any boss you beat can drop one: 1 kill in 40, and never one you already have. They live on Items, and each one has a Preview." },   // W1183 (was earned from milestones, W1168)
         { emoji: '', title: 'Every boss, set by real days', description: "Boss goals now climb one clear ladder: 5,000 steps a day at E up to 9,000 at S. Most are easier than before, and the sleep bosses ask for 7 hours, not 8." },   // W1182
         { emoji: '', title: 'A new morning briefing', description: "Your pact flames, your steps against the world average, the latest update or a health fact, and a way to review the app." },   // W1178, W1179
         { emoji: '', title: 'Multi-day bosses fall by themselves', description: "Two or three days in a row of sleep, steps or stairs, and the boss is yours, even if you open the app days later. No tap needed." },   // W1176 (was W1167, the Patient Flame alone)
@@ -63564,6 +63709,7 @@
     // W762 — attach the relic to this hunt's already-logged W716 history row.
     try { if (dropInfo) _annotateCoopHistoryDrop(inst.id, { id: dropInfo.id, name: dropInfo.name, rarity: dropInfo.rarity }); } catch (_) {}
     awarded[inst.id] = true; _saveCoopAwarded(awarded);   // persist the local guard AFTER granting
+    try { _ultOnBossKill(inst.boss_id); } catch (_) {}   // W1183 — a paid co-op win rolls for an ultimate too
     try { _coopBumpKill(inst.boss_id); } catch (_) {}     // W545 — per-co-op-boss kill count for the Kill Log
     // W697 — co-op wins now post to the Guild Activity feed like a solo kill does (they
     // previously fired NO 'boss_kill' row, so a defeated co-op boss — the Grinning God
@@ -78175,6 +78321,8 @@
       // W1169 — the chosen ultimate and the ones already seen in the Wardrobe (the unlocks themselves are derived)
       'hb_ult_choice',
       'hb_ult_seen',
+      'hb_ult_owned',   // W1183 — the ultimates found
+      'hb_ult_pity',    // W1183 — kills since the last one (the safety net)
       // Cloud-sync metadata itself (so the destination device knows
       // when the snapshot was authored / when it last synced)
       LS_KEY_LAST_BACKUP,
