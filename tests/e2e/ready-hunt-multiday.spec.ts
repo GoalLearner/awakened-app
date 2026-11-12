@@ -381,3 +381,118 @@ test.describe('W1187 — every multi-day boss falls by itself at its exact bar, 
     expect(await feesPaid(page)).toBe(ids.length);
   });
 });
+
+// W1190 — owner 2026-11-11: "For consecutive day challenges and other dungeons that have additional criteria, end them
+// early in case the player fails one criteria ... rather than have them engaged for 3 days, wasting time." An ENGAGED
+// multi-day hunt ends the moment a missed day leaves no room for a full run in its window: its HUNT FAILED screen says
+// which day came up short and on what, and "Hunt again" starts a fresh run that counts today. A hunt that can still be
+// won keeps going, and today (still accruing) never ends one.
+test.describe('W1190 — a multi-day hunt that can no longer be won ends early', () => {
+  // an engaged hunt that began `back` days ago at `hour`:00, its window = the boss's huntWindowDays
+  const engagedAt = (back: number, hour: number, min = 0) => { const d = new Date(); d.setDate(d.getDate() - back); d.setHours(hour, min, 0, 0); return d.getTime(); };
+  async function engage(page: Page, id: string, back: number, hour: number, min = 0) {
+    const start = engagedAt(back, hour, min);
+    await boot(page, {}, '40000');
+    await page.evaluate(([i, s]: [string, number]) => {
+      const cfg = (window as any).Bosses.BOSSES[i];
+      const all = JSON.parse(localStorage.getItem('hb_bosses') || '{}');
+      all[i] = { engaged: true, engaged_at: new Date(s).toISOString(), hunt_started_at: s, hunt_expires_at: s + cfg.huntWindowDays * 86400000, kill_count: 0, streak: 0 };
+      localStorage.setItem('hb_bosses', JSON.stringify(all));
+    }, [id, start] as [string, number]);
+  }
+  const resolve = async (page: Page, fix: Fix) => { await scan(page, fix, false); await page.evaluate(() => (window as any).resolveBossHuntsAcrossWindow()); };
+  const st = (page: Page, id: string) => page.evaluate((i: string) => (window as any).Bosses.getBossState(i), id);
+  // the test's days also make one-day bosses ready: put that sheet away so the HUNT FAILED screen can take the stage
+  const clearStage = (page: Page) => page.evaluate(() => { const b = document.querySelector('#rh-sheet [data-rh-close]') as HTMLElement; if (b) b.click(); });
+
+  test('the Worldspine, engaged 8 AM two days ago: day 1 short of 7,000 → it ends now, says so, and Hunt again counts today', async ({ page }) => {
+    await engage(page, 'the_worldspine', 2, 8);   // the window ends 8 AM tomorrow: day 4 is too short to count
+    await resolve(page, { steps: { [dayKey(2)]: 6999, [dayKey(1)]: 9000, [dayKey(0)]: 9000 } });
+    const s = await st(page, 'the_worldspine');
+    expect(s.engaged).toBe(false);
+    expect(s.last_hunt_outcome).toBe('expired');
+    expect(s.last_hunt_broke).toEqual({ day: 1, need: 3, miss: 'steps' });
+    await clearStage(page);
+    const ov = page.locator('#boss-result-overlay');
+    await expect(ov.locator('.hr-sub')).toHaveText('Day 1 came up short on steps. The run ended early.', { timeout: 8000 });
+    await expect(ov.locator('.hr-mood')).toHaveText('Hunt again, and today counts.');
+  });
+
+  test('a hunt that can still be won keeps going: engaged 9 PM yesterday, a short first day leaves three full days', async ({ page }) => {
+    await engage(page, 'the_worldspine', 1, 21);   // the window ends 9 PM in two days: today, tomorrow and that day still fit
+    await resolve(page, { steps: { [dayKey(1)]: 500, [dayKey(0)]: 1200 } });
+    const s = await st(page, 'the_worldspine');
+    expect(s.engaged).toBe(true);
+    expect(s.last_hunt_broke == null).toBe(true);
+  });
+
+  test('today never ends a hunt: still short this afternoon, the run is alive', async ({ page }) => {
+    await engage(page, 'the_patient_flame', 0, 8);
+    await resolve(page, { steps: { [dayKey(0)]: 100 } });
+    expect((await st(page, 'the_patient_flame')).engaged).toBe(true);
+  });
+
+  test('the Hunting row says where a multi-day run stands: "1 / 2 days · …steps"', async ({ page }) => {
+    await engage(page, 'the_patient_flame', 1, 8);
+    await resolve(page, { steps: { [dayKey(1)]: 5400, [dayKey(0)]: 1200 } });
+    expect((await st(page, 'the_patient_flame')).engaged).toBe(true);
+    expect((await page.evaluate(() => (window as any).__huntSoloProgress('the_patient_flame'))).line).toMatch(/^1 \/ 2 days · [\d,]+ \/ 5,000 steps$/);
+    expect((await page.evaluate(() => (window as any).__huntSoloProgress('the_steel_wolf'))).line).toMatch(/^[\d,]+ \/ 2,000 steps$/);   // a one-day boss reads as before
+  });
+
+  test('more than one condition: Erebus with 9,000 steps but 2 flights on day 2 → it ends, naming the stairs', async ({ page }) => {
+    await engage(page, 'erebus_the_shadow_sovereign', 2, 8);
+    await resolve(page, { steps: { [dayKey(2)]: 9000, [dayKey(1)]: 9000, [dayKey(0)]: 9000 }, flights: { [dayKey(2)]: 5, [dayKey(1)]: 2, [dayKey(0)]: 6 } });
+    const s = await st(page, 'erebus_the_shadow_sovereign');
+    expect(s.engaged).toBe(false);
+    expect(s.last_hunt_broke).toEqual({ day: 2, need: 3, miss: 'stairs' });
+    await clearStage(page);
+    await expect(page.locator('#boss-result-overlay .hr-sub')).toHaveText('Day 2 came up short on stairs. The run ended early.', { timeout: 8000 });
+  });
+
+  test('sleep: the Vow Keeper, two short nights in a row → it ends on the second morning; one short night does not', async ({ page }) => {
+    await engage(page, 'the_vow_keeper', 1, 10);   // nights keyed yesterday and today, and tomorrow's still to come
+    await resolve(page, { sleep: { [dayKey(1)]: 5 } });
+    expect((await st(page, 'the_vow_keeper')).engaged).toBe(true);   // tonight and tomorrow morning still make two
+    await engage(page, 'the_vow_keeper', 2, 23, 59);   // ends 11:59 PM today, so it is still running
+    await resolve(page, { sleep: { [dayKey(2)]: 7.5, [dayKey(1)]: 5 } });
+    const s = await st(page, 'the_vow_keeper');
+    expect(s.engaged).toBe(false);
+    expect(s.last_hunt_broke).toEqual({ day: 2, need: 2, miss: 'sleep' });
+  });
+
+  test('a run that already qualified is never ended: two good days for the Flame win it instead', async ({ page }) => {
+    await engage(page, 'the_patient_flame', 1, 8);
+    await resolve(page, { steps: { [dayKey(1)]: 5200, [dayKey(0)]: 5100 } });
+    const s = await st(page, 'the_patient_flame');
+    expect(s.kill_count).toBe(1);
+    expect(s.last_hunt_broke == null).toBe(true);
+  });
+
+  test('the judge alone: every boss with a run, every window shape', async ({ page }) => {
+    await boot(page);
+    const r = await page.evaluate(([d0, d1, d2]: string[]) => {
+      const J = (window as any).__bossRunBroken, now = Date.now();
+      const at = (back: number, hour: number) => { const d = new Date(); d.setDate(d.getDate() - back); d.setHours(hour, 0, 0, 0); return d.getTime(); };
+      const mid = (back: number) => at(back, 0);
+      const run = (need: number, days: string[], flags: boolean[], nights?: boolean) => ({ need, days, flags, misses: flags.map((f) => f ? null : 'steps'), nights: !!nights });
+      return {
+        // 3-day, engaged 8 AM two days ago, day 1 missed → broken
+        a: J(run(3, [d2, d1, d0], [false, true, true]), mid(2), at(2, 8) + 3 * 86400000, now),
+        // the same at 9 PM: day 4 counts, so days 2-4 still fit
+        b: J(run(3, [d2, d1, d0], [false, true, true]), mid(2), at(2, 21) + 3 * 86400000, now),
+        // nothing missed yet → never ended, even if the window is short
+        c: J(run(3, [d0], [false]), mid(0), at(0, 8) + 3 * 86400000, now),
+        // 2-day, engaged 8 AM yesterday, yesterday missed → broken (day 3 is under half a day)
+        d: J(run(2, [d1, d0], [false, false]), mid(1), at(1, 8) + 2 * 86400000, now),
+        // a sleep run keeps its last morning: engaged 8 AM yesterday, last night short (keyed yesterday) → still alive
+        e: J(run(2, [d1, d0], [false, false], true), mid(1), at(1, 8) + 2 * 86400000, now),
+      };
+    }, [dayKey(0), dayKey(1), dayKey(2)]);
+    expect(r.a).toEqual({ day: 1, need: 3, miss: 'steps' });
+    expect(r.b).toBeNull();
+    expect(r.c).toBeNull();
+    expect(r.d).toEqual({ day: 1, need: 2, miss: 'steps' });
+    expect(r.e).toBeNull();
+  });
+});
