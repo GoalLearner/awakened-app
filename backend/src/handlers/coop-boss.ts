@@ -72,22 +72,24 @@ export const COOP_BOSS_CFG: Record<
   // ladder for co-op: E 5,000 · D 6,000 · C 7,000 · B 8,000 · A 8,500 · S 9,000 a hunter a day, never above the old goal)
   // W1186 (owner 2026-11-11: "nerfing the steps at S-tier down to 8,000 ... reducing down the tiers again so that it fits")
   // — E 5,000 · D 6,000 · C 6,500 · B 7,000 · A 7,500 · S 8,000; goals already under the new bar stay.
+  // W1189 (owner 2026-11-11: "actually make E 2,000 steps ... S steps should be around 7,000") — E 2,000 · D 3,000 ·
+  // C 4,000 · B 5,000 · A 6,000 · S 7,000 a hunter a day; every steps goal follows (none was under the new bar).
   // — every goal below is set from that ladder and what real hunters do (28 days of Health data; the
   // Twin Maw lost 39% of its hunts at 14k, the Coursing Dread 5 of 5 at 18k). Rewards unchanged.
-  the_twin_maw:         { rank: 'E', goalSteps: 10000, rewardSouls: 25,  windowHours: 24, metric: 'steps' },   // W765 — owner tuned 16k→14k (entry-rank hunt was too steep for two casual hunters' day)
+  the_twin_maw:         { rank: 'E', goalSteps: 4000, rewardSouls: 25,  windowHours: 24, metric: 'steps' },   // W765 — owner tuned 16k→14k (entry-rank hunt was too steep for two casual hunters' day)
   // W682 — first D-rank co-op + first 48-HOUR window (endurance duo: a goal
   // deliberately beyond one day's walking, humane across two). Reward = half
   // the solo D kill (100 → 50/hunter, the W648 split model).
-  the_unresting_march:  { rank: 'D', goalSteps: 24000, rewardSouls: 50,  windowHours: 48, metric: 'steps' },
-  the_coursing_dread:   { rank: 'C', goalSteps: 13000, rewardSouls: 100, windowHours: 24, metric: 'steps' },
+  the_unresting_march:  { rank: 'D', goalSteps: 12000, rewardSouls: 50,  windowHours: 48, metric: 'steps' },
+  the_coursing_dread:   { rank: 'C', goalSteps: 8000, rewardSouls: 100, windowHours: 24, metric: 'steps' },
   the_hollow_monarch:   { rank: 'B', goalSteps: 12,    rewardSouls: 200, windowHours: 24, metric: 'flights' },
   // W447 — dual-condition (steps AND flights) co-op duo bosses.
-  the_gaunt_wardens:    { rank: 'C', goalSteps: 10000, goalFlights: 6,  rewardSouls: 100, windowHours: 24, metric: 'both' },
-  the_sundered_choir:   { rank: 'B', goalSteps: 12000, goalFlights: 8,  rewardSouls: 200, windowHours: 24, metric: 'both' },
+  the_gaunt_wardens:    { rank: 'C', goalSteps: 8000, goalFlights: 6,  rewardSouls: 100, windowHours: 24, metric: 'both' },
+  the_sundered_choir:   { rank: 'B', goalSteps: 10000, goalFlights: 8,  rewardSouls: 200, windowHours: 24, metric: 'both' },
   // W853 (v3 V3b) — the A-rank co-op gap (catalog jumped B→S). Duo, first
   // 48h dual-metric window; goals sit between the Choir (12k/10 in 24h) and
   // the raids. Reward = half the solo A kill (800 → 400), the W648 half-split.
-  the_cloven_titan:     { rank: 'A', goalSteps: 28000, goalFlights: 16, rewardSouls: 400, windowHours: 48, metric: 'both' },
+  the_cloven_titan:     { rank: 'A', goalSteps: 24000, goalFlights: 16, rewardSouls: 400, windowHours: 48, metric: 'both' },
   // W677 — first TRIO hunt (partySize 3: summoner + 2 hand-picked friends).
   // Owner spec: C-rank, 27,000 COMBINED steps. rewardSouls = floor(solo C 200 / 3)
   // = 66 per hunter (thirds split — the trio analog of the W648 duo half-split).
@@ -95,15 +97,15 @@ export const COOP_BOSS_CFG: Record<
   // W1104 — owner 2026-10-27: a steps trio at every rank D to A — D 16,000, C 21,000 (the
   // Court, was 27,000), B 24,000, A 27,000, each in 24h, each paying a third of the solo kill
   // for its rank (D 100 → 33, B 400 → 133, A 800 → 266). New names/art are placeholders too.
-  the_crossroads_hound: { rank: 'D', goalSteps: 16000, rewardSouls: 33,  windowHours: 24, metric: 'steps', partySize: 3 },
-  the_threefold_court:  { rank: 'C', goalSteps: 19500, rewardSouls: 66,  windowHours: 24, metric: 'steps', partySize: 3 },
-  the_triune_sentinel:  { rank: 'B', goalSteps: 21000, rewardSouls: 133, windowHours: 24, metric: 'steps', partySize: 3 },
-  the_trinity_colossus: { rank: 'A', goalSteps: 22500, rewardSouls: 266, windowHours: 24, metric: 'steps', partySize: 3 },
+  the_crossroads_hound: { rank: 'D', goalSteps: 9000, rewardSouls: 33,  windowHours: 24, metric: 'steps', partySize: 3 },
+  the_threefold_court:  { rank: 'C', goalSteps: 12000, rewardSouls: 66,  windowHours: 24, metric: 'steps', partySize: 3 },
+  the_triune_sentinel:  { rank: 'B', goalSteps: 15000, rewardSouls: 133, windowHours: 24, metric: 'steps', partySize: 3 },
+  the_trinity_colossus: { rank: 'A', goalSteps: 18000, rewardSouls: 266, windowHours: 24, metric: 'steps', partySize: 3 },
   // W686 — the S-rank endgame raid: first 72-HOUR window + first steps+SLEEP dual.
   // Owner spec: duo, 60,000 combined steps AND 42h combined sleep across 3 days
   // (exactly 7h/night/hunter — the discipline the Crown refused). goalFlights
   // holds SLEEP MINUTES (2520 = 42h). Reward = half the solo S kill (1600 → 800).
-  the_sleepless_crown:  { rank: 'S', goalSteps: 48000, goalFlights: 2340,   // W1186 — 48k + 39h (W1182 54k; was 60k + 42h)
+  the_sleepless_crown:  { rank: 'S', goalSteps: 42000, goalFlights: 2340,   // W1189 — 42k + 39h (W1186 48k; W1182 54k; was 60k + 42h)
     rewardSouls: 800, windowHours: 72, metric: 'steps_sleep' },
   // W693 — THE GRINNING GOD: the members-only apex raid (homage to Solo Leveling's
   // Monarch/"state of god"). First N-hunter hunt (party 2–5; brutal below 5, but the
@@ -113,7 +115,7 @@ export const COOP_BOSS_CFG: Record<
   // a clean difficulty easing rather than a silent rebalance). memberOnly gates BOTH the summoner and
   // every ally at create + join. Drops (client-side): the mythic-only table (Nightfall
   // + Reverie + Vigil, ~1% each), UNCAPPED + trophy-only. rewardSouls 800/hunter.
-  the_grinning_god:     { rank: 'S', goalSteps: 106000, goalFlights: 50,   // W1186 — sized so 4 walk 8,000 a day each (W1182 120k, party 4–6; was 150k + 75, party 2–5)
+  the_grinning_god:     { rank: 'S', goalSteps: 93000, goalFlights: 50,   // W1189 — sized so 4 walk 7,000 a day each (W1186 106k) (W1182 120k, party 4–6; was 150k + 75, party 2–5)
     rewardSouls: 800, windowHours: 80, metric: 'both', minParty: 4, maxParty: 6, memberOnly: true, matchmaking: true },
 };
 // W761 — display names for push copy ("2/5 have answered The Grinning God…").

@@ -38,22 +38,23 @@ beforeEach(() => {
 });
 
 // W1182 — AUTO_FIT 0.9 → 0.75 and the goals came down (Coursing Dread 14k, Twin Maw 10k). W1186 — the Dread 13k.
+// W1189 — the ladder's E 2,000 / C 4,000 a hunter: the Twin Maw 4,000, the Dread 8,000.
 describe('pickAutoBoss — the strongest boss both ranks allow whose printed goal fits AUTO_FIT (0.75) × pattern', () => {
   it('a C pair walking 20,000 a day faces The Coursing Dread at its real goal', () => {
     expect(AUTO_FIT).toBe(0.75);
-    expect(pickAutoBoss('C', 'B', 20000)).toEqual({ bossId: 'the_coursing_dread', goalSteps: 13000 });
+    expect(pickAutoBoss('C', 'B', 20000)).toEqual({ bossId: 'the_coursing_dread', goalSteps: 8000 });
   });
-  it('the boundary: 13,000 fits at 17,334; a step less drops to the Twin Maw at 10,000', () => {
-    expect(pickAutoBoss('C', 'C', 17334).bossId).toBe('the_coursing_dread');
-    expect(pickAutoBoss('C', 'C', 17333)).toEqual({ bossId: 'the_twin_maw', goalSteps: 10000 });
+  it('the boundary: 8,000 fits at 10,667; a step less drops to the Twin Maw at 4,000', () => {
+    expect(pickAutoBoss('C', 'C', 10667).bossId).toBe('the_coursing_dread');
+    expect(pickAutoBoss('C', 'C', 10666)).toEqual({ bossId: 'the_twin_maw', goalSteps: 4000 });
   });
   it('an E hunter caps the pair at the Twin Maw however far they walk', () => {
-    expect(pickAutoBoss('E', 'S', 40000)).toEqual({ bossId: 'the_twin_maw', goalSteps: 10000 });
+    expect(pickAutoBoss('E', 'S', 40000)).toEqual({ bossId: 'the_twin_maw', goalSteps: 4000 });
   });
   it('a pair under the Twin Maw gets it sized to them: 0.75 × pattern to the nearest 100, floor 2,000', () => {
-    expect(pickAutoBoss('E', 'E', 10000)).toEqual({ bossId: 'the_twin_maw', goalSteps: 7500 });
-    expect(pickAutoBoss('E', 'E', 13333)).toEqual({ bossId: 'the_twin_maw', goalSteps: 10000 });   // 9,999.75 → sized 10,000; the real goal is 10,000 and does not fit
-    expect(pickAutoBoss('E', 'E', 13334).goalSteps).toBe(10000);                                   // 10,000.5 fits the real boss
+    expect(pickAutoBoss('E', 'E', 4000)).toEqual({ bossId: 'the_twin_maw', goalSteps: 3000 });
+    expect(pickAutoBoss('E', 'E', 5333)).toEqual({ bossId: 'the_twin_maw', goalSteps: 4000 });   // 3,999.75 → sized 4,000; the real goal is 4,000 and does not fit
+    expect(pickAutoBoss('E', 'E', 5334).goalSteps).toBe(4000);                                     // 4,000.5 fits the real boss
     expect(pickAutoBoss('E', 'E', 1000)).toEqual({ bossId: 'the_twin_maw', goalSteps: 2000 });
     expect(pickAutoBoss('E', 'E', 0).goalSteps).toBe(2000);
   });
@@ -180,12 +181,12 @@ describe('sweepCoopAutoHunts — one sized hunt per walking friend pair per day'
       expect(ins.args[10]).toBe(today);                         // hunt_day
     }
     const byPair = new Map(inserts.map((c) => [c.args[11], c]));
-    // u1 (C) + u2 (E): the E hunter caps it at the Twin Maw; pattern ≈ 100k/9 + 50k/9 = 16.7k, × 0.75 = 12.5k → the real 10,000
+    // u1 (C) + u2 (E): the E hunter caps it at the Twin Maw; pattern ≈ 100k/9 + 50k/9 = 16.7k, × 0.75 = 12.5k → the real 4,000 (W1189)
     expect(byPair.get('u1|u2')!.args[1]).toBe('the_twin_maw');
-    expect(byPair.get('u1|u2')!.args[6]).toBe(10000);
-    // u1 (C) + u3 (C): pattern ≈ 24.4k, × 0.75 = 18.3k → The Coursing Dread at 13,000 (W1186)
+    expect(byPair.get('u1|u2')!.args[6]).toBe(4000);
+    // u1 (C) + u3 (C): pattern ≈ 24.4k, × 0.75 = 18.3k → The Coursing Dread at 8,000 (W1189)
     expect(byPair.get('u1|u3')!.args[1]).toBe('the_coursing_dread');
-    expect(byPair.get('u1|u3')!.args[6]).toBe(13000);
+    expect(byPair.get('u1|u3')!.args[6]).toBe(8000);
     // the participant row is guarded on the instance existing
     const parts = calls.filter((c) => c.sql.includes('INTO coop_boss_participants'));
     expect(parts.length).toBe(3);

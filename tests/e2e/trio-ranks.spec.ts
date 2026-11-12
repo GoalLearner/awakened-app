@@ -32,10 +32,10 @@ async function boot(page: Page) {
 }
 
 const TRIOS = [
-  { id: 'the_crossroads_hound', name: 'The Crossroads Hound', rank: 'D', goal: '16,000', fresh: true },
-  { id: 'the_threefold_court',  name: 'The Threefold Court',  rank: 'C', goal: '19,500', fresh: false },   // W1186
-  { id: 'the_triune_sentinel',  name: 'The Triune Sentinel',  rank: 'B', goal: '21,000', fresh: true },   // W1186
-  { id: 'the_trinity_colossus', name: 'The Trinity Colossus', rank: 'A', goal: '22,500', fresh: true },   // W1182 · W1186
+  { id: 'the_crossroads_hound', name: 'The Crossroads Hound', rank: 'D', goal: '9,000', fresh: true },   // W1189
+  { id: 'the_threefold_court',  name: 'The Threefold Court',  rank: 'C', goal: '12,000', fresh: false },   // W1186 · W1189
+  { id: 'the_triune_sentinel',  name: 'The Triune Sentinel',  rank: 'B', goal: '15,000', fresh: true },   // W1186 · W1189
+  { id: 'the_trinity_colossus', name: 'The Trinity Colossus', rank: 'A', goal: '18,000', fresh: true },   // W1182 · W1186 · W1189
 ];
 
 test.describe('A steps trio at every rank (W1104)', () => {

@@ -143,9 +143,9 @@ test.describe('The Ready Hunt and the multi-day bosses (W1039)', () => {
     await boot(page);
     await scan(page, { steps: { [T1]: 12000, [T0]: 3000 }, flights: { [T1]: 6, [T0]: 1 } });
     const w = await watchOf(page);
-    expect(w).toContainEqual({ id: 'the_patient_flame', metric: 'steps', bar: 7000, day: T0, also: [] });   // W1186 ladder (B 7,000)
-    expect(w).toContainEqual({ id: 'the_tideless_marcher', metric: 'steps', bar: 7500, day: T0, also: [{ metric: 'flights', bar: 4 }] });
-    expect(w).toContainEqual({ id: 'the_tideless_marcher', metric: 'flights', bar: 4, day: T0, also: [{ metric: 'steps', bar: 7500 }] });
+    expect(w).toContainEqual({ id: 'the_patient_flame', metric: 'steps', bar: 5000, day: T0, also: [] });   // W1189 ladder (B 5,000)
+    expect(w).toContainEqual({ id: 'the_tideless_marcher', metric: 'steps', bar: 6000, day: T0, also: [{ metric: 'flights', bar: 4 }] });
+    expect(w).toContainEqual({ id: 'the_tideless_marcher', metric: 'flights', bar: 4, day: T0, also: [{ metric: 'steps', bar: 6000 }] });
     expect(w.filter((h: any) => h.id === 'erebus_the_shadow_sovereign')).toHaveLength(0);   // needs two earlier days
     expect(w.filter((h: any) => h.day === tomorrow)).toHaveLength(0);                       // today is not done yet
   });
@@ -156,8 +156,8 @@ test.describe('The Ready Hunt and the multi-day bosses (W1039)', () => {
     await scan(page, { steps: { [T2]: 12000, [T1]: 12000, [T0]: 12000 }, flights: { [T2]: 10, [T1]: 10, [T0]: 10 } });
     const w = await watchOf(page);
     const flame = w.filter((h: any) => h.id === 'the_patient_flame');
-    expect(flame).toEqual([{ id: 'the_patient_flame', metric: 'steps', bar: 7000, day: tomorrow, also: [] }]);
-    expect(w).toContainEqual({ id: 'erebus_the_shadow_sovereign', metric: 'steps', bar: 8000, day: tomorrow, also: [{ metric: 'flights', bar: 4 }] });
+    expect(flame).toEqual([{ id: 'the_patient_flame', metric: 'steps', bar: 5000, day: tomorrow, also: [] }]);
+    expect(w).toContainEqual({ id: 'erebus_the_shadow_sovereign', metric: 'steps', bar: 7000, day: tomorrow, also: [{ metric: 'flights', bar: 4 }] });
   });
 
   test('the phone list: last night qualified → the Vow Keeper on sleep today; only tonight qualified → tomorrow', async ({ page }) => {
@@ -200,7 +200,7 @@ test.describe('The Ready Hunt and the multi-day bosses (W1039)', () => {
 
   test('W1167: today still short, or a hunter below B → the Flame stands', async ({ page }) => {
     await boot(page);
-    await scan(page, { steps: { [T1]: 12000, [T0]: 6900 } }, true);   // W1186 — the Flame's bar is 7,000
+    await scan(page, { steps: { [T1]: 12000, [T0]: 4900 } }, true);   // W1189 — the Flame's bar is 5,000
     await page.waitForTimeout(800);
     expect((await flame(page)).kill_count || 0).toBe(0);
     await page.evaluate(() => { localStorage.setItem('hb_points', '0'); });
@@ -280,12 +280,12 @@ test.describe('The Ready Hunt and the multi-day bosses (W1039)', () => {
 type Bar = { steps?: number; flights?: number; sleep?: number; workouts?: number };
 type MD = { id: string; name: string; rank: string; n: number; bar: Bar };
 const MD_BOSSES: MD[] = [
-  { id: 'erebus_the_shadow_sovereign', name: 'Erebus, the Shadow Sovereign', rank: 'S', n: 3, bar: { steps: 8000, flights: 4 } },
-  { id: 'the_worldspine', name: 'The Worldspine', rank: 'S', n: 3, bar: { steps: 8000 } },
-  { id: 'the_starved_sentinel', name: 'The Starved Sentinel', rank: 'S', n: 3, bar: { steps: 5000, sleep: 6.5 } },
-  { id: 'the_tideless_marcher', name: 'The Tideless Marcher', rank: 'A', n: 2, bar: { steps: 7500, flights: 4 } },
+  { id: 'erebus_the_shadow_sovereign', name: 'Erebus, the Shadow Sovereign', rank: 'S', n: 3, bar: { steps: 7000, flights: 4 } },   // W1189
+  { id: 'the_worldspine', name: 'The Worldspine', rank: 'S', n: 3, bar: { steps: 7000 } },
+  { id: 'the_starved_sentinel', name: 'The Starved Sentinel', rank: 'S', n: 3, bar: { steps: 2000, sleep: 6.5 } },
+  { id: 'the_tideless_marcher', name: 'The Tideless Marcher', rank: 'A', n: 2, bar: { steps: 6000, flights: 4 } },
   { id: 'the_sleepless_ascent', name: 'The Sleepless Ascent', rank: 'A', n: 2, bar: { workouts: 20, sleep: 7 } },
-  { id: 'the_patient_flame', name: 'The Patient Flame', rank: 'B', n: 2, bar: { steps: 7000 } },
+  { id: 'the_patient_flame', name: 'The Patient Flame', rank: 'B', n: 2, bar: { steps: 5000 } },
   { id: 'the_vow_keeper', name: 'The Vow Keeper', rank: 'B', n: 2, bar: { sleep: 7 } },
   { id: 'the_forge_of_ten_thousand_days', name: 'The Forge of Ten Thousand Days', rank: 'B', n: 2, bar: { workouts: 20 } },
 ];
@@ -352,7 +352,7 @@ test.describe('W1187 — every multi-day boss falls by itself at its exact bar, 
   }
 
   // every run at once, at the bars, three days long (the two-day bosses read the last two)
-  const ALL: Fix = { steps: days3(8000), flights: days3(4), sleep: days3(7), workouts: days3(20) };
+  const ALL: Fix = { steps: days3(7000), flights: days3(4), sleep: days3(7), workouts: days3(20) };
   function days3(v: number) { const o: Record<string, number> = {}; for (let i = 0; i < 3; i++) o[dayKey(i)] = v; return o; }
   const byRank = (r: string) => MD_BOSSES.filter((x) => x.rank === r).map((x) => x.id);
 

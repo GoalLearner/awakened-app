@@ -3058,7 +3058,7 @@ test.describe('AC · Onboarding v4 (W936 → W1050)', () => {
   test('the reveal runs up the real week and counts it in Steel Wolves', async ({ page }) => {
     test.slow();   // the count runs up five times over
     await obFirstRun(page);
-    await obWorld(page, { today: 7318, week: 31204, board: obBoard(31204) });
+    await obWorld(page, { today: 7318, week: 13204, board: obBoard(13204) });   // W1189 — six Wolves at 2,000 and a part
     await obName(page, 'Richie');
     await page.locator('#cn-healthBtn').click();
     await obOn(page, 'reveal');
@@ -3067,13 +3067,13 @@ test.describe('AC · Onboarding v4 (W936 → W1050)', () => {
     const part  = page.locator(OB + ' .ob4-wolves .ob4-wolfhead.is-part');
     const line  = page.locator('#cn-revealLine');
 
-    // 31,204 = six whole Wolves (5,000 each since W1182) and a part of a seventh.
+    // 13,204 = six whole Wolves (2,000 each since W1189) and a part of a seventh.
     await expect(strikeOne).not.toHaveClass(/is-off/, { timeout: 8_000 });
-    await expect(page.locator('#cn-steps7')).toHaveText('31,204');
+    await expect(page.locator('#cn-steps7')).toHaveText('13,204');
     await expect(line).toHaveText('That is six Steel Wolves.');
     await expect(heads).toHaveCount(7);
     await expect(part).toHaveCount(1);
-    expect(await part.evaluate((e) => (e as HTMLElement).style.getPropertyValue('--ob4-f'))).toBe('24%');   // 1,204 of 5,000
+    expect(await part.evaluate((e) => (e as HTMLElement).style.getPropertyValue('--ob4-f'))).toBe('60%');   // 1,204 of 2,000
     await expect(strikeOne).toHaveText('Strike one');
 
     // The same screen, told other weeks.
@@ -3087,19 +3087,19 @@ test.describe('AC · Onboarding v4 (W936 → W1050)', () => {
     await expect(heads).toHaveCount(0);
     await expect(strikeOne).toHaveText('Carry on');   // nothing walked today: nothing to strike with
 
-    await show(4200, 4200);
-    await expect(page.locator('#cn-steps7')).toHaveText('4,200');
+    await show(1500, 1500);
+    await expect(page.locator('#cn-steps7')).toHaveText('1,500');
     await expect(line).toHaveText('Not yet one Steel Wolf. Tonight changes that.');
     await expect(heads).toHaveCount(1);
     await expect(part).toHaveCount(1);
 
-    await show(5000, 900);
+    await show(2000, 900);
     await expect(line).toHaveText('That is one Steel Wolf.');
     await expect(heads).toHaveCount(1);
     await expect(part).toHaveCount(0);
 
     // More than seven do not fit: seven heads and the count.
-    await show(51000, 9000);
+    await show(20500, 9000);
     await expect(line).toHaveText('That is ten Steel Wolves.');
     await expect(heads).toHaveCount(7);
     await expect(page.locator(OB + ' .ob4-wolves .ob4-num')).toHaveText('×10');
@@ -3122,7 +3122,7 @@ test.describe('AC · Onboarding v4 (W936 → W1050)', () => {
 
     // The reveal is the hunter's own seven days.
     expect(r.reveal.total).toBe('31,204');
-    expect(r.reveal.line).toBe('That is six Steel Wolves.');
+    expect(r.reveal.line).toBe('That is 15 Steel Wolves.');   // W1189 — 31,204 at 2,000 a Wolf
 
     // The board carries the rank the SERVER gave, positioned by the number walked.
     const me = r.board.rows.find((x) => x.me);
@@ -3134,7 +3134,7 @@ test.describe('AC · Onboarding v4 (W936 → W1050)', () => {
 
     // The hunt reads its goal and its drop pool out of the game's own tables.
     expect(r.hunt.kicker).toBe('The hunt · E-rank · Duo');
-    expect(r.hunt.line).toContain('10,000');   // W1182 — the Twin Maw's goal
+    expect(r.hunt.line).toContain('4,000');   // W1189 — the Twin Maw's goal
     expect(r.hunt.drops).toEqual(['Twin-Fang Cleaver', 'The Twofold Gaze', 'Bothsight, the Long Hunt']);
 
     // The paths are the real packs with their real vow counts, and none is
@@ -3145,14 +3145,14 @@ test.describe('AC · Onboarding v4 (W936 → W1050)', () => {
     expect([r.paths.swear, r.paths.swearOn]).toEqual(['Swear it', false]);
   });
 
-  test('a day already past 5,000 steps kills the Steel Wolf for real, once', async ({ page }) => {
+  test('a day already past 2,000 steps kills the Steel Wolf for real, once', async ({ page }) => {
     await obFirstRun(page);
     const r = await walkToStrike(page, 7318, 31204);
 
-    expect(r.beforeStrike).toMatchObject({ sub: '5,000 steps in a day', today: '7,318', outcome: null, carryOn: false, engaged: false });
+    expect(r.beforeStrike).toMatchObject({ sub: '2,000 steps in a day', today: '7,318', outcome: null, carryOn: false, engaged: false });
     expect(r.outcome).toBe('beaten');
     expect(r.wolf.stamp).toBe('Beaten');
-    expect(r.wolf.sub).toBe('7,318 of 5,000 · beaten today');
+    expect(r.wolf.sub).toBe('7,318 of 2,000 · beaten today');
     expect(r.wolf.bar).toBe(0);
 
     // Real kill: the boss ledger moved, the once-per-(boss, day) reward was
@@ -3173,17 +3173,17 @@ test.describe('AC · Onboarding v4 (W936 → W1050)', () => {
     expect(r.wolf.queuedBossResult).toBeNull();
   });
 
-  test('a day still short of 5,000 engages the Wolf and says how far it is; Make Your Own starts with an empty list', async ({ page }) => {
+  test('a day still short of 2,000 engages the Wolf and says how far it is; Make Your Own starts with an empty list', async ({ page }) => {
     test.slow();   // the one walk that goes from the name all the way into the app
     await obFirstRun(page);
-    const r = await walkToStrike(page, 3860, 18860);
+    const r = await walkToStrike(page, 1544, 18860);
     await walkOnToVow(page);
 
     expect(r.outcome).toBe('bleeds');
     expect(r.wolf.stamp).toBe('It bleeds');
-    expect(r.wolf.sub).toBe('1,140 steps left today');
-    expect(r.wolf.bar).toBeCloseTo(22.8, 1);   // 3,860 of 5,000 struck, the rest (1,140 = 22.8%) stands
-    expect(r.wolf.body).toBe('Walk 1,140 more today and it is beaten tonight.');
+    expect(r.wolf.sub).toBe('456 steps left today');
+    expect(r.wolf.bar).toBeCloseTo(22.8, 1);   // 1,544 of 2,000 struck, the rest (456 = 22.8%) stands
+    expect(r.wolf.body).toBe('Walk 456 more today and it is beaten tonight.');
     expect(r.wolf.state.engaged).toBe(true);
     expect(r.wolf.state.kill_count).toBe(0);
     expect(r.wolf.killClaim.length).toBe(0);
@@ -4907,8 +4907,8 @@ test.describe('AL · No list-view tip (W946)', () => {
 // ─────────────────────────────────────────────────────────────────────────
 test.describe('AM · Onboarding v4, the touches (W947 → W1050)', () => {
   const WOLF = OB + ' .ob4-s-wolf';
-  /** A first run with Health open: 3,860 today, 18,860 this week, one hunter above on the board. */
-  async function boot(page: Page, today = 3860, week = 18860) {
+  /** A first run with Health open: 1,544 today (short of the 2,000 Wolf), 18,860 this week, one hunter above on the board. */
+  async function boot(page: Page, today = 1544, week = 18860) {
     await obFirstRun(page);
     await obWorld(page, {
       today, week,
@@ -4979,7 +4979,7 @@ test.describe('AM · Onboarding v4, the touches (W947 → W1050)', () => {
     await obName(page, 'Richie');
     expect(await page.evaluate(() => localStorage.getItem('hb_avatar_skin'))).toBe('avatar-warrior.png');
 
-    await obGo(page, 'board', { health: true, today: 3860, steps7: 18860 });
+    await obGo(page, 'board', { health: true, today: 1544, steps7: 18860 });
     await obOn(page, 'board');
     const me = page.locator('#cn-rows .ob4-row.is-me');
     await expect(me.locator('.ob4-bust img')).toHaveAttribute('src', /avatar-warrior-bust/, { timeout: 5_000 });
@@ -4993,10 +4993,10 @@ test.describe('AM · Onboarding v4, the touches (W947 → W1050)', () => {
 
   test('holding the Wolf strikes it: letting go early cools and engages nothing, the full hold lands the real engage', async ({ page }) => {
     await boot(page);
-    await toWolf(page, 3860);
+    await toWolf(page, 1544);
     const hold = page.locator('#cn-wolf'), next = page.locator('#cn-wolfNext');
-    await expect(page.locator('#cn-wolfSub')).toHaveText('5,000 steps in a day');
-    await expect(page.locator(OB + ' .ob4-today')).toHaveText('3,860');
+    await expect(page.locator('#cn-wolfSub')).toHaveText('2,000 steps in a day');
+    await expect(page.locator(OB + ' .ob4-today')).toHaveText('1,544');
     await expect(page.locator(OB + ' .ob4-hold-l')).toHaveText('Hold to strike');
     await expect(next).toBeDisabled();
 
@@ -5028,14 +5028,14 @@ test.describe('AM · Onboarding v4, the touches (W947 → W1050)', () => {
     await page.mouse.up();
     await expect(page.locator(WOLF)).toHaveAttribute('data-outcome', 'bleeds', { timeout: 5_000 });
     await expect(page.locator('#cn-wolfStamp')).toHaveText('It bleeds');
-    await expect(page.locator('#cn-wolfSub')).toHaveText('1,140 steps left today');   // W1182 — 3,860 of 5,000
-    await expect(page.locator('#cn-pactBody')).toHaveText('Walk 1,140 more today and it is beaten tonight.');
+    await expect(page.locator('#cn-wolfSub')).toHaveText('456 steps left today');   // W1189 — 1,544 of 2,000
+    await expect(page.locator('#cn-pactBody')).toHaveText('Walk 456 more today and it is beaten tonight.');
     const done = await page.evaluate(() => ({
       width: parseFloat((document.querySelector('#cn-hpi') as HTMLElement).style.width),
       engaged: !!((JSON.parse(localStorage.getItem('hb_bosses') || '{}').the_steel_wolf || {}).engaged),
       kills: Object.keys(localStorage).filter((k) => k.indexOf('hb_kill_reward_') === 0).length,
     }));
-    expect(done.width).toBeCloseTo(22.8, 1);   // W1182 — 3,860 of 5,000 struck, the rest (1,140) stands
+    expect(done.width).toBeCloseTo(22.8, 1);   // W1189 — 1,544 of 2,000 struck, the rest (456) stands
     expect(done.engaged).toBe(true);
     expect(done.kills).toBe(0);
     await expect(next).toBeEnabled();
@@ -5065,7 +5065,7 @@ test.describe('AM · Onboarding v4, the touches (W947 → W1050)', () => {
     await expect(page.locator(WOLF)).toHaveAttribute('data-outcome', 'unmoved', { timeout: 5_000 });
     await expect(page.locator('#cn-wolfStamp')).toHaveText('Unmoved');
     await expect(page.locator('#cn-pactBody')).toHaveText('Nothing landed. Walk, then come back.');
-    await expect(page.locator('#cn-wolfSub')).toHaveText('5,000 steps left today');
+    await expect(page.locator('#cn-wolfSub')).toHaveText('2,000 steps left today');
     expect(await page.evaluate(() => (document.querySelector('#cn-hpi') as HTMLElement).style.width)).toBe('100%');
     await expect(page.locator(OB + ' .ob4-dmg')).toHaveCount(0);   // no damage number for no damage
     // The hunt is on all the same: the walk still counts tonight.
@@ -5097,7 +5097,7 @@ test.describe('AM · Onboarding v4, the touches (W947 → W1050)', () => {
     await page.evaluate(() => { Math.random = () => 0; });   // a roll, if one were made, would land
     expect(await obStrike(page)).toBe('claimed');
     await expect(page.locator('#cn-wolfStamp')).toHaveText('Beaten');
-    await expect(page.locator('#cn-wolfSub')).toHaveText('7,318 of 5,000 · beaten today');
+    await expect(page.locator('#cn-wolfSub')).toHaveText('7,318 of 2,000 · beaten today');
     await expect(page.locator('#cn-pactBody')).toHaveText('Today’s kill is already claimed. It returns tomorrow.');
     await expect(page.locator('#cn-pactBody .ob4-relic-card')).toHaveCount(0);
     expect(await purse()).toEqual(before);
@@ -5113,7 +5113,7 @@ test.describe('AM · Onboarding v4, the touches (W947 → W1050)', () => {
     expect(await fxLog(page)).toContain('snd:arrive');
     await expect(page.locator(OB + ' .ob4-s-hunt .ob4-boss')).toHaveText('The Twin Maw');
     // The real goal and the real drop pool, out of the game's own tables.
-    await expect(page.locator('#cn-mawLine')).toHaveText('10,000 combined steps. The relic drops for both.');
+    await expect(page.locator('#cn-mawLine')).toHaveText('4,000 combined steps. The relic drops for both.');
     const relics = page.locator('#cn-drops .ob4-relic');
     await expect(relics).toHaveCount(3);
     expect(await page.evaluate(() => Array.from(document.querySelectorAll('#cn-drops .ob4-relic-front')).map((f) => ({
@@ -5169,7 +5169,7 @@ test.describe('AM · Onboarding v4, the touches (W947 → W1050)', () => {
     const sent = await page.evaluate(() => (window as any).__shared[0] as { title: string; text: string });
     expect(sent.title).toBe('Awakened');
     expect(sent.text).toContain('Hunt The Twin Maw with me on Awakened');
-    expect(sent.text).toContain('10,000 combined steps');
+    expect(sent.text).toContain('4,000 combined steps');
     q = await page.evaluate(() => localStorage.getItem('hb_funnel_queue') || '');
     expect(q).toContain('onboarding_summon_sent');
     await summon.click();
@@ -5246,7 +5246,7 @@ test.describe('AM · Onboarding v4, the touches (W947 → W1050)', () => {
     const before = await read();
 
     // Health opened later; the replay arms a Wolf of its own.
-    await obWorld(page, { today: 3860, week: 18860 });
+    await obWorld(page, { today: 1544, week: 18860 });
     await page.evaluate(() => (window as any).__replayOnboarding());
     await obOn(page, 'gate');
     expect(await page.evaluate(() => (document.getElementById('cin-onboarding') as HTMLElement).classList.contains('ob4-preview'))).toBe(true);
@@ -5625,13 +5625,13 @@ test.describe('AP · The hunt row (W951)', () => {
     await expect(row).toBeVisible();
     await expect(page.locator('#dungeon-tease-pointer')).toHaveCount(0);   // the old banner is gone for good
     await expect(row.locator('.hunt-row-name')).toHaveText('The Steel Wolf');
-    await expect(row.locator('.hunt-row-line')).toHaveText('1,100 / 5,000 steps');
+    await expect(row.locator('.hunt-row-line')).toHaveText('1,100 / 2,000 steps');
     await expect(row.locator('.hunt-row-meta')).toContainText('E-RANK');
     await expect(row.locator('.hunt-row-more')).toHaveCount(0);            // only one hunt: no count chip
     // The bar is the share walked, not a guess.
     const pct = await row.locator('.hunt-row-bar i').evaluate((el) => parseFloat((el as HTMLElement).style.width));
-    expect(pct).toBeGreaterThan(19);   // W1182 — 1,100 of 5,000 = 22%
-    expect(pct).toBeLessThan(25);
+    expect(pct).toBeGreaterThan(52);   // W1189 — 1,100 of 2,000 = 55%
+    expect(pct).toBeLessThan(58);
     // It sits above the vows, where the old banner was.
     expect(await page.evaluate(() => {
       const r = document.getElementById('hunt-row'), h = document.getElementById('vows-header');
@@ -5661,7 +5661,7 @@ test.describe('AP · The hunt row (W951)', () => {
     await expect(sheet).toBeVisible();
     expect(await sheet.locator('.hunt-row-name').allTextContents()).toEqual(['The Steel Wolf', 'The Insomniac', 'The Gray Pilgrim']);
     expect(await sheet.locator('.hunt-row-line').allTextContents()).toEqual([
-      '1,100 / 5,000 steps', 'Sleep 6.5+ hours in a single night', '31 / 42 flights',
+      '1,100 / 2,000 steps', 'Sleep 6.5+ hours in a single night', '31 / 42 flights',
     ]);
     await sheet.locator('.hunt-row', { hasText: 'The Gray Pilgrim' }).click();
     await expect(sheet).toHaveCount(0);
@@ -5700,7 +5700,7 @@ test.describe('AP · The hunt row (W951)', () => {
       (window as any).__renderHuntRow();
     }, wolf());
     await expect(page.locator('#hunt-row')).toBeVisible();
-    await expect(page.locator('#hunt-row .hunt-row-line')).toHaveText('1,100 / 5,000 steps');
+    await expect(page.locator('#hunt-row .hunt-row-line')).toHaveText('1,100 / 2,000 steps');
   });
 });
 
@@ -5982,7 +5982,7 @@ test.describe('AS · Day one shows the hunt (W954)', () => {
     const row = page.locator('#hunt-row');
     await expect(row).toBeVisible({ timeout: 10_000 });
     await expect(row.locator('.hunt-row-name')).toHaveText('The Steel Wolf');
-    await expect(row.locator('.hunt-row-line')).toHaveText('0 / 5,000 steps');
+    await expect(row.locator('.hunt-row-line')).toHaveText('0 / 2,000 steps');
     // The first vow is still the day's job, so it keeps the top slot.
     await expect(page.locator('#first-vow-pointer')).toBeVisible();
     expect(await page.evaluate(() => {
@@ -9832,16 +9832,16 @@ test.describe('CA · The ready hunt, groundwork (W1033)', () => {
   test('the ladders are the one-day, one-metric solo bosses, easiest first', async ({ page }) => {
     await freshApp(page);
     const l = await page.evaluate(() => { const r = (window as any).__readyHunt; return ['steps', 'flights', 'sleep'].map((m) => r.ladder(m).map((x: any) => x.bossId + ':' + x.rank + ':' + x.bar)); });
-    expect(l[0]).toEqual(['the_steel_wolf:E:5000', 'the_glass_strider:D:6000', 'the_marathon_wraith:C:6500']);   // W1186 ladder (C 6,500)
+    expect(l[0]).toEqual(['the_steel_wolf:E:2000', 'the_glass_strider:D:3000', 'the_marathon_wraith:C:4000']);   // W1189 ladder (E 2,000 · D 3,000 · C 4,000)
     expect(l[1]).toEqual(['the_carouser:E:4', 'the_ascendant_colossus:C:6', 'the_unbroken_anvil:A:7']);
     expect(l[2]).toEqual(['the_insomniac:E:6.5', 'the_dream_tyrant:D:7']);
   });
 
   test('a new hunter is offered only what their rank can start; nothing below the bar', async ({ page }) => {
     await freshApp(page);
-    const r = await page.evaluate(() => { const p = (window as any).__readyHunt.pick; return [p('steps', 4999), p('steps', 5000), p('steps', 25000), p('sleep', 8), p('flights', 0), p('steps', NaN)]; });
+    const r = await page.evaluate(() => { const p = (window as any).__readyHunt.pick; return [p('steps', 1999), p('steps', 2000), p('steps', 25000), p('sleep', 8), p('flights', 0), p('steps', NaN)]; });
     expect(r[0]).toBeNull();
-    expect(r[1]).toMatchObject({ bossId: 'the_steel_wolf', bar: 5000, value: 5000, also: [] });
+    expect(r[1]).toMatchObject({ bossId: 'the_steel_wolf', bar: 2000, value: 2000, also: [] });
     expect(r[2].bossId).toBe('the_steel_wolf');          // E-rank hunter: the D and C gates are shut
     expect(r[3].bossId).toBe('the_insomniac');
     expect(r[4]).toBeNull();
@@ -9957,7 +9957,7 @@ test.describe('CB · The ready hunt (W1034 · W1039)', () => {
     await expect(sheet(page)).toBeVisible({ timeout: 8000 });
     await expect(sheet(page).locator('.rh-name')).toHaveText('The Steel Wolf');
     await expect(sheet(page).locator('.rh-chip')).toHaveText(/E rank/i);
-    await expect(sheet(page).locator('.rh-pl')).toHaveText(/9,632\s*\/\s*5,000 steps today/i, { timeout: 4000 });
+    await expect(sheet(page).locator('.rh-pl')).toHaveText(/9,632\s*\/\s*2,000 steps today/i, { timeout: 4000 });
     await expect(sheet(page).locator('.rh-call')).toHaveText(/^strike$/i);
     await expect(sheet(page).locator('.rh-quiet')).toHaveText('Your first hunt is free');
     await expect(sheet(page).locator('.rh-row')).toHaveCount(0);            // one boss: no list
@@ -10173,7 +10173,7 @@ test.describe('CB · The ready hunt (W1034 · W1039)', () => {
 
   test('nothing is offered: below the bar, Health not granted, beaten today, already engaged', async ({ page }) => {
     await hunter(page, {});
-    await health(page, { steps: 4999, flights: 3, sleepH: 6.4 });   // W1182 — one under each E bar
+    await health(page, { steps: 1999, flights: 3, sleepH: 6.4 });   // W1189 — one under each E bar
     expect(await offers(page)).toEqual([]);
     await health(page, { steps: 9632, granted: false });
     expect(await offers(page)).toEqual([]);
@@ -10191,8 +10191,8 @@ test.describe('CB · The ready hunt (W1034 · W1039)', () => {
     await hunter(page, { ...GATE.D });
     await health(page, { steps: 9632 });
     await expect(sheet(page).locator('.rh-many')).toHaveText('2 hunts are ready', { timeout: 8000 });
-    // at the strike Health now reports 5,500: the Wolf (5,000) still dies, the Strider (6,000) does not
-    await page.evaluate(() => { (window as any).Health.getStepsBetween = async () => 5500; });
+    // at the strike Health now reports 2,500: the Wolf (2,000) still dies, the Strider (3,000) does not (W1189)
+    await page.evaluate(() => { (window as any).Health.getStepsBetween = async () => 2500; });
     const before = await souls(page);
     await sheet(page).locator('[data-rh-strike]').click();
     await expect(page.locator('#boss-result-overlay .hr-boss')).toHaveText('The Steel Wolf', { timeout: 6000 });
@@ -10312,7 +10312,7 @@ test.describe('CB · The ready hunt (W1034 · W1039)', () => {
     ]);
     // then the single-boss sheet
     await expect(sheet(page).locator('.rh-name')).toHaveText('The Steel Wolf', { timeout: 6000 });
-    await expect(sheet(page).locator('.rh-pl')).toHaveText(/9,632\s*\/\s*5,000 steps today/i, { timeout: 4000 });
+    await expect(sheet(page).locator('.rh-pl')).toHaveText(/9,632\s*\/\s*2,000 steps today/i, { timeout: 4000 });
     await page.locator('#rh-sheet [data-rh-close]').click();
     await expect(page.locator('.rh-sheet--on')).toHaveCount(0);
     expect(await snap()).toEqual(before);                    // no hunt, no kill, no souls, nothing marked as announced
@@ -10324,7 +10324,7 @@ test.describe('CB · The ready hunt (W1034 · W1039)', () => {
     const run = { engaged: true, kill_count: 0, streak: 0, hunt_started_at: Date.now() - 60_000, hunt_expires_at: Date.now() + 20 * 3600_000 };
     await hunter(page, { the_steel_wolf: run }, { hb_onboarding_first_xp_date: TODAY(), hb_first_completion_bonus_v1: '0', hb_wolf_trail_v1: '1' });
     expect(await page.evaluate(() => (window as any).__newHunterQuiet())).toBe(true);
-    await health(page, { steps: 2100, sleepH: 7 + 40 / 60 });
+    await health(page, { steps: 1500, sleepH: 7 + 40 / 60 });   // W1189 — short of the 2,000 Wolf, so the trail's hunt stays open
     await expect(sheet(page).locator('.rh-name')).toHaveText('The Insomniac', { timeout: 8000 });
     await expect(page.locator('#hunt-row.hunt-row--ready')).toContainText('The Insomniac is ready');
     await sheet(page).locator('[data-rh-strike]').click();
@@ -10365,7 +10365,7 @@ test.describe('CB · The ready hunt (W1034 · W1039)', () => {
     expect(ids(w)).toEqual(['the_ascendant_colossus', 'the_carouser', 'the_dream_tyrant', 'the_glass_strider', 'the_insomniac', 'the_iron_warden', 'the_marathon_wraith', 'the_steel_wolf']);
     const by = Object.fromEntries(w.hunts.map((h) => [h.id, h]));
     expect(by.the_iron_warden).toMatchObject({ name: 'The Iron Warden', metric: 'workout', bar: 10 });
-    expect(by.the_marathon_wraith).toEqual({ id: 'the_marathon_wraith', name: 'The Marathon Wraith', metric: 'steps', bar: 6500, beaten: '', until: 0 });   // W1186 ladder (C 6,500)
+    expect(by.the_marathon_wraith).toEqual({ id: 'the_marathon_wraith', name: 'The Marathon Wraith', metric: 'steps', bar: 4000, beaten: '', until: 0 });   // W1189 ladder (C 4,000)
     expect(by.the_ascendant_colossus).toMatchObject({ metric: 'flights', bar: 6 });
     expect(by.the_insomniac).toMatchObject({ metric: 'sleep', bar: 6.5 });
     expect(by.the_dream_tyrant).toMatchObject({ metric: 'sleep', bar: 7 });
@@ -11081,7 +11081,7 @@ test.describe('CC · The Shadow Army drops like a pet (W1035 · W1047)', () => {
     // the open window is untouched, and its boss still says so
     expect(await page.evaluate(() => Object.keys((window as any).__shadows().windows))).toEqual(['the_steel_wolf']);
     await page.evaluate(() => (window as any).__readyHunt.open('the_steel_wolf'));
-    await expect(page.locator('#bfs-shadow-line')).toHaveText(/EXTRACTION OPEN — 2,500 steps within \d+h, and it rises\./, { timeout: 8000 });
+    await expect(page.locator('#bfs-shadow-line')).toHaveText(/EXTRACTION OPEN — 1,000 steps within \d+h, and it rises\./, { timeout: 8000 });
   });
 });
 
@@ -11245,13 +11245,13 @@ test.describe('CF · Weekly step bosses (W1070)', () => {
     expect(await kills(page)).toEqual([1, 1, 0, 0, 0, 0]);
   });
 
-  test('W1070 — mid-week: 34,900 stands, and the steps that carry the week past 35,000 bring the Herald down; a weekly boss is never engaged', async ({ page }) => {
-    await week(page, { points: 0, daily: { '2026-10-20': 20000, '2026-10-21': 14900 } });
+  test('W1070 — mid-week: 13,900 stands, and the steps that carry the week past 14,000 bring the Herald down; a weekly boss is never engaged', async ({ page }) => {
+    await week(page, { points: 0, daily: { '2026-10-20': 8000, '2026-10-21': 5900 } });   // W1189 — the E week is 14,000
     expect(await kills(page)).toEqual([0, 0, 0, 0, 0, 0]);
     expect(await page.evaluate(() => (window as any).engageBoss ? (window as any).engageBoss('the_footsore_herald') : false)).toBeFalsy();
     await page.evaluate(() => {
       const s = JSON.parse(localStorage.getItem('hb_leaderboard') || '{}');
-      s.steps_daily['2026-10-21'] = 15100;
+      s.steps_daily['2026-10-21'] = 6100;
       localStorage.setItem('hb_leaderboard', JSON.stringify(s));
     });
     expect(await tick(page)).toBe(1);
@@ -11260,19 +11260,19 @@ test.describe('CF · Weekly step bosses (W1070)', () => {
   });
 
   test('W1166 — the kill sends the board the same week total at once, inside the 5-minute throttle', async ({ page }) => {
-    await week(page, { points: 0, daily: { '2026-10-20': 20000, '2026-10-21': 14900 } });
+    await week(page, { points: 0, daily: { '2026-10-20': 8000, '2026-10-21': 5900 } });   // W1189
     await page.evaluate(() => {
       const w = window as any;
       w.__sent = [];
       w.Auth.submitLeaderboardSnapshot = async (m: string, v: number) => { if (m === 'step_total') w.__sent.push(v); return { ok: true, best_value: v }; };
       localStorage.setItem('hb_lb_last_submit', String(Date.now()));   // an upload just went out
-      localStorage.setItem('hb_lb_last_step_submitted', '34900');
+      localStorage.setItem('hb_lb_last_step_submitted', '13900');
       const s = JSON.parse(localStorage.getItem('hb_leaderboard') || '{}');
-      s.steps_daily['2026-10-21'] = 15100;
+      s.steps_daily['2026-10-21'] = 6100;
       localStorage.setItem('hb_leaderboard', JSON.stringify(s));
     });
     expect(await tick(page)).toBe(1);
-    await expect.poll(() => page.evaluate(() => (window as any).__sent.slice()), { timeout: 3000 }).toEqual([35100]);   // 20,000 + 15,100
+    await expect.poll(() => page.evaluate(() => (window as any).__sent.slice()), { timeout: 3000 }).toEqual([14100]);   // 8,000 + 6,100
   });
 
   test('W1070 — day one stays quiet: 40,000 on a hunter\'s first day brings nothing down', async ({ page }) => {
@@ -11304,7 +11304,7 @@ test.describe('CF · Weekly step bosses (W1070)', () => {
   });
 
   test('W1070 — a late walk counts: the daily re-read raises a past day of the week, the board with it, and the Herald falls', async ({ page }) => {
-    await week(page, { points: 0, daily: { '2026-10-19': 4000, '2026-10-21': 30000 } });
+    await week(page, { points: 0, daily: { '2026-10-19': 4000, '2026-10-21': 9000 } });   // W1189 — 13,000 stands under 14,000
     expect(await kills(page)).toEqual([0, 0, 0, 0, 0, 0]);
     await page.evaluate(async () => {
       const w = window as any, H = w.Health;
@@ -11320,7 +11320,7 @@ test.describe('CF · Weekly step bosses (W1070)', () => {
       day: JSON.parse(localStorage.getItem('hb_leaderboard') || '{}').steps_daily['2026-10-19'],
       board: (window as any).Leaderboard.getSnapshot().steps_last_7_days,
     }));
-    expect(r).toEqual({ day: 9000, board: 39000 });
+    expect(r).toEqual({ day: 9000, board: 18000 });
     expect(await kills(page)).toEqual([1, 0, 0, 0, 0, 0]);
   });
 
@@ -11344,7 +11344,7 @@ test.describe('CF · Weekly step bosses (W1070)', () => {
   });
 
   test('W1070 — the card: the week\'s steps instead of a hunt, then Beaten this week', async ({ page }) => {
-    await week(page, { points: 600, daily: { '2026-10-19': 16240, '2026-10-21': 15000 } });
+    await week(page, { points: 600, daily: { '2026-10-19': 10240, '2026-10-21': 10000 } });   // W1189 — the C week is 28,000
     const card = async () => page.evaluate(() => {
       const w = window as any;
       w.__test_setDungeonRank('C');
@@ -11353,7 +11353,7 @@ test.describe('CF · Weekly step bosses (W1070)', () => {
       return c ? { mode: (c.querySelector('.bcard-mode') || {} as any).textContent, cond: (c.querySelector('.bcard-cond') || {} as any).textContent,
         label: (c.querySelector('.bcard-progress-label') || {} as any).textContent, bar: !!c.querySelector('.bcard-wk'), cleared: c.classList.contains('bcard--cleared') } : null;
     });
-    expect(await card()).toEqual({ mode: 'WEEKLY', cond: '31,240 / 45,500 steps this week', label: '31,240 / 45,500', bar: true, cleared: false });   // W1186 — the C week is 45,500
+    expect(await card()).toEqual({ mode: 'WEEKLY', cond: '20,240 / 28,000 steps this week', label: '20,240 / 28,000', bar: true, cleared: false });
     await page.evaluate(() => {
       const s = JSON.parse(localStorage.getItem('hb_leaderboard') || '{}');
       s.steps_daily['2026-10-21'] = 33000;

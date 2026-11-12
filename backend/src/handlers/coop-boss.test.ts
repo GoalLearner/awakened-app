@@ -305,15 +305,15 @@ describe('W677 — trio create validation', () => {
 
 // ── W1104 — a steps trio at every rank D to A (owner 2026-10-27) ─────────────
 describe('W1104 — the steps trios', () => {
-  it('D 16,000 · C 19,500 · B 21,000 · A 22,500 in 24h (W1186 ladder), three hunters, a third of the solo kill each', () => {
+  it('D 9,000 · C 12,000 · B 15,000 · A 18,000 in 24h (W1189 ladder), three hunters, a third of the solo kill each', () => {
     const trios = Object.entries(COOP_BOSS_CFG)
       .filter(([, c]) => c.partySize === 3)
       .map(([id, c]) => [id, c.rank, c.goalSteps, c.rewardSouls, c.windowHours, c.metric]);
     expect(trios).toEqual([
-      ['the_crossroads_hound', 'D', 16000, 33, 24, 'steps'],
-      ['the_threefold_court', 'C', 19500, 66, 24, 'steps'],
-      ['the_triune_sentinel', 'B', 21000, 133, 24, 'steps'],
-      ['the_trinity_colossus', 'A', 22500, 266, 24, 'steps'],
+      ['the_crossroads_hound', 'D', 9000, 33, 24, 'steps'],
+      ['the_threefold_court', 'C', 12000, 66, 24, 'steps'],
+      ['the_triune_sentinel', 'B', 15000, 133, 24, 'steps'],
+      ['the_trinity_colossus', 'A', 18000, 266, 24, 'steps'],
     ]);
     for (const [id] of trios) expect(COOP_BOSS_NAMES[id as string]).toBeTruthy();
   });
