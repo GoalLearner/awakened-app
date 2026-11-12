@@ -496,3 +496,52 @@ test.describe('W1190 — a multi-day hunt that can no longer be won ends early',
     expect(r.e).toBeNull();
   });
 });
+
+// W1191 — owner 2026-11-12: "yes do it" — a boss that falls by itself has no hunt to start by hand. Its screen says
+// NO HUNT NEEDED with nothing to pay, engageBoss refuses (no fee taken), the automatic kill still happens, and a hunt
+// that was running from before ends on a screen with nothing to hunt again.
+test.describe('W1191 — the bosses that fall by themselves need no hunt', () => {
+  const AUTO_IDS = ['the_patient_flame', 'the_vow_keeper', 'the_tideless_marcher', 'the_forge_of_ten_thousand_days', 'the_sleepless_ascent',
+    'erebus_the_shadow_sovereign', 'the_starved_sentinel', 'the_gray_pilgrim', 'the_worldspine'];
+  const purse = (page: Page) => page.evaluate(() => JSON.parse(localStorage.getItem('hb_souls') || '{}').balance);
+
+  test('Engage is refused for every one of them, nothing is paid; a one-day boss still engages; the run still pays by itself', async ({ page }) => {
+    await boot(page);
+    const before = await purse(page);
+    const r = await page.evaluate((ids: string[]) => ids.map((id) => [id, (window as any).Bosses.engageBoss(id), !!(window as any).Bosses.getBossState(id).engaged]), AUTO_IDS);
+    expect(r).toEqual(AUTO_IDS.map((id) => [id, false, false]));
+    expect(await purse(page)).toBe(before);
+    expect(await page.evaluate(() => (window as any).Bosses.engageBoss('the_marathon_wraith'))).toBe(true);   // a one-day boss: as before
+    // and the Flame's run still falls on its own, its fee out of the win
+    await scan(page, { steps: { [dayKey(1)]: 5000, [dayKey(0)]: 5000 } }, 'the_patient_flame');
+    await expect.poll(() => page.evaluate(() => (window as any).Bosses.getBossState('the_patient_flame').kill_count || 0), { timeout: 15_000 }).toBe(1);
+  });
+
+  test('the boss screen says NO HUNT NEEDED, with nothing to pay', async ({ page }) => {
+    await boot(page);
+    await page.evaluate(() => (window as any).openBossFullScreen('the_worldspine'));
+    const btn = page.locator('#bfs-engage-btn');
+    await expect(btn).toHaveText('NO HUNT NEEDED', { timeout: 8000 });
+    await expect(btn).toBeDisabled();
+    await expect(page.locator('#bfs-souls-balance')).toBeHidden();
+    await expect(page.locator('#bfs-engage-cta .bfs-engage-blurb')).toHaveText('It falls on its own when Apple Health shows the run. Its fee comes out of the win.');
+  });
+
+  test('a hunt running from before that breaks ends with nothing to hunt again', async ({ page }) => {
+    await boot(page);
+    const start = (() => { const d = new Date(); d.setDate(d.getDate() - 2); d.setHours(8, 0, 0, 0); return d.getTime(); })();
+    await page.evaluate((s: number) => {
+      const all = JSON.parse(localStorage.getItem('hb_bosses') || '{}');
+      all.the_worldspine = { engaged: true, engaged_at: new Date(s).toISOString(), hunt_started_at: s, hunt_expires_at: s + 3 * 86400000, kill_count: 0, streak: 0 };
+      localStorage.setItem('hb_bosses', JSON.stringify(all));
+    }, start);
+    await scan(page, { steps: { [dayKey(2)]: 6999, [dayKey(1)]: 9000, [dayKey(0)]: 9000 } }, false);
+    await page.evaluate(async () => { (window as any).Bosses.BOSSES.the_worldspine.autoKill = true; await (window as any).resolveBossHuntsAcrossWindow(); });
+    await page.evaluate(() => { const b = document.querySelector('#rh-sheet [data-rh-close]') as HTMLElement; if (b) b.click(); });
+    const ov = page.locator('#boss-result-overlay');
+    await expect(ov.locator('.hr-sub')).toHaveText('Day 1 came up short on steps. The run ended early.', { timeout: 8000 });
+    await expect(ov.locator('.hr-mood')).toHaveText('No hunt needed now: it falls on its own when you finish a run.');
+    await expect(ov.locator('[data-hr-again]')).toHaveCount(0);
+    await expect(ov.locator('.hr-acts .hr-call')).toHaveText('Got it');
+  });
+});
