@@ -41,6 +41,7 @@
 import type { Env } from '../env';
 import type { SessionPayload } from '../session-jwt';
 import { jsonOk, jsonError } from '../lib/responses';
+import { fameWeekOk } from '../lib/fame-days';   // W1197 — two days in the app that week, or the week waits
 
 const SUPPORTED_METRICS = new Set(['step_total']);
 const DEFAULT_LIMIT = 50;
@@ -174,6 +175,7 @@ export async function handleLeaderboardHallOfFame(
      FROM merged m
      JOIN users u ON u.id = m.user_id
      LEFT JOIN public_profile_summary pps ON pps.user_id = m.user_id
+     WHERE ${fameWeekOk('m.user_id', 'm.week_start')}
      ORDER BY m.steps DESC, m.week_start ASC
      LIMIT ?`,
   )
@@ -208,11 +210,11 @@ export async function handleLeaderboardHallOfFame(
   // rules as the top-N query.
   const myBestRow = await env.DB.prepare(
     `WITH my_rows AS (
-       SELECT week_start, steps
+       SELECT user_id, week_start, steps
          FROM weekly_step_records
          WHERE user_id = ?
        UNION ALL
-       SELECT ls.week_start, ls.current_value AS steps
+       SELECT ls.user_id, ls.week_start, ls.current_value AS steps
          FROM leaderboard_snapshots ls
          WHERE ls.user_id = ?
            AND ls.metric = 'step_total'
@@ -223,6 +225,7 @@ export async function handleLeaderboardHallOfFame(
            )
      )
      SELECT week_start, steps FROM my_rows
+     WHERE ${fameWeekOk('my_rows.user_id', 'my_rows.week_start')}
      ORDER BY steps DESC, week_start ASC
      LIMIT 1`,
   )
@@ -250,9 +253,9 @@ export async function handleLeaderboardHallOfFame(
     // me_best.rank computed against only the wsr rows above them.
     const rankResult = await env.DB.prepare(
       `WITH merged AS (
-         SELECT steps FROM weekly_step_records
+         SELECT user_id, week_start, steps FROM weekly_step_records
          UNION ALL
-         SELECT ls.current_value AS steps
+         SELECT ls.user_id, ls.week_start, ls.current_value AS steps
            FROM leaderboard_snapshots ls
            JOIN users u ON u.id = ls.user_id
            WHERE ls.metric = 'step_total'
@@ -265,7 +268,7 @@ export async function handleLeaderboardHallOfFame(
        )
        SELECT COUNT(*) + 1 AS rank
        FROM merged
-       WHERE steps > ?`,
+       WHERE steps > ? AND ${fameWeekOk('merged.user_id', 'merged.week_start')}`,
     )
       .bind(myBestRow.steps)
       .first<RankRow>();

@@ -36,7 +36,7 @@ function makeDb(opts: {
         return {
           all: async () => ({ results: topRows, success: true, meta: {} }),
           first: async () => {
-            if (sql.includes('COUNT(*)')) return { rank };
+            if (sql.includes('COUNT(*) + 1')) return { rank };
             if (sql.includes('weekly_step_records')) return myBest;
             return null;
           },
@@ -151,7 +151,7 @@ describe('GET /v1/leaderboard/hall-of-fame', () => {
     });
     await handleLeaderboardHallOfFame(makeReq(), makeEnv(db), session);
     const calls = (db as unknown as { _calls(): CapturedCall[] })._calls();
-    const rankQuery = calls.find(c => c.sql.includes('COUNT(*)'));
+    const rankQuery = calls.find(c => c.sql.includes('COUNT(*) + 1'));
     expect(rankQuery).toBeDefined();
     expect(rankQuery!.sql).toMatch(/merged AS/i);
     expect(rankQuery!.sql).toMatch(/UNION ALL/i);
@@ -255,7 +255,7 @@ describe('GET /v1/leaderboard/hall-of-fame', () => {
     });
     await handleLeaderboardHallOfFame(makeReq(), makeEnv(db), session);
     const calls = (db as unknown as { _calls(): CapturedCall[] })._calls();
-    const rankQuery = calls.find(c => c.sql.includes('COUNT(*)'));
+    const rankQuery = calls.find(c => c.sql.includes('COUNT(*) + 1'));
     expect(rankQuery).toBeDefined();
     expect(rankQuery!.sql).toMatch(/WHERE\s+steps\s*>\s*\?/i);
     expect(rankQuery!.binds).toEqual([88420]);

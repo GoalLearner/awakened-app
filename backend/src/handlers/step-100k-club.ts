@@ -54,6 +54,15 @@
 import type { Env } from '../env';
 import type { SessionPayload } from '../session-jwt';
 import { jsonOk, jsonError } from '../lib/responses';
+import { FAME_DAYS_FROM, fameWeekOk } from '../lib/fame-days';
+
+// W1197 — a member shows once one of their 100,000-step weeks had two days in the app (or they joined
+// before the open counter began). Owner 2026-11-13: "They must sign in two-days out of the week".
+const CLUB_STEPS = 100000;
+const clubOk = (ua: string) => `(${ua}.unlock_week_start < '${FAME_DAYS_FROM}' OR EXISTS (
+       SELECT 1 FROM weekly_step_records cw
+        WHERE cw.user_id = ${ua}.user_id AND cw.steps >= ${CLUB_STEPS}
+          AND ${fameWeekOk('cw.user_id', 'cw.week_start')}))`;
 
 const ACCOLADE_TYPE = 'step_100k_club';
 const SIM_APPLE_SUB_PREFIX = 'sim_test_';
@@ -150,6 +159,7 @@ export async function handleStep100kClub(
      LEFT JOIN public_profile_summary pps ON pps.user_id = ua.user_id
      WHERE ua.accolade_type = ?
        AND u.apple_sub NOT LIKE 'sim_test_%'
+       AND ${clubOk('ua')}
      ORDER BY ua.best_value DESC,
               ua.repeat_count DESC,
               ua.unlocked_at ASC
@@ -188,7 +198,8 @@ export async function handleStep100kClub(
      JOIN users u ON u.id = ua.user_id
      WHERE ua.user_id = ?
        AND ua.accolade_type = ?
-       AND u.apple_sub NOT LIKE 'sim_test_%'`,
+       AND u.apple_sub NOT LIKE 'sim_test_%'
+       AND ${clubOk('ua')}`,
   )
     .bind(session.userId, ACCOLADE_TYPE)
     .first<MyRow>();
@@ -209,7 +220,8 @@ export async function handleStep100kClub(
        JOIN users u ON u.id = ua.user_id
        WHERE ua.accolade_type = ?
          AND u.apple_sub NOT LIKE 'sim_test_%'
-         AND ua.best_value > ?`,
+         AND ua.best_value > ?
+         AND ${clubOk('ua')}`,
     )
       .bind(ACCOLADE_TYPE, myRow.best_value)
       .first<RankRow>();

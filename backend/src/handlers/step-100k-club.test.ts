@@ -44,7 +44,7 @@ function makeDb(opts: {
         return {
           all: async () => ({ results: topRows, success: true, meta: {} }),
           first: async () => {
-            if (sql.includes('COUNT(*)')) return { rank };
+            if (sql.includes('COUNT(*) + 1')) return { rank };
             if (sql.includes('user_accolades')) return myRow;
             return null;
           },
@@ -171,7 +171,7 @@ describe('GET /v1/leaderboard/step-100k-club', () => {
     });
     await handleStep100kClub(makeReq(), makeEnv(db), session);
     const calls = (db as unknown as { _calls(): CapturedCall[] })._calls();
-    const rankQ = calls.find(c => c.sql.includes('COUNT(*)'));
+    const rankQ = calls.find(c => c.sql.includes('COUNT(*) + 1'));
     expect(rankQ).toBeDefined();
     expect(rankQ!.sql).toMatch(/WHERE[\s\S]+ua\.best_value\s*>\s*\?/i);
     // accolade_type + best_value binds (the apple_sub filter is a literal)
