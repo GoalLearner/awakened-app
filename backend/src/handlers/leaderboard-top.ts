@@ -23,7 +23,7 @@ import type { SessionPayload } from '../session-jwt';
 import { jsonOk, jsonError } from '../lib/responses';
 import { isValidMetric, isWeeklyMetric, type Metric } from '../lib/metrics';
 import { getAccoladeWeekStart, isFinalStandingsHold, priorWeekStart } from '../lib/accolade-week';
-import { MERGED_FOR_WEEK } from '../lib/week-board';
+import { FAME_MERGED_FOR_WEEK } from '../lib/week-board';   // W1198 — a FINISHED week counts two days in the app
 
 const DEFAULT_LIMIT = 100;
 const MAX_LIMIT = 500;
@@ -66,7 +66,7 @@ interface RankRow {
 // (the snapshots are being overwritten by the new week's submits).
 async function readFinalStandings(env: Env, week: string, userId: string, limit: number) {
   const topResult = await env.DB.prepare(
-    `${MERGED_FOR_WEEK}
+    `${FAME_MERGED_FOR_WEEK}
      SELECT u.alias AS alias, m.steps AS current_value,
             pps.arena_title AS arena_title,
             pps.bosses_slain_total AS bosses_slain,
@@ -87,7 +87,7 @@ async function readFinalStandings(env: Env, week: string, userId: string, limit:
     .all<TopRow>();
 
   const meRow = await env.DB.prepare(
-    `${MERGED_FOR_WEEK}
+    `${FAME_MERGED_FOR_WEEK}
      SELECT (SELECT steps FROM merged WHERE user_id = ?2)                                          AS steps,
             (SELECT COUNT(*) FROM merged WHERE steps > (SELECT steps FROM merged WHERE user_id = ?2)) AS above`,
   )

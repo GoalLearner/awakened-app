@@ -24,6 +24,7 @@ import type { SessionPayload } from '../session-jwt';
 import { jsonOk, jsonError } from '../lib/responses';
 import { getAccoladeWeekStart } from '../lib/accolade-week';
 import { grantWeeklyChampionIfEarned } from '../lib/weekly-champion';
+import { FAME_MERGED_FOR_WEEK } from '../lib/week-board';   // W1198 — two days in the app that week
 
 const DEFAULT_LIMIT = 50;
 const MAX_LIMIT = 100;
@@ -68,21 +69,8 @@ function weekEndFromStart(weekStart: string): string {
     String(d.getUTCDate()).padStart(2, '0');
 }
 
-// merged = weekly_step_records ∪ eligible leaderboard_snapshots, for ONE week,
-// real users only, steps > 0. ?1 = the target week_start (reused).
-const MERGED_FOR_WEEK = `
-  WITH merged AS (
-    SELECT user_id, steps FROM weekly_step_records WHERE week_start = ?1 AND steps > 0
-    UNION ALL
-    SELECT ls.user_id, ls.current_value AS steps
-      FROM leaderboard_snapshots ls
-      JOIN users u ON u.id = ls.user_id
-     WHERE ls.metric = 'step_total' AND ls.week_start = ?1 AND ls.current_value > 0
-       AND u.apple_sub NOT LIKE 'sim_test_%'
-       AND NOT EXISTS (
-         SELECT 1 FROM weekly_step_records w WHERE w.user_id = ls.user_id AND w.week_start = ?1
-       )
-  )`;
+// W1198 — the week's standings come from FAME_MERGED_FOR_WEEK (week-board.ts): last week's winner, the
+// caller's place and the Step Crown count only hunters with two days in the app that week.
 
 export async function handleLeaderboardLastWeek(
   request: Request,
@@ -106,7 +94,7 @@ export async function handleLeaderboardLastWeek(
 
   // Top-N final standings for last week.
   const topResult = await env.DB.prepare(
-    `${MERGED_FOR_WEEK}
+    `${FAME_MERGED_FOR_WEEK}
      SELECT u.alias AS alias, m.steps AS steps, m.user_id AS user_id,
             pps.avatar_id AS avatar_id, pps.card_bg AS card_bg, pps.card_ink AS card_ink
        FROM merged m
@@ -120,7 +108,7 @@ export async function handleLeaderboardLastWeek(
 
   // Caller's placement + the field size, computed across the whole week.
   const meResult = await env.DB.prepare(
-    `${MERGED_FOR_WEEK}
+    `${FAME_MERGED_FOR_WEEK}
      SELECT (SELECT steps FROM merged WHERE user_id = ?2)                                          AS my_steps,
             (SELECT COUNT(*) FROM merged)                                                          AS total,
             (SELECT COUNT(*) FROM merged WHERE steps > (SELECT steps FROM merged WHERE user_id = ?2)) AS above`,
