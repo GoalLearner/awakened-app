@@ -23,7 +23,8 @@ import type { SessionPayload } from '../session-jwt';
 import { jsonOk, jsonError } from '../lib/responses';
 import { isValidMetric, isWeeklyMetric, type Metric } from '../lib/metrics';
 import { getAccoladeWeekStart, isFinalStandingsHold, priorWeekStart } from '../lib/accolade-week';
-import { MERGED_FOR_WEEK } from '../lib/week-board';
+import { FAME_MERGED_FOR_WEEK } from '../lib/week-board';   // W1198 — two days in the app that week
+import { liveBoardOk } from '../lib/fame-days';
 
 const DEFAULT_LIMIT = 100;
 const MAX_LIMIT = 500;
@@ -66,7 +67,7 @@ interface RankRow {
 // (the snapshots are being overwritten by the new week's submits).
 async function readFinalStandings(env: Env, week: string, userId: string, limit: number) {
   const topResult = await env.DB.prepare(
-    `${MERGED_FOR_WEEK}
+    `${FAME_MERGED_FOR_WEEK}
      SELECT u.alias AS alias, m.steps AS current_value,
             pps.arena_title AS arena_title,
             pps.bosses_slain_total AS bosses_slain,
@@ -87,7 +88,7 @@ async function readFinalStandings(env: Env, week: string, userId: string, limit:
     .all<TopRow>();
 
   const meRow = await env.DB.prepare(
-    `${MERGED_FOR_WEEK}
+    `${FAME_MERGED_FOR_WEEK}
      SELECT (SELECT steps FROM merged WHERE user_id = ?2)                                          AS steps,
             (SELECT COUNT(*) FROM merged WHERE steps > (SELECT steps FROM merged WHERE user_id = ?2)) AS above`,
   )
@@ -185,6 +186,7 @@ export async function handleLeaderboardTop(
          LEFT JOIN public_profile_summary pps ON pps.user_id = ls.user_id
          LEFT JOIN hall_of_awakened hoa ON hoa.user_id = ls.user_id
          WHERE ls.metric = ? AND ls.week_start = ?
+           AND (ls.metric <> 'step_total' OR ${liveBoardOk('ls.user_id', 'ls.week_start')})
          ORDER BY ls.current_value DESC
          LIMIT ?`,
       )
@@ -236,10 +238,13 @@ export async function handleLeaderboardTop(
   // Caller's row (if they've submitted this metric). For weekly metrics,
   // we additionally require the row's week_start to match the current
   // week -- otherwise the user is treated as "not yet ranked this week".
+  // W1198 — the Steps board ranks only hunters with two days in the app (this week or last); a newcomer's
+  // own row waits for their second day like everyone else's view of them.
   const myRow = weekly
     ? await env.DB.prepare(
-        `SELECT current_value FROM leaderboard_snapshots
-         WHERE user_id = ? AND metric = ? AND week_start = ?`,
+        `SELECT current_value FROM leaderboard_snapshots ls
+         WHERE ls.user_id = ? AND ls.metric = ? AND ls.week_start = ?
+           AND (ls.metric <> 'step_total' OR ${liveBoardOk('ls.user_id', 'ls.week_start')})`,
       )
         .bind(session.userId, metric, currentWeek)
         .first<MyRow>()
@@ -258,8 +263,9 @@ export async function handleLeaderboardTop(
     const rankResult = weekly
       ? await env.DB.prepare(
           `SELECT COUNT(*) + 1 AS rank
-           FROM leaderboard_snapshots
-           WHERE metric = ? AND week_start = ? AND current_value > ?`,
+           FROM leaderboard_snapshots ls
+           WHERE ls.metric = ? AND ls.week_start = ? AND ls.current_value > ?
+             AND (ls.metric <> 'step_total' OR ${liveBoardOk('ls.user_id', 'ls.week_start')})`,
         )
           .bind(metric, currentWeek, myRow.current_value)
           .first<RankRow>()
