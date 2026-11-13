@@ -114,8 +114,8 @@ export const COOP_BOSS_CFG: Record<
   // unlike the Sleepless Crown this goal has no per-NIGHT coupling, so more clock is
   // a clean difficulty easing rather than a silent rebalance). memberOnly gates BOTH the summoner and
   // every ally at create + join. Drops (client-side): the mythic-only table (Nightfall
-  // + Reverie + Vigil, ~1% each), UNCAPPED + trophy-only. rewardSouls 800/hunter.
-  the_grinning_god:     { rank: 'S', goalSteps: 93000, goalFlights: 50,   // W1189 — sized so 4 walk 7,000 a day each (W1186 106k) (W1182 120k, party 4–6; was 150k + 75, party 2–5)
+  // + Reverie + Vigil: a 2% chance of one per kill since W1200), UNCAPPED + trophy-only. rewardSouls 800/hunter.
+  the_grinning_god:     { rank: 'S', goalSteps: 135000, goalFlights: 150,   // W1200 — owner 2026-11-13: 135,000 steps + 150 flights in 80h (W1189 93k + 50) — sized so 4 walk 7,000 a day each (W1186 106k) (W1182 120k, party 4–6; was 150k + 75, party 2–5)
     rewardSouls: 800, windowHours: 80, metric: 'both', minParty: 4, maxParty: 6, memberOnly: true, matchmaking: true },
 };
 // W761 — display names for push copy ("2/5 have answered The Grinning God…").
