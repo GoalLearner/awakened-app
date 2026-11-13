@@ -39,6 +39,11 @@ on:
         default: 'macos-26'
         type: choice
         options: [macos-26, macos-15]
+      xcode:
+        description: 'Xcode app on the runner, blank to pick the newest Xcode 26 or later by itself'
+        required: false
+        default: ''
+        type: string
 
 permissions:
   contents: read
@@ -68,6 +73,29 @@ jobs:
       - name: Ruby xcodeproj (the script sets signing on the Xcode project with it)
         run: |
           ruby -e 'require "xcodeproj"' 2>/dev/null && echo "xcodeproj present" || sudo gem install xcodeproj --no-document
+
+      - name: Pick an Xcode Apple accepts (26 or later)
+        env:
+          WANT_XCODE: ${{ inputs.xcode }}
+        run: |
+          ls -d /Applications/Xcode*.app 2>/dev/null || true
+          if [ -n "$WANT_XCODE" ]; then
+            echo "XCODE_APP=$WANT_XCODE" >> "$GITHUB_ENV"
+            echo "Asked for $WANT_XCODE"
+            exit 0
+          fi
+          major=$(xcodebuild -version | head -1 | awk '{print $2}' | cut -d. -f1)
+          if [ "$major" -ge 26 ]; then
+            echo "The default Xcode is $major: kept."
+            exit 0
+          fi
+          pick=$(ls -d /Applications/Xcode_2[6-9]*.app 2>/dev/null | sort -V | tail -1)
+          if [ -z "$pick" ]; then
+            echo "No Xcode 26 or later on this runner. Apple rejects older SDKs, so this build cannot be uploaded from here."
+            exit 1
+          fi
+          echo "XCODE_APP=$pick" >> "$GITHUB_ENV"
+          echo "The default Xcode is $major, too old for Apple: using $pick"
 
       - name: Tool versions
         run: |
