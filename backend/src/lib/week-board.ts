@@ -11,7 +11,6 @@
  * and the Hall of Fame). Real users only — sims are merged client-side.
  */
 import type { Env } from '../env';
-import { fameWeekOk } from './fame-days';
 
 interface RecordRow {
   user_id: string;
@@ -53,12 +52,6 @@ export const MERGED_FOR_WEEK = `
        )
   )`;
 
-/** W1198 — the merged view keeping only hunters whose week counts: two days in the app that week
- *  (fame-days.ts; weeks before 2026-11-08 keep everyone). ?1 = the week. Used for every FINISHED
- *  week's standings: the Week Recap, the Archive, "last week" and its Step Crown, the Sunday hold. */
-export const FAME_MERGED_FOR_WEEK = MERGED_FOR_WEEK.replace('WITH merged AS (', 'WITH merged_all AS (').trimEnd() + `,
-  merged AS (SELECT ma.user_id, ma.steps FROM merged_all ma WHERE ${fameWeekOk('ma.user_id', '?1')})`;
-
 /** Top rows + the caller's placement for ONE week, off the merged view. */
 export async function readWeekBoard(env: Env, weekKey: string, userId: string): Promise<{
   records: Array<{ rank: number; alias: string; steps: number; avatar_id: string | null; card_bg: string | null; card_ink: string | null;
@@ -67,7 +60,7 @@ export async function readWeekBoard(env: Env, weekKey: string, userId: string): 
   total: number;
 }> {
   const topResult = await env.DB.prepare(
-    `${FAME_MERGED_FOR_WEEK}
+    `${MERGED_FOR_WEEK}
      SELECT u.alias AS alias, m.steps AS steps, m.user_id AS user_id,
             pps.avatar_id AS avatar_id, pps.card_bg AS card_bg, pps.card_ink AS card_ink,
             pps.rank_tier AS rank_tier, pps.prestige_level AS prestige, pps.founder_seq AS founder_seq
@@ -81,7 +74,7 @@ export async function readWeekBoard(env: Env, weekKey: string, userId: string): 
     .all<RecordRow>();
 
   const meResult = await env.DB.prepare(
-    `${FAME_MERGED_FOR_WEEK}
+    `${MERGED_FOR_WEEK}
      SELECT (SELECT steps FROM merged WHERE user_id = ?2)                                          AS my_steps,
             (SELECT COUNT(*) FROM merged)                                                          AS total,
             (SELECT COUNT(*) FROM merged WHERE steps > (SELECT steps FROM merged WHERE user_id = ?2)) AS above`,

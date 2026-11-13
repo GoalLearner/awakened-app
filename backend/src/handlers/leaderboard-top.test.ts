@@ -37,7 +37,7 @@ function makeDb(opts: {
         return {
           all:   async () => ({ results: topRows, success: true, meta: {} }),
           first: async () => {
-            if (sql.includes('COUNT(*) + 1')) return { rank };
+            if (sql.includes('COUNT(*)')) return { rank };
             if (sql.includes('FROM leaderboard_snapshots')) return myRow;
             return null;
           },
@@ -189,7 +189,7 @@ describe('GET /v1/leaderboard/top -- weekly scoping (1z.33)', () => {
       env, session,
     );
     const calls = (db as unknown as { _calls(): CapturedCall[] })._calls();
-    const rankQuery = calls.find(c => c.sql.includes('COUNT(*) + 1'));
+    const rankQuery = calls.find(c => c.sql.includes('COUNT(*)'));
     expect(rankQuery).toBeDefined();
     expect(rankQuery!.sql).toMatch(/week_start\s*=\s*\?/i);
     expect(rankQuery!.binds).toEqual(['step_total', '2026-05-17', 5000]);
@@ -209,7 +209,7 @@ describe('GET /v1/leaderboard/top -- weekly scoping (1z.33)', () => {
     const meQuery = calls.find(c =>
       c.sql.includes('FROM leaderboard_snapshots') &&
       c.sql.includes('user_id') &&
-      !c.sql.includes('COUNT(*) + 1'),
+      !c.sql.includes('COUNT(*)'),
     );
     expect(meQuery).toBeDefined();
     expect(meQuery!.sql).toMatch(/week_start\s*=\s*\?/i);
