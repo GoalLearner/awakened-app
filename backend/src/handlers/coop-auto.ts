@@ -14,12 +14,24 @@
  *
  *   pattern(hunter)  = (last completed PT week's steps + this week's so far)
  *                      ÷ (7 + days elapsed this week)            — from the weekly board
- *   pair pattern     = the sum
- *   boss             = the strongest steps-only duo boss both ranks allow whose printed goal
- *                      fits AUTO_FIT × pair pattern (The Coursing Dread 14k, then The Twin Maw 10k);
- *                      if none fits, The Twin Maw with its goal sized to AUTO_FIT × pair pattern
+ *   flights(hunter)  = the phone's own 14-day flights-a-day average (W1195, app_opens.flights_avg,
+ *                      newest in the last 7 days; null on builds before w1195)
+ *   pair pattern     = the sum of each
+ *   boss             = the best one-day duo boss both ranks allow whose printed goals all fit
+ *                      AUTO_FIT × the pair's averages, best first: The Sundered Choir (B, steps +
+ *                      flights), The Hollow Monarch (B, flights), The Gaunt Wardens (C, steps +
+ *                      flights), The Coursing Dread (C, steps), The Twin Maw (E, steps). A boss
+ *                      that asks for flights needs both hunters' flights averages.
+ *                      If none fits, The Twin Maw with its goal sized to AUTO_FIT × pair pattern
  *                      (nearest 100, floor 2,000). The instance row carries the goal, and
  *                      both isGoalMet and every client view read the row, not the catalog.
+ *
+ * W1195 (owner 2026-11-13: "get the averages of the users and then pick the closest duo boss for
+ * the automated so it isn't just twin maw or coursing dread all the time ... even automate steps +
+ * flights if a user averages flights per day ... choose the best boss to automate that is within
+ * 80% of the averages of the two users"): AUTO_FIT 0.75 → 0.8, the three flights bosses join the
+ * list, and the phones send their flights average. The two-day duos (The Unresting March, The
+ * Cloven Titan) stay out: an automatic hunt is one Pacific day.
  *
  * A pair is skipped for the day when either side switched the other off (coop_auto_optouts,
  * '*' = everything off), when either blocked the other, when either has no steps on the
@@ -74,11 +86,13 @@ import {
  *  W1094 client, so the client half lands at w1097 or later. Never let a build number below the
  *  real client half through. */
 export const AUTO_HUNT_MIN_W = 1097;
-/** Steps-only 24h duo bosses, strongest first. Flights and sleep duos wait for a pattern the
- *  phones do not send yet. */
-export const AUTO_BOSSES: readonly string[] = ['the_coursing_dread', 'the_twin_maw'];
-/** W1182 — 0.9 → 0.75: at 90% of a pair's usual walking, any slow day lost the hunt (39% lost). */
-export const AUTO_FIT = 0.75;
+/** One-day duo bosses, best first (W1195: the flights bosses join; sleep duos still wait). */
+export const AUTO_BOSSES: readonly string[] = ['the_sundered_choir', 'the_hollow_monarch', 'the_gaunt_wardens', 'the_coursing_dread', 'the_twin_maw'];
+/** W1182 — 0.9 → 0.75: at 90% of a pair's usual walking, any slow day lost the hunt (39% lost).
+ *  W1195 — 0.75 → 0.8: the owner's "within 80% of the averages of the two users". */
+export const AUTO_FIT = 0.8;
+/** W1195 — a phone's flights average counts for this long after its last app-open ping. */
+export const FLIGHTS_AVG_MAX_AGE_S = 7 * 86_400;
 export const AUTO_MIN_GOAL = 2000;
 export const AUTO_SIZED_BOSS = 'the_twin_maw';
 const MAX_CREATE_PER_RUN = 40;
@@ -120,19 +134,36 @@ export function pairKey(a: string, b: string): string {
   return a < b ? a + '|' + b : b + '|' + a;
 }
 
-/** The boss and goal for a pair: the strongest boss both ranks allow whose printed goal fits
- *  the pair's pattern, else The Twin Maw sized to the pair. */
-export function pickAutoBoss(rankA: string, rankB: string, pairPattern: number): { bossId: string; goalSteps: number } {
+export interface AutoPick { bossId: string; goalSteps: number; goalFlights?: number }
+
+/** The boss and goal for a pair: the best boss both ranks allow whose printed goals all fit
+ *  AUTO_FIT × the pair's averages (steps a day; flights a day, null when either phone has not sent
+ *  one), else The Twin Maw sized to the pair's walking. For a flights boss goalSteps holds the
+ *  flights, as the catalog and isGoalMet do. */
+export function pickAutoBoss(rankA: string, rankB: string, pairPattern: number, pairFlights: number | null = null): AutoPick {
   const r = Math.min(RANK_ORDER[rankA] ?? 0, RANK_ORDER[rankB] ?? 0);
   const fit = AUTO_FIT * Math.max(0, Number(pairPattern) || 0);
+  const fl = pairFlights == null || !Number.isFinite(Number(pairFlights)) ? null : AUTO_FIT * Math.max(0, Number(pairFlights));
   for (const bossId of AUTO_BOSSES) {
     const cfg = COOP_BOSS_CFG[bossId];
     if (!cfg || (RANK_ORDER[cfg.rank] ?? 0) > r) continue;
-    if (cfg.goalSteps <= fit) return { bossId, goalSteps: cfg.goalSteps };
+    if (cfg.windowHours !== 24 || (cfg.partySize ?? 2) !== 2) continue;
+    if (cfg.metric === 'steps') {
+      if (cfg.goalSteps <= fit) return { bossId, goalSteps: cfg.goalSteps };
+    } else if (cfg.metric === 'flights') {
+      if (fl !== null && cfg.goalSteps <= fl) return { bossId, goalSteps: cfg.goalSteps };
+    } else if (cfg.metric === 'both') {
+      const gf = cfg.goalFlights ?? 0;
+      if (fl !== null && cfg.goalSteps <= fit && gf <= fl) return { bossId, goalSteps: cfg.goalSteps, goalFlights: gf };
+    }
   }
   const sized = Math.max(AUTO_MIN_GOAL, Math.round(fit / 100) * 100);
   return { bossId: AUTO_SIZED_BOSS, goalSteps: sized };
 }
+
+/** The lookups both sweeps share: opt-outs, blocks, builds, ranks, steps this week and last, and
+ *  (W1195) flights averages. */
+type Shared = [Set<string>, Set<string>, Map<string, string>, Map<string, string>, Map<string, number>, Map<string, number>, Map<string, number>];
 
 /** W1164 — one hunter in the matching pool. */
 export interface MatchCandidate { id: string; killDays: number; kills: number; pattern: number }
@@ -181,6 +212,29 @@ async function stepsByUser(env: Env, weekKey: string): Promise<Map<string, numbe
   return out;
 }
 
+/** W1195 — each hunter's newest flights average from the last FLIGHTS_AVG_MAX_AGE_S (app_opens). */
+async function flightsAvgByUser(env: Env, nowMs: number): Promise<Map<string, number>> {
+  const out = new Map<string, number>();
+  const since = Math.floor(nowMs / 1000) - FLIGHTS_AVG_MAX_AGE_S;
+  const rows = await env.DB.prepare(
+    `SELECT a.user_id, a.flights_avg FROM app_opens a
+      WHERE a.flights_avg IS NOT NULL AND a.opened_at >= ?1
+        AND a.opened_at = (SELECT MAX(b.opened_at) FROM app_opens b
+                            WHERE b.user_id = a.user_id AND b.flights_avg IS NOT NULL AND b.opened_at >= ?1)`,
+  ).bind(since).all<{ user_id: string; flights_avg: number | null }>();
+  for (const r of rows.results ?? []) {
+    const v = Number(r.flights_avg);
+    if (r.user_id && Number.isFinite(v) && v >= 0) out.set(r.user_id, v);
+  }
+  return out;
+}
+
+/** W1195 — the pair's flights a day, or null when either phone has not sent an average. */
+export function pairFlightsOf(flights: Map<string, number>, a: string, b: string): number | null {
+  const fa = flights.get(a), fb = flights.get(b);
+  return fa === undefined || fb === undefined ? null : fa + fb;
+}
+
 async function latestBuildByUser(env: Env): Promise<Map<string, string>> {
   const out = new Map<string, string>();
   const rows = await env.DB.prepare(
@@ -220,7 +274,7 @@ export async function createAutoHunt(
   a: string,
   b: string,
   dayKey: string,
-  pick: { bossId: string; goalSteps: number },
+  pick: AutoPick,
   matched = false,   // W1164 — a pair of friendless hunters the cron matched, not friends
 ): Promise<boolean> {
   const cfg = COOP_BOSS_CFG[pick.bossId];
@@ -237,9 +291,11 @@ export async function createAutoHunt(
            (id, boss_id, boss_rank, challenger_user_id, partner_user_id, partner2_user_id,
             partner_joined_at, partner2_joined_at, goal_steps, goal_flights, reward_souls,
             status, starts_at, ends_at, auto, hunt_day, pair_key, matched)
-         VALUES (?, ?, ?, ?, ?, NULL, ?, NULL, ?, NULL, ?, 'active', ?, ?, 1, ?, ?, ?)`,
+         VALUES (?, ?, ?, ?, ?, NULL, ?, NULL, ?, ?, ?, 'active', ?, ?, 1, ?, ?, ?)`,
       )
-      .bind(id, pick.bossId, cfg.rank, challenger, partner, startsAt, pick.goalSteps, cfg.rewardSouls, startsAt, endsAt, dayKey, pairKey(a, b), matched ? 1 : 0),
+      .bind(id, pick.bossId, cfg.rank, challenger, partner, startsAt, pick.goalSteps,
+        cfg.metric === 'both' ? (pick.goalFlights ?? cfg.goalFlights ?? null) : null,   // W1195 — a steps + flights boss carries both goals
+        cfg.rewardSouls, startsAt, endsAt, dayKey, pairKey(a, b), matched ? 1 : 0),
     env.DB
       .prepare(
         `INSERT OR IGNORE INTO coop_boss_participants (instance_id, user_id, joined_at)
@@ -275,7 +331,7 @@ export async function sweepCoopAutoHunts(env: Env, _ctx?: ExecutionContext): Pro
     const lastWeek = priorWeekStart(thisWeek);
     const elapsed = elapsedDaysPt(thisWeek, today);
     // The lookups both passes share, read once and only when a pass needs them.
-    let sharedP: Promise<[Set<string>, Set<string>, Map<string, string>, Map<string, string>, Map<string, number>, Map<string, number>]> | null = null;
+    let sharedP: Promise<Shared> | null = null;
     const shared = () => (sharedP ??= Promise.all([
       optOutSet(env),
       blockSet(env),
@@ -283,6 +339,7 @@ export async function sweepCoopAutoHunts(env: Env, _ctx?: ExecutionContext): Pro
       rankByUser(env),
       stepsByUser(env, thisWeek),
       stepsByUser(env, lastWeek),
+      flightsAvgByUser(env, nowMs),
     ]));
 
     if (pairs.size) {
@@ -292,7 +349,7 @@ export async function sweepCoopAutoHunts(env: Env, _ctx?: ExecutionContext): Pro
       const done = new Set((doneRows.results ?? []).map((r) => r.pair_key));
       const todo = Array.from(pairs.entries()).filter(([k]) => !done.has(k));
       if (todo.length) {
-        const [optouts, blocks, builds, ranks, stepsNow, stepsLast] = await shared();
+        const [optouts, blocks, builds, ranks, stepsNow, stepsLast, flights] = await shared();
         const pattern = (uid: string) => dailyPattern(stepsLast.get(uid) ?? 0, stepsNow.get(uid) ?? 0, elapsed);
         for (const [key, [a, b]] of todo) {
           if (out.created >= MAX_CREATE_PER_RUN) break;
@@ -302,7 +359,7 @@ export async function sweepCoopAutoHunts(env: Env, _ctx?: ExecutionContext): Pro
           const pa = pattern(a);
           const pb = pattern(b);
           if (pa === null || pb === null) { out.skipped++; continue; }
-          const pick = pickAutoBoss(ranks.get(a) ?? 'E', ranks.get(b) ?? 'E', pa + pb);
+          const pick = pickAutoBoss(ranks.get(a) ?? 'E', ranks.get(b) ?? 'E', pa + pb, pairFlightsOf(flights, a, b));
           if (await createAutoHunt(env, a, b, today, pick)) out.created++;
         }
       }
@@ -328,7 +385,7 @@ async function sweepMatchedPairs(
   thisWeek: string,
   elapsed: number,
   hasFriend: Set<string>,
-  shared: () => Promise<[Set<string>, Set<string>, Map<string, string>, Map<string, string>, Map<string, number>, Map<string, number>]>,
+  shared: () => Promise<Shared>,
 ): Promise<number> {
   const dayStartMs = Date.parse(ptMidnightIso(today) || '');
   if (!Number.isFinite(dayStartMs)) return 0;
@@ -350,7 +407,7 @@ async function sweepMatchedPairs(
     (Number(r.created_at) || 0) < dayStartMs);   // the quiet first day stays quiet
   if (first.length < 2) return 0;
 
-  const [optouts, blocks, builds, ranks, stepsNow, stepsLast] = await shared();
+  const [optouts, blocks, builds, ranks, stepsNow, stepsLast, flights] = await shared();
   const pattern = (uid: string) => dailyPattern(stepsLast.get(uid) ?? 0, stepsNow.get(uid) ?? 0, elapsed);
   const pool: MatchCandidate[] = [];
   for (const r of first) {
@@ -391,7 +448,7 @@ async function sweepMatchedPairs(
   for (const [a, b] of pickMatchedPairs(pool, keep, busyToday, isBlocked)) {
     if (made >= MAX_CREATE_PER_RUN) break;
     if (doneToday.has(pairKey(a, b))) continue;   // today's row already stands
-    const pick = pickAutoBoss(ranks.get(a) ?? 'E', ranks.get(b) ?? 'E', (byId.get(a)?.pattern ?? 0) + (byId.get(b)?.pattern ?? 0));
+    const pick = pickAutoBoss(ranks.get(a) ?? 'E', ranks.get(b) ?? 'E', (byId.get(a)?.pattern ?? 0) + (byId.get(b)?.pattern ?? 0), pairFlightsOf(flights, a, b));
     if (await createAutoHunt(env, a, b, today, pick, true)) made++;
   }
   return made;

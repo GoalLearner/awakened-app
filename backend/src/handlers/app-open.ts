@@ -24,6 +24,11 @@
  * W1127 — `open` (boolean, 3.0.22+) feeds app_open_counts, one counter per hunter per Pacific
  * day: true adds 1, false adds 0, absent (older builds) adds 1. See migration 0071.
  *
+ * W1195 — `flights_avg` (number, 3.0.24-w1195+): the phone's mean flights a day over its last 14
+ * complete days. Kept on the day row (latest non-null wins) for the automatic duo hunts' boss
+ * pick (coop-auto.ts); never shown or sent back. Anything that is not a number from 0 to 200 is
+ * dropped. See migration 0075.
+ *
  * Auth: required. user_id is ALWAYS the verified session `sub`; clients cannot
  * specify or override it (date_utc is derived server-side from the Worker clock,
  * not from the request body, so the table can't be back/forward-dated by a client).
@@ -45,6 +50,12 @@ const FUNNEL_MAX_PER_USER_PER_DAY = 300;
 const FUNNEL_PRUNE_ONE_IN = 20;
 /** Test seam for the sampled prune. */
 export const _sample = { roll: (): number => Math.random() };
+
+/** W1195 — a flights-a-day average from the phone: 0–200, one decimal; anything else is null. */
+export function readFlightsAvg(v: unknown): number | null {
+  if (typeof v !== 'number' || !Number.isFinite(v) || v < 0 || v > 200) return null;
+  return Math.round(v * 10) / 10;
+}
 
 function clamp(v: unknown, max: number): string | null {
   if (typeof v !== 'string') return null;
@@ -76,19 +87,21 @@ export async function handleAppOpenPost(
     body = null;
   }
   const build = clamp(body?.build, 40);
+  const flightsAvg = readFlightsAvg(body?.flights_avg);
 
   const nowMs = Date.now();
   const nowSec = Math.floor(nowMs / 1000);
   const dateUtc = new Date(nowSec * 1000).toISOString().slice(0, 10); // 'YYYY-MM-DD' (UTC)
 
   await env.DB.prepare(
-    `INSERT INTO app_opens (user_id, opened_at, date_utc, build)
-       VALUES (?, ?, ?, ?)
+    `INSERT INTO app_opens (user_id, opened_at, date_utc, build, flights_avg)
+       VALUES (?, ?, ?, ?, ?)
      ON CONFLICT(user_id, date_utc) DO UPDATE SET
-       opened_at = excluded.opened_at,
-       build     = COALESCE(excluded.build, app_opens.build)`,
+       opened_at   = excluded.opened_at,
+       build       = COALESCE(excluded.build, app_opens.build),
+       flights_avg = COALESCE(excluded.flights_avg, app_opens.flights_avg)`,
   )
-    .bind(session.userId, nowSec, dateUtc, build)
+    .bind(session.userId, nowSec, dateUtc, build, flightsAvg)
     .run();
 
   // ── W1127 — count every open (migration 0071) ──

@@ -4,7 +4,7 @@
  * other handler tests), extended with a batch() capture.
  */
 import { describe, expect, it } from 'vitest';
-import { handleAppOpenPost, _sample } from './app-open';
+import { handleAppOpenPost, readFlightsAvg, _sample } from './app-open';
 import type { Env } from '../env';
 import type { SessionPayload } from '../session-jwt';
 
@@ -68,6 +68,24 @@ describe('POST /v1/users/me/app-open (W834)', () => {
     const upsert = calls.find((c) => /INSERT INTO app_opens/.test(c.sql))!;
     expect(upsert.binds[3]).toBe('2.5.1-w834');
     expect(/COALESCE\(excluded\.build, app_opens\.build\)/.test(upsert.sql)).toBe(true);
+  });
+
+  // W1195 — the phone's 14-day flights average, for the automatic duo hunts' boss pick
+  it('W1195: records the flights average on the day row (one decimal), keeping the last good one', async () => {
+    const { env, calls } = makeEnv();
+    await handleAppOpenPost(makeReq({ build: '3.0.24-w1195', flights_avg: 6.46 }), env, session);
+    const upsert = calls.find((c) => /INSERT INTO app_opens/.test(c.sql))!;
+    expect(upsert.binds[4]).toBe(6.5);
+    expect(/COALESCE\(excluded\.flights_avg, app_opens\.flights_avg\)/.test(upsert.sql)).toBe(true);
+    const bare = makeEnv();
+    await handleAppOpenPost(makeReq({ build: '3.0.23-w1190' }), bare.env, session);
+    expect(bare.calls.find((c) => /INSERT INTO app_opens/.test(c.sql))!.binds[4]).toBeNull();   // older builds send none
+  });
+  it('W1195: anything but a number from 0 to 200 is dropped', () => {
+    expect(readFlightsAvg(0)).toBe(0);
+    expect(readFlightsAvg(200)).toBe(200);
+    expect(readFlightsAvg(12.04)).toBe(12);
+    for (const v of [-1, 201, NaN, Infinity, '7', null, undefined, {}]) expect(readFlightsAvg(v)).toBeNull();
   });
 
   it('accepts batched funnel events and reports the accepted count', async () => {

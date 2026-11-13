@@ -25,6 +25,8 @@ import {
   sweepCoopAutoHunts,
   sweepCoopResolve,
   AUTO_FIT,
+  AUTO_BOSSES,
+  pairFlightsOf,
 } from './coop-auto';
 import { getAccoladeWeekStart, priorWeekStart } from '../lib/accolade-week';
 import { ptDayKey, ptMidnightIso, nextDay, prevDay } from '../lib/pact-streak';
@@ -39,24 +41,52 @@ beforeEach(() => {
 
 // W1182 — AUTO_FIT 0.9 → 0.75 and the goals came down (Coursing Dread 14k, Twin Maw 10k). W1186 — the Dread 13k.
 // W1189 — the ladder's E 2,000 / C 4,000 a hunter: the Twin Maw 4,000, the Dread 8,000.
-describe('pickAutoBoss — the strongest boss both ranks allow whose printed goal fits AUTO_FIT (0.75) × pattern', () => {
-  it('a C pair walking 20,000 a day faces The Coursing Dread at its real goal', () => {
-    expect(AUTO_FIT).toBe(0.75);
+// W1195 (owner 2026-11-13) — "within 80% of the averages of the two users": AUTO_FIT 0.8, and the
+// flights bosses join when both phones send a flights average.
+describe('pickAutoBoss — the best one-day duo both ranks allow whose printed goals all fit AUTO_FIT (0.8) × the pair\'s averages', () => {
+  it('a C pair walking 20,000 a day (no flights figure) faces The Coursing Dread at its real goal', () => {
+    expect(AUTO_FIT).toBe(0.8);
     expect(pickAutoBoss('C', 'B', 20000)).toEqual({ bossId: 'the_coursing_dread', goalSteps: 8000 });
   });
-  it('the boundary: 8,000 fits at 10,667; a step less drops to the Twin Maw at 4,000', () => {
-    expect(pickAutoBoss('C', 'C', 10667).bossId).toBe('the_coursing_dread');
-    expect(pickAutoBoss('C', 'C', 10666)).toEqual({ bossId: 'the_twin_maw', goalSteps: 4000 });
+  it('the boundary: 8,000 fits at 10,000; a step less drops to the Twin Maw at 4,000', () => {
+    expect(pickAutoBoss('C', 'C', 10000).bossId).toBe('the_coursing_dread');
+    expect(pickAutoBoss('C', 'C', 9999)).toEqual({ bossId: 'the_twin_maw', goalSteps: 4000 });
   });
-  it('an E hunter caps the pair at the Twin Maw however far they walk', () => {
+  it('an E hunter caps the pair at the Twin Maw however far they walk or climb', () => {
     expect(pickAutoBoss('E', 'S', 40000)).toEqual({ bossId: 'the_twin_maw', goalSteps: 4000 });
+    expect(pickAutoBoss('E', 'S', 40000, 60)).toEqual({ bossId: 'the_twin_maw', goalSteps: 4000 });
   });
-  it('a pair under the Twin Maw gets it sized to them: 0.75 × pattern to the nearest 100, floor 2,000', () => {
-    expect(pickAutoBoss('E', 'E', 4000)).toEqual({ bossId: 'the_twin_maw', goalSteps: 3000 });
-    expect(pickAutoBoss('E', 'E', 5333)).toEqual({ bossId: 'the_twin_maw', goalSteps: 4000 });   // 3,999.75 → sized 4,000; the real goal is 4,000 and does not fit
-    expect(pickAutoBoss('E', 'E', 5334).goalSteps).toBe(4000);                                     // 4,000.5 fits the real boss
+  it('a pair under the Twin Maw gets it sized to them: 0.8 × pattern to the nearest 100, floor 2,000', () => {
+    expect(pickAutoBoss('E', 'E', 4000)).toEqual({ bossId: 'the_twin_maw', goalSteps: 3200 });
+    expect(pickAutoBoss('E', 'E', 4999)).toEqual({ bossId: 'the_twin_maw', goalSteps: 4000 });   // 3,999.2 → sized 4,000; the real goal does not fit
+    expect(pickAutoBoss('E', 'E', 5000).goalSteps).toBe(4000);                                     // 4,000 fits the real boss
     expect(pickAutoBoss('E', 'E', 1000)).toEqual({ bossId: 'the_twin_maw', goalSteps: 2000 });
     expect(pickAutoBoss('E', 'E', 0).goalSteps).toBe(2000);
+  });
+  it('the list, best first: the Choir, the Monarch, the Gaunt Wardens, the Dread, the Twin Maw', () => {
+    expect(AUTO_BOSSES).toEqual(['the_sundered_choir', 'the_hollow_monarch', 'the_gaunt_wardens', 'the_coursing_dread', 'the_twin_maw']);
+  });
+  it('a B pair that walks and climbs faces The Sundered Choir: 10,000 steps and 8 flights', () => {
+    expect(pickAutoBoss('B', 'A', 20000, 12)).toEqual({ bossId: 'the_sundered_choir', goalSteps: 10000, goalFlights: 8 });
+    expect(pickAutoBoss('B', 'B', 12500, 10)).toEqual({ bossId: 'the_sundered_choir', goalSteps: 10000, goalFlights: 8 });   // exactly 80% of both
+  });
+  it('a B pair that climbs more than it walks faces The Hollow Monarch: 12 flights', () => {
+    expect(pickAutoBoss('B', 'B', 11000, 16)).toEqual({ bossId: 'the_hollow_monarch', goalSteps: 12 });
+    expect(pickAutoBoss('B', 'B', 11000, 14.9)).toEqual({ bossId: 'the_gaunt_wardens', goalSteps: 8000, goalFlights: 6 });   // 11.9 flights: under the Monarch's 12, so the Wardens
+  });
+  it('a C pair with some stairs faces The Gaunt Wardens: 8,000 steps and 6 flights', () => {
+    expect(pickAutoBoss('C', 'C', 11000, 8)).toEqual({ bossId: 'the_gaunt_wardens', goalSteps: 8000, goalFlights: 6 });
+    expect(pickAutoBoss('C', 'S', 11000, 30)).toEqual({ bossId: 'the_gaunt_wardens', goalSteps: 8000, goalFlights: 6 });   // a C hunter keeps the B bosses out
+    expect(pickAutoBoss('C', 'C', 11000, 7)).toEqual({ bossId: 'the_coursing_dread', goalSteps: 8000 });   // 5.6 flights: under 6
+  });
+  it('with no flights figure from either phone, the flights bosses never come up', () => {
+    expect(pickAutoBoss('B', 'B', 30000, null)).toEqual({ bossId: 'the_coursing_dread', goalSteps: 8000 });
+    expect(pickAutoBoss('B', 'B', 30000)).toEqual({ bossId: 'the_coursing_dread', goalSteps: 8000 });
+  });
+  it('the pair\'s flights: the sum, or nothing when either phone has not sent one', () => {
+    const m = new Map([['a', 4.5], ['b', 3]]);
+    expect(pairFlightsOf(m, 'a', 'b')).toBe(7.5);
+    expect(pairFlightsOf(m, 'a', 'c')).toBeNull();
   });
 });
 
@@ -96,6 +126,7 @@ interface SweepFixture {
   ranks?: Record<string, string>;
   stepsThisWeek?: Record<string, number>;
   stepsLastWeek?: Record<string, number>;
+  flights?: Record<string, number>;   // W1195 — each phone's flights a day
   active?: Record<string, unknown>[];
   progress?: { bid: string; user_id: string; event_type: string; s: number }[];
   participants?: { instance_id: string; user_id: string; joined_at: string | null }[];
@@ -117,6 +148,7 @@ function sweepDb(f: SweepFixture, calls: Call[]) {
     if (sql.includes('WHERE matched = 1 AND hunt_day')) return f.matchedWeek ?? []; // W1164
     if (sql.includes('FROM coop_auto_optouts')) return f.optouts ?? [];
     if (sql.includes('FROM board_blocks')) return f.blocks ?? [];
+    if (sql.includes('flights_avg IS NOT NULL')) return Object.entries(f.flights ?? {}).map(([user_id, flights_avg]) => ({ user_id, flights_avg }));   // W1195
     if (sql.includes('FROM app_opens')) return Object.entries(f.builds ?? {}).map(([user_id, build]) => ({ user_id, build }));
     if (sql.includes('FROM public_profile_summary')) return Object.entries(f.ranks ?? {}).map(([user_id, rank_tier]) => ({ user_id, rank_tier }));
     if (sql.includes('FROM merged')) {
@@ -176,11 +208,11 @@ describe('sweepCoopAutoHunts — one sized hunt per walking friend pair per day'
     // every insert: active, auto, today's day, the pair's key, PT midnight to PT midnight
     for (const ins of inserts) {
       expect(ins.sql).toContain("'active'");
-      expect(ins.args[8]).toBe(ptMidnightIso(today));          // starts_at
-      expect(ins.args[9]).toBe(ptMidnightIso(nextDay(today))); // ends_at
-      expect(ins.args[10]).toBe(today);                         // hunt_day
+      expect(ins.args[9]).toBe(ptMidnightIso(today));          // starts_at
+      expect(ins.args[10]).toBe(ptMidnightIso(nextDay(today))); // ends_at
+      expect(ins.args[11]).toBe(today);                         // hunt_day
     }
-    const byPair = new Map(inserts.map((c) => [c.args[11], c]));
+    const byPair = new Map(inserts.map((c) => [c.args[12], c]));
     // u1 (C) + u2 (E): the E hunter caps it at the Twin Maw; pattern ≈ 100k/9 + 50k/9 = 16.7k, × 0.75 = 12.5k → the real 4,000 (W1189)
     expect(byPair.get('u1|u2')!.args[1]).toBe('the_twin_maw');
     expect(byPair.get('u1|u2')!.args[6]).toBe(4000);
@@ -191,6 +223,23 @@ describe('sweepCoopAutoHunts — one sized hunt per walking friend pair per day'
     const parts = calls.filter((c) => c.sql.includes('INTO coop_boss_participants'));
     expect(parts.length).toBe(3);
     expect(parts[0].sql).toContain('WHERE EXISTS');
+    // no phone sent a flights average: no steps-only row carries a flights goal
+    for (const ins of inserts) expect(ins.args[7]).toBeNull();
+  });
+
+  it('W1195 — a pair whose phones both send flights averages gets a steps + flights boss with both goals on the row', async () => {
+    const calls: Call[] = [];
+    const res = await sweepCoopAutoHunts(makeEnv(sweepDb({ ...base, flights: { u1: 5, u3: 4, u4: 0.5 } }, calls)), ctx);
+    expect(res.created).toBe(3);
+    const inserts = calls.filter((c) => c.sql.includes('INSERT OR IGNORE INTO coop_boss_instances'));
+    const byPair = new Map(inserts.map((c) => [c.args[12], c]));
+    // u1 (C) + u3 (C): 24.4k steps and 9 flights a day; × 0.8 = 19.6k and 7.2 → The Gaunt Wardens, 8,000 + 6
+    expect(byPair.get('u1|u3')!.args[1]).toBe('the_gaunt_wardens');
+    expect(byPair.get('u1|u3')!.args[6]).toBe(8000);
+    expect(byPair.get('u1|u3')!.args[7]).toBe(6);
+    // u1 (C) + u2 (E): u2 sent no average, and the E hunter caps it anyway → the Twin Maw, no flights goal
+    expect(byPair.get('u1|u2')!.args[1]).toBe('the_twin_maw');
+    expect(byPair.get('u1|u2')!.args[7]).toBeNull();
   });
 
   it('skips a pair already holding today\'s row, an opted-out side, a blocked pair, an old build, and a hunter with no pattern', async () => {
@@ -392,7 +441,7 @@ describe('sweepCoopAutoHunts — matched partners (W1164)', () => {
     stepsLastWeek: { u1: 70000, u2: 70000, u5: 35000, u6: 40000, u7: 20000, u8: 15000 },
   };
   const kill = (user_id: string, kill_days: number, kills: number, created_at = OLD_JOIN) => ({ user_id, kill_days, kills, created_at });
-  const matchedInserts = (calls: Call[]) => calls.filter((c) => c.sql.includes('INSERT OR IGNORE INTO coop_boss_instances') && c.args[12] === 1);
+  const matchedInserts = (calls: Call[]) => calls.filter((c) => c.sql.includes('INSERT OR IGNORE INTO coop_boss_instances') && c.args[13] === 1);
 
   it('two active hunters with no friends get a sized daily hunt together; friends still get theirs', async () => {
     const calls: Call[] = [];
@@ -401,11 +450,11 @@ describe('sweepCoopAutoHunts — matched partners (W1164)', () => {
     expect(res.matched).toBe(1);   // the matched pair
     const m = matchedInserts(calls);
     expect(m.length).toBe(1);
-    expect(m[0].args[11]).toBe('u5|u6');
-    expect(m[0].args[10]).toBe(today);
+    expect(m[0].args[12]).toBe('u5|u6');
+    expect(m[0].args[11]).toBe(today);
     expect(m[0].args[1]).toBe('the_twin_maw');   // an E hunter caps it, sized to the pair's walking
-    const friend = calls.find((c) => c.sql.includes('INSERT OR IGNORE INTO coop_boss_instances') && c.args[11] === 'u1|u2')!;
-    expect(friend.args[12]).toBe(0);
+    const friend = calls.find((c) => c.sql.includes('INSERT OR IGNORE INTO coop_boss_instances') && c.args[12] === 'u1|u2')!;
+    expect(friend.args[13]).toBe(0);
     expect(MATCH_MIN_KILL_DAYS).toBe(2);
   });
 
@@ -441,7 +490,7 @@ describe('sweepCoopAutoHunts — matched partners (W1164)', () => {
     };
     const res = await sweepCoopAutoHunts(makeEnv(sweepDb(f, calls)), ctx);
     expect(res.matched).toBe(2);
-    expect(matchedInserts(calls).map((c) => c.args[11]).sort()).toEqual(['u5|u8', 'u6|u7']);
+    expect(matchedInserts(calls).map((c) => c.args[12]).sort()).toEqual(['u5|u8', 'u6|u7']);
 
     const calls2: Call[] = [];
     const f2: SweepFixture = { ...f, matchedWeek: [{ a: 'u5', b: 'u8', d: today }, { a: 'u6', b: 'u7', d: today }] };
