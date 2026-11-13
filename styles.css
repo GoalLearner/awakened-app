@@ -29567,6 +29567,19 @@ button.pc-shard { cursor: pointer; font: inherit; -webkit-appearance: none; appe
   color: var(--text-primary); border-color: var(--border-accent); background: var(--accent-glow);
 }
 .vows-header-actions { flex: none; display: inline-flex; align-items: flex-end; gap: 7px; }
+/* W1194 — the sun beside Manage opens today's briefing again (Rendell, 2026-11-13). */
+.vows-brief-btn {
+  flex: none; display: inline-flex; align-items: center; justify-content: center;
+  width: 34px; height: 29px; margin-bottom: 3px; padding: 0; border-radius: 10px;
+  background: rgba(245,184,66,0.06); border: 1px solid rgba(245,184,66,0.28);
+  color: #f5b842; cursor: pointer; -webkit-appearance: none; appearance: none;
+  -webkit-tap-highlight-color: transparent; transition: border-color .15s, background .15s;
+}
+.vows-brief-btn svg { display: block; }
+.vows-brief-btn:active { background: rgba(245,184,66,0.16); border-color: rgba(245,184,66,0.55); }
+.vows-header--ledger .vows-brief-btn, .vows-header--todo .vows-brief-btn { display: none; }
+/* On the narrowest phones Manage keeps only its glyph, so the sun still fits beside the title. */
+@media (max-width: 340px) { .vows-brief-btn ~ .vows-manage-btn span { display: none; } }
 
 /* ──────────────────────────────
    W337 · First Mark — activation celebration on the first-ever completion.

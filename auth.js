@@ -2307,6 +2307,8 @@
       // append-at-tail, so slicing the accepted count off the FRONT can
       // never drop an event that arrived mid-flight.
       var payload = { build: (typeof window.__APP_BUILD_TAG === 'string' ? window.__APP_BUILD_TAG : null), open: open };
+      // W1195 — this phone's 14-day flights a day (app.js), for the automatic duo hunts' boss pick
+      try { var fa = typeof window.__flightsAvg14 === 'function' ? window.__flightsAvg14() : null; if (typeof fa === 'number' && isFinite(fa)) payload.flights_avg = fa; } catch (_) {}
       try {
         var q = JSON.parse(localStorage.getItem('hb_funnel_queue') || '[]');
         if (Array.isArray(q) && q.length) payload.events = q.slice(0, 10);

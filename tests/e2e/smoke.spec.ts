@@ -7309,13 +7309,53 @@ test.describe('BG · Today’s Briefing v2 (W978)', () => {
     expect(await page.evaluate(() => localStorage.getItem('hb_daily_insight_last_shown'))).toBe(before);
     expect(await page.evaluate(() => localStorage.getItem('hb_brief_lead_v1'))).toBeNull();
   });
+
+  // W1194 — Rendell asked for a way back to today's briefing (owner, 2026-11-13).
+  const OLD_ORIGIN = { hb_origin_beginning: JSON.stringify({ text: 'Your story began.', dateISO: '2026-01-01', dateDisplay: 'January 1, 2026' }), hb_tour_day3_v1: '1', hb_tour_day7_v1: '1' };
+  test('the sun beside Manage opens today’s briefing again, as often as you like (W1194)', async ({ page }) => {
+    await seed(page, { [pt(1)]: ['tb-phone'] }, OLD_ORIGIN);
+    const sun = page.locator('#vows-header [data-vows-brief]');
+    await expect(sun).toBeVisible({ timeout: 6_000 });
+    await expect(sun).toHaveAttribute('aria-label', 'Today’s briefing');
+    expect((await view(page)).shown).toBe(false);
+    for (let i = 0; i < 2; i++) {
+      await sun.click();
+      await expect.poll(() => view(page).then((x) => x.shown), { timeout: 4_000 }).toBe(true);
+      await expect(page.locator('#tb-root [data-tile="board"] .tb4-tl2')).toHaveText('Did you know?');
+      await page.waitForTimeout(1500);
+      await holdSeal(page, 1150);
+      await expect.poll(() => view(page).then((x) => x.shown), { timeout: 4_000 }).toBe(false);
+      await expect(sun).toBeVisible();
+    }
+  });
+
+  test('no sun on a hunter’s first day (W1194, the new-hunter quiet rule)', async ({ page }) => {
+    const d = new Date(), p2 = (n: number) => String(n).padStart(2, '0');
+    const local = d.getFullYear() + '-' + p2(d.getMonth() + 1) + '-' + p2(d.getDate());
+    await seed(page, {}, { hb_origin_beginning: JSON.stringify({ text: 'Your story began.', dateISO: local, dateDisplay: 'Today' }) });
+    await expect(page.locator('#vows-header .vows-manage-btn')).toBeVisible({ timeout: 6_000 });
+    await expect(page.locator('#vows-header [data-vows-brief]')).toHaveCount(0);
+    expect(await page.evaluate(() => (window as any).__tb.reopen())).toBe(false);
+  });
+
+  test('the sun and Manage fit beside the title on a 320-wide phone (W1194)', async ({ page }) => {
+    await page.setViewportSize({ width: 320, height: 640 });
+    await seed(page, {}, OLD_ORIGIN);
+    await expect(page.locator('#vows-header [data-vows-brief]')).toBeVisible({ timeout: 6_000 });
+    const r = await page.evaluate(() => {
+      const b = (s: string) => document.querySelector(s)!.getBoundingClientRect();
+      return { title: b('#vows-header [data-vows-title]').right, sun: b('#vows-header [data-vows-brief]'), manage: b('#vows-header .vows-manage-btn').right, row: b('#vows-header .vows-header-row').right };
+    });
+    expect(r.sun.left).toBeGreaterThan(r.title);
+    expect(r.manage).toBeLessThanOrEqual(r.row + 0.5);
+  });
 });
 
 // ─────────────────────────────────────────────────────────────────────────
 // BH. W980 — HUNT RESULTS (Claude Design handoffs 31 + 32): solo + co-op, win + loss
 // ─────────────────────────────────────────────────────────────────────────
 // W986 — the morning briefing names a developer update the hunter has not opened.
-test.describe('BI · Briefing names a new update (W986 → the board tile, W1178; the fact once read, W1179)', () => {
+test.describe('BI · Briefing names a new update (W986 → the board tile, W1178; the fact once read, W1179; the fact always, W1194)', () => {
   const VOWS = [{ id: 'bi-read', name: 'Read', emoji: '•', difficulty: 'easy', type: 'build' }];
   async function seed(page: Page, extra: Record<string, string>) {
     await freshApp(page);
@@ -7335,15 +7375,18 @@ test.describe('BI · Briefing names a new update (W986 → the board tile, W1178
   const news = (page: Page) => page.evaluate(() => { const el = document.querySelector('#tb-root [data-tile="board"]'); return el ? { title: (el.querySelector('.tb4-bt')?.textContent || '').trim(), isNew: !!el.querySelector('.tb4-new'), fact: (el.querySelector('.tb4-ft')?.textContent || '').trim() } : null; });
   const todaysFact = (page: Page) => page.evaluate(() => (window as any).__tb.fact().text);
 
-  test('an unopened update is named on the board tile, marked NEW', async ({ page }) => {
-    await seed(page, { hb_board_update_last: JSON.stringify({ id: 'up-1', created_at: Date.UTC(2026, 10, 8, 18), title: 'Week of Sep 21' }) });
-    await page.evaluate(() => (window as any).__previewTodaysBriefing());
-    await expect.poll(() => news(page), { timeout: 6_000 }).toEqual({ title: 'Week of Sep 21', isNew: true, fact: '' });
-    await expect(page.locator('#tb-root [data-tile="board"] .tb4-bd')).toHaveText(/^Sun · NOV 8$/i);
-  });
-
   // The real briefing (not the owner's preview) is the one hunters see.
   const real = (page: Page) => page.evaluate(() => (window as any).__tb.show({}));
+
+  // W1194 — owner 2026-11-13: "make the did you know fact the default instead of the community board".
+  test('an unopened update no longer takes the tile: today’s fact shows (W1194)', async ({ page }) => {
+    await seed(page, { hb_board_update_last: JSON.stringify({ id: 'up-1', created_at: Date.UTC(2026, 10, 8, 18), title: 'Week of Sep 21' }) });
+    await real(page);
+    await expect(page.locator('.tb-frame')).toBeVisible({ timeout: 6_000 });
+    expect(await news(page)).toEqual({ title: '', isNew: false, fact: await todaysFact(page) });
+    await expect(page.locator('#tb-root [data-tile="board"] .tb4-tl2')).toHaveText('Did you know?');
+    await expect(page.locator('#tb-root [data-tile="board"]')).toHaveAttribute('data-fact', '1');
+  });
 
   test('once that update is opened, the tile turns to today’s health fact (W1179)', async ({ page }) => {
     await seed(page, { hb_board_update_last: JSON.stringify({ id: 'up-1', created_at: 1, title: 'Week of Sep 21' }), hb_board_update_seen: 'up-1' });
@@ -7559,7 +7602,7 @@ test.describe('BI2 · Briefing tiles (W1178, W1179)', () => {
     await expect(page.locator('#cm-pane-friends')).toHaveAttribute('data-active', 'true', { timeout: 3_000 });
   });
 
-  test('the board tile opens the update itself while it is new', async ({ page }) => {
+  test('while an update is new the board tile still opens today’s fact, and the update stays unread (W1194)', async ({ page }) => {
     await seed(page, {});
     await page.evaluate(() => { localStorage.setItem('hb_board_update_last', JSON.stringify({ id: 'up-9', created_at: 1, title: 'Week of Nov 8 - v3.0.23' })); });
     await page.reload();
@@ -7567,9 +7610,10 @@ test.describe('BI2 · Briefing tiles (W1178, W1179)', () => {
     await show(page);
     await page.waitForTimeout(1300);
     await tile(page, 'board').click();
-    await expect(page.locator('#daily-insight-overlay')).toHaveClass(/hidden/, { timeout: 4_000 });
-    await expect(page.locator('.board-sheet--topic')).toBeVisible({ timeout: 4_000 });
-    expect(await page.evaluate(() => localStorage.getItem('hb_board_update_seen'))).toBe('up-9');
+    await expect(page.locator('.tb4-fc')).toBeVisible({ timeout: 4_000 });
+    await expect(page.locator('#daily-insight-overlay')).not.toHaveClass(/hidden/);
+    await expect(page.locator('.board-sheet--topic')).toHaveCount(0);
+    expect(await page.evaluate(() => localStorage.getItem('hb_board_update_seen'))).toBeNull();
   });
 
   test('fit: no scroll at 390 × 844 on a normal day or a Monday; on an iPhone SE the seal stays docked in view', async ({ page }) => {
