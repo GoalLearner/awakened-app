@@ -304,6 +304,7 @@ for (const vp of [{ width: 390, height: 844 }, { width: 375, height: 667 }]) {
       await expect(page.locator('#pkb-intent')).toHaveText('CHARGE');
       const jab = page.locator('#arena-body .ar-bmove[data-move="jab"]');
       await expect(jab.locator('.tag')).toHaveText('INTERRUPT');
+      await page.evaluate(() => { (window as any).Arena._live.sess().rng = () => 0.5; });   // the jab lands (a random miss interrupts nothing)
       await jab.click();
       await toast(page, 'INTERRUPTED!');
       await shot(page, '16-interrupt');

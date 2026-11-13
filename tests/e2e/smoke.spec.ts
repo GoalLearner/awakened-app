@@ -9495,9 +9495,9 @@ test.describe('BH · Hunt results (W980)', () => {
     await tap(page);
     texts.push(await view(page).then((v) => v.text));
     await tap(page);
-    await page.waitForTimeout(700);
+    // the solo tally can still be leaving after a fixed wait on a slow runner: wait for the co-op one by its own words
+    await expect.poll(eyebrow, { timeout: 8_000 }).toBe('Co-op hunts · 2 down');
     await expect.poll(tallyOn, { timeout: 5_000 }).toBe(true);
-    expect(await eyebrow()).toBe('Co-op hunts · 2 down');
     await tap(page);
     texts.push(await view(page).then((v) => v.text));
     await tap(page);
