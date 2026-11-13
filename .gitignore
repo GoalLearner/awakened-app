@@ -58,3 +58,6 @@ SPRINT-W397-W402.md
 # W907 — wrangler run from the repo ROOT autoconfigures a stray wrangler.jsonc here that
 # then hijacks deploys from backend/. Never commit one; always run wrangler from backend/.
 wrangler.jsonc
+
+# short-form video captures (large; regenerate with marketing/tiktok/capture.mjs)
+marketing/tiktok/raw/
