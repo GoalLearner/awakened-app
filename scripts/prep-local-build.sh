@@ -115,8 +115,8 @@ for gate in gate-e-rank gate-d-rank gate-c-rank gate-b-rank gate-a-rank gate-s-r
   if [ -f "$src" ]; then cp "$src" "www/assets/gates/$gate.png"; fi
 done
 mkdir -p www/assets/bosses
-if compgen -G "assets/bosses/*.png" > /dev/null; then
-  cp assets/bosses/*.png www/assets/bosses/
+if compgen -G "assets/bosses/*.webp" > /dev/null; then   # W1192 — WebP since 3.0.24
+  cp assets/bosses/*.webp www/assets/bosses/
 fi
 mkdir -p www/assets/icons
 for icon in souls-icon; do
@@ -124,8 +124,8 @@ for icon in souls-icon; do
   if [ -f "$src" ]; then cp "$src" "www/assets/icons/$icon.png"; fi
 done
 mkdir -p www/assets/items
-if compgen -G "assets/items/*.png" > /dev/null; then
-  cp assets/items/*.png www/assets/items/
+if compgen -G "assets/items/*.webp" > /dev/null; then   # W1192
+  cp assets/items/*.webp www/assets/items/
 fi
 # v3 Phase 1z.282 — The First Awakened coach character pose set.
 # Five PNGs (~50-60 KB each, ~300 KB total) loaded by the coachmark

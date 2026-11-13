@@ -56,7 +56,7 @@ test.describe('A steps trio at every rank (W1104)', () => {
       const out: Array<{ path: string; ok: boolean }> = [];
       for (const id of ids) {
         const portrait = (window as any).__bossArt.path(id);
-        for (const path of [portrait, portrait.replace(/\.png$/, '-summons.png')]) {
+        for (const path of [portrait, portrait.replace(/\.webp$/, '-summons.webp')]) {   // W1192 — the art is WebP
           let ok = false;
           try { const res = await fetch(path, { cache: 'no-store' }); ok = res.ok && (res.headers.get('content-type') || '').indexOf('image') >= 0; } catch (_) { /* not ok */ }
           out.push({ path, ok });
@@ -65,10 +65,10 @@ test.describe('A steps trio at every rank (W1104)', () => {
       return out;
     }, TRIOS.map((t) => t.id));
     expect(r.map((x) => x.path)).toEqual([
-      'assets/bosses/the-crossroads-hound.png', 'assets/bosses/the-crossroads-hound-summons.png',
-      'assets/bosses/the-threefold-court.png', 'assets/bosses/the-threefold-court-summons.png',
-      'assets/bosses/the-triune-sentinel.png', 'assets/bosses/the-triune-sentinel-summons.png',
-      'assets/bosses/the-trinity-colossus.png', 'assets/bosses/the-trinity-colossus-summons.png',
+      'assets/bosses/the-crossroads-hound.webp', 'assets/bosses/the-crossroads-hound-summons.webp',
+      'assets/bosses/the-threefold-court.webp', 'assets/bosses/the-threefold-court-summons.webp',
+      'assets/bosses/the-triune-sentinel.webp', 'assets/bosses/the-triune-sentinel-summons.webp',
+      'assets/bosses/the-trinity-colossus.webp', 'assets/bosses/the-trinity-colossus-summons.webp',
     ]);
     expect(r.filter((x) => !x.ok)).toEqual([]);
   });

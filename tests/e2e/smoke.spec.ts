@@ -5150,7 +5150,7 @@ test.describe('AM · Onboarding v4, the touches (W947 → W1050)', () => {
     await summon.click();
     await expect.poll(() => page.evaluate(() => (window as any).__shared.length)).toBe(1);
     await expect(summon).toHaveText('Summon a friend');
-    await expect(maw).toHaveAttribute('src', 'assets/bosses/the-twin-maw.png');
+    await expect(maw).toHaveAttribute('src', 'assets/bosses/the-twin-maw.webp');
     await expect(alone).toBeVisible();
     await expect(page.locator('#cn-party .ob4-chip')).toHaveCount(0);
     expect(await page.evaluate(() => (window as any).__ob.U.summoned)).toBe(false);
@@ -5163,7 +5163,7 @@ test.describe('AM · Onboarding v4, the touches (W947 → W1050)', () => {
     await summon.click();
     await expect(summon).toHaveText('Onward');
     await expect(summon).toHaveClass(/ob4-ghost/);
-    await expect(maw).toHaveAttribute('src', 'assets/bosses/the-twin-maw-summons.png');
+    await expect(maw).toHaveAttribute('src', 'assets/bosses/the-twin-maw-summons.webp');
     await expect(page.locator('#cn-party .ob4-chip')).toHaveText('Invite sent · the hunt opens when they answer');
     await expect(alone).toBeHidden();
     const sent = await page.evaluate(() => (window as any).__shared[0] as { title: string; text: string });
@@ -5613,8 +5613,8 @@ test.describe('AP · The hunt row (W951)', () => {
       }
       return { out, king: b.path('the_sleepless_crown'), wolf: b.path('the_steel_wolf') };
     });
-    expect(r.king).toBe('assets/bosses/the-myrmidon-king.png');
-    expect(r.wolf).toBe('assets/bosses/the-steel-wolf.png');   // a solo boss is untouched
+    expect(r.king).toBe('assets/bosses/the-myrmidon-king.webp');
+    expect(r.wolf).toBe('assets/bosses/the-steel-wolf.webp');   // a solo boss is untouched
     expect(r.out.length).toBeGreaterThanOrEqual(10);
     expect(r.out.filter((x) => !x.ok || x.type.indexOf('image') < 0).map((x) => x.id + ' → ' + x.path)).toEqual([]);
   });

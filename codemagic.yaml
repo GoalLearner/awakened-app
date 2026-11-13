@@ -189,8 +189,8 @@ workflows:
           # "C-rank boss art blank on TestFlight" smoke-test failure.
           # Glob copy now picks up any future boss PNG automatically.
           mkdir -p www/assets/bosses
-          if compgen -G "assets/bosses/*.png" > /dev/null; then
-            cp assets/bosses/*.png www/assets/bosses/
+          if compgen -G "assets/bosses/*.webp" > /dev/null; then
+            cp assets/bosses/*.webp www/assets/bosses/
             echo "Boss art copied:"
             ls -1 www/assets/bosses/
           fi
@@ -209,8 +209,8 @@ workflows:
           # the emoji + rarity gradient placeholder. Add cards to disk
           # as art lands; no codemagic edit required for the new ones.
           mkdir -p www/assets/items
-          if compgen -G "assets/items/*.png" > /dev/null; then
-            cp assets/items/*.png www/assets/items/
+          if compgen -G "assets/items/*.webp" > /dev/null; then
+            cp assets/items/*.webp www/assets/items/
           fi
           # W245 — battle music loops (parity with prep-local-build.sh;
           # missing these = silent music layer on device)
@@ -446,8 +446,8 @@ workflows:
           # explicit presence check so any future regression fails
           # loudly here instead of silently shipping blank boss cards.
           for boss in the-ascendant-colossus the-furnace-knight the-marathon-wraith; do
-            if [ ! -f "www/assets/bosses/$boss.png" ]; then
-              echo "FAIL: www/assets/bosses/$boss.png missing — Codemagic boss-art copy regressed"
+            if [ ! -f "www/assets/bosses/$boss.webp" ]; then
+              echo "FAIL: www/assets/bosses/$boss.webp missing — Codemagic boss-art copy regressed"
               echo "      The hardcoded allowlist on line ~117 of codemagic.yaml has likely been re-introduced."
               ls -la www/assets/bosses/ || true
               exit 1
@@ -619,8 +619,8 @@ workflows:
           # public dir. Mirror of the pre-sync check above; catches
           # the case where cap sync somehow drops these specific files.
           for boss in the-ascendant-colossus the-furnace-knight the-marathon-wraith; do
-            if [ ! -f "$PUB/assets/bosses/$boss.png" ]; then
-              echo "FAIL: $PUB/assets/bosses/$boss.png missing after cap sync"
+            if [ ! -f "$PUB/assets/bosses/$boss.webp" ]; then
+              echo "FAIL: $PUB/assets/bosses/$boss.webp missing after cap sync"
               ls -la "$PUB/assets/bosses/" || true
               exit 1
             fi

@@ -28464,7 +28464,7 @@ button.pc-shard { cursor: pointer; font: inherit; -webkit-appearance: none; appe
 .reveal-overlay--mythic .blade-stage{ position:absolute; inset:0; clip-path:inset(0 50% 0 50%); }
 .reveal-overlay--mythic .is-revealed .blade-stage{ animation:blade-unveil 1.4s cubic-bezier(.22,1,.36,1) forwards; }
 @keyframes blade-unveil{ from{clip-path:inset(0 50% 0 50%);} to{clip-path:inset(0 0 0 0);} }
-.reveal-overlay--mythic .blade-art{ position:absolute; inset:0; background-size:cover; background-position:center; background-image:url('assets/items/nightfall-blade-of-the-sovereign.png'); }
+.reveal-overlay--mythic .blade-art{ position:absolute; inset:0; background-size:cover; background-position:center; background-image:url('assets/items/nightfall-blade-of-the-sovereign.webp'); }
 .reveal-overlay--mythic .blade-fallback{ position:absolute; inset:0; background:radial-gradient(80% 60% at 50% 30%, rgba(123,47,247,.25), transparent 70%), #07030f; }
 .reveal-overlay--mythic .blade-fallback .blade-shape{ position:absolute; left:var(--blade-seam-x); top:8%; width:26%; height:66%; transform:translateX(-50%);
   background:linear-gradient(90deg,#7a5a16 0%, var(--gold) 26%, var(--gold-hot) 47%, #fff 50%, var(--gold-hot) 53%, #3a1a6e 74%, #150a2e 100%);
@@ -29791,7 +29791,7 @@ button.pc-shard { cursor: pointer; font: inherit; -webkit-appearance: none; appe
 /* art + slow Ken Burns */
 .coopsm-art {
   position: absolute; inset: 0;
-  background: url("assets/bosses/the-twin-maw-summons.png") center/cover no-repeat;
+  background: url("assets/bosses/the-twin-maw-summons.webp") center/cover no-repeat;
   transform: scale(1.06);
   animation: coopsmKenburns 18s ease-in-out infinite alternate;
 }
