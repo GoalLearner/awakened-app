@@ -11,6 +11,7 @@ const ROOT = join(HERE, '..', '..');
 const OUT = join(HERE, 'out');
 const PORT = 8131;
 const SHAPES = { card: [1920, 1080], page: [1080, 1920] };
+const NAME = process.argv[2] || '';   // 3.0.24: `node event.mjs hunt` → event-hunt.html → out/event-hunt-*.png
 
 async function main() {
   mkdirSync(OUT, { recursive: true });
@@ -23,11 +24,12 @@ async function main() {
   try {
     for (const [shape, [w, h]] of Object.entries(SHAPES)) {
       const page = await browser.newPage({ viewport: { width: w, height: h }, deviceScaleFactor: 1 });
-      await page.goto(`http://localhost:${PORT}/marketing/aso-3.0.7/event.html?shape=${shape}`, { waitUntil: 'load' });
+      await page.goto(`http://localhost:${PORT}/marketing/aso-3.0.7/event${NAME ? '-' + NAME : ''}.html?shape=${shape}`, { waitUntil: 'load' });
       await page.waitForFunction(() => document.body.dataset.ready === '1', null, { timeout: 15000 });
       await page.waitForTimeout(400);
-      await page.screenshot({ path: join(OUT, `event-${shape}.png`) });
-      console.log(`saved out/event-${shape}.png (${w}x${h})`);
+      const file = `event${NAME ? '-' + NAME : ''}-${shape}.png`;
+      await page.screenshot({ path: join(OUT, file) });
+      console.log(`saved out/${file} (${w}x${h})`);
       await page.close();
     }
   } finally {

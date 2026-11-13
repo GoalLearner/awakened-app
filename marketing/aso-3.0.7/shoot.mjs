@@ -53,7 +53,7 @@ function seedScript(extra) {
       // a lived-in hunter: a Steel Wolf hunt under way, nine bosses slain, a world rank
       const now = Date.now();
       set('hb_bosses', JSON.stringify({
-        the_steel_wolf: { engaged: true, engaged_at: new Date(now - 5 * 3600e3).toISOString(), hunt_started_at: now - 5 * 3600e3, step_progress: 4630, kill_count: 2 },
+        the_steel_wolf: { engaged: true, engaged_at: new Date(now - 5 * 3600e3).toISOString(), hunt_started_at: now - 5 * 3600e3, step_progress: 1430, kill_count: 2 },   // 3.0.24: the 2,000 bar
         the_insomniac: { kill_count: 3 }, the_iron_warden: { kill_count: 2 }, the_patient_flame: { kill_count: 2 },
       }));
       const o = new Date(now - 47 * 86400000);   // day 48 of the journey (the briefing's DAY N)
@@ -96,7 +96,7 @@ const SCENES = {
   },
   async victory(page) {
     await page.evaluate(() => window.__queueBossResult({ bossId: 'the_steel_wolf', bossName: 'The Steel Wolf', rank: 'E', kill_count: 1,
-      conditionLabel: 'Walk 6,000+ steps in a single day', souls: 120, drop: { cardId: 'x', name: 'Fang of the Pack', rarity: 'rare', wasFirst: false }, mercy: null }));
+      conditionLabel: 'Walk 2,000+ steps in a single day', souls: 120, drop: { cardId: 'x', name: 'Fang of the Pack', rarity: 'rare', wasFirst: false }, mercy: null }));
     await page.waitForSelector('#boss-result-overlay .hr-frame', { timeout: 8000 });
     await page.waitForTimeout(600); await skip(page); await page.waitForTimeout(1800);
 
@@ -130,6 +130,24 @@ const SCENES = {
     await page.evaluate(() => document.getElementById('sc-arena-btn').click());
     await page.waitForTimeout(3000);
   },
+  // 3.0.24 (W1188 battle FX): a real Ascent fight at the blow of an ultimate — Storm of Blades' lightning on the foe.
+  async battle(page) {
+    await page.click('#tab-profile');
+    await page.waitForTimeout(900);
+    await page.evaluate(() => document.getElementById('sc-arena-btn').click());
+    await page.waitForTimeout(2500);
+    await page.evaluate(() => document.querySelector('#arena-body [data-ar="fight"][data-floor="38"]').click());
+    await page.waitForSelector('#arena-body [data-ar="introgo"]', { timeout: 8000 });
+    await page.click('#arena-body [data-ar="introgo"]');
+    await page.waitForTimeout(1200);
+    if (await page.$('#arena-body .pkb2-intro')) await page.click('#arena-body .pkb2-intro');
+    await page.waitForSelector('#arena-body .ar-bmoves:not(.lock) [data-ar="move"]', { timeout: 15000 });
+    await page.waitForFunction(() => { const s = window.__bfx && window.__bfx.state(); return !!s && s.lib === 'ready' && Object.values(s.json).every((v) => v === 'ready'); }, null, { timeout: 15000 });
+    await page.evaluate(() => { const s = window.Arena._live.sess(); s._surge = 1; s.rng = () => 0.5; window.Arena._live.paint(); });
+    await page.click('#pkb-surge');
+    await page.waitForSelector('#pkb-stage [data-bfx="thunder-element"]', { timeout: 12000 });
+    await page.waitForTimeout(300);
+  },
   async relics(page) {
     await page.click('#tab-items');
     await page.waitForTimeout(1500);
@@ -149,6 +167,14 @@ const OWNED = ['trail_worn_boots', 'pendant_of_the_wakeful', 'sleepwalkers_cloak
   'glass_path_boots', 'wardens_plate', 'crown_of_the_ascendant', 'greaves_of_the_endless_road', 'ashen_monarchs_cape', 'keystone_pendant',
   'ten_thousand_step_blade', 'amulet_of_the_kept_word', 'gauntlets_of_ten_thousand_days', 'boots_of_the_long_road'];
 const SEEDS = {
+  battle: {   // the tower's hunter, Titan's Oathblade in hand, wearing Storm of Blades
+    hb_ascent_opening_seen_v1: '1', hb_dev_ults: '1', hb_ult_choice: 'storm', hb_ult_owned: JSON.stringify(['feast', 'hellfire', 'storm', 'arise']),
+    hb_hunter_build: JSON.stringify({ slots: [null, null, null, 'titan_oathblade', null, null, null, null] }),
+    hb_inventory: JSON.stringify({ cards: { titan_oathblade: { discovered: true, count: 1, first_acquired_date: '2026-09-20' } } }),
+    hb_arena_v2: JSON.stringify({ rating: 1000, bestRating: 1000, currentFloor: 38, highestCleared: 37, wins: 41, losses: 6, streak: 5, bestStreak: 9,
+      dailyDate: '', dailyLosses: 0, reclaimDate: '', reclaimFloors: [], reclaimSouls: 0 }),
+    hb_stats: JSON.stringify({ STR: { pts: 2400 }, VIT: { pts: 2200 }, INT: { pts: 1900 }, FOCUS: { pts: 2100 }, WILL: { pts: 2000 }, WLT: { pts: 1500 } }),
+  },
   tower: {
     hb_ascent_opening_seen_v1: '1',
     hb_arena_v2: JSON.stringify({ rating: 1000, bestRating: 1000, currentFloor: 38, highestCleared: 37, wins: 41, losses: 6, streak: 5, bestStreak: 9,

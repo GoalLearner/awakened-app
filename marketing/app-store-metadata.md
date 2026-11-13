@@ -8,6 +8,33 @@ Update this file every time App Store Connect metadata changes.
 
 ---
 
+## 3.0.24 — LISTING REFRESH (2026-11-12, after downloads stopped Nov 5)
+
+Why: App Store Connect showed search impressions steady (~47–60 a day) but the share of searchers tapping into the page
+fell from 7.5% (Aug–Oct) to 3.7% (Nov 5–11) and search downloads to zero. Ratings fine (5.0, 7). The app was 376.9 MB
+(W1192 cuts ~270 MB). Subtitle and keywords only change with a version, so they ride 3.0.24.
+
+### Subtitle (30 max) — was "Turn Habits into Epic Quests"
+`Habit Tracker & Boss Battles` (28)
+
+### Keywords (100 max) — was `quest,level,discipline,routine,goal,streak,productivity,workout,fitness,steps,sleep,focus,gamify`
+`quest,level,dungeon,anime,pedometer,walk,step,counter,sleep,workout,fitness,streak,discipline,gamify` (100)
+
+### Promotional text (170 max, no review needed)
+Walk 2,000 steps and your first boss falls tonight. Every real habit, verified by Apple Health, levels up your hunter. Hunt bosses, find ultimates, climb the Ascent. (165)
+
+### Screenshots — marketing/aso-3.0.7/out/frames (7, at 6.9" / 6.5" / 6.3")
+01 battle (Storm of Blades mid-strike, "Your habits power the fight.") · 02 habits (Steel Wolf 1,430 / 2,000) · 03 victory
+("Walk 2,000+ steps") · 04 tower · 05 coop · 06 worldgate · 07 relics. Regenerate: shoot.mjs → frames.mjs.
+
+### In-App Event — "The Hunt Gets Easier"
+- Badge: Major Update · Purpose: Attract new users (and keep current ones informed)
+- Name (30): The Hunt Gets Easier (20)
+- Short description (50): Beat your first boss with just 2,000 steps. (43)
+- Long description (120): Every boss now fits real days: 2,000 steps at E up to 7,000 at S. Hits land harder, and ultimates drop from bosses. (115)
+- Art: out/event-hunt-card.png (1920×1080) + out/event-hunt-page.png (1080×1920) — no text in the art (the App Store overlays it).
+- Dates: start once 3.0.24 is live; up to 31 days.
+
 ## 3.0.12 — READY TO PASTE (W1037–W1039, drafted 2026-10-11, HEAD `d3f3dfb`, tag `3.0.12-w1039`)
 
 Four languages, each far under the 4,000-character limit. Banned-word check done.

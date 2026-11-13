@@ -13,8 +13,8 @@
      pieces floating over the frame, nothing crossing a seam. FREE TO PLAY stays, smaller, on 1–3.
      frames.mjs screenshots each frame. */
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  html, body { width: 7920px; height: 2868px; overflow: hidden; background: #111; }
-  .strip { position: relative; width: 7920px; height: 2868px; }
+  html, body { width: 9240px; height: 2868px; overflow: hidden; background: #111; }
+  .strip { position: relative; width: 9240px; height: 2868px; }
   .card { position: absolute; top: 0; width: 1320px; height: 2868px; overflow: hidden; }
   .card::after { content: ''; position: absolute; inset: 0; pointer-events: none; z-index: 2;
     background: radial-gradient(1200px 900px at 50% -120px, rgba(255,255,255,.22), transparent 70%); }
@@ -50,9 +50,10 @@
 
   // shot = raw/<shot>.png. Every frame: a real screen.
   const FRAMES = [
+    { shot: 'battle',  free: true, bg: 'linear-gradient(165deg, #fb7185 0%, #e11d48 45%, #4c0519 100%)', kicker: 'Turn-based battles',       h: 'Your habits<br>power the <em>fight</em>.' },   // 3.0.24
     { shot: 'habits',  free: true, bg: 'linear-gradient(165deg, #8b5cf6 0%, #6d28d9 45%, #3b0f8c 100%)', kicker: 'A habit RPG',             h: 'Turn your habits<br>into an <em>RPG</em>.' },
     { shot: 'victory', free: true, bg: 'linear-gradient(165deg, #fb923c 0%, #ea580c 45%, #9a1c1c 100%)', kicker: 'Real steps · real bosses', h: 'Your steps<br>slay the <em>boss</em>.' },
-    { shot: 'tower',   free: true, bg: 'linear-gradient(165deg, #38bdf8 0%, #2563eb 50%, #1e3a8a 100%)', kicker: 'The Ascent',               h: 'Climb the<br><em>Tower</em>.' },
+    { shot: 'tower',               bg: 'linear-gradient(165deg, #38bdf8 0%, #2563eb 50%, #1e3a8a 100%)', kicker: 'The Ascent',               h: 'Climb the<br><em>Tower</em>.' },
     { shot: 'coop',                bg: 'linear-gradient(165deg, #2dd4bf 0%, #0d9488 50%, #134e4a 100%)', kicker: 'Co-op hunts',              h: 'Hunt with<br>your <em>friends</em>.' },
     { shot: 'mvp',                 bg: 'linear-gradient(165deg, #f472b6 0%, #c026d3 45%, #581c87 100%)', kicker: 'The Worldgate',            h: 'One monster.<br><em>Everyone.</em>' },
     { shot: 'relics',              bg: 'linear-gradient(165deg, #fcd34d 0%, #f59e0b 45%, #9a3412 100%)', kicker: 'Loot',                     h: 'Win legendary<br><em>relics</em>.' },

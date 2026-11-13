@@ -17,7 +17,7 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, '..', '..');
 const OUT = join(HERE, 'out', 'frames');
 const PORT = 8095;
-const NAMES = ['habits', 'victory', 'tower', 'coop', 'worldgate', 'relics'];
+const NAMES = ['battle', 'habits', 'victory', 'tower', 'coop', 'worldgate', 'relics'];   // 3.0.24: the fight leads
 const SIZES = [['6.5-inch', 1284, 2778], ['6.3-inch', 1206, 2622]];
 const sharp = createRequire(import.meta.url)(join(ROOT, 'node_modules', 'sharp'));
 
@@ -30,7 +30,7 @@ async function main() {
     try { browser = await chromium.launch({ channel, headless: true }); break; } catch (_) { /* next */ }
   }
   try {
-    const page = await browser.newPage({ viewport: { width: 7920, height: 2868 }, deviceScaleFactor: 1 });
+    const page = await browser.newPage({ viewport: { width: 1320 * NAMES.length, height: 2868 }, deviceScaleFactor: 1 });
     await page.goto(`http://localhost:${PORT}/marketing/aso-3.0.7/frames.html`, { waitUntil: 'networkidle' });
     await page.waitForFunction(() => document.body.dataset.ready === '1', null, { timeout: 20000 });
     await page.waitForTimeout(500);
