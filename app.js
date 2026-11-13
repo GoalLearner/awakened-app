@@ -160,7 +160,7 @@
   const APP_VERSION = '3.0.24';   // W1169 — 3.0.23 APPROVED 2026-11-08 (submitted 2026-11-07 5:00 PM PST, LIVE 2:33 PM PST on the 8th; almost certainly build 628 = w1161: pins, the Wardrobe tap fix), so 3.0.24 opened carrying W1162-W1169 (the 3.0.23 store notes, the board update, matched hunt partners, Add as friend, late steps reach the board, The Patient Flame falls by itself, earned ultimates behind their flag). [history] W1134 — 3.0.22 APPROVED 2026-11-06 (submitted 4:53 AM PST from build 617 = w1132: the Shadowborn + the Elite Eight, the Rising redrawn, profile cards name the look, every open counted), so 3.0.23 opened carrying W1134 (the Worldgate counts a hunter's steps only after 2 days in the app that week). [history] W1127 — 3.0.21 LIVE on the App Store 2026-11-05 9:34 AM PST (built from w1126: no memberships, kill stamps without a title, the tier crests, the onboarding's "How did you find the Gate?"), so 3.0.22 opened carrying W1127 (the app-open ping says when it is a real open; the server counts every one per Pacific day). [history] W1124 — 3.0.20 LIVE on the App Store 2026-11-01 12:50 PM PST (built from w1120: final standings Sunday, shadows in the public feed, Shadow Army on Status); 3.0.21 opened carrying W1121 (its What's New, never shown: re-keyed to 3.0.21), W1122 (no memberships), W1124 (kill stamp without a title, inlined tier crests) and W1125 (the onboarding's last screen asks how the hunter found the app; W1126 keeps it in place when the keyboard opens). [history] W1114 — 3.0.19 approved 2026-10-30 (submitted 1:45 AM PST, w1113: shadows 1 in 5, armor upgrades, relic power by boss rank, relic cards three across); 3.0.20 opened with the feed's boss rank chips, no What's New entry yet. W1107 — 3.0.18 approved and LIVE 2026-10-28 8:02 AM PST (submitted 2026-10-27 7:41 PM PST, build 602 = w1106: the four steps trios, the Rising's nine looks, the earned line in the Wardrobe, the richer-backup offer); 3.0.19 opened at approval. [history] W1103 — 3.0.17 approved 2026-10-27 (build 600, submitted 2026-10-26 6:21 PM PST: the automatic friend hunts, the earned looks, the two-tab Wardrobe); 3.0.18 opened at approval, carrying W1102 (the app offers back a richer cloud backup). [history] W1097 — 3.0.16 approved + live 2026-10-26 (build 599, the iOS 27 fix); 3.0.17 opened at approval. Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.16 = the post-3.0.15 train, opened 2026-10-23 (W1085): 3.0.15 was submitted 2026-10-22 2:55 PM PST from build 595 (w1083: the tally, the preview row, the security pass) and approved the same day, so the train closed under it. It carries W1084 (the tally leads the 3.0.15 What's New) forward. [history] 3.0.15 = the post-3.0.14 train, opened 2026-10-22 (W1080): 3.0.14 was approved and LIVE 2026-10-21 5:08 PM PST from build 591 (w1074) — the first 592 upload was refused ("train closed"), the sixth time an approval closed a train under a build. It carries W1077/W1078 (sign-out ends the session, cloud save checksum + gzip, socket token out of the URL, invite links ask first) forward. [history] 3.0.14 = the post-3.0.13 train, opened 2026-10-21 (W1074): 3.0.13 was approved and went LIVE 2026-10-20 3:50 AM PST from build 587 (w1068), so it carries W1069 (the floor 100 curve), W1070-W1073 (the ten weekly step and sleep bosses and their drops) and the real-screen screenshots and header Apple asked for (App Review 2.3.3) forward. [history] 3.0.11 = the post-3.0.10 train, opened 2026-10-05: Apple's store lookup showed 3.0.10 LIVE (released 11:35 AM PST that day, built from w1024, so it carried W1023 the 9:45 PM finish-strong reminder and nothing after). It carries forward W1025 (Myrmidon King art), W1026 (one request for every co-op hunt) and W1027 (steps 'today' = the device's day), all pushed under the 3.0.10 tag after that build was cut. [history] 3.0.10 = the post-3.0.9 train, opened 2026-10-04 when the owner passed on Apple's approval of 3.0.9 (submitted 2026-10-02 12:41 PM PST, approved 2026-10-03; carried W1002–W1022: weekly to-do planner, to-dos first in the briefing, the Monday recap, times-a-week vows, the interactive Status tab, the Jump Manual program, the flights-hunt result fix). It carries W1023 (the 9:45 PM finish-strong reminder) forward. First TWO-DIGIT patch: every version compare in the app is numeric (_updVersionNewer, the What's New compare), never a string compare. [history] 3.0.9 = the post-3.0.8 train, opened 2026-09-25 the moment Apple approved 3.0.8 (submitted 4:57 PM PST, approved the same evening; carried W989–W1001: Items overhaul, Resolved + mod view counts, the sectioned Habits tab + to-dos v2, topic edit). [history] 3.0.8 = the post-3.0.7 train, opened 2026-09-24 the moment Apple approved 3.0.7 (build 543, submitted 1:15 AM PST, approved same day; the Worldgate In-App Event was approved in the same hour). Carries forward: the three description corrections (Ranked PvP / Streak Shields / five-hunter raid = Premium) go out WITH this version, since a description only changes with a new version. [history] 3.0.7 carried W968–W987 (vows yours + glory verified, morning briefing v2, hunt results, Worldgate MVPs + weekly line + strike freeze, Community Updates + briefing line, mod preview rows, awakened:// scheme). [history] 3.0.7 = the post-3.0.6 train, opened 2026-09-20 the moment Apple approved 3.0.6 (submitted 3:14 AM PST that day, approved same day) — an approval CLOSES a train, and uploading under the approved number is refused (CFBundleShortVersionString must exceed it). This has now bitten FOUR times; the bump is done at approval, not at upload. [history] 3.0.6 carried W960–W967 (Manage Vows fix, rank-bar hairline, Worldgate kill ceremony, division-up celebration, owner preview row, 3.0.6 release notes). [history] 3.0.4 = the post-3.0.3 train, opened 2026-09-11 because Apple approved 3.0.3 (live 2026-09-09) and an approval closes a train — carries W935 (weekly-board upload fix + Apple Health asked on every onboarding path). [history] 3.0.3 = the post-3.0.2 train, opened 2026-09-07 the morning after Apple approved 3.0.2 (submitted 2026-09-06 4:41 PM PT; approval closes a train — twice-bitten lesson) — carries W917-W919b (Ledger view, Streak Shields deleted, handoff 29) forward under the new number. [history] 3.0.2 = the post-release train, opened 2026-09-04 because Apple closes a train on approval (build 493 under 3.0.1 was refused: CFBundleShortVersionString must exceed the approved 3.0.1) — carries W903 (boss-sheet hotfix) + W905 (Status is the hunter profile again). 3.0.1 "MAKE IT LAND" = the repair release (W882-W890): Wave-2 progression joins cloud sync, the activation funnel is instrumented end to end, silent Wave-2 server failures leave breadcrumbs, the altar routes to a same-day first kill, the Double Dungeon stops reporting false failures and yields when the stair is unavailable, the beat What's New used to eat is chained, and every banked free engage is visible before the tap. 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.24-w1195';
+  const APP_BUILD_TAG = '3.0.24-w1196';
   // W1192 — the relic and boss paintings are WebP now (the app was 376.9 MB, 290 MB of it these PNGs). A path saved
   // before (the drop history, a friend's card, a cloud save) still says .png: the first time one fails to load it is
   // pointed at the .webp beside it, before the image's own error handler can hide it.
@@ -1204,9 +1204,9 @@
       rank:             'B',
       archetype:        'aggressor', // inert metadata for future combat triangle
       flavorShort:      'A god-forge that opens only for the hammer that never falls.',
-      flavorLong:       'A god-forge sealed since the second age. Its doors part only for those who lift on the days they do not want to. Stop, and the forge cools. Continue, and the steel between you and the world grows thinner with every blow.',
-      killCondShort:    '20+ workout minutes, 2 days back-to-back',
-      killCondLong:     'Complete at least 20 verified workout minutes on two days in a row. Any Apple Health workout type counts. It falls on its own the moment the second day gets there.',   // W1176
+      flavorLong:       'A god-forge sealed since the second age. It counts every minute you train across two days, and its doors part when the tally is paid. A slow day can be made up the next; the steel does not care which blow finishes it.',
+      killCondShort:    '40 workout minutes in 2 days',   // W1196 — a total (was 20+ minutes, 2 days back-to-back)
+      killCondLong:     'Complete 40 verified workout minutes in total over two days in a row, split any way you like. Any Apple Health workout type counts. Do it all in one day and it falls that day.',   // W1196 · was W1176
       failedCopy:       'The hammer went silent. The forge sealed.',
       // consecutiveDays = back-to-back days inside the window that must
       // hit the workoutMinutes threshold (W262 — was 5-of-7 qualifying
@@ -1244,9 +1244,9 @@
       rank:             'B',
       archetype:        'caster',
       flavorShort:      'A quiet flame that waits for discipline measured in steps.',
-      flavorLong:       'It does not burn loudly. It does not chase. It waits, and watches, and weighs the road you cover for seven days. Walk the distance two days running, and it warms your hand. Break the chain, and the wick darkens.',
-      killCondShort:    '5,000 steps, 2 days back-to-back',   // W1189 (was 7,000)
-      killCondLong:     'Walk at least 5,000 verified steps on two days in a row. It falls on its own the moment the second day gets there. Steady ground beats sudden distance.',   // W1167
+      flavorLong:       'It does not burn loudly. It does not chase. It waits, and weighs the road you cover over two days. Reach its distance, however you split it, and it warms your hand.',
+      killCondShort:    '10,000 steps in 2 days',   // W1196 — a total (was 5,000 steps, 2 days back-to-back)   // W1189 (was 7,000)
+      killCondLong:     'Walk 10,000 verified steps in total over two days in a row, split any way you like. Do it all in one day and it falls that day.',   // W1196 · was W1167
       failedCopy:       'The flame waited longer than you held.',
       stepThreshold:    5000,   // W1189 — the B bar (was 7,000)
       consecutiveDays:  2,
@@ -1273,9 +1273,9 @@
       rank:             'A',
       archetype:        'sustainer',
       flavorShort:      'He has not stopped walking since the world was young.',
-      flavorLong:       'A figure of endless motion, bound to the road itself. He does not tire and does not slow — to match him you must cover ground both flat and rising, two days running. Break stride once, and he leaves you behind.',
-      killCondShort:    '6,000 steps + 4 flights, 2 days back-to-back',   // W1189 (was 7,500)
-      killCondLong:     'Reach BOTH 6,000 verified steps and 4 flights of stairs on two days in a row. It falls on its own the moment the second day gets there. Miss either on either day and the march resets.',   // W1176
+      flavorLong:       'A figure of endless motion, bound to the road itself. He does not tire and does not slow — to match him you must cover ground both flat and rising over two days. Lag one day, and you can still catch him the next.',
+      killCondShort:    '12,000 steps + 8 flights in 2 days',   // W1196 — totals (was 6,000 + 4, 2 days back-to-back)   // W1189 (was 7,500)
+      killCondLong:     'Reach BOTH 12,000 verified steps and 8 flights of stairs in total over two days in a row, split any way you like. Do both in one day and it falls that day.',   // W1196 · was W1176
       failedCopy:       'You dropped behind. The march went on without you.',
       dailyAllOf:       true,
       stepThreshold:    6000,   // W1189 — the A bar (was 7,500)
@@ -1294,9 +1294,9 @@
       rank:             'A',
       archetype:        'caster',
       flavorShort:      'It demands you spend yourself by day and restore yourself by night.',
-      flavorLong:       'An endless ascent that tests not just effort but recovery — for none reach the summit running on empty. Train hard and sleep deep, two days running, and the way opens. The one trial that asks for a tracked night of rest.',
-      killCondShort:    '20min workout + 7h sleep, 2 days back-to-back',
-      killCondLong:     'On two days in a row, complete BOTH a 20-minute workout and 7 hours of sleep. Any Apple Health workout type counts. It falls on its own the moment the second day gets there. Miss either pillar on either day and the ascent resets. Note: tracking a workout and sleep needs a wearable — this is the wearable-only elite of the dungeon.',   // W1176
+      flavorLong:       'An endless ascent that tests not just effort but recovery — for none reach the summit running on empty. Train across two days and sleep deep both nights, and the way opens. The one trial that asks for a tracked night of rest.',
+      killCondShort:    '40 workout min in 2 days + 7h sleep both nights',   // W1196 — minutes add up, each night keeps its hours
+      killCondLong:     'Over two days in a row, complete 40 workout minutes in total and sleep 7 hours each night. Any Apple Health workout type counts. The minutes can be split any way you like; each night still needs its 7 hours. Note: tracking a workout and sleep needs a wearable — this is the wearable-only elite of the dungeon.',   // W1196 · was W1176
       failedCopy:       'The stair went dark. Effort without rest, or rest without effort — the climb demands both.',
       dailyAllOf:       true,
       workoutMinutes:   20,
@@ -1340,9 +1340,9 @@
       rank:             'S',
       archetype:        'caster',
       flavorShort:      'The crowned dark that waits at the summit of the climb.',
-      flavorLong:       'A sovereign wreathed in living shadow, throned above every lesser terror in the dungeon. He does not test one virtue but all at once — body, will, and rest, held together without falter. Master every discipline for three days unbroken, and the shadow yields what nothing else will: the regalia of the Sovereign himself.',
-      killCondShort:    '7k steps + 4 flights — both, 3 days back-to-back',   // W1189 (was 8k)
-      killCondLong:     'On three days in a row, reach BOTH 7,000 verified steps and 4 flights of stairs climbed. It falls on its own the moment the third day gets there. Miss either on any day and the run resets to zero. The summit of the dungeon, and the only source of the Mythic blade Nightfall.',   // W1176
+      flavorLong:       'A sovereign wreathed in living shadow, throned above every lesser terror in the dungeon. He does not test one virtue but two at once — the road and the climb. Pay his toll of ground and stairs across three days, and the shadow yields what nothing else will: the regalia of the Sovereign himself.',
+      killCondShort:    '21,000 steps + 12 flights in 3 days',   // W1196 — totals (was 7k + 4, 3 days back-to-back)   // W1189 (was 8k)
+      killCondLong:     'Reach BOTH 21,000 verified steps and 12 flights of stairs in total over three days in a row, split any way you like. Do both in one day and it falls that day. The summit of the dungeon, and the only source of the Mythic blade Nightfall.',   // W1196 · was W1176
       failedCopy:       'One day came up short, and the whole climb with it. The shadow keeps its crown.',
       dailyAllOf:       true,
       dropTable:        { mythic: 0.01, ultra_rare: 0.30 },
@@ -1372,9 +1372,9 @@
       rank:             'S',
       archetype:        'sustainer',
       flavorShort:      'It has kept the long watch for centuries, and hungers for those who cannot.',
-      flavorLong:       'The Sovereign’s first consort keeps the watch he is too proud to keep — night after night, road after road. It does not respect effort spent in a single burst; it respects the ones who restore themselves in the dark and spend it all again by daylight. Hold the watch for three days unbroken, and it will open its hands.',
-      killCondShort:    '6.5h sleep + 2,000 steps — both, 3 days back-to-back',
-      killCondLong:     'On three days in a row, reach BOTH 6.5 hours of verified sleep and 2,000 verified steps. It falls on its own the moment the third day gets there. Miss either on any day and the watch resets. Sleep tracking needs a wearable — this trial belongs to the wearable elite.',   // W1176
+      flavorLong:       'The Sovereign’s first consort keeps the watch he is too proud to keep — night after night, road after road. It respects the ones who restore themselves in the dark, every night of the watch. Sleep through its three nights and walk its road, and it will open its hands.',
+      killCondShort:    '6,000 steps in 3 days + 6.5h sleep each night',   // W1196 — steps add up, each night keeps its hours
+      killCondLong:     'Over three days in a row, walk 6,000 verified steps in total and sleep 6.5 verified hours each night. The steps can be split any way you like; each night still needs its hours. Sleep tracking needs a wearable — this trial belongs to the wearable elite.',   // W1196 · was W1176
       failedCopy:       'The watch broke, and the Sentinel kept its regalia.',
       dailyAllOf:       true,
       sleepHours:       6.5,
@@ -1393,10 +1393,10 @@
       name:             'The Worldspine',
       rank:             'S',
       archetype:        'aggressor',
-      flavorShort:      'The mountain that walks. It is climbed a day at a time, three days running.',   // W1182
-      flavorLong:       'The Sovereign’s second consort is not a creature but a burden — a mountain’s worth of ground laid end to end. No one crosses it in a single burst. It yields to the hunter who walks every day, three days without a gap, and never to the one who walks far once and stops.',
-      killCondShort:    '7,000 steps, 3 days back-to-back',   // W1189 (was 8,000)
-      killCondLong:     'Walk at least 7,000 verified steps on three days in a row. All iPhone-native — no wearable required. It falls on its own the moment the third day gets there. Miss a day and the climb starts again.',   // W1182 (was 12,000 steps + 10 flights in one day)
+      flavorShort:      'The mountain that walks. Cross it in three days, however you pace the climb.',   // W1196   // W1182
+      flavorLong:       'The Sovereign’s second consort is not a creature but a burden — a mountain’s worth of ground laid end to end. Cover it in three days, however you pace the climb, and it yields.',
+      killCondShort:    '21,000 steps in 3 days',   // W1196 — a total (was 7,000 steps, 3 days back-to-back)   // W1189 (was 8,000)
+      killCondLong:     'Walk 21,000 verified steps in total over three days in a row, split any way you like. All iPhone-native — no wearable required. Do it all in one day and it falls that day.',   // W1196 · was W1182 (was 12,000 steps + 10 flights in one day)
       failedCopy:       'A day went quiet, and the mountain waited for you to start again.',
       dailyAllOf:       true,
       stepThreshold:    7000,   // W1189 — the S bar (was 8,000)
@@ -1945,7 +1945,10 @@
     const ev = await _bossEvalWindow(id, cfg, JSON.parse(JSON.stringify(st)), w.start, w.evalEnd, now, true, H);
     if (!ev || !ev.defeated) return null;
     let startMs = w.lookBack ? w.start : 0;
-    if (w.run && ev.day) {   // W1176 — the strike starts on the run's first day: the hunt is exactly that run
+    if (w.run && ev.startDay) {   // W1196 — a totals boss: the strike starts on the winning stretch's first day
+      const r = new Date(String(ev.startDay) + 'T00:00:00');
+      if (Number.isFinite(r.getTime()) && r.getTime() > startMs) startMs = r.getTime();
+    } else if (w.run && ev.day) {   // W1176 — the strike starts on the run's first day: the hunt is exactly that run
       const r = new Date(String(ev.day) + 'T00:00:00'); r.setDate(r.getDate() - (w.n - 1));
       if (Number.isFinite(r.getTime()) && r.getTime() > startMs) startMs = r.getTime();
     }
@@ -2115,6 +2118,30 @@
     if (await probe(dayMs(-(m.n - 2)), now)) out.push(_localDateKey(new Date(dayMs(1))));         // today already qualifies: tomorrow does
     return out;
   }
+  // W1196 — a totals boss on the phone list: today's number must reach what the earlier days of today's stretch left
+  // (the dry judge reads them), and for a sleep pillar the earlier nights must all qualify and last night too. Only
+  // today: tomorrow's share is not known until today ends. null = nothing to announce today.
+  async function _rhMultiTotals(id, cfg, st, plan, now, H) {
+    const todayMs = _startOfLocalDayMs(now);
+    const killDay = (st.last_defeated_at && (st.kill_count || 0) > 0) ? _startOfLocalDayMs(new Date(st.last_defeated_at)) : -1;
+    if (killDay >= todayMs) return null;                                        // beaten today: today is spent
+    const f = new Date(todayMs); f.setDate(f.getDate() - (plan.n - 1));
+    let fromMs = f.getTime();
+    if (killDay >= 0) { const k = new Date(killDay); k.setDate(k.getDate() + 1); if (k.getTime() > fromMs) fromMs = k.getTime(); }
+    let earlier = {}, nightsOk = !plan.nightHours;
+    if (fromMs < todayMs) {
+      const copy = JSON.parse(JSON.stringify(st));
+      const ev = await _bossEvalWindow(id, cfg, copy, fromMs, todayMs - 1, now, true, H);   // dry: nothing saved, nothing awarded
+      if (ev && ev.defeated) return null;                                       // the earlier days already did it: the app takes it on the next open
+      earlier = copy.total_progress || {};
+      if (plan.nightHours) nightsOk = (earlier.days | 0) === plan.n - 1 && (earlier.nights | 0) >= plan.n - 1;
+    }
+    if (!nightsOk) return null;
+    const rem = {};
+    Object.keys(plan.totals).forEach(function (k) { rem[k] = Math.max(1, Math.ceil(plan.totals[k] - (Number(earlier[k]) || 0))); });
+    if (plan.nightHours) rem.sleep = plan.nightHours;
+    return rem;
+  }
   async function _rhMultiRefresh(now, H) {
     const today = _localDateKey(new Date(now)), hunts = [];
     let bal = 0, credit = false;
@@ -2125,6 +2152,18 @@
       if (!credit && engageCostSouls(cfg.rank) > bal) continue;     // the sheet could not strike it
       const st = getBossState(id) || {};
       if (st.engaged === true) continue;                             // a running hunt resolves on its own
+      const plan = _bossTotalPlan(cfg);
+      if (plan) {   // W1196 — totals: today's share of what is left
+        let rem = null; try { rem = await _rhMultiTotals(id, cfg, st, plan, now, H); } catch (_) { rem = null; }
+        if (!rem) continue;
+        const beatenT = (st.last_defeated_at && (st.kill_count || 0) > 0) ? _localDateKey(st.last_defeated_at) : '';
+        const needs = Object.keys(rem).map(function (k) { return { metric: k, bar: rem[k] }; });
+        needs.forEach(function (need) {
+          hunts.push({ id: id, name: cfg.name, metric: need.metric, bar: need.bar, beaten: beatenT, until: 0, day: today,
+            also: needs.filter(function (x) { return x.metric !== need.metric; }) });
+        });
+        continue;
+      }
       let days = []; try { days = await _rhMultiDays(id, cfg, st, m, now, H); } catch (_) { days = []; }
       const beaten = (st.last_defeated_at && (st.kill_count || 0) > 0) ? _localDateKey(st.last_defeated_at) : '';
       days.forEach(function (day) {
@@ -2839,6 +2878,84 @@
     }
     return { best: best, hitIndex: hitIndex };
   }
+  // W1196 — TOTALS (owner 2026-11-13: "change it to totals to give the user a chance to make up for a bad day throughout
+  // the app ... instead of back to back consecutive days or 3 consecutive days it would change to total for those 2-3
+  // days ... If a person completes the total in one full day, they earn that reward that day"). His answers: the total is
+  // the daily bar × the days; any days in a row count; a fresh total starts right after a kill (it can fall again the
+  // next day); sleep is NOT totalled — each night keeps its hours. So every consecutiveDays boss (n ≥ 2) judges:
+  //   - steps, flights and workout minutes: their sum over any stretch of up to n days in a row (inside the window, which
+  //     never reaches the day of the last kill) must reach bar × n; one day alone can do it;
+  //   - sleep (the Sleepless Ascent, the Starved Sentinel): the stretch is exactly n days and every night in it qualifies.
+  // The Vow Keeper (consecutiveNights, sleep only) keeps its two nights in a row. The kill is credited to the first day
+  // a stretch reaches its totals, and the strike starts on that stretch's first day.
+  function _bossTotalPlan(cfg) {
+    if (!cfg || cfg.coopOnly || typeof cfg.consecutiveDays !== 'number' || !(cfg.consecutiveDays >= 2)) return null;
+    if (Number(cfg.activeEnergyKcal) > 0) return null;
+    const n = cfg.consecutiveDays, t = {};
+    if (Number(cfg.stepThreshold) > 0) t.steps = Number(cfg.stepThreshold) * n;
+    if (Number(cfg.flightThreshold) > 0) t.flights = Number(cfg.flightThreshold) * n;
+    if (Number(cfg.workoutMinutes) > 0) t.workout = Number(cfg.workoutMinutes) * n;
+    if (!Object.keys(t).length) return null;
+    return { n: n, totals: t, nightHours: Number(cfg.sleepHours) > 0 ? Number(cfg.sleepHours) : 0 };
+  }
+  // vals: one { steps?, flights?, workout?, night? } per local day of the window, oldest first. hit = the first day
+  // whose stretch reaches every total (from = that stretch's first day); tail = the stretch ending on the last day.
+  function _bossTotalScan(plan, vals) {
+    const n = plan.n, keys = Object.keys(plan.totals), L = vals.length;
+    const sumOver = function (lo, hi) {
+      const o = {}; keys.forEach(function (k) { o[k] = 0; });
+      for (let i = Math.max(0, lo); i <= hi; i++) keys.forEach(function (k) { o[k] += Number(vals[i] && vals[i][k]) || 0; });
+      return o;
+    };
+    const nightsEnding = function (j) { let c = 0; for (let i = j; i >= 0 && c < n && vals[i] && vals[i].night; i--) c++; return c; };
+    let hit = -1, from = -1;
+    for (let j = 0; j < L && hit < 0; j++) {
+      const lo = plan.nightHours ? j - n + 1 : Math.max(0, j - n + 1);
+      if (lo < 0) continue;
+      if (plan.nightHours && nightsEnding(j) < n) continue;
+      const sum = sumOver(lo, j);
+      if (keys.every(function (k) { return sum[k] >= plan.totals[k]; })) { hit = j; from = lo; }
+    }
+    const tail = L ? sumOver(L - n, L - 1) : sumOver(0, -1);
+    if (plan.nightHours) tail.nights = L ? nightsEnding(L - 1) : 0;
+    tail.days = Math.min(n, L);
+    return { hit: hit, from: from, tail: tail };
+  }
+  // The live readout from the phone's own daily numbers (no Apple Health read): the stretch that ends today, never
+  // reaching the day of the last kill. For the cards, the boss screen and the Hunting row; the judge stays above.
+  function _bossTotalsLocal(id, cfg, plan) {
+    const out = { steps: 0, flights: 0, workout: 0, nights: 0, days: 0 };
+    try {
+      const ls = (typeof loadLeaderboardState === 'function' ? loadLeaderboardState() : null) || {};
+      const st = getBossState(id) || {};
+      const kill = (st.last_defeated_at && (st.kill_count || 0) > 0) ? _localDateKey(new Date(st.last_defeated_at)) : '';
+      let d = getDeviceLocalDate(), nightRun = true;
+      for (let i = 0; i < plan.n && d; i++) {
+        if (kill && d <= kill) break;
+        out.steps += Number((ls.steps_daily || {})[d]) || 0;
+        out.flights += Number((ls.flights_daily || {})[d]) || 0;
+        out.workout += Number((ls.workout_daily || {})[d]) || 0;
+        if (plan.nightHours && nightRun) { if ((Number((ls.sleep_hours_daily || {})[d]) || 0) >= plan.nightHours) out.nights++; else nightRun = false; }
+        out.days++;
+        const p = lbPrevDate(d); if (!p || p === d) break; d = p;
+      }
+    } catch (_) {}
+    return out;
+  }
+  // "12,400 / 21,000 steps · 5 / 12 flights · 1 / 3 nights": the readout, and how far along its furthest-behind part is.
+  function _bossTotalsLine(cfg, plan, cur) {
+    const parts = [], fr = [];
+    const unit = { steps: 'steps', flights: 'flights', workout: 'workout min' };
+    Object.keys(plan.totals).forEach(function (k) {
+      const need = plan.totals[k], have = Math.min(Number(cur[k]) || 0, need);
+      parts.push(have.toLocaleString('en-US') + ' / ' + need.toLocaleString('en-US') + ' ' + unit[k]);
+      fr.push(need ? have / need : 1);
+    });
+    if (plan.nightHours) { const nn = Math.min(cur.nights | 0, plan.n); parts.push(nn + ' / ' + plan.n + ' nights'); fr.push(nn / plan.n); }
+    return { line: parts.join(' · '), pct: fr.length ? Math.min.apply(null, fr) : 0 };
+  }
+  try { window.__bossTotals = function (id) { const cfg = BOSSES[id], plan = _bossTotalPlan(cfg); return plan ? { plan: plan, local: _bossTotalsLocal(id, cfg, plan), line: _bossTotalsLine(cfg, plan, _bossTotalsLocal(id, cfg, plan)).line } : null; }; } catch (_) {}   // QA
+
   // W1039 — the per-boss rules of the resolver, in one place. `dry` answers the question
   // ("would this window beat it, and on which day?") without touching anything: nothing is
   // saved, nothing is awarded. The ready-hunt scan asks with dry = true and the resolver
@@ -2874,6 +2991,54 @@
     const _kill = function (day) { _day = day; if (!dry) _awardHuntKillFromBackfill(id, cfg, day); };
     let defeated = false;
     let _run = null;   // W1190 — a consecutive boss's days, for the early end (resolveBossHuntsAcrossWindow)
+    let _startDay = null;   // W1196 — the first day of the stretch that won (a totals boss)
+
+    // ── W1196 — totals: steps, flights and workout minutes add up over up to n days in a row; nights each qualify ──
+    const _plan = _bossTotalPlan(cfg);
+    if (_plan) {
+      const days = _huntWindowLocalDays(start, evalEnd);
+      let _nightBy = {};
+      if (_plan.nightHours && typeof H.getSleepBetween === 'function') {
+        let _sr = null;
+        try { _sr = await H.getSleepBetween(new Date(start - 12 * 3600 * 1000).toISOString(), new Date(evalEnd).toISOString()); } catch (_) { _sr = null; }
+        _nightBy = (_sr && _sr.byDate) || {};
+      }
+      const vals = [];
+      for (const dayIso of days) {
+        const dayStartMs = new Date(dayIso + 'T00:00:00').getTime();
+        const dayEndMs   = new Date(dayIso + 'T23:59:59.999').getTime();
+        const sIso = new Date(Math.max(start,   dayStartMs)).toISOString();
+        const eIso = new Date(Math.min(evalEnd, dayEndMs  )).toISOString();
+        const v = {};
+        if (_plan.totals.steps != null) {
+          let x = null; try { x = (typeof H.getStepsBetween === 'function') ? await H.getStepsBetween(sIso, eIso) : null; } catch (_) { x = null; }
+          v.steps = (typeof x === 'number' && x > 0) ? x : 0;
+        }
+        if (_plan.totals.flights != null) {
+          let x = null; try { x = (typeof H.getFlightsClimbedBetween === 'function') ? await H.getFlightsClimbedBetween(sIso, eIso) : null; } catch (_) { x = null; }
+          v.flights = (typeof x === 'number' && x > 0) ? x : 0;
+        }
+        if (_plan.totals.workout != null) {
+          v.workout = _bossWorkoutsUsable(H) ? (_bossWorkoutMinutes(await _bossWorkoutsBetween(H, sIso, eIso)) || 0) : 0;   // W1054 — any workout
+        }
+        if (_plan.nightHours) {
+          const _se = _nightBy[dayIso];
+          v.night = (_se && typeof _se.totalAsleepHours === 'number' ? _se.totalAsleepHours : 0) >= _plan.nightHours;
+        }
+        vals.push(v);
+      }
+      const ts = _bossTotalScan(_plan, vals);
+      state.total_progress = ts.tail;
+      state.qualifying_progress = _plan.nightHours ? (ts.tail.nights | 0) : 0;
+      _persist();
+      // W1190 — only a missed night can end a hunt early now; totals can still be made up
+      if (_plan.nightHours) _run = { need: _plan.n, days: days, flags: vals.map(function (v) { return !!v.night; }), misses: vals.map(function (v) { return v.night ? null : 'sleep'; }), nights: true };
+      if (ts.hit >= 0) {
+        _startDay = days[ts.from];
+        _kill(days[ts.hit]);
+        defeated = true;
+      }
+    }
 
     // ── v3 Phase 1z.271B / W262 / W263 — B-rank back-to-back pair ──
     // Three bosses (Forge of Ten Thousand Days, Vow Keeper, Patient
@@ -2891,7 +3056,7 @@
     // scan for `consecutiveDays` back-to-back days. Covers S Erebus (3
     // pillars) and the A duals (one active pillar + sleep). Single-metric
     // branches below are guarded with !cfg.dailyAllOf so this can't fire them.
-    if (cfg.dailyAllOf === true && typeof cfg.consecutiveDays === 'number') {
+    if (!_plan && cfg.dailyAllOf === true && typeof cfg.consecutiveDays === 'number') {   // W1196 — totals bosses are judged above
       const days = _huntWindowLocalDays(start, evalEnd);
       let _sleepByDate = {};
       if (typeof cfg.sleepHours === 'number' && typeof H.getSleepBetween === 'function') {
@@ -2943,7 +3108,7 @@
     }
 
     // ── B-rank steps boss (Patient Flame) ──────────────────
-    if (!defeated &&
+    if (!defeated && !_plan &&
         cfg.dailyAllOf !== true &&
         typeof cfg.consecutiveDays === 'number' &&
         typeof cfg.stepThreshold === 'number' &&
@@ -2975,7 +3140,7 @@
     // Counts days inside the window where TOTAL workout minutes
     // for that day reach the threshold, any workout type (W1054;
     // it read strength training only until then).
-    if (!defeated &&
+    if (!defeated && !_plan &&
         cfg.dailyAllOf !== true &&
         typeof cfg.consecutiveDays === 'number' &&
         typeof cfg.workoutMinutes === 'number' &&
@@ -3188,7 +3353,7 @@
         }
       }
     }
-    return { defeated: defeated, day: _day, run: _run };
+    return { defeated: defeated, day: _day, run: _run, startDay: _startDay };
   }
 
   // W1190 — owner 2026-11-11: "For consecutive day challenges and other dungeons that have additional criteria, end them
@@ -30924,7 +31089,7 @@
         { emoji: '', title: 'Eight ultimates to find', description: "Any boss you beat can drop one: 1 kill in 40, and never one you already have. They live on Items, and each one has a Preview." },   // W1183 (was earned from milestones, W1168)
         { emoji: '', title: 'Every boss, set by real days', description: "Boss goals now climb one clear ladder: 2,000 steps a day at E up to 7,000 at S. Most are easier than before, and the sleep bosses ask for 7 hours, not 8." },   // W1182
         { emoji: '', title: 'A new morning briefing', description: "Your pact flames, your steps against the world average, a health fact, and a way to review the app. Tap the sun beside Manage to see it again." },   // W1178, W1179, W1194
-        { emoji: '', title: 'Multi-day bosses fall by themselves', description: "Two or three days in a row of sleep, steps or stairs, and the boss is yours, even if you open the app days later. No hunt to start and no fee up front: it comes out of the win." },   // W1176 (was W1167, the Patient Flame alone)
+        { emoji: '', title: 'Multi-day bosses add up', description: "Two- and three-day bosses count totals now: 10,000 steps over 2 days, split any way you like, and all of it in one day counts that day. Each night of sleep still needs its hours. They fall by themselves, with no hunt to start." },   // W1176 (was W1167, the Patient Flame alone)
         { emoji: '', title: 'A partner for every hunter', description: "No friends yet? You are paired with another active hunter for a daily hunt, and your Pact Flame grows each day you both walk." },   // W1179
         { emoji: '', title: 'Daily hunts that fit you', description: "Your daily duo hunt is picked from what you and your partner usually walk and climb: one of five bosses, and the stair bosses join if you both take the stairs." },   // W1195
         { emoji: '', title: 'Every step on the board', description: "Steps that arrive right after an upload now reach the Steps board." },
@@ -39078,6 +39243,8 @@
   function _huntSoloProgress(cfg, st) {
     const today = function (m) { try { return _ddTodayVal(m) | 0; } catch (_) { return 0; } };
     // W1190 — a multi-day run says where it stands before today's number: '1 / 3 days · 3,100 / 7,000 steps'
+    const _tp = _bossTotalPlan(cfg);   // W1196 — a totals boss reads its totals
+    if (_tp) { let id = null; try { id = Object.keys(BOSSES).find(function (k) { return BOSSES[k] === cfg; }) || null; } catch (_) {} return id ? _bossTotalsLine(cfg, _tp, _bossTotalsLocal(id, cfg, _tp)) : { pct: 0, line: String(cfg.killCondShort || '') }; }
     const runN = cfg.consecutiveDays || cfg.consecutiveNights, runPre = runN ? Math.min(st.qualifying_progress | 0, runN) + ' / ' + runN + ' days · ' : '';
     if (cfg.stepThreshold) {
       const cur = Math.max(st.step_progress | 0, today('steps_daily'));
@@ -62004,7 +62171,9 @@
     // W262 — B-rank back-to-back bosses render run dots from the
     // qualifying_progress mirror; flagged BEFORE the step branch so the
     // Patient Flame (stepThreshold + consecutiveDays) lands here.
-    const _isConsecBoss = (typeof cfg.consecutiveDays === 'number' || typeof cfg.consecutiveNights === 'number');
+    const _totPlan = _bossTotalPlan(cfg);   // W1196 — a totals boss: one dot and its totals, not day dots
+    const _totNow = _totPlan ? _bossTotalsLine(cfg, _totPlan, _bossTotalsLocal(id, cfg, _totPlan)) : null;
+    const _isConsecBoss = !_totPlan && (typeof cfg.consecutiveDays === 'number' || typeof cfg.consecutiveNights === 'number');
     const _consecTarget = _isConsecBoss ? (cfg.consecutiveDays || cfg.consecutiveNights) : 0;
     const _consecCur = _isConsecBoss ? Math.max(0, Math.min(_consecTarget,
       (typeof state.qualifying_progress === 'number') ? state.qualifying_progress : 0)) : 0;
@@ -62016,6 +62185,8 @@
       ? '<span class="bcard-dot' + (_wk.beaten ? ' bcard-dot--filled' : '') + '"></span>'
       : _isDualBoss
       ? '<span class="bcard-dot' + (_dualSatisfied ? ' bcard-dot--filled' : '') + '"></span>'
+      : _totNow
+      ? '<span class="bcard-dot' + (_totNow.pct >= 1 ? ' bcard-dot--filled' : '') + '"></span>'
       : _isConsecBoss
       ? Array.from({ length: _consecTarget }, (_, i) =>
           '<span class="bcard-dot' + (i < _consecCur ? ' bcard-dot--filled' : '') + '"></span>'
@@ -62157,6 +62328,8 @@
               ? ((state.strength_done === true ? '✓' : '○') + ' strength · ' +
                   Math.max(0, Math.min(cfg.activeEnergyKcal, (typeof state.energy_progress === 'number') ? state.energy_progress : 0)) +
                   ' / ' + cfg.activeEnergyKcal + ' kcal')
+              : _totNow
+              ? _totNow.line
               : _isConsecBoss
               ? (_consecCur + ' / ' + _consecTarget + ' ' + _bossProgressNoun(cfg) + ' · back-to-back')
               : (typeof cfg.flightThreshold === 'number'
@@ -62498,6 +62671,14 @@
           '<div class="bfs-dots">' + dots + '</div>' +
           '<div class="bfs-progress-label">' + esc(strengthLine) + '</div>' +
           '<div class="bfs-progress-label">' + esc(kcalLine) + '</div>';
+      } else if (_bossTotalPlan(cfg)) {
+        // W1196 — a totals boss: what today's stretch holds, one line per number (and the nights, when it asks for them)
+        const plan = _bossTotalPlan(cfg), cur = _bossTotalsLocal(id, cfg, plan), t = _bossTotalsLine(cfg, plan, cur);
+        const dots = '<span class="bfs-dot' + (t.pct >= 1 ? ' bfs-dot--filled' : '') + '"></span>';
+        progressEl.innerHTML =
+          '<div class="bfs-dots">' + dots + '</div>' +
+          t.line.split(' · ').map(function (x) { return '<div class="bfs-progress-label">' + esc(x) + '</div>'; }).join('') +
+          '<div class="bfs-progress-label">over ' + plan.n + ' days in a row' + (cur.days < plan.n && cur.days > 0 ? ' · ' + cur.days + ' so far' : '') + '</div>';
       } else if (typeof cfg.consecutiveDays === 'number' || typeof cfg.consecutiveNights === 'number') {
         // W262 — B-rank back-to-back run: dots show the CURRENT best run
         // inside the hunt window (qualifying_progress mirror). Checked

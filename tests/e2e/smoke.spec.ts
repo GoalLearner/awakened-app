@@ -10133,13 +10133,16 @@ test.describe('CB · The ready hunt (W1034 · W1039)', () => {
     expect((await boss(page, 'the_furnace_knight')).kill_count || 0).toBe(0);
   });
 
-  test('W1039 — days already finished count: 10,000 steps yesterday and today is the Patient Flame, never started', async ({ page }) => {
+  // W1196 — the Flame is a total now: 10,000 steps over two days in a row
+  test('W1039 — days already finished count: yesterday’s steps make up today’s for the Patient Flame, never started', async ({ page }) => {
     await hunter(page, { ...GATE.B });
-    await health(page, { days: { 0: { steps: 10400 } } });
-    expect(await offers(page)).not.toContain('the_patient_flame');                       // today alone is one day of two
+    await health(page, { days: { 0: { steps: 4400 } } });
+    await page.waitForTimeout(800);
+    expect((await boss(page, 'the_patient_flame')).kill_count || 0).toBe(0);              // 4,400 of 10,000
+    expect(await offers(page)).not.toContain('the_patient_flame');
     await page.evaluate(() => (window as any).closeReadyHunt && (window as any).closeReadyHunt());
     await page.locator('#rh-sheet [data-rh-close]').click({ timeout: 4000 }).catch(() => {});
-    await health(page, { days: { 0: { steps: 10400 }, 1: { steps: 11020 } } });
+    await health(page, { days: { 0: { steps: 4400 }, 1: { steps: 5600 } } });            // 10,000 in all
     // W1167 — the Flame is automated now: it falls by itself, never offered for a tap, the fee out of the win
     await expect.poll(() => boss(page, 'the_patient_flame').then((b: any) => b.kill_count || 0), { timeout: 8000 }).toBe(1);
     expect(await offers(page)).not.toContain('the_patient_flame');
@@ -10149,14 +10152,14 @@ test.describe('CB · The ready hunt (W1034 · W1039)', () => {
   });
 
   test('W1039 — a day is spent once per boss: yesterday\'s kill cannot lend its day to today', async ({ page }) => {
-    const twoDays = { days: { 0: { steps: 10400 }, 1: { steps: 11020 }, 2: { steps: 10100 } } };
+    const twoDays = { days: { 0: { steps: 6000 }, 1: { steps: 11020 }, 2: { steps: 10100 } } };   // W1196 — 6,000 today alone is short of 10,000
     await hunter(page, { ...GATE.B, the_patient_flame: { kill_count: 1, streak: 0, engaged: false, last_defeated_at: daysAgo(1) } });
     await page.evaluate(() => { (window as any).Bosses.BOSSES.the_patient_flame.autoKill = false; });   // W1167 — the judge alone
     await health(page, twoDays);
-    expect(await offers(page)).not.toContain('the_patient_flame');     // the window may only start today: one day of two
+    expect(await offers(page)).not.toContain('the_patient_flame');     // the window may only start today: 6,000 of 10,000
     await page.evaluate(() => { const b = JSON.parse(localStorage.getItem('hb_bosses') || '{}'); b.the_patient_flame.last_defeated_at = new Date(Date.now() - 2 * 86400000).toISOString(); localStorage.setItem('hb_bosses', JSON.stringify(b)); });
     await health(page, twoDays);
-    expect(await offers(page)).toContain('the_patient_flame');         // killed two days ago: yesterday and today are both fresh
+    expect(await offers(page)).toContain('the_patient_flame');         // killed two days ago: yesterday and today are both fresh (17,020)
   });
 
   test('W1039 — three days and a week: Erebus on three full days, the Gray Pilgrim on 56 flights in seven', async ({ page }) => {
@@ -10168,9 +10171,9 @@ test.describe('CB · The ready hunt (W1034 · W1039)', () => {
     expect(o).toContain('erebus_the_shadow_sovereign');
     expect(o).toContain('the_gray_pilgrim');
     expect(o[0]).toBe('erebus_the_shadow_sovereign');                  // S rank leads
-    // two full days is not three
+    // W1196 — Erebus is a total: 20,999 steps in three days is not 21,000
     await page.evaluate(() => (window as any).closeReadyHunt && (window as any).closeReadyHunt());
-    await health(page, { days: { 0: d, 1: d, 2: { steps: 4000, flights: 10 } } });
+    await health(page, { days: { 0: d, 1: d, 2: { steps: 199, flights: 10 } } });
     expect(await offers(page)).not.toContain('erebus_the_shadow_sovereign');
   });
 
