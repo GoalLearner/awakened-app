@@ -1,0 +1,101 @@
+name: Ship Campus Tycoon to TestFlight
+
+# Campus Tycoon is another app of the same developer account (GoalLearner/campus-tycoon, a public
+# repo). It is built, signed and uploaded from here because the signing secrets live on this repo
+# and GitHub cannot copy them to another one. Nothing of Awakened is read, built or changed: the
+# job checks out the Campus Tycoon repo and runs that repo's own script, scripts/ship-ios.sh.
+#
+#   gh workflow run ship-campus-tycoon.yml -R GoalLearner/awakened-app
+#
+# It uses this repo's IOS_DIST_P12_B64, IOS_DIST_P12_PASSWORD, ASC_API_KEY_ID, ASC_API_ISSUER_ID and
+# ASC_API_KEY_B64 (the certificate and the API key belong to the account, not to one app), and one
+# secret of its own: CT_ART_TOKEN, the read-only key for Campus Tycoon's private art. The
+# provisioning profile is fetched by name with the API key, so it needs no secret.
+#
+# To be moved into the Campus Tycoon repo when its own secrets are set there.
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: 'Campus Tycoon branch, tag or commit to build'
+        required: false
+        default: 'main'
+        type: string
+      build:
+        description: 'Build number. Blank = one above the newest build in TestFlight'
+        required: false
+        default: ''
+        type: string
+      upload:
+        description: '1 = upload to TestFlight. 0 = build and sign only'
+        required: false
+        default: '1'
+        type: choice
+        options: ['1', '0']
+      runner:
+        description: 'macOS runner'
+        required: false
+        default: 'macos-26'
+        type: choice
+        options: [macos-26, macos-15]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ship-campus-tycoon
+  cancel-in-progress: false
+
+jobs:
+  ship:
+    name: Campus Tycoon → TestFlight
+    runs-on: ${{ inputs.runner }}
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: GoalLearner/campus-tycoon
+          ref: ${{ inputs.ref }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Ruby xcodeproj (the script sets signing on the Xcode project with it)
+        run: |
+          ruby -e 'require "xcodeproj"' 2>/dev/null && echo "xcodeproj present" || sudo gem install xcodeproj --no-document
+
+      - name: Tool versions
+        run: |
+          echo "node $(node -v) · npm $(npm -v) · ruby $(ruby -v | cut -d' ' -f2)"
+          xcodebuild -version
+          git log -1 --format='Campus Tycoon at %h, %s'
+
+      - name: Build, sign and upload
+        env:
+          BUILD: ${{ inputs.build }}
+          UPLOAD: ${{ inputs.upload }}
+          TESTER_TOOLS: '1'
+          ART_TOKEN: ${{ secrets.CT_ART_TOKEN }}
+          IOS_DIST_P12_B64: ${{ secrets.IOS_DIST_P12_B64 }}
+          IOS_DIST_P12_PASSWORD: ${{ secrets.IOS_DIST_P12_PASSWORD }}
+          ASC_API_KEY_ID: ${{ secrets.ASC_API_KEY_ID }}
+          ASC_API_ISSUER_ID: ${{ secrets.ASC_API_ISSUER_ID }}
+          ASC_API_KEY_B64: ${{ secrets.ASC_API_KEY_B64 }}
+        run: bash scripts/ship-ios.sh
+
+      - name: Keep the build logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: campus-tycoon-ship-logs-${{ github.run_number }}
+          path: |
+            ${{ runner.temp }}/campus-ship/logs/
+            ${{ runner.temp }}/campus-ship/export/*.plist
+            ${{ runner.temp }}/campus-ship/export/*.log
+          if-no-files-found: ignore
+          retention-days: 14
