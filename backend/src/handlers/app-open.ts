@@ -38,6 +38,7 @@ import type { SessionPayload } from '../session-jwt';
 import { jsonOk } from '../lib/responses';
 import { SHADOW_BOSS_NAMES } from './public-achievement-events';
 import { ptDayKey } from '../lib/pact-streak';
+import { postOfficialFame } from '../lib/fame-posts';
 
 const EVENTS_MAX_PER_CALL = 10;
 const EVENT_NAME_RE = /^[a-z0-9_.-]{1,40}$/i;
@@ -116,6 +117,8 @@ export async function handleAppOpenPost(
          ON CONFLICT(user_id, day_pt) DO UPDATE SET opens = app_open_counts.opens + excluded.opens`,
       ).bind(session.userId, dayPt, opened).run();
     } catch { /* a counter must never fail the ping */ }
+    // W1199 — a second day in the app can make the week official: announce what it earned
+    await postOfficialFame(env, session.userId, nowMs);
   }
 
   // ── W834 — funnel events (optional, batched) ──

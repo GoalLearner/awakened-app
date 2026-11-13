@@ -39,7 +39,7 @@ function makeDb(opts: MakeDbOptions = {}) {
         const isFeed   = /FROM public_achievement_events/.test(sql) && !isInsert;
         return {
           all:   async () => ({
-            results: !isFeed ? [] : (/WHERE e\.event_type = 'shadow_drop'/.test(sql) && opts.publicShadowRows) || (opts.feedRows ?? []),
+            results: !isFeed ? [] : (/\(e\.event_type = 'shadow_drop' OR e\.client_event_id LIKE 'official:%'\)/.test(sql) && opts.publicShadowRows) || (opts.feedRows ?? []),
             success: true,
             meta: {},
           }),
@@ -818,18 +818,18 @@ describe('POST /v1/users/me/public-achievement-events — validation (1z.200)', 
   });
 
   // — step_100k_club_unlocked —
-  it('accepts a valid canonical step_100k_club_unlocked', async () => {
+  // W1199 — the server announces the 100K Step Club itself once the week is official (lib/fame-posts.ts):
+  // a phone's own post still validates, is acknowledged (so old builds stop retrying), and is not stored.
+  it('a valid canonical step_100k_club_unlocked from a phone is acknowledged and dropped (W1199)', async () => {
     const db = makeDb({ perInsertChanges: [1] });
     const res = await handlePublicAchievementEventsPost(
       makeReq({ events: [VALID_STEP_100K_CLUB] }),
       makeEnv(db), session,
     );
     expect(res.status).toBe(200);
-    const calls = db._calls();
-    expect(calls.filter((c) => !/^SELECT COUNT/.test(c.sql))[0]?.binds[3]).toBe('step_100k_club');
-    expect(calls.filter((c) => !/^SELECT COUNT/.test(c.sql))[0]?.binds[4]).toBe('joined the 100K Step Club');
-    expect(calls.filter((c) => !/^SELECT COUNT/.test(c.sql))[0]?.binds[5]).toBe(100000);
-    expect(calls.filter((c) => !/^SELECT COUNT/.test(c.sql))[0]?.binds[6]).toBeNull();
+    const body = (await res.json()) as { insertedCount: number; duplicateCount: number };
+    expect(body).toMatchObject({ insertedCount: 0, duplicateCount: 1 });
+    expect(db._calls().some((c) => /INSERT INTO public_achievement_events/.test(c.sql))).toBe(false);
   });
 
   it('rejects step_100k_club_unlocked with a 50K Step Club label', async () => {
@@ -1824,7 +1824,7 @@ describe('GET /v1/friends/activity — feed read (1z.200)', () => {
   it('the every-hunter read takes shadows only, honours blocks both ways, skips sims and is capped', async () => {
     const db = makeDb({ publicShadowRows: [] });
     await feed(db);
-    const q = db._calls().find((c) => /WHERE e\.event_type = 'shadow_drop'/.test(c.sql))!;
+    const q = db._calls().find((c) => /\(e\.event_type = 'shadow_drop' OR e\.client_event_id LIKE 'official:%'\)/.test(c.sql))!;
     expect(q.sql).not.toMatch(/FROM friends/);
     expect(q.sql).toMatch(/u\.apple_sub NOT LIKE 'sim_test_%'/);
     expect(q.sql).toMatch(/NOT IN \(SELECT blocked_id FROM board_blocks WHERE blocker_id = \?\)/);

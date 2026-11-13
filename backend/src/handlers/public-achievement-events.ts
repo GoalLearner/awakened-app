@@ -33,6 +33,7 @@
  *   "crossed 15,319 steps today" → exact step counts NEVER allowed
  */
 import type { Env } from '../env';
+import { FAME_FROM_MS } from '../lib/fame-posts';
 import type { SessionPayload } from '../session-jwt';
 import { jsonOk, jsonError } from '../lib/responses';
 
@@ -983,6 +984,9 @@ export async function handlePublicAchievementEventsPost(
   let insertedCount = 0;
   let duplicateCount = 0;
   for (const ev of valid) {
+    // W1199 — the server announces the 100K Step Club itself, once the week is official (fame-posts.ts);
+    // a phone's own post is acknowledged and dropped, so old builds stop retrying it.
+    if (ev.eventType === 'step_100k_club_unlocked') { duplicateCount++; continue; }
     if (room <= 0) { duplicateCount++; continue; }
     room -= 1;
     const id = crypto.randomUUID();
@@ -1089,6 +1093,7 @@ export async function handleFriendsActivityGet(
                 AND (f.requester_user_id = ? OR f.recipient_user_id = ?)
            ))
         AND e.server_created_at > ?
+        AND NOT (e.client_event_id = 'step_100k_club' AND e.server_created_at >= ${FAME_FROM_MS})
       ORDER BY e.server_created_at DESC
       LIMIT ?`,
   )
@@ -1106,7 +1111,7 @@ export async function handleFriendsActivityGet(
   // hides it both ways, as on every other public read, and sims never appear.
   const publicShadows = await env.DB.prepare(
     `${FEED_SELECT}
-      WHERE e.event_type = 'shadow_drop'
+      WHERE (e.event_type = 'shadow_drop' OR e.client_event_id LIKE 'official:%')   -- W1199 — the record books reach everyone
         AND e.server_created_at > ?
         AND u.apple_sub NOT LIKE 'sim_test_%'
         AND e.user_id NOT IN (SELECT blocked_id FROM board_blocks WHERE blocker_id = ?)

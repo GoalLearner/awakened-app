@@ -38,6 +38,7 @@ import type { Env } from '../env';
 import type { SessionPayload } from '../session-jwt';
 import { jsonOk, jsonError } from '../lib/responses';
 import { isValidMetric, isWeeklyMetric, METRIC_CAPS, maxPlausibleStepTotal, type Metric } from '../lib/metrics';
+import { postOfficialFame } from '../lib/fame-posts';
 import { getAccoladeWeekStart } from '../lib/accolade-week';
 
 // v3 Phase 1z.27 -- 100K Step Club accolade. Awarded inline during
@@ -421,6 +422,9 @@ export async function handleLeaderboardSubmit(
         .run();
     }
   }
+
+  // W1199 — the steps can be what puts an official week in the 100K Club or the Hall of Fame: announce it
+  if (metric === 'step_total' && !isSimUser) await postOfficialFame(env, session.userId, now);
 
   return jsonOk({
     metric,
