@@ -7371,6 +7371,9 @@ test.describe('BI · Briefing names a new update (W986 → the board tile, W1178
 // your steps, and Write a review, in place of the to-do card. W1179 — steps against the world
 // average, a health fact once the update is read, and the matched partner's pact.
 test.describe('BI2 · Briefing tiles (W1178, W1179)', () => {
+  // The app's day is the Pacific date (getPTDate). Pin the browser clock to it, so the seeded
+  // step days and today() agree with the app on a UTC CI runner after 4 PM PST too.
+  test.use({ timezoneId: 'America/Los_Angeles' });
   async function seed(page: Page, o: { you?: number; days?: number; friends?: number; match?: number | null }) {
     await freshApp(page);
     await page.addInitScript(([you, days, friends, match]) => {
