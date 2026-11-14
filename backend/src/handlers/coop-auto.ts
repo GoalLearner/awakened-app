@@ -79,6 +79,16 @@
  * consent as a summoned trio (W677: a summoner and two of their friends) — with no block or
  * switch-off between any two of them. Yesterday's trios are kept while all three stay eligible
  * (their Pact Flames can grow), then trios of three mutual friends, then the strongest walkers.
+ *
+ * W1209 — MIXED AND COLLECTED (owner 2026-11-14: "I just want to mix up the automations ...
+ * everyday the twin maw was just getting beat by everyone and just getting the same reward every
+ * time. If we can mix it up and make sure users maximize by getting all the drops"). Among the
+ * bosses a group can finish (the fit and rank rules above, unchanged), choosePick takes: a boss
+ * someone in the group still lacks a drop from (rare or ultra rare, AUTO_BOSS_DROPS), when there
+ * is one; then the one fewest of the group are already on in today's automatic hunts (one hunter's
+ * friends don't all land on the same boss); then the one the group hunted longest ago (its own last
+ * AUTO_HISTORY_DAYS); then the best. W1207's ultra-only rule is folded in: a boss is passed over
+ * only when every hunter in the group owns ALL its drops.
  */
 import type { Env } from '../env';
 import type { SessionPayload } from '../session-jwt';
@@ -108,19 +118,33 @@ import {
 export const AUTO_HUNT_MIN_W = 1097;
 /** One-day duo bosses, best first (W1195: the flights bosses join; sleep duos still wait). */
 export const AUTO_BOSSES: readonly string[] = ['the_sundered_choir', 'the_hollow_monarch', 'the_gaunt_wardens', 'the_coursing_dread', 'the_twin_maw'];
-/** W1207 — each automatic boss's ultra rares, from the client catalog (rarity 'ultra_rare',
- *  source_boss). A test reads app.js so the two cannot drift. */
-export const AUTO_BOSS_ULTRAS: Readonly<Record<string, readonly string[]>> = {
-  the_sundered_choir: ['the_choirmasters_vestment'],
-  the_hollow_monarch: ['the_hollow_crown'],
-  the_gaunt_wardens: ['the_wardens_vigil'],
-  the_coursing_dread: ['the_long_pursuit'],
-  the_twin_maw: ['bothsight_longbow'],
-  // W1208 — the trios: the Court has its own relic; the other three pool their rank's spoils (W1104)
-  the_trinity_colossus: ['striders_of_the_tideless_road', 'mantle_of_the_long_vigil', 'amulet_of_the_endless_stair', 'skyward_vigil_ring', 'duskforge_greatblade', 'aetherspire_staff', 'wraithwind_bow', 'forgewarden_gauntlets'],
-  the_triune_sentinel: ['the_hollow_crown', 'the_choirmasters_vestment', 'gauntlets_of_ten_thousand_days', 'amulet_of_the_kept_word', 'ember_ledger_of_the_patient_flame'],
-  the_threefold_court: ['vestments_of_the_final_verdict'],
-  the_crossroads_hound: ['roadwardens_harness', 'titan_oathblade', 'horizon_step_ring', 'crown_of_deep_rest'],
+/** W1209 — every drop of each automatic boss (rare + ultra rare; co-op pools have no commons), from
+ *  the client catalog: the items whose source_boss is the boss, or the boss's own pool (W1104). A
+ *  test reads app.js so the two cannot drift. */
+export const AUTO_BOSS_DROPS: Readonly<Record<string, readonly string[]>> = {
+  the_sundered_choir: ['the_choirmasters_vestment', 'the_discordant_crown', 'the_sundered_grips', 'the_antiphon_striders'],
+  the_hollow_monarch: ['the_hollow_crown', 'the_monarchs_writ', 'crownpiercer'],
+  the_gaunt_wardens: ['the_wardens_vigil', 'the_stairwalkers_treads', 'the_famished_circlet', 'the_gaunt_mantle'],
+  the_coursing_dread: ['the_long_pursuit', 'houndsfang_recurve', 'coursing_houndcall'],
+  the_twin_maw: ['bothsight_longbow', 'twin_fang_cleaver', 'twofold_gaze'],
+  // the trios: the Court has its own relics; the other three pool their rank's spoils (W1104)
+  the_trinity_colossus: [
+    'striders_of_the_tideless_road', 'mantle_of_the_long_vigil', 'amulet_of_the_endless_stair', 'skyward_vigil_ring',
+    'duskforge_greatblade', 'aetherspire_staff', 'wraithwind_bow', 'forgewarden_gauntlets',
+    'band_of_the_roadkeeper', 'restplate_of_the_wanderer', 'nightcrown_of_the_climb', 'ascent_worn_cloak',
+    'anvilrest_cuirass', 'charm_of_the_emberkeeper',
+  ],
+  the_triune_sentinel: [
+    'the_hollow_crown', 'the_choirmasters_vestment', 'gauntlets_of_ten_thousand_days', 'amulet_of_the_kept_word',
+    'ember_ledger_of_the_patient_flame',
+    'the_monarchs_writ', 'crownpiercer', 'the_discordant_crown', 'the_sundered_grips', 'the_antiphon_striders',
+    'hammerfall_warmaul', 'ring_of_the_unbroken_vow', 'boots_of_the_long_road',
+  ],
+  the_threefold_court: ['vestments_of_the_final_verdict', 'courthunters_grips', 'seal_of_the_threefold_court'],
+  the_crossroads_hound: [
+    'roadwardens_harness', 'titan_oathblade', 'horizon_step_ring', 'crown_of_deep_rest',
+    'milestone_cowl', 'longroad_grips', 'wardens_plate', 'glass_path_boots', 'tyrants_sleep_mask',
+  ],
 };
 /** W1208 — the one-day steps trios, best first. */
 export const AUTO_TRIO_BOSSES: readonly string[] = ['the_trinity_colossus', 'the_triune_sentinel', 'the_threefold_court', 'the_crossroads_hound'];
@@ -175,58 +199,80 @@ export function pairKey(a: string, b: string): string {
 
 export interface AutoPick { bossId: string; goalSteps: number; goalFlights?: number }
 
-/** The boss and goal for a pair: the best boss both ranks allow whose printed goals all fit
+/** W1209 — what the pick weighs beyond fit, for one group. The defaults (every boss useful, nobody
+ *  on anything today, nothing hunted before) give the best boss that fits, as before W1207. */
+export interface PickPrefs {
+  /** someone in the group still lacks one of the boss's drops */
+  useful?: (bossId: string) => boolean;
+  /** how many of the group are already on this boss in today's automatic hunts */
+  today?: (bossId: string) => number;
+  /** the group's last automatic hunt day on this boss, 'YYYY-MM-DD' ('' = never) */
+  last?: (bossId: string) => string;
+}
+
+/** W1209 — which of the bosses that fit (best first) to hunt: one someone in the group still needs a
+ *  drop from, when there is one; then the one fewest of the group are already on today; then the one
+ *  the group hunted longest ago; then the best. */
+export function choosePick<T extends { bossId: string }>(fits: T[], prefs: PickPrefs = {}): T | null {
+  if (!fits.length) return null;
+  const useful = prefs.useful ?? (() => true);
+  const today = prefs.today ?? (() => 0);
+  const last = prefs.last ?? (() => '');
+  const need = fits.filter((p) => useful(p.bossId));
+  const pool = need.length ? need : fits;
+  let best = pool[0];
+  for (const p of pool.slice(1)) {
+    const d = today(p.bossId) - today(best.bossId);
+    if (d < 0 || (d === 0 && last(p.bossId) < last(best.bossId))) best = p;
+  }
+  return best;
+}
+
+/** The boss and goal for a pair: among the bosses both ranks allow whose printed goals all fit
  *  AUTO_FIT × the pair's averages (steps a day; flights a day, null when either phone has not sent
- *  one), else The Twin Maw sized to the pair's walking. For a flights boss goalSteps holds the
- *  flights, as the catalog and isGoalMet do. W1207 — a boss in `spent` (both own all its ultra
- *  rares) is passed over for the next that fits; if every boss that fits is spent, the best one. */
-export function pickAutoBoss(rankA: string, rankB: string, pairPattern: number, pairFlights: number | null = null, spent: ReadonlySet<string> = new Set()): AutoPick {
+ *  one), the one choosePick takes (W1209); none fits → The Twin Maw sized to the pair's walking.
+ *  For a flights boss goalSteps holds the flights, as the catalog and isGoalMet do. */
+export function pickAutoBoss(rankA: string, rankB: string, pairPattern: number, pairFlights: number | null = null, prefs: PickPrefs = {}): AutoPick {
   const r = Math.min(RANK_ORDER[rankA] ?? 0, RANK_ORDER[rankB] ?? 0);
   const fit = AUTO_FIT * Math.max(0, Number(pairPattern) || 0);
   const fl = pairFlights == null || !Number.isFinite(Number(pairFlights)) ? null : AUTO_FIT * Math.max(0, Number(pairFlights));
-  let best: AutoPick | null = null;
+  const fits: AutoPick[] = [];
   for (const bossId of AUTO_BOSSES) {
     const cfg = COOP_BOSS_CFG[bossId];
     if (!cfg || (RANK_ORDER[cfg.rank] ?? 0) > r) continue;
     if (cfg.windowHours !== 24 || (cfg.partySize ?? 2) !== 2) continue;
-    let pick: AutoPick | null = null;
     if (cfg.metric === 'steps') {
-      if (cfg.goalSteps <= fit) pick = { bossId, goalSteps: cfg.goalSteps };
+      if (cfg.goalSteps <= fit) fits.push({ bossId, goalSteps: cfg.goalSteps });
     } else if (cfg.metric === 'flights') {
-      if (fl !== null && cfg.goalSteps <= fl) pick = { bossId, goalSteps: cfg.goalSteps };
+      if (fl !== null && cfg.goalSteps <= fl) fits.push({ bossId, goalSteps: cfg.goalSteps });
     } else if (cfg.metric === 'both') {
       const gf = cfg.goalFlights ?? 0;
-      if (fl !== null && cfg.goalSteps <= fit && gf <= fl) pick = { bossId, goalSteps: cfg.goalSteps, goalFlights: gf };
+      if (fl !== null && cfg.goalSteps <= fit && gf <= fl) fits.push({ bossId, goalSteps: cfg.goalSteps, goalFlights: gf });
     }
-    if (!pick) continue;
-    if (!spent.has(bossId)) return pick;
-    best ??= pick;
   }
-  if (best) return best;
+  const chosen = choosePick(fits, prefs);
+  if (chosen) return chosen;
   const sized = Math.max(AUTO_MIN_GOAL, Math.round(fit / 100) * 100);
   return { bossId: AUTO_SIZED_BOSS, goalSteps: sized };
 }
 
-/** W1208 — a trio's boss: the best steps trio every rank allows whose goal fits AUTO_FIT × the
- *  three's combined pattern, passing over a spent one (all three own its ultra rares) unless every
- *  fitting one is spent; nothing fits → The Crossroads Hound sized to the walking; null when no
- *  trio boss is open to the lowest rank (E). */
-export function pickAutoTrioBoss(ranks: string[], trioPattern: number, spent: ReadonlySet<string> = new Set()): AutoPick | null {
+/** W1208 — a trio's boss: among the steps trios every rank allows whose goal fits AUTO_FIT × the
+ *  three's combined pattern, the one choosePick takes (W1209); none fits → The Crossroads Hound
+ *  sized to the walking; null when no trio boss is open to the lowest rank (E). */
+export function pickAutoTrioBoss(ranks: string[], trioPattern: number, prefs: PickPrefs = {}): AutoPick | null {
   const r = Math.min(...ranks.map((k) => RANK_ORDER[k] ?? 0));
   const fit = AUTO_FIT * Math.max(0, Number(trioPattern) || 0);
-  let best: AutoPick | null = null;
+  const fits: AutoPick[] = [];
   let open = false;
   for (const bossId of AUTO_TRIO_BOSSES) {
     const cfg = COOP_BOSS_CFG[bossId];
     if (!cfg || (RANK_ORDER[cfg.rank] ?? 0) > r) continue;
     if (cfg.windowHours !== 24 || cfg.partySize !== 3 || cfg.metric !== 'steps') continue;
     open = true;
-    if (cfg.goalSteps > fit) continue;
-    const pick: AutoPick = { bossId, goalSteps: cfg.goalSteps };
-    if (!spent.has(bossId)) return pick;
-    best ??= pick;
+    if (cfg.goalSteps <= fit) fits.push({ bossId, goalSteps: cfg.goalSteps });
   }
-  if (best) return best;
+  const chosen = choosePick(fits, prefs);
+  if (chosen) return chosen;
   if (!open) return null;
   return { bossId: AUTO_TRIO_SIZED_BOSS, goalSteps: Math.max(AUTO_TRIO_MIN_GOAL, Math.round(fit / 100) * 100) };
 }
@@ -342,42 +388,108 @@ async function flightsAvgByUser(env: Env, nowMs: number): Promise<Map<string, nu
   return out;
 }
 
-/** W1207 — the automatic bosses' ultra rares each hunter owns now (cloud save hb_inventory →
- *  cards[id].count > 0). A hunter with no save, or a failed read, owns none: nothing is passed over. */
-export async function ownedAutoUltras(env: Env, userIds: string[]): Promise<Map<string, Set<string>>> {
+/** W1209 — which automatic-boss drops each hunter owns now (cloud save hb_inventory → cards[id].count
+ *  > 0; a sold last copy is not owned). A hunter with no save, or a failed read, owns none, so every
+ *  boss still counts as useful to them. */
+export async function ownedAutoDrops(env: Env, userIds: readonly string[]): Promise<Map<string, Set<string>>> {
   const out = new Map<string, Set<string>>();
   const ids = Array.from(new Set(userIds.filter(Boolean)));
-  const items = Array.from(new Set(Object.values(AUTO_BOSS_ULTRAS).flat()));
-  if (!ids.length || !items.length) return out;
+  if (!ids.length) return out;
+  // the item ids are this file's own constants ([a-z_]), never input
+  const items = Array.from(new Set(Object.values(AUTO_BOSS_DROPS).flat())).map((it) => `'${it}'`).join(', ');
   try {
-    // the item ids are this file's own constants ([a-z_]), never input
-    const cols = items.map((it) => `json_extract(inv, '$.cards.${it}.count') AS "${it}"`).join(', ');
     const rows = (await env.DB.prepare(
-      `SELECT user_id, ${cols}
-         FROM (SELECT user_id, json_extract(state_json, '$.keys.hb_inventory') AS inv
-                 FROM user_state_snapshots WHERE user_id IN (${ids.map(() => '?').join(', ')}))`,
-    ).bind(...ids).all<Record<string, unknown>>()).results ?? [];
+      `SELECT s.user_id AS user_id, j.key AS item
+         FROM user_state_snapshots s, json_each(json_extract(s.state_json, '$.keys.hb_inventory'), '$.cards') j
+        WHERE s.user_id IN (${ids.map(() => '?').join(', ')})
+          AND j.key IN (${items})
+          AND COALESCE(json_extract(j.value, '$.count'), 0) > 0`,
+    ).bind(...ids).all<{ user_id: string; item: string }>()).results ?? [];
     for (const r of rows) {
-      const own = new Set<string>();
-      for (const it of items) if ((Number(r[it]) || 0) > 0) own.add(it);
-      out.set(String(r.user_id), own);
+      if (!r.user_id || !r.item) continue;
+      if (!out.has(r.user_id)) out.set(r.user_id, new Set());
+      out.get(r.user_id)!.add(r.item);
     }
   } catch (err) {
-    console.error('[coop-auto] ultra ownership read failed', err);
+    console.error('[coop-auto] drop ownership read failed', err);
   }
   return out;
 }
 
-/** W1207 — the automatic bosses whose every ultra rare both hunters (W1208: every hunter given)
- *  already own. */
-export function spentBossesFor(owned: Map<string, Set<string>>, ...ids: string[]): Set<string> {
-  const out = new Set<string>();
-  const sets = ids.map((id) => owned.get(id));
-  if (!sets.length || sets.some((s) => !s)) return out;
-  for (const [bossId, items] of Object.entries(AUTO_BOSS_ULTRAS)) {
-    if (items.length && items.every((it) => sets.every((s) => s!.has(it)))) out.add(bossId);
-  }
-  return out;
+/** W1209 — someone in the group still lacks one of the boss's drops. */
+export function stillNeeded(owned: Map<string, Set<string>>, ids: readonly string[], bossId: string): boolean {
+  const drops = AUTO_BOSS_DROPS[bossId] ?? [];
+  return drops.length > 0 && ids.some((u) => drops.some((it) => !owned.get(u)?.has(it)));
+}
+
+/** W1209 — how far back a group's own automatic bosses are remembered for the rotation. */
+export const AUTO_HISTORY_DAYS = 14;
+
+/** W1209 — what one sweep's picks read: each group's recent bosses, today's automatic hunts per
+ *  hunter (kept current as the sweep makes rows), and the group's drops. Loaded once per sweep. */
+export interface PickContext {
+  prefsFor(ids: readonly string[]): Promise<PickPrefs>;
+  /** count a hunt this sweep just made into today's tally */
+  add(ids: readonly string[], bossId: string): void;
+}
+
+export function makePickContext(env: Env, today: string): PickContext {
+  let histP: Promise<Map<string, Map<string, string>>> | null = null;
+  let todayP: Promise<Map<string, Map<string, number>>> | null = null;
+  let todayMap: Map<string, Map<string, number>> | null = null;
+  const bump = (m: Map<string, Map<string, number>>, uid: string, bossId: string) => {
+    if (!m.has(uid)) m.set(uid, new Map());
+    const per = m.get(uid)!;
+    per.set(bossId, (per.get(bossId) ?? 0) + 1);
+  };
+  const history = () => (histP ??= (async () => {
+    const out = new Map<string, Map<string, string>>();
+    let since = today;
+    for (let i = 0; i < AUTO_HISTORY_DAYS; i++) since = prevDay(since) || since;
+    try {
+      const rows = (await env.DB.prepare(
+        `SELECT pair_key, boss_id, MAX(hunt_day) AS d FROM coop_boss_instances
+          WHERE hunt_day >= ? AND hunt_day < ? AND auto = 1 AND pair_key IS NOT NULL
+          GROUP BY pair_key, boss_id`,
+      ).bind(since, today).all<{ pair_key: string; boss_id: string; d: string | null }>()).results ?? [];
+      for (const r of rows) {
+        if (!r.pair_key || !r.boss_id) continue;
+        if (!out.has(r.pair_key)) out.set(r.pair_key, new Map());
+        out.get(r.pair_key)!.set(r.boss_id, String(r.d || ''));
+      }
+    } catch (err) {
+      console.error('[coop-auto] hunt history read failed', err);
+    }
+    return out;
+  })());
+  const todays = () => (todayP ??= (async () => {
+    const out = new Map<string, Map<string, number>>();
+    try {
+      const rows = (await env.DB.prepare(
+        `SELECT boss_id, challenger_user_id AS a, partner_user_id AS b, partner2_user_id AS c
+           FROM coop_boss_instances WHERE hunt_day = ? AND auto = 1`,
+      ).bind(today).all<{ boss_id: string; a: string | null; b: string | null; c: string | null }>()).results ?? [];
+      for (const r of rows) for (const uid of [r.a, r.b, r.c]) if (uid && r.boss_id) bump(out, uid, r.boss_id);
+    } catch (err) {
+      console.error('[coop-auto] today\'s hunts read failed', err);
+    }
+    todayMap = out;
+    return out;
+  })());
+  return {
+    async prefsFor(ids) {
+      const [hist, tod, owned] = await Promise.all([history(), todays(), ownedAutoDrops(env, ids)]);
+      const mine = hist.get([...ids].sort().join('|')) ?? new Map<string, string>();
+      return {
+        useful: (bossId) => stillNeeded(owned, ids, bossId),
+        today: (bossId) => ids.reduce((n, u) => n + (tod.get(u)?.get(bossId) ?? 0), 0),
+        last: (bossId) => mine.get(bossId) ?? '',
+      };
+    },
+    add(ids, bossId) {
+      if (todayMap) for (const uid of ids) bump(todayMap, uid, bossId);
+    },
+  };
 }
 
 /** W1195 — the pair's flights a day, or null when either phone has not sent an average. */
@@ -516,6 +628,7 @@ export async function sweepCoopAutoHunts(env: Env, _ctx?: ExecutionContext): Pro
     const thisWeek = getAccoladeWeekStart(nowMs);
     const lastWeek = priorWeekStart(thisWeek);
     const elapsed = elapsedDaysPt(thisWeek, today);
+    const picks = makePickContext(env, today);   // W1209 — drops, today's bosses, each group's rotation
     // The lookups both passes share, read once and only when a pass needs them.
     let sharedP: Promise<Shared> | null = null;
     const shared = () => (sharedP ??= Promise.all([
@@ -545,23 +658,23 @@ export async function sweepCoopAutoHunts(env: Env, _ctx?: ExecutionContext): Pro
           const pa = pattern(a);
           const pb = pattern(b);
           if (pa === null || pb === null) { out.skipped++; continue; }
-          const spent = spentBossesFor(await ownedAutoUltras(env, [a, b]), a, b);   // W1207
-          const pick = pickAutoBoss(ranks.get(a) ?? 'E', ranks.get(b) ?? 'E', pa + pb, pairFlightsOf(flights, a, b), spent);
-          if (await createAutoHunt(env, a, b, today, pick)) out.created++;
+          const prefs = await picks.prefsFor([a, b]);   // W1209
+          const pick = pickAutoBoss(ranks.get(a) ?? 'E', ranks.get(b) ?? 'E', pa + pb, pairFlightsOf(flights, a, b), prefs);
+          if (await createAutoHunt(env, a, b, today, pick)) { out.created++; picks.add([a, b], pick.bossId); }
         }
       }
     }
 
     // ── W1164 — matched partners: active hunters with no friends, paired with each other ──
     try {
-      out.matched = await sweepMatchedPairs(env, nowMs, today, thisWeek, elapsed, hasFriend, shared);
+      out.matched = await sweepMatchedPairs(env, nowMs, today, thisWeek, elapsed, hasFriend, shared, picks);
     } catch (err) {
       console.error('[coop-auto] matched sweep failed', err);
     }
 
     // ── W1208 — automatic trios ──
     try {
-      if (pairs.size >= 2) out.trios = await sweepAutoTrios(env, today, elapsed, pairs, shared, out.created + out.matched);
+      if (pairs.size >= 2) out.trios = await sweepAutoTrios(env, today, elapsed, pairs, shared, out.created + out.matched, picks);
     } catch (err) {
       console.error('[coop-auto] trio sweep failed', err);
     }
@@ -580,6 +693,7 @@ async function sweepMatchedPairs(
   elapsed: number,
   hasFriend: Set<string>,
   shared: () => Promise<Shared>,
+  picks: PickContext,
 ): Promise<number> {
   const dayStartMs = Date.parse(ptMidnightIso(today) || '');
   if (!Number.isFinite(dayStartMs)) return 0;
@@ -642,9 +756,9 @@ async function sweepMatchedPairs(
   for (const [a, b] of pickMatchedPairs(pool, keep, busyToday, isBlocked)) {
     if (made >= MAX_CREATE_PER_RUN) break;
     if (doneToday.has(pairKey(a, b))) continue;   // today's row already stands
-    const spent = spentBossesFor(await ownedAutoUltras(env, [a, b]), a, b);   // W1207
-    const pick = pickAutoBoss(ranks.get(a) ?? 'E', ranks.get(b) ?? 'E', (byId.get(a)?.pattern ?? 0) + (byId.get(b)?.pattern ?? 0), pairFlightsOf(flights, a, b), spent);
-    if (await createAutoHunt(env, a, b, today, pick, true)) made++;
+    const prefs = await picks.prefsFor([a, b]);   // W1209
+    const pick = pickAutoBoss(ranks.get(a) ?? 'E', ranks.get(b) ?? 'E', (byId.get(a)?.pattern ?? 0) + (byId.get(b)?.pattern ?? 0), pairFlightsOf(flights, a, b), prefs);
+    if (await createAutoHunt(env, a, b, today, pick, true)) { made++; picks.add([a, b], pick.bossId); }
   }
   return made;
 }
@@ -657,6 +771,7 @@ async function sweepAutoTrios(
   pairs: Map<string, [string, string]>,
   shared: () => Promise<Shared>,
   madeSoFar: number,
+  picks: PickContext,
 ): Promise<number> {
   const friendsOf = new Map<string, Set<string>>();
   for (const [a, b] of pairs.values()) {
@@ -696,10 +811,10 @@ async function sweepAutoTrios(
   let made = 0;
   for (const trio of pickAutoTrios(pool, friendsOf, keep, busyToday, isBlocked, (id) => pattern(id) ?? 0)) {
     if (madeSoFar + made >= MAX_CREATE_PER_RUN) break;
-    const spent = spentBossesFor(await ownedAutoUltras(env, trio), ...trio);   // W1207
-    const pick = pickAutoTrioBoss(trio.map((u) => ranks.get(u) ?? 'E'), trio.reduce((s, u) => s + (pattern(u) ?? 0), 0), spent);
+    const prefs = await picks.prefsFor(trio);   // W1209
+    const pick = pickAutoTrioBoss(trio.map((u) => ranks.get(u) ?? 'E'), trio.reduce((s, u) => s + (pattern(u) ?? 0), 0), prefs);
     if (!pick) continue;
-    if (await createAutoTrio(env, trio, today, pick)) made++;
+    if (await createAutoTrio(env, trio, today, pick)) { made++; picks.add(trio, pick.bossId); }
   }
   return made;
 }
