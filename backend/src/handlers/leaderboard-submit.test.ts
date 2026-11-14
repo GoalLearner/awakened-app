@@ -77,8 +77,8 @@ describe('POST /v1/leaderboard/submit -- weekly scoping (1z.33)', () => {
   // Pin time to Wed 2026-05-20 20:00 UTC (13:00 PDT). The Sunday-Pacific
   // week-start key is still '2026-05-17' (unchanged from the original
   // Sunday pin, so every week_start assertion below holds), but placing
-  // "now" mid-week gives the W585 step_total velocity clamp its full 150k
-  // headroom (elapsed ≈ 4 days × 50k/day = 200k, capped to 150k) so the
+  // "now" mid-week gives the W585 step_total velocity clamp plenty of
+  // headroom (elapsed ≈ 4 days × 100k/day = 400k since W1203) so the
   // suite's synthetic high-value submits (88k, 104k) still validate. The
   // clamp's own boundary behavior is covered in its dedicated describe below.
   beforeEach(() => {
@@ -627,10 +627,12 @@ describe('POST /v1/leaderboard/submit -- weekly scoping (1z.33)', () => {
   // The flat cap alone (150k) let a fabricated near-cap value dominate the
   // shared board on day 1 of the week and permanently poison the MAX-sticky
   // best_value → Hall-of-Fame / 100K-club accolades. The clamp rejects any
-  // step_total above min(150k, elapsedDays × 50k) BEFORE any DB write.
+  // step_total above elapsedDays × 100k BEFORE any DB write. W1203 took the
+  // 150k cap out (owner: "Take out the step cap"); the flat bound is now
+  // 700k = 7 × 100k, so the clamp is the only line.
   describe('step_total velocity clamp (W585)', () => {
     it('rejects an implausible day-1 (Sunday) submit above the elapsed-day ceiling', async () => {
-      // Sunday 2026-05-17 06:00 PDT → elapsed = 1 day → ceiling = 50k.
+      // Sunday 2026-05-17 06:00 PDT → elapsed = 1 day → ceiling = 100k.
       vi.setSystemTime(new Date(Date.UTC(2026, 4, 17, 13, 0, 0)));
       const db = makeDb(null);
       const env = makeEnv(db);
@@ -645,7 +647,7 @@ describe('POST /v1/leaderboard/submit -- weekly scoping (1z.33)', () => {
     });
 
     it('accepts a normal day-1 accumulation under the ceiling', async () => {
-      vi.setSystemTime(new Date(Date.UTC(2026, 4, 17, 13, 0, 0)));   // day 1 → 50k ceiling
+      vi.setSystemTime(new Date(Date.UTC(2026, 4, 17, 13, 0, 0)));   // day 1 → 100k ceiling
       const db = makeDb({ current_value: 40000, best_value: 40000 });
       const env = makeEnv(db);
       const res = await handleLeaderboardSubmit(makeReq({ metric: 'step_total', current_value: 40000 }), env, session);
@@ -654,20 +656,33 @@ describe('POST /v1/leaderboard/submit -- weekly scoping (1z.33)', () => {
       expect(calls.find(c => c.sql.includes('INSERT INTO leaderboard_snapshots'))).toBeDefined();
     });
 
-    it('allows a full-week (day-7 Saturday) total up to the flat cap', async () => {
-      // Saturday 2026-05-23 13:00 PDT → week_start still 2026-05-17, elapsed = 7 → ceiling = 150k.
-      vi.setSystemTime(new Date(Date.UTC(2026, 4, 23, 20, 0, 0)));
-      const db = makeDb({ current_value: 140000, best_value: 140000 });
+    it('W1203: the 150k cap is gone — a real 243,095-step week (Sunday to Friday) is stored as it is', async () => {
+      // Friday 2026-05-22 13:00 PDT → elapsed = 6 → ceiling = 600k.
+      vi.setSystemTime(new Date(Date.UTC(2026, 4, 22, 20, 0, 0)));
+      const db = makeDb({ current_value: 243095, best_value: 243095 });
       const env = makeEnv(db);
-      const res = await handleLeaderboardSubmit(makeReq({ metric: 'step_total', current_value: 140000 }), env, session);
+      const res = await handleLeaderboardSubmit(makeReq({ metric: 'step_total', current_value: 243095 }), env, session);
+      expect(res.status).toBe(200);
+      const calls = (db as unknown as { _calls(): CapturedCall[] })._calls();
+      const up = calls.find(c => c.sql.includes('INSERT INTO leaderboard_snapshots'));
+      expect(up).toBeDefined();
+      expect(up!.binds).toContain(243095);
+    });
+
+    it('allows a full-week (day-7 Saturday) total up to 700k, the 7 × 100k line', async () => {
+      // Saturday 2026-05-23 13:00 PDT → week_start still 2026-05-17, elapsed = 7 → ceiling = 700k.
+      vi.setSystemTime(new Date(Date.UTC(2026, 4, 23, 20, 0, 0)));
+      const db = makeDb({ current_value: 328394, best_value: 328394 });
+      const env = makeEnv(db);
+      const res = await handleLeaderboardSubmit(makeReq({ metric: 'step_total', current_value: 328394 }), env, session);
       expect(res.status).toBe(200);
     });
 
-    it('rejects a value above the lowered 150k flat cap even late in the week', async () => {
-      vi.setSystemTime(new Date(Date.UTC(2026, 4, 23, 20, 0, 0)));   // day 7
+    it('still rejects a number no one can walk: above 100k a day on average', async () => {
+      vi.setSystemTime(new Date(Date.UTC(2026, 4, 23, 20, 0, 0)));   // day 7 → 700k
       const db = makeDb(null);
       const env = makeEnv(db);
-      const res = await handleLeaderboardSubmit(makeReq({ metric: 'step_total', current_value: 160000 }), env, session);
+      const res = await handleLeaderboardSubmit(makeReq({ metric: 'step_total', current_value: 700001 }), env, session);
       expect(res.status).toBe(400);
       const body = (await res.json()) as { error: string };
       expect(body.error).toBe('INVALID_VALUE');

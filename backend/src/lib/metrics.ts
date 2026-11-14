@@ -55,8 +55,12 @@ export const METRIC_CAPS: Readonly<Record<Metric, number>> = {
    * board early in the week either. Neither is true anti-cheat (device
    * attestation is still the durable fix) — but together they stop the
    * cross-user leaderboard/Hall-of-Fame/100K-club poisoning that a flat
-   * 200k cap allowed. */
-  step_total: 150_000,
+   * 200k cap allowed.
+   * W1203 (owner 2026-11-14: "Take out the step cap") — the 150k cap is gone:
+   * a hunter's real weekly total shows (Killua walked 243,095 in six days and
+   * the board read 150,000). What stays is only a guard against broken or
+   * forged numbers: 7 days × STEP_TOTAL_PER_DAY_CEILING, a pace no one walks. */
+  step_total: 700_000,
   /** Consecutive nights ≥7h sleep. 365 = full year; cap protects
    * against accidental millisecond-style values. */
   sleep_streak: 365,
@@ -87,12 +91,14 @@ export function isValidMetric(value: unknown): value is Metric {
 }
 
 // W585 — per-day plausibility ceiling for the weekly cumulative step total.
-// A very big real day (a marathon ≈ 50k steps) sits at this line; sustaining
-// >50k EVERY day for a week is ultra-athlete territory that effectively no
-// account reaches, so a legit accumulator never trips it. The purpose is to
-// stop a fabricated weekly total from occupying rank #1 early in the week when
-// only a day or two has elapsed.
-export const STEP_TOTAL_PER_DAY_CEILING = 50_000;
+// The purpose is to stop a fabricated weekly total from occupying rank #1 early
+// in the week when only a day or two has elapsed.
+// W1203 — raised from 50k to 100k with the step cap's removal: a real hunter
+// logged 61,121 in a day and averaged ~44k for 13 days, so 50k was a line real
+// people reach. 100k a day on average (≈45 miles, every day) is past anything
+// a person sustains, so this only stops broken or forged numbers. The co-op
+// hunts' per-day step line (duels.ts COOP_VALUE_PER_DAY) uses the same number.
+export const STEP_TOTAL_PER_DAY_CEILING = 100_000;
 
 /**
  * Elapsed days (1..7) into the current weekly window given `nowMs` and the

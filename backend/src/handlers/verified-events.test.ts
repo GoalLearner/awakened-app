@@ -90,16 +90,17 @@ describe('POST /v1/verified-events (W1040)', () => {
     expect(inserts.length).toBe(0);
   });
 
-  it('a co-op value is capped per day of the hunt window: 50,000 steps and 300 flights a day', async () => {
+  it('a co-op value is capped per day of the hunt window: 100,000 steps (W1203) and 300 flights a day', async () => {
     const day = makeEnv(24);
-    expect((await send(day.env, [ev({ value: 50_000 })])).inserted).toBe(1);
-    const over = await send(day.env, [ev({ value: 50_001, client_event_id: 'b' }), ev({ value: 150_000, client_event_id: 'c' })]);
+    expect((await send(day.env, [ev({ value: 61_121 })])).inserted).toBe(1);   // a real big day, refused at the old 50k line
+    expect((await send(day.env, [ev({ value: 100_000, client_event_id: 'a2' })])).inserted).toBe(1);
+    const over = await send(day.env, [ev({ value: 100_001, client_event_id: 'b' }), ev({ value: 300_000, client_event_id: 'c' })]);
     expect(over.errors.map((e) => e.reason)).toEqual(['INVALID_VALUE', 'INVALID_VALUE']);
-    expect(day.inserts.length).toBe(1);
-    // an 80-hour raid is four days: 200,000 is the line
+    expect(day.inserts.length).toBe(2);
+    // an 80-hour raid is four days: 400,000 is the line
     const raid = makeEnv(80);
-    expect((await send(raid.env, [ev({ value: 150_000 })])).inserted).toBe(1);
-    expect((await send(raid.env, [ev({ value: 200_001, client_event_id: 'd' })])).errors[0].reason).toBe('INVALID_VALUE');
+    expect((await send(raid.env, [ev({ value: 300_000 })])).inserted).toBe(1);
+    expect((await send(raid.env, [ev({ value: 400_001, client_event_id: 'd' })])).errors[0].reason).toBe('INVALID_VALUE');
   });
 
   it('the hunt-membership checks still stand: a stranger, or a hunt that is not live, stores nothing', async () => {

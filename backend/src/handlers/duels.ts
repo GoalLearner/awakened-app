@@ -20,6 +20,7 @@ import { jsonOk, jsonError } from '../lib/responses';
 // validated (participant + active + in-window) before insert so the
 // server-authoritative co-op win can't be forged or won past the window.
 import { validateBossInstanceForUser } from './coop-boss';
+import { STEP_TOTAL_PER_DAY_CEILING } from '../lib/metrics';
 // v3 Phase 1z.279 — Duels permanently retired. This file is now
 // the residual carrier for two endpoints only:
 //   - POST /v1/verified-events     (handleVerifiedEventsSubmit)
@@ -79,7 +80,9 @@ const EVENT_VALUE_CAPS: Record<string, number> = { sleep_minutes_total: 10080 };
 // line is leaderboard-submit's STEP_TOTAL_PER_DAY_CEILING. Not anti-cheat (a forged client
 // can still lie inside human limits) but a single request can no longer finish any hunt
 // with one absurd number. Largest real values on record at the time: 44,375 steps, 181 flights.
-const COOP_VALUE_PER_DAY: Record<string, number> = { steps_total: 50_000, flights_total: 300 };
+// W1203 — the step line follows the board's guard, now 100,000 a day (a real 61,121-step day
+// would have been refused at 50,000).
+const COOP_VALUE_PER_DAY: Record<string, number> = { steps_total: STEP_TOTAL_PER_DAY_CEILING, flights_total: 300 };
 // W1075 SECURITY — and a ceiling that follows the clock: whatever the window allows, a hunter
 // cannot have walked more than `base + perHour × hours since the hunt began` (the per-day line
 // above let one request finish any hunt the minute it started — every goal sits under one
