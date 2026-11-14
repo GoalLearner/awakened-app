@@ -67,6 +67,18 @@
  * that still fits. A better boss is already the pick whenever it fits, so the move is down the
  * list. When every boss that fits is spent for both, the best of them still runs: the day's hunt
  * keeps the Pact Flame and pays its souls and rares.
+ *
+ * W1208 — AUTOMATIC TRIOS (owner 2026-11-14: "Throw in some trio bosses in the automatic list as
+ * well"). On top of the duos, each hunter can be in ONE automatic trio a day, on one of the four
+ * one-day steps trios (The Trinity Colossus A, The Triune Sentinel B, The Threefold Court C, The
+ * Crossroads Hound D), picked by the same rules: every hunter's rank allows it, the goal fits
+ * AUTO_FIT × the three's combined daily pattern, a boss whose ultra rares all three already own
+ * is passed over (W1207). Nothing fits → The Crossroads Hound sized to the three's walking
+ * (floor AUTO_TRIO_MIN_GOAL). An E-rank hunter is never put in one (no trio boss is open to E).
+ * Who: three eligible hunters (the duo gates) where one is friends with both others — the same
+ * consent as a summoned trio (W677: a summoner and two of their friends) — with no block or
+ * switch-off between any two of them. Yesterday's trios are kept while all three stay eligible
+ * (their Pact Flames can grow), then trios of three mutual friends, then the strongest walkers.
  */
 import type { Env } from '../env';
 import type { SessionPayload } from '../session-jwt';
@@ -104,7 +116,17 @@ export const AUTO_BOSS_ULTRAS: Readonly<Record<string, readonly string[]>> = {
   the_gaunt_wardens: ['the_wardens_vigil'],
   the_coursing_dread: ['the_long_pursuit'],
   the_twin_maw: ['bothsight_longbow'],
+  // W1208 — the trios: the Court has its own relic; the other three pool their rank's spoils (W1104)
+  the_trinity_colossus: ['striders_of_the_tideless_road', 'mantle_of_the_long_vigil', 'amulet_of_the_endless_stair', 'skyward_vigil_ring', 'duskforge_greatblade', 'aetherspire_staff', 'wraithwind_bow', 'forgewarden_gauntlets'],
+  the_triune_sentinel: ['the_hollow_crown', 'the_choirmasters_vestment', 'gauntlets_of_ten_thousand_days', 'amulet_of_the_kept_word', 'ember_ledger_of_the_patient_flame'],
+  the_threefold_court: ['vestments_of_the_final_verdict'],
+  the_crossroads_hound: ['roadwardens_harness', 'titan_oathblade', 'horizon_step_ring', 'crown_of_deep_rest'],
 };
+/** W1208 — the one-day steps trios, best first. */
+export const AUTO_TRIO_BOSSES: readonly string[] = ['the_trinity_colossus', 'the_triune_sentinel', 'the_threefold_court', 'the_crossroads_hound'];
+export const AUTO_TRIO_SIZED_BOSS = 'the_crossroads_hound';
+/** W1208 — a sized trio never asks less than 1,000 steps a hunter. */
+export const AUTO_TRIO_MIN_GOAL = 3000;
 /** W1182 — 0.9 → 0.75: at 90% of a pair's usual walking, any slow day lost the hunt (39% lost).
  *  W1195 — 0.75 → 0.8: the owner's "within 80% of the averages of the two users". */
 export const AUTO_FIT = 0.8;
@@ -183,6 +205,73 @@ export function pickAutoBoss(rankA: string, rankB: string, pairPattern: number, 
   if (best) return best;
   const sized = Math.max(AUTO_MIN_GOAL, Math.round(fit / 100) * 100);
   return { bossId: AUTO_SIZED_BOSS, goalSteps: sized };
+}
+
+/** W1208 — a trio's boss: the best steps trio every rank allows whose goal fits AUTO_FIT × the
+ *  three's combined pattern, passing over a spent one (all three own its ultra rares) unless every
+ *  fitting one is spent; nothing fits → The Crossroads Hound sized to the walking; null when no
+ *  trio boss is open to the lowest rank (E). */
+export function pickAutoTrioBoss(ranks: string[], trioPattern: number, spent: ReadonlySet<string> = new Set()): AutoPick | null {
+  const r = Math.min(...ranks.map((k) => RANK_ORDER[k] ?? 0));
+  const fit = AUTO_FIT * Math.max(0, Number(trioPattern) || 0);
+  let best: AutoPick | null = null;
+  let open = false;
+  for (const bossId of AUTO_TRIO_BOSSES) {
+    const cfg = COOP_BOSS_CFG[bossId];
+    if (!cfg || (RANK_ORDER[cfg.rank] ?? 0) > r) continue;
+    if (cfg.windowHours !== 24 || cfg.partySize !== 3 || cfg.metric !== 'steps') continue;
+    open = true;
+    if (cfg.goalSteps > fit) continue;
+    const pick: AutoPick = { bossId, goalSteps: cfg.goalSteps };
+    if (!spent.has(bossId)) return pick;
+    best ??= pick;
+  }
+  if (best) return best;
+  if (!open) return null;
+  return { bossId: AUTO_TRIO_SIZED_BOSS, goalSteps: Math.max(AUTO_TRIO_MIN_GOAL, Math.round(fit / 100) * 100) };
+}
+
+/** W1208 — the day's automatic trios (each sorted a < b < c). Kept trios first (all three still in
+ *  the pool, one still friends with both others, nothing blocked), then every trio where one hunter
+ *  is friends with both others: three mutual friends first, then the highest combined `weight`,
+ *  then the key. A hunter is in at most one; `busyToday` hunters are in none. Pure. */
+export function pickAutoTrios(
+  pool: ReadonlySet<string>,
+  friendsOf: ReadonlyMap<string, ReadonlySet<string>>,
+  keep: ReadonlyArray<readonly string[]>,
+  busyToday: ReadonlySet<string>,
+  isBlocked: (a: string, b: string) => boolean,
+  weight: (id: string) => number,
+): Array<[string, string, string]> {
+  const fr = (a: string, b: string) => !!friendsOf.get(a)?.has(b);
+  const ok = (t: readonly string[]) =>
+    t.length === 3 && new Set(t).size === 3 && t.every((x) => pool.has(x)) &&
+    !isBlocked(t[0], t[1]) && !isBlocked(t[0], t[2]) && !isBlocked(t[1], t[2]) &&
+    ((fr(t[0], t[1]) && fr(t[0], t[2])) || (fr(t[1], t[0]) && fr(t[1], t[2])) || (fr(t[2], t[0]) && fr(t[2], t[1])));
+  const sorted = (t: readonly string[]) => [...t].sort() as [string, string, string];
+  const used = new Set<string>(busyToday);
+  const out: Array<[string, string, string]> = [];
+  const take = (t: [string, string, string]) => { out.push(t); t.forEach((x) => used.add(x)); };
+  for (const k of keep) {
+    const t = sorted(k);
+    if (ok(t) && t.every((x) => !used.has(x))) take(t);
+  }
+  const cands = new Map<string, { t: [string, string, string]; mutual: boolean; w: number }>();
+  for (const hub of [...pool].sort()) {
+    const fs = [...(friendsOf.get(hub) ?? [])].filter((f) => f !== hub && pool.has(f)).sort();
+    for (let i = 0; i < fs.length; i++) {
+      for (let j = i + 1; j < fs.length; j++) {
+        const t = sorted([hub, fs[i], fs[j]]);
+        const key = t.join('|');
+        if (cands.has(key) || !ok(t)) continue;
+        cands.set(key, { t, mutual: fr(t[0], t[1]) && fr(t[0], t[2]) && fr(t[1], t[2]), w: t.reduce((s, x) => s + (Number(weight(x)) || 0), 0) });
+      }
+    }
+  }
+  const list = [...cands.entries()].sort(([ka, a], [kb, b]) =>
+    (Number(b.mutual) - Number(a.mutual)) || (b.w - a.w) || (ka < kb ? -1 : ka > kb ? 1 : 0));
+  for (const [, c] of list) if (c.t.every((x) => !used.has(x))) take(c.t);
+  return out;
 }
 
 /** The lookups both sweeps share: opt-outs, blocks, builds, ranks, steps this week and last, and
@@ -279,13 +368,14 @@ export async function ownedAutoUltras(env: Env, userIds: string[]): Promise<Map<
   return out;
 }
 
-/** W1207 — the automatic bosses whose every ultra rare both hunters already own. */
-export function spentBossesFor(owned: Map<string, Set<string>>, a: string, b: string): Set<string> {
+/** W1207 — the automatic bosses whose every ultra rare both hunters (W1208: every hunter given)
+ *  already own. */
+export function spentBossesFor(owned: Map<string, Set<string>>, ...ids: string[]): Set<string> {
   const out = new Set<string>();
-  const oa = owned.get(a), ob = owned.get(b);
-  if (!oa || !ob) return out;
+  const sets = ids.map((id) => owned.get(id));
+  if (!sets.length || sets.some((s) => !s)) return out;
   for (const [bossId, items] of Object.entries(AUTO_BOSS_ULTRAS)) {
-    if (items.length && items.every((it) => oa.has(it) && ob.has(it))) out.add(bossId);
+    if (items.length && items.every((it) => sets.every((s) => s!.has(it)))) out.add(bossId);
   }
   return out;
 }
@@ -367,10 +457,45 @@ export async function createAutoHunt(
   return Number(res[0]?.meta?.changes ?? 0) > 0;
 }
 
+/** W1208 — one automatic trio row, all three seats joined, idempotent on (pair_key "a|b|c",
+ *  hunt_day) like a duo. True when this call created the row. */
+export async function createAutoTrio(env: Env, trio: readonly string[], dayKey: string, pick: AutoPick): Promise<boolean> {
+  const cfg = COOP_BOSS_CFG[pick.bossId];
+  if (!cfg || cfg.partySize !== 3) return false;
+  const [challenger, partner, partner2] = [...trio].sort();
+  if (!challenger || !partner || !partner2 || new Set([challenger, partner, partner2]).size !== 3) return false;
+  const id = crypto.randomUUID();
+  const startsAt = ptMidnightIso(dayKey);
+  const endsAt = ptMidnightIso(nextDay(dayKey));
+  if (!startsAt || !endsAt) return false;
+  const seat = (uid: string) => env.DB
+    .prepare(
+      `INSERT OR IGNORE INTO coop_boss_participants (instance_id, user_id, joined_at)
+         SELECT ?1, ?2, ?3 WHERE EXISTS (SELECT 1 FROM coop_boss_instances WHERE id = ?1)`,
+    )
+    .bind(id, uid, startsAt);
+  const res = await env.DB.batch([
+    env.DB
+      .prepare(
+        `INSERT OR IGNORE INTO coop_boss_instances
+           (id, boss_id, boss_rank, challenger_user_id, partner_user_id, partner2_user_id,
+            partner_joined_at, partner2_joined_at, goal_steps, goal_flights, reward_souls,
+            status, starts_at, ends_at, auto, hunt_day, pair_key, matched)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, 'active', ?, ?, 1, ?, ?, 0)`,
+      )
+      .bind(id, pick.bossId, cfg.rank, challenger, partner, partner2, startsAt, startsAt, pick.goalSteps,
+        cfg.rewardSouls, startsAt, endsAt, dayKey, [challenger, partner, partner2].join('|')),
+    seat(partner),
+    seat(partner2),
+  ]);
+  return Number(res[0]?.meta?.changes ?? 0) > 0;
+}
+
 /** Cron, every 2 minutes: today's hunt for every walking friend pair that has none yet, then
- *  (W1164) today's hunt for every matched pair of active hunters who have no friends. */
-export async function sweepCoopAutoHunts(env: Env, _ctx?: ExecutionContext): Promise<{ created: number; pairs: number; skipped: number; matched: number }> {
-  const out = { created: 0, pairs: 0, skipped: 0, matched: 0 };
+ *  (W1164) today's hunt for every matched pair of active hunters who have no friends, then
+ *  (W1208) today's automatic trios. */
+export async function sweepCoopAutoHunts(env: Env, _ctx?: ExecutionContext): Promise<{ created: number; pairs: number; skipped: number; matched: number; trios: number }> {
+  const out = { created: 0, pairs: 0, skipped: 0, matched: 0, trios: 0 };
   try {
     const nowMs = Date.now();
     const today = ptDayKey(nowMs);
@@ -432,6 +557,13 @@ export async function sweepCoopAutoHunts(env: Env, _ctx?: ExecutionContext): Pro
       out.matched = await sweepMatchedPairs(env, nowMs, today, thisWeek, elapsed, hasFriend, shared);
     } catch (err) {
       console.error('[coop-auto] matched sweep failed', err);
+    }
+
+    // ── W1208 — automatic trios ──
+    try {
+      if (pairs.size >= 2) out.trios = await sweepAutoTrios(env, today, elapsed, pairs, shared, out.created + out.matched);
+    } catch (err) {
+      console.error('[coop-auto] trio sweep failed', err);
     }
   } catch (err) {
     console.error('[coop-auto] hunt sweep failed', err);
@@ -513,6 +645,61 @@ async function sweepMatchedPairs(
     const spent = spentBossesFor(await ownedAutoUltras(env, [a, b]), a, b);   // W1207
     const pick = pickAutoBoss(ranks.get(a) ?? 'E', ranks.get(b) ?? 'E', (byId.get(a)?.pattern ?? 0) + (byId.get(b)?.pattern ?? 0), pairFlightsOf(flights, a, b), spent);
     if (await createAutoHunt(env, a, b, today, pick, true)) made++;
+  }
+  return made;
+}
+
+/** W1208 — today's automatic trios (see the header). Returns how many rows it made. */
+async function sweepAutoTrios(
+  env: Env,
+  today: string,
+  elapsed: number,
+  pairs: Map<string, [string, string]>,
+  shared: () => Promise<Shared>,
+  madeSoFar: number,
+): Promise<number> {
+  const friendsOf = new Map<string, Set<string>>();
+  for (const [a, b] of pairs.values()) {
+    if (!friendsOf.has(a)) friendsOf.set(a, new Set());
+    if (!friendsOf.has(b)) friendsOf.set(b, new Set());
+    friendsOf.get(a)!.add(b);
+    friendsOf.get(b)!.add(a);
+  }
+  // Today's and yesterday's automatic trios: today's hunters are taken, yesterday's trios are kept.
+  const yesterday = prevDay(today) || today;
+  const rows = (await env.DB.prepare(
+    `SELECT challenger_user_id AS a, partner_user_id AS b, partner2_user_id AS c, hunt_day AS d
+       FROM coop_boss_instances
+      WHERE auto = 1 AND partner2_user_id IS NOT NULL AND hunt_day >= ? ORDER BY hunt_day DESC`,
+  ).bind(yesterday).all<{ a: string; b: string; c: string; d: string }>()).results ?? [];
+  const busyToday = new Set<string>();
+  const keep: string[][] = [];
+  for (const r of rows) {
+    if (!r.a || !r.b || !r.c) continue;
+    if (r.d === today) { busyToday.add(r.a); busyToday.add(r.b); busyToday.add(r.c); }
+    else keep.push([r.a, r.b, r.c]);
+  }
+
+  const [optouts, blocks, builds, ranks, stepsNow, stepsLast] = await shared();
+  const pattern = (uid: string) => dailyPattern(stepsLast.get(uid) ?? 0, stepsNow.get(uid) ?? 0, elapsed);
+  const pool = new Set<string>();
+  for (const uid of friendsOf.keys()) {
+    if (pattern(uid) === null) continue;                              // no steps on the server: no goal to size
+    if (buildW(builds.get(uid)) < AUTO_HUNT_MIN_W) continue;          // the automatic client is not on their phone
+    if (optouts.has(uid + '>*')) continue;                            // switched automatic hunts off
+    if ((RANK_ORDER[ranks.get(uid) ?? 'E'] ?? 0) < (RANK_ORDER.D ?? 1)) continue;   // no trio boss is open to E
+    pool.add(uid);
+  }
+  if (pool.size < 3) return 0;
+  const isBlocked = (a: string, b: string) =>
+    blocks.has(pairKey(a, b)) || optouts.has(a + '>' + b) || optouts.has(b + '>' + a);
+  let made = 0;
+  for (const trio of pickAutoTrios(pool, friendsOf, keep, busyToday, isBlocked, (id) => pattern(id) ?? 0)) {
+    if (madeSoFar + made >= MAX_CREATE_PER_RUN) break;
+    const spent = spentBossesFor(await ownedAutoUltras(env, trio), ...trio);   // W1207
+    const pick = pickAutoTrioBoss(trio.map((u) => ranks.get(u) ?? 'E'), trio.reduce((s, u) => s + (pattern(u) ?? 0), 0), spent);
+    if (!pick) continue;
+    if (await createAutoTrio(env, trio, today, pick)) made++;
   }
   return made;
 }

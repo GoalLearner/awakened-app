@@ -30,7 +30,10 @@ import {
   AUTO_FIT,
   AUTO_BOSSES,
   AUTO_BOSS_ULTRAS,
+  AUTO_TRIO_BOSSES,
   ownedAutoUltras,
+  pickAutoTrioBoss,
+  pickAutoTrios,
   spentBossesFor,
   pairFlightsOf,
 } from './coop-auto';
@@ -102,6 +105,43 @@ describe('pickAutoBoss — the best one-day duo both ranks allow whose printed g
     expect(pickAutoBoss('C', 'C', 20000, null, new Set(['the_coursing_dread', 'the_twin_maw']))).toEqual({ bossId: 'the_coursing_dread', goalSteps: 8000 });
     expect(pickAutoBoss('C', 'C', 9999, null, new Set(['the_twin_maw']))).toEqual({ bossId: 'the_twin_maw', goalSteps: 4000 });
   });
+  // W1208 — owner: "Throw in some trio bosses in the automatic list as well"
+  it('W1208: a trio gets the best steps trio every rank allows that fits 0.8 × the three\'s walking', () => {
+    expect(pickAutoTrioBoss(['A', 'S', 'A'], 23000)).toEqual({ bossId: 'the_trinity_colossus', goalSteps: 18000 });
+    expect(pickAutoTrioBoss(['S', 'S+', 'B'], 20000)).toEqual({ bossId: 'the_triune_sentinel', goalSteps: 15000 });   // the B hunter keeps the A out
+    expect(pickAutoTrioBoss(['C', 'C', 'B'], 16000)).toEqual({ bossId: 'the_threefold_court', goalSteps: 12000 });
+    expect(pickAutoTrioBoss(['D', 'S', 'S'], 40000)).toEqual({ bossId: 'the_crossroads_hound', goalSteps: 9000 });
+  });
+  it('W1208: spent trios are passed over; nothing fits → the Hound sized; an E hunter → no trio', () => {
+    expect(pickAutoTrioBoss(['C', 'C', 'C'], 16000, new Set(['the_threefold_court']))).toEqual({ bossId: 'the_crossroads_hound', goalSteps: 9000 });
+    expect(pickAutoTrioBoss(['C', 'C', 'C'], 16000, new Set(['the_threefold_court', 'the_crossroads_hound']))).toEqual({ bossId: 'the_threefold_court', goalSteps: 12000 });
+    expect(pickAutoTrioBoss(['C', 'C', 'C'], 10000)).toEqual({ bossId: 'the_crossroads_hound', goalSteps: 8000 });
+    expect(pickAutoTrioBoss(['C', 'C', 'C'], 2000)).toEqual({ bossId: 'the_crossroads_hound', goalSteps: 3000 });
+    expect(pickAutoTrioBoss(['E', 'S', 'S'], 40000)).toBeNull();
+  });
+  it('W1208: trios — one hunter friends with both others; mutual friends first; one trio a hunter; kept trios stay', () => {
+    const f = (edges: string[]) => {
+      const m = new Map<string, Set<string>>();
+      for (const e of edges) { const [a, b] = e.split('-'); (m.get(a) ?? m.set(a, new Set()).get(a)!).add(b); (m.get(b) ?? m.set(b, new Set()).get(b)!).add(a); }
+      return m;
+    };
+    const none = () => false;
+    const w = (id: string) => ({ a: 5, b: 4, c: 3, d: 2, e: 1, x: 9, y: 9 } as Record<string, number>)[id] ?? 0;
+    const g = f(['a-b', 'a-c', 'a-d', 'c-d', 'x-a', 'y-a']);
+    // x and y (weight 9) make a|x|y the strongest star, but a|c|d is three mutual friends
+    expect(pickAutoTrios(new Set(['a', 'b', 'c', 'd', 'x', 'y']), g, [], new Set(), none, w)).toEqual([['a', 'c', 'd']]);
+    // a star is enough: b and d are both a's friends
+    expect(pickAutoTrios(new Set(['a', 'b', 'd']), f(['a-b', 'a-d']), [], new Set(), none, w)).toEqual([['a', 'b', 'd']]);
+    // a block between the two leaves stops it; no common friend = no trio
+    expect(pickAutoTrios(new Set(['a', 'b', 'd']), f(['a-b', 'a-d']), [], new Set(), (p, q) => (p === 'b' && q === 'd') || (p === 'd' && q === 'b'), w)).toEqual([]);
+    expect(pickAutoTrios(new Set(['a', 'b', 'd']), f(['a-b']), [], new Set(), none, w)).toEqual([]);
+    // yesterday's trio is kept ahead of a mutual one; today's hunters are in none
+    expect(pickAutoTrios(new Set(['a', 'b', 'c', 'd', 'x', 'y']), g, [['y', 'a', 'x']], new Set(), none, w)).toEqual([['a', 'x', 'y']]);
+    expect(pickAutoTrios(new Set(['a', 'b', 'c', 'd']), g, [], new Set(['a']), none, w)).toEqual([]);
+    // two hubs, two trios, nobody twice
+    const two = pickAutoTrios(new Set(['a', 'b', 'c', 'd', 'e', 'x']), f(['a-b', 'a-c', 'd-e', 'd-x']), [], new Set(), none, w);
+    expect(two).toEqual([['a', 'b', 'c'], ['d', 'e', 'x']]);   // equal walking: by key
+  });
   it('W1207: spent = both own every ultra rare; one owner, or no save, is not enough', () => {
     const owned = new Map([
       ['a', new Set(['the_long_pursuit', 'bothsight_longbow'])],
@@ -117,7 +157,13 @@ describe('pickAutoBoss — the best one-day duo both ranks allow whose printed g
     const ultras: Record<string, string[]> = {};
     let m: RegExpExecArray | null;
     while ((m = re.exec(app))) if (m[4] === 'ultra_rare') (ultras[m[3]] ??= []).push(m[2]);
-    for (const bossId of AUTO_BOSSES) {
+    // W1208 — a drop source with a pool (the D, B and A trios) drops its pool's ultra rares
+    const card = /\n {4}([a-z0-9_]+): \{\r?\n {6}id: +'([a-z0-9_]+)',[\s\S]*?\r?\n {4}\},/g;
+    while ((m = card.exec(app))) {
+      const pool = /pool: \{\s*ultra_rare: \[([^\]]*)\]/.exec(m[0]);
+      if (pool && AUTO_TRIO_BOSSES.includes(m[2])) ultras[m[2]] = pool[1].split(',').map((x) => x.trim().replace(/'/g, '')).filter(Boolean);
+    }
+    for (const bossId of [...AUTO_BOSSES, ...AUTO_TRIO_BOSSES]) {
       expect(ultras[bossId] ?? [], bossId).not.toEqual([]);
       expect([...(AUTO_BOSS_ULTRAS[bossId] ?? [])].sort(), bossId).toEqual([...(ultras[bossId] ?? [])].sort());
     }
@@ -175,6 +221,7 @@ interface SweepFixture {
   kills?: { user_id: string; kill_days: number; kills: number; created_at: number }[];
   matchedWeek?: { a: string; b: string; d: string }[];
   ultras?: Record<string, string[]>;   // W1207 — the ultra rares each hunter's cloud save holds
+  trioRows?: { a: string; b: string; c: string; d: string }[];   // W1208 — today's / yesterday's automatic trios
 }
 interface Call { sql: string; args: unknown[] }
 
@@ -183,6 +230,7 @@ function sweepDb(f: SweepFixture, calls: Call[]) {
   const lastWeek = priorWeekStart(thisWeek);
   const results = (sql: string, args: unknown[]): unknown[] => {
     if (sql.includes('FROM friends')) return f.friends ?? [];
+    if (sql.includes('partner2_user_id IS NOT NULL AND hunt_day')) return f.trioRows ?? [];   // W1208
     if (sql.includes('FROM user_state_snapshots')) {   // W1207 — one row per hunter with a save, a column per ultra rare
       return args.filter((id) => f.ultras && (id as string) in f.ultras).map((id) => {
         const row: Record<string, unknown> = { user_id: id };
@@ -288,6 +336,38 @@ describe('sweepCoopAutoHunts — one sized hunt per walking friend pair per day'
     await sweepCoopAutoHunts(makeEnv(sweepDb(base, plain)), ctx);
     const plainPairs = new Map(plain.filter((c) => c.sql.includes('INSERT OR IGNORE INTO coop_boss_instances')).map((c) => [c.args[12], c]));
     expect(plainPairs.get('u1|u3')!.args[1]).toBe('the_coursing_dread');
+  });
+
+  it('W1208 — three friends get one automatic trio, all seats joined; the duos are made as before', async () => {
+    const trioFix: SweepFixture = {
+      friends: [{ a: 'u1', b: 'u3' }, { a: 'u3', b: 'u5' }, { a: 'u5', b: 'u1' }, { a: 'u1', b: 'u2' }],
+      builds: { u1: NEW, u2: NEW, u3: NEW, u5: NEW },
+      ranks: { u1: 'C', u2: 'E', u3: 'C', u5: 'B' },
+      stepsThisWeek: { u1: 30000, u2: 15000, u3: 40000, u5: 30000 },
+      stepsLastWeek: { u1: 70000, u2: 35000, u3: 80000, u5: 60000 },
+    };
+    const calls: Call[] = [];
+    const res = await sweepCoopAutoHunts(makeEnv(sweepDb(trioFix, calls)), ctx);
+    expect(res.created).toBe(4);   // the four friend pairs
+    expect(res.trios).toBe(1);     // u2 is E-rank: only u1, u3, u5
+    const trio = calls.filter((c) => c.sql.includes('INSERT OR IGNORE INTO coop_boss_instances') && c.args[13] === 'u1|u3|u5');
+    expect(trio.length).toBe(1);
+    const t = trio[0];
+    // pattern ≈ 11.1k + 13.3k + 10k = 34.4k, × 0.8 = 27.6k; the C hunters cap it at the Threefold Court
+    expect(t.args.slice(1, 6)).toEqual(['the_threefold_court', 'C', 'u1', 'u3', 'u5']);
+    expect(t.args[8]).toBe(12000);
+    expect(t.args[12]).toBe(today);
+    const seats = calls.filter((c) => c.sql.includes('INTO coop_boss_participants') && c.args[0] === t.args[0]);
+    expect(seats.map((c) => c.args[1])).toEqual(['u3', 'u5']);
+    // all three own the Court's ultra rare → the Crossroads Hound
+    const spentCalls: Call[] = [];
+    await sweepCoopAutoHunts(makeEnv(sweepDb({ ...trioFix, ultras: { u1: ['vestments_of_the_final_verdict'], u3: ['vestments_of_the_final_verdict'], u5: ['vestments_of_the_final_verdict'] } }, spentCalls)), ctx);
+    const t2 = spentCalls.find((c) => c.sql.includes('INSERT OR IGNORE INTO coop_boss_instances') && c.args[13] === 'u1|u3|u5')!;
+    expect(t2.args[1]).toBe('the_crossroads_hound');
+    // today's trio already stands → no second
+    const again: Call[] = [];
+    const res2 = await sweepCoopAutoHunts(makeEnv(sweepDb({ ...trioFix, trioRows: [{ a: 'u1', b: 'u3', c: 'u5', d: today }] }, again)), ctx);
+    expect(res2.trios).toBe(0);
   });
 
   it('W1207 — ownedAutoUltras reads count > 0; a failed read owns nothing', async () => {
