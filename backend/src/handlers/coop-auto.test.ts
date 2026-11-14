@@ -621,6 +621,21 @@ describe('sweepCoopAutoHunts — the automatic raid (W1211)', () => {
     const q = calls.find((c) => c.sql.includes('partner2_user_id IS NOT NULL AND hunt_day'))!;
     expect(q.sql).toContain("boss_id IN ('the_trinity_colossus', 'the_triune_sentinel', 'the_threefold_court', 'the_crossroads_hound')");
   });
+
+  // W1212 — the build lookup was a correlated MAX over every app_opens row ever (88% of the
+  // database's reads); both lookups now read only the recent window through the date index.
+  it('W1212 — the build and flights lookups read only the recent window, never each row\'s history', async () => {
+    const calls: Call[] = [];
+    await sweepCoopAutoHunts(makeEnv(sweepDb(fix, calls)), ctx);
+    const b = calls.find((c) => c.sql.includes('FROM app_opens') && !c.sql.includes('flights_avg IS NOT NULL'))!;
+    expect(b.sql).toContain('INDEXED BY idx_app_opens_date');
+    expect(b.sql).not.toContain('MAX(b.opened_at)');
+    expect(b.args).toEqual([new Date(Date.now() - 21 * 86_400_000).toISOString().slice(0, 10)]);
+    const f = calls.find((c) => c.sql.includes('flights_avg IS NOT NULL'))!;
+    expect(f.sql).toContain('INDEXED BY idx_app_opens_date');
+    expect(f.sql).not.toContain('MAX(b.opened_at)');
+    expect(f.args.length).toBe(2);
+  });
 });
 
 describe('sweepCoopResolve — the server settles every active hunt', () => {

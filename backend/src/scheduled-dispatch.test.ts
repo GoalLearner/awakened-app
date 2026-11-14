@@ -40,6 +40,10 @@ vi.mock('./lib/push-outbox', async (importOriginal) => ({
   ...(await importOriginal<typeof import('./lib/push-outbox')>()),
   sweepPushOutbox: vi.fn(async () => 0),
 }));
+vi.mock('./handlers/steps-rank', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('./handlers/steps-rank')>()),
+  refreshStepRankCache: vi.fn(async () => false),
+}));
 
 import worker from './index';
 import { runUpdatePushCron, UPDATE_PUSH_CRON } from './lib/update-push';
@@ -48,8 +52,9 @@ import { sweepWinBackPushes } from './lib/win-back';
 import { sweepPactFlameRisk } from './lib/pact-flame-risk';
 import { sweepCoopAutoHunts, sweepCoopResolve } from './handlers/coop-auto';
 import { sweepPushOutbox } from './lib/push-outbox';
+import { refreshStepRankCache } from './handlers/steps-rank';
 
-const SWEEPS = [runRaidMatchmakeSweep, sweepPendingSummonsReminders, sweepCrunchTimeReminders, sweepWinBackPushes, sweepPactFlameRisk, sweepCoopResolve, sweepCoopAutoHunts, sweepPushOutbox];   // W1094 — settle + automatic hunts; W1101 — the owner's outbox
+const SWEEPS = [runRaidMatchmakeSweep, sweepPendingSummonsReminders, sweepCrunchTimeReminders, sweepWinBackPushes, sweepPactFlameRisk, sweepCoopResolve, sweepCoopAutoHunts, sweepPushOutbox, refreshStepRankCache];   // W1094 — settle + automatic hunts; W1101 — the owner's outbox; W1212 — the shared step ranking
 
 async function fire(cron: string): Promise<{ env: Env; waited: number }> {
   const env = { DB: {} } as unknown as Env;

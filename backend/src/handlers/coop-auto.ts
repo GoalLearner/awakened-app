@@ -517,16 +517,18 @@ async function stepsByUser(env: Env, weekKey: string): Promise<Map<string, numbe
   return out;
 }
 
-/** W1195 — each hunter's newest flights average from the last FLIGHTS_AVG_MAX_AGE_S (app_opens). */
+/** W1195 — each hunter's newest flights average from the last FLIGHTS_AVG_MAX_AGE_S (app_opens).
+ *  W1212 — one pass over the window's rows (idx_app_opens_date); SQLite's bare-column MAX takes
+ *  flights_avg from each hunter's newest row (was a correlated MAX per row). */
 async function flightsAvgByUser(env: Env, nowMs: number): Promise<Map<string, number>> {
   const out = new Map<string, number>();
   const since = Math.floor(nowMs / 1000) - FLIGHTS_AVG_MAX_AGE_S;
+  const sinceDay = new Date(nowMs - FLIGHTS_AVG_MAX_AGE_S * 1000 - 86_400_000).toISOString().slice(0, 10);
   const rows = await env.DB.prepare(
-    `SELECT a.user_id, a.flights_avg FROM app_opens a
-      WHERE a.flights_avg IS NOT NULL AND a.opened_at >= ?1
-        AND a.opened_at = (SELECT MAX(b.opened_at) FROM app_opens b
-                            WHERE b.user_id = a.user_id AND b.flights_avg IS NOT NULL AND b.opened_at >= ?1)`,
-  ).bind(since).all<{ user_id: string; flights_avg: number | null }>();
+    `SELECT user_id, flights_avg, MAX(opened_at) AS last FROM app_opens INDEXED BY idx_app_opens_date
+      WHERE date_utc >= ?2 AND opened_at >= ?1 AND flights_avg IS NOT NULL
+      GROUP BY user_id`,
+  ).bind(since, sinceDay).all<{ user_id: string; flights_avg: number | null }>();
   for (const r of rows.results ?? []) {
     const v = Number(r.flights_avg);
     if (r.user_id && Number.isFinite(v) && v >= 0) out.set(r.user_id, v);
@@ -644,12 +646,23 @@ export function pairFlightsOf(flights: Map<string, number>, a: string, b: string
   return fa === undefined || fb === undefined ? null : fa + fb;
 }
 
-async function latestBuildByUser(env: Env): Promise<Map<string, string>> {
+/** W1212 — how far back the automatic passes look for a hunter's build. Every pass also needs steps
+ *  from the last two weeks or boss kills from the last one, so an older open never made a hunt. */
+export const BUILD_LOOKBACK_DAYS = 21;
+
+/** Each hunter's newest build among their opens of the last BUILD_LOOKBACK_DAYS.
+ *  W1212 (owner 2026-11-14: "make sure the awakened server / app won't crash if there's a mass
+ *  influx") — this was a correlated MAX over EVERY app_opens row ever: 70,000 rows a run, 46 of the
+ *  database's 52 million rows read a day (88%), growing with hunters × their history, every two
+ *  minutes. Now one pass over the window (idx_app_opens_date): 412 rows on 2026-11-14. SQLite's
+ *  bare-column MAX takes the build from each hunter's newest row. */
+async function latestBuildByUser(env: Env, nowMs: number): Promise<Map<string, string>> {
   const out = new Map<string, string>();
+  const sinceDay = new Date(nowMs - BUILD_LOOKBACK_DAYS * 86_400_000).toISOString().slice(0, 10);
   const rows = await env.DB.prepare(
-    `SELECT a.user_id, a.build FROM app_opens a
-      WHERE a.opened_at = (SELECT MAX(b.opened_at) FROM app_opens b WHERE b.user_id = a.user_id)`,
-  ).all<{ user_id: string; build: string | null }>();
+    `SELECT user_id, build, MAX(opened_at) AS last FROM app_opens INDEXED BY idx_app_opens_date
+      WHERE date_utc >= ? GROUP BY user_id`,
+  ).bind(sinceDay).all<{ user_id: string; build: string | null }>();
   for (const r of rows.results ?? []) out.set(r.user_id, r.build ?? '');
   return out;
 }
@@ -780,7 +793,7 @@ export async function sweepCoopAutoHunts(env: Env, _ctx?: ExecutionContext): Pro
     const shared = () => (sharedP ??= Promise.all([
       optOutSet(env),
       blockSet(env),
-      latestBuildByUser(env),
+      latestBuildByUser(env, nowMs),
       rankByUser(env),
       stepsByUser(env, thisWeek),
       stepsByUser(env, lastWeek),

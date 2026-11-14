@@ -96,7 +96,7 @@ import {
   handleCoopBossEmote,
 } from './handlers/coop-boss';
 import { handleCoopPacts } from './handlers/coop-pacts';
-import { handleStepsRank } from './handlers/steps-rank';
+import { handleStepsRank, refreshStepRankCache } from './handlers/steps-rank';
 // W1094 — automatic friend hunts: the opt-out switch + the two cron sweeps (settle, create).
 import { handleCoopAutoOptOut, sweepCoopAutoHunts, sweepCoopResolve } from './handlers/coop-auto';
 // W836 (Train 3, R2) — server-side win-back push for lapsed hunters.
@@ -773,6 +773,9 @@ export default {
       ctx.waitUntil(sweepCoopAutoHunts(env, ctx).then(() => undefined));
       // W1101 — the owner's one-off pushes (push_outbox, 0070); each row claimed before it sends.
       ctx.waitUntil(sweepPushOutbox(env).then(() => undefined));
+      // W1212 — the Briefing's step ranking, computed once for everyone (steps_rank_cache, 0076)
+      // instead of once per isolate; recomputes only when the row is 15 minutes old.
+      ctx.waitUntil(refreshStepRankCache(env).then(() => undefined));
     }
   },
 } satisfies ExportedHandler<Env>;

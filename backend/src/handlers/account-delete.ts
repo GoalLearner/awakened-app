@@ -109,6 +109,8 @@ export async function handleAccountDelete(
   await bestEffortDelete(env, 'DELETE FROM coop_emotes WHERE user_id = ?', uid);
   await bestEffortDelete(env, 'DELETE FROM coop_emote_cooldowns WHERE user_id = ?', uid);
   await bestEffortDelete(env, 'DELETE FROM board_topic_views WHERE user_id = ?', uid);
+  // W1212 — the shared step ranking (0076) lists user ids; drop it, the next read rebuilds it
+  await bestEffortDelete(env, 'DELETE FROM steps_rank_cache');
 
   // ── Core deletion (MUST succeed) ──
   // user_state_snapshots has no FK on users.id (kept independent so the schema
