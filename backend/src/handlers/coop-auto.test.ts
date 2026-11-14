@@ -31,6 +31,7 @@ import {
   AUTO_BOSSES,
   AUTO_BOSS_DROPS,
   AUTO_TRIO_BOSSES,
+  AUTO_TRIOS_PER_HUNTER,
   choosePick,
   ownedAutoDrops,
   pickAutoTrioBoss,
@@ -142,7 +143,7 @@ describe('pickAutoBoss — the best one-day duo both ranks allow whose printed g
     expect(pickAutoTrioBoss(['C', 'C', 'C'], 2000)).toEqual({ bossId: 'the_crossroads_hound', goalSteps: 3000 });
     expect(pickAutoTrioBoss(['E', 'S', 'S'], 40000)).toBeNull();
   });
-  it('W1208: trios — one hunter friends with both others; mutual friends first; one trio a hunter; kept trios stay', () => {
+  it('W1208/W1210: trios — one hunter friends with both others; mutual friends first; new faces next; up to 3 a hunter a day', () => {
     const f = (edges: string[]) => {
       const m = new Map<string, Set<string>>();
       for (const e of edges) { const [a, b] = e.split('-'); (m.get(a) ?? m.set(a, new Set()).get(a)!).add(b); (m.get(b) ?? m.set(b, new Set()).get(b)!).add(a); }
@@ -151,18 +152,25 @@ describe('pickAutoBoss — the best one-day duo both ranks allow whose printed g
     const none = () => false;
     const w = (id: string) => ({ a: 5, b: 4, c: 3, d: 2, e: 1, x: 9, y: 9 } as Record<string, number>)[id] ?? 0;
     const g = f(['a-b', 'a-c', 'a-d', 'c-d', 'x-a', 'y-a']);
-    // x and y (weight 9) make a|x|y the strongest star, but a|c|d is three mutual friends
-    expect(pickAutoTrios(new Set(['a', 'b', 'c', 'd', 'x', 'y']), g, [], new Set(), none, w)).toEqual([['a', 'c', 'd']]);
+    const all = new Set(['a', 'b', 'c', 'd', 'x', 'y']);
+    expect(AUTO_TRIOS_PER_HUNTER).toBe(3);
+    // three mutual friends first; then a|x|y (no pair grouped yet, the strongest); a's third repeats
+    // one pair whichever it is, so the strongest of those
+    expect(pickAutoTrios(all, g, [], [], none, w)).toEqual([['a', 'c', 'd'], ['a', 'x', 'y'], ['a', 'b', 'x']]);
+    // a cap of one is the W1208 rule
+    expect(pickAutoTrios(all, g, [], [], none, w, 1)).toEqual([['a', 'c', 'd']]);
     // a star is enough: b and d are both a's friends
-    expect(pickAutoTrios(new Set(['a', 'b', 'd']), f(['a-b', 'a-d']), [], new Set(), none, w)).toEqual([['a', 'b', 'd']]);
+    expect(pickAutoTrios(new Set(['a', 'b', 'd']), f(['a-b', 'a-d']), [], [], none, w)).toEqual([['a', 'b', 'd']]);
     // a block between the two leaves stops it; no common friend = no trio
-    expect(pickAutoTrios(new Set(['a', 'b', 'd']), f(['a-b', 'a-d']), [], new Set(), (p, q) => (p === 'b' && q === 'd') || (p === 'd' && q === 'b'), w)).toEqual([]);
-    expect(pickAutoTrios(new Set(['a', 'b', 'd']), f(['a-b']), [], new Set(), none, w)).toEqual([]);
-    // yesterday's trio is kept ahead of a mutual one; today's hunters are in none
-    expect(pickAutoTrios(new Set(['a', 'b', 'c', 'd', 'x', 'y']), g, [['y', 'a', 'x']], new Set(), none, w)).toEqual([['a', 'x', 'y']]);
-    expect(pickAutoTrios(new Set(['a', 'b', 'c', 'd']), g, [], new Set(['a']), none, w)).toEqual([]);
-    // two hubs, two trios, nobody twice
-    const two = pickAutoTrios(new Set(['a', 'b', 'c', 'd', 'e', 'x']), f(['a-b', 'a-c', 'd-e', 'd-x']), [], new Set(), none, w);
+    expect(pickAutoTrios(new Set(['a', 'b', 'd']), f(['a-b', 'a-d']), [], [], (p, q) => (p === 'b' && q === 'd') || (p === 'd' && q === 'b'), w)).toEqual([]);
+    expect(pickAutoTrios(new Set(['a', 'b', 'd']), f(['a-b']), [], [], none, w)).toEqual([]);
+    // yesterday's trio is kept first
+    expect(pickAutoTrios(all, g, [['y', 'a', 'x']], [], none, w)).toEqual([['a', 'x', 'y'], ['a', 'c', 'd'], ['a', 'b', 'x']]);
+    // today's trios count toward the cap and are never made twice
+    expect(pickAutoTrios(all, g, [], [['a', 'c', 'd'], ['a', 'b', 'c']], none, w)).toEqual([['a', 'x', 'y']]);
+    expect(pickAutoTrios(new Set(['a', 'b', 'd']), f(['a-b', 'a-d']), [], [['d', 'b', 'a']], none, w)).toEqual([]);
+    // two hubs, two trios
+    const two = pickAutoTrios(new Set(['a', 'b', 'c', 'd', 'e', 'x']), f(['a-b', 'a-c', 'd-e', 'd-x']), [], [], none, w);
     expect(two).toEqual([['a', 'b', 'c'], ['d', 'e', 'x']]);   // equal walking: by key
   });
   it('W1209: a boss is still needed while anyone in the group lacks any of its drops', () => {
@@ -433,6 +441,29 @@ describe('sweepCoopAutoHunts — one sized hunt per walking friend pair per day'
     const again: Call[] = [];
     const res2 = await sweepCoopAutoHunts(makeEnv(sweepDb({ ...trioFix, trioRows: [{ a: 'u1', b: 'u3', c: 'u5', d: today }] }, again)), ctx);
     expect(res2.trios).toBe(0);
+  });
+
+  it('W1210 — a hunter with several friends gets up to three trios a day, with different friends and bosses', async () => {
+    const fix: SweepFixture = {
+      friends: [{ a: 'u1', b: 'u3' }, { a: 'u1', b: 'u5' }, { a: 'u1', b: 'u6' }, { a: 'u3', b: 'u5' }],
+      builds: { u1: NEW, u3: NEW, u5: NEW, u6: NEW },
+      ranks: { u1: 'C', u3: 'C', u5: 'C', u6: 'C' },
+      stepsThisWeek: { u1: 30000, u3: 40000, u5: 30000, u6: 30000 },
+      stepsLastWeek: { u1: 70000, u3: 80000, u5: 60000, u6: 60000 },
+    };
+    const calls: Call[] = [];
+    const res = await sweepCoopAutoHunts(makeEnv(sweepDb(fix, calls)), ctx);
+    expect(res.trios).toBe(3);
+    const trios = calls.filter((c) => c.sql.includes('INSERT OR IGNORE INTO coop_boss_instances') && String(c.args[13]).split('|').length === 3);
+    // the mutual three first; then new faces (u6), the stronger walkers first
+    expect(trios.map((c) => c.args[13])).toEqual(['u1|u3|u5', 'u1|u3|u6', 'u1|u5|u6']);
+    // u1 is on the Court after the first, so the second goes to the Hound; the third ties, so the best
+    expect(trios.map((c) => c.args[1])).toEqual(['the_threefold_court', 'the_crossroads_hound', 'the_threefold_court']);
+    // with two already made today, u1 has room for one more, and those two are not made again
+    const later: Call[] = [];
+    const res2 = await sweepCoopAutoHunts(makeEnv(sweepDb({ ...fix, trioRows: [{ a: 'u1', b: 'u3', c: 'u5', d: today }, { a: 'u1', b: 'u3', c: 'u6', d: today }] }, later)), ctx);
+    expect(res2.trios).toBe(1);
+    expect(later.filter((c) => c.sql.includes('INSERT OR IGNORE INTO coop_boss_instances') && String(c.args[13]).split('|').length === 3).map((c) => c.args[13])).toEqual(['u1|u5|u6']);
   });
 
   it('W1209 — ownedAutoDrops reads the owned drops (count > 0); a failed read owns nothing', async () => {

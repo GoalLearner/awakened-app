@@ -89,6 +89,13 @@
  * friends don't all land on the same boss); then the one the group hunted longest ago (its own last
  * AUTO_HISTORY_DAYS); then the best. W1207's ultra-only rule is folded in: a boss is passed over
  * only when every hunter in the group owns ALL its drops.
+ *
+ * W1210 — MORE TRIOS FOR MORE FRIENDS (owner 2026-11-14: "Allow for 2-3 different trio bosses for
+ * people with multiple friends like me or anthony ... reward people with a lot of friends"). A
+ * hunter can now be in up to AUTO_TRIOS_PER_HUNTER (3) automatic trios a day, never the same three
+ * twice in a day. After kept and mutual-friend trios, the next trio is the one that groups the
+ * fewest pairs already grouped today, so a hunter's trios bring in different friends; W1209's today
+ * rule then spreads their bosses.
  */
 import type { Env } from '../env';
 import type { SessionPayload } from '../session-jwt';
@@ -277,17 +284,24 @@ export function pickAutoTrioBoss(ranks: string[], trioPattern: number, prefs: Pi
   return { bossId: AUTO_TRIO_SIZED_BOSS, goalSteps: Math.max(AUTO_TRIO_MIN_GOAL, Math.round(fit / 100) * 100) };
 }
 
-/** W1208 — the day's automatic trios (each sorted a < b < c). Kept trios first (all three still in
- *  the pool, one still friends with both others, nothing blocked), then every trio where one hunter
- *  is friends with both others: three mutual friends first, then the highest combined `weight`,
- *  then the key. A hunter is in at most one; `busyToday` hunters are in none. Pure. */
+/** W1210 — how many automatic trios one hunter can be in a day (owner 2026-11-14: "give me and
+ *  anthony 2-3 automated trio bosses per day ... reward people with a lot of friends"). */
+export const AUTO_TRIOS_PER_HUNTER = 3;
+
+/** W1208/W1210 — the day's automatic trios (each sorted a < b < c). A hunter is in at most `cap` a
+ *  day, counting `todayTrios` (already made), and a trio made today is never made twice. Kept trios
+ *  first (yesterday's: all three still in the pool, one still friends with both others, nothing
+ *  blocked), then, one at a time, the trio where one hunter is friends with both others that is:
+ *  three mutual friends; then fewest pairs already grouped today (new faces before the same two
+ *  again); then the highest combined `weight`; then the key. Pure. */
 export function pickAutoTrios(
   pool: ReadonlySet<string>,
   friendsOf: ReadonlyMap<string, ReadonlySet<string>>,
   keep: ReadonlyArray<readonly string[]>,
-  busyToday: ReadonlySet<string>,
+  todayTrios: ReadonlyArray<readonly string[]>,
   isBlocked: (a: string, b: string) => boolean,
   weight: (id: string) => number,
+  cap: number = AUTO_TRIOS_PER_HUNTER,
 ): Array<[string, string, string]> {
   const fr = (a: string, b: string) => !!friendsOf.get(a)?.has(b);
   const ok = (t: readonly string[]) =>
@@ -295,12 +309,25 @@ export function pickAutoTrios(
     !isBlocked(t[0], t[1]) && !isBlocked(t[0], t[2]) && !isBlocked(t[1], t[2]) &&
     ((fr(t[0], t[1]) && fr(t[0], t[2])) || (fr(t[1], t[0]) && fr(t[1], t[2])) || (fr(t[2], t[0]) && fr(t[2], t[1])));
   const sorted = (t: readonly string[]) => [...t].sort() as [string, string, string];
-  const used = new Set<string>(busyToday);
+  const count = new Map<string, number>();
+  const together = new Map<string, number>();
+  const done = new Set<string>();
+  const pairsOf = (t: [string, string, string]) => [t[0] + '|' + t[1], t[0] + '|' + t[2], t[1] + '|' + t[2]];
+  const note = (t: [string, string, string]) => {
+    done.add(t.join('|'));
+    for (const x of t) count.set(x, (count.get(x) ?? 0) + 1);
+    for (const p of pairsOf(t)) together.set(p, (together.get(p) ?? 0) + 1);
+  };
+  for (const k of todayTrios) {
+    const t = sorted(k);
+    if (new Set(t).size === 3) note(t);
+  }
+  const room = (t: readonly string[]) => t.every((x) => (count.get(x) ?? 0) < cap);
   const out: Array<[string, string, string]> = [];
-  const take = (t: [string, string, string]) => { out.push(t); t.forEach((x) => used.add(x)); };
+  const take = (t: [string, string, string]) => { out.push(t); note(t); };
   for (const k of keep) {
     const t = sorted(k);
-    if (ok(t) && t.every((x) => !used.has(x))) take(t);
+    if (ok(t) && !done.has(t.join('|')) && room(t)) take(t);
   }
   const cands = new Map<string, { t: [string, string, string]; mutual: boolean; w: number }>();
   for (const hub of [...pool].sort()) {
@@ -314,9 +341,22 @@ export function pickAutoTrios(
       }
     }
   }
-  const list = [...cands.entries()].sort(([ka, a], [kb, b]) =>
-    (Number(b.mutual) - Number(a.mutual)) || (b.w - a.w) || (ka < kb ? -1 : ka > kb ? 1 : 0));
-  for (const [, c] of list) if (c.t.every((x) => !used.has(x))) take(c.t);
+  const overlap = (t: [string, string, string]) => pairsOf(t).reduce((s, p) => s + (together.get(p) ?? 0), 0);
+  for (;;) {
+    let best: { key: string; t: [string, string, string]; mutual: boolean; w: number; o: number } | null = null;
+    for (const [key, c] of cands) {
+      if (done.has(key) || !room(c.t)) continue;
+      const o = overlap(c.t);
+      const better = !best ||
+        (c.mutual !== best.mutual ? c.mutual
+          : o !== best.o ? o < best.o
+          : c.w !== best.w ? c.w > best.w
+          : key < best.key);
+      if (better) best = { key, t: c.t, mutual: c.mutual, w: c.w, o };
+    }
+    if (!best) break;
+    take(best.t);
+  }
   return out;
 }
 
@@ -780,19 +820,18 @@ async function sweepAutoTrios(
     friendsOf.get(a)!.add(b);
     friendsOf.get(b)!.add(a);
   }
-  // Today's and yesterday's automatic trios: today's hunters are taken, yesterday's trios are kept.
+  // Today's and yesterday's automatic trios: today's count toward each hunter's cap (W1210), yesterday's are kept.
   const yesterday = prevDay(today) || today;
   const rows = (await env.DB.prepare(
     `SELECT challenger_user_id AS a, partner_user_id AS b, partner2_user_id AS c, hunt_day AS d
        FROM coop_boss_instances
       WHERE auto = 1 AND partner2_user_id IS NOT NULL AND hunt_day >= ? ORDER BY hunt_day DESC`,
   ).bind(yesterday).all<{ a: string; b: string; c: string; d: string }>()).results ?? [];
-  const busyToday = new Set<string>();
+  const todayTrios: string[][] = [];
   const keep: string[][] = [];
   for (const r of rows) {
     if (!r.a || !r.b || !r.c) continue;
-    if (r.d === today) { busyToday.add(r.a); busyToday.add(r.b); busyToday.add(r.c); }
-    else keep.push([r.a, r.b, r.c]);
+    (r.d === today ? todayTrios : keep).push([r.a, r.b, r.c]);
   }
 
   const [optouts, blocks, builds, ranks, stepsNow, stepsLast] = await shared();
@@ -809,7 +848,7 @@ async function sweepAutoTrios(
   const isBlocked = (a: string, b: string) =>
     blocks.has(pairKey(a, b)) || optouts.has(a + '>' + b) || optouts.has(b + '>' + a);
   let made = 0;
-  for (const trio of pickAutoTrios(pool, friendsOf, keep, busyToday, isBlocked, (id) => pattern(id) ?? 0)) {
+  for (const trio of pickAutoTrios(pool, friendsOf, keep, todayTrios, isBlocked, (id) => pattern(id) ?? 0)) {
     if (madeSoFar + made >= MAX_CREATE_PER_RUN) break;
     const prefs = await picks.prefsFor(trio);   // W1209
     const pick = pickAutoTrioBoss(trio.map((u) => ranks.get(u) ?? 'E'), trio.reduce((s, u) => s + (pattern(u) ?? 0), 0), prefs);
