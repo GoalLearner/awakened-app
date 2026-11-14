@@ -82,10 +82,10 @@ test.describe('Co-op kills in the Bosses Slain ledger (W545/W546)', () => {
     await openKillLog(page);
 
     await expect(page.locator('#guild-bosses-ledger-total')).toHaveText('4');    // TOTAL KILLS = 3 + 1
-    await expect(page.locator('#guild-bosses-ledger-unique')).toHaveText('2');   // BOSSES = 2 distinct
+    await expect(page.locator('#guild-bosses-ledger-unique')).toHaveText(/^2\/\d+$/);   // BOSSES = 2 beaten, of every boss (W1202)
 
     // Both co-op bosses render as CO-OP-tagged rows.
-    await expect(page.locator('.guild-bosses-row--coop')).toHaveCount(2);
+    await expect(page.locator('.guild-bosses-row--coop:not(.guild-bosses-row--unslain)')).toHaveCount(2);
     await expect(page.locator('.guild-bosses-coop-tag').first()).toBeVisible();
   });
 
@@ -96,8 +96,8 @@ test.describe('Co-op kills in the Bosses Slain ledger (W545/W546)', () => {
     await openKillLog(page);
 
     await expect(page.locator('#guild-bosses-ledger-total')).toHaveText('5');
-    await expect(page.locator('#guild-bosses-ledger-unique')).toHaveText('1');
-    await expect(page.locator('.guild-bosses-row--coop')).toHaveCount(1);
+    await expect(page.locator('#guild-bosses-ledger-unique')).toHaveText(/^1\/\d+$/);
+    await expect(page.locator('.guild-bosses-row--coop:not(.guild-bosses-row--unslain)')).toHaveCount(1);
   });
 
   test('no kills at all → ledger total reads 0, no co-op rows', async ({ page }) => {
@@ -105,6 +105,32 @@ test.describe('Co-op kills in the Bosses Slain ledger (W545/W546)', () => {
     await openKillLog(page);
 
     await expect(page.locator('#guild-bosses-ledger-total')).toHaveText('0');
-    await expect(page.locator('.guild-bosses-row--coop')).toHaveCount(0);
+    await expect(page.locator('.guild-bosses-row--coop:not(.guild-bosses-row--unslain)')).toHaveCount(0);
+  });
+
+  // W1202 — owner 2026-11-13: "Make sure that every boss is on the boss kill log as well as the raid boss has it's own
+  // category". Every solo and co-op boss is listed (not yet beaten = dimmed at 0, nothing to share), and the raid gate's
+  // Grinning God sits in its own RAID group ahead of the ranks.
+  test('W1202: every boss is on the log, unbeaten ones dimmed at 0; the Grinning God has its own Raid group first', async ({ page }) => {
+    await freshAppWithCoopKills(page, { the_twin_maw: { count: 2, last: '2026-06-28T10:00:00.000Z' } });
+    await openKillLog(page);
+    const all = await page.evaluate(() => Object.keys((window as any).Bosses.BOSSES).length);
+    expect(all).toBeGreaterThanOrEqual(40);
+    await expect(page.locator('#guild-bosses-list .guild-bosses-row')).toHaveCount(all);
+    await expect(page.locator('#guild-bosses-list .guild-bosses-row--unslain')).toHaveCount(all - 1);
+    await expect(page.locator('#guild-bosses-ledger-unique')).toHaveText('1/' + all);
+    await expect(page.locator('#guild-bosses-list .guild-bosses-row--unslain[data-bkshare]')).toHaveCount(0);   // nothing to share yet
+    // the raid group leads, with the God alone in it
+    const first = page.locator('#guild-bosses-list .guild-bosses-group').first();
+    await expect(first).toHaveClass(/guild-bosses-group--raid/);
+    await expect(first.locator('.guild-bosses-group-label')).toHaveText('Raid');
+    await expect(first.locator('.guild-bosses-title')).toHaveText(['The Grinning GodCO-OP']);
+    // the ranks follow, S first; a weekly boss and a duo are on the list too
+    await expect(page.locator('#guild-bosses-list .guild-bosses-group').nth(1).locator('.guild-bosses-group-label')).toHaveText('S Rank');
+    await expect(page.locator('#guild-bosses-list [data-boss-id="the_footsore_herald"]')).toHaveCount(1);
+    await expect(page.locator('#guild-bosses-list [data-boss-id="the_coursing_dread"]')).toHaveCount(1);
+    // the beaten boss leads its group and can be shared
+    await expect(page.locator('#guild-bosses-list .guild-bosses-group--rank-e .guild-bosses-row').first()).toHaveAttribute('data-boss-id', 'the_twin_maw');
+    await expect(page.locator('#guild-bosses-list [data-boss-id="the_twin_maw"][data-bkshare]')).toHaveCount(1);
   });
 });

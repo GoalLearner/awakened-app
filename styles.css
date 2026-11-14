@@ -22617,6 +22617,11 @@ button.guildhall-summary-tile:active {
 .guild-bosses-group--rank-b { --rank-color: #fbbf24; --rank-glow: rgba(251,191,36,0.50); --rank-soft: rgba(251,191,36,0.14); --rank-rule: rgba(251,191,36,0.45); }
 .guild-bosses-group--rank-a { --rank-color: #ef4444; --rank-glow: rgba(239,68,68,0.50); --rank-soft: rgba(239,68,68,0.14); --rank-rule: rgba(239,68,68,0.45); }
 .guild-bosses-group--rank-s { --rank-color: #e879f9; --rank-glow: rgba(232,121,249,0.55); --rank-soft: rgba(232,121,249,0.16); --rank-rule: rgba(232,121,249,0.50); }
+/* W1202 — the raid gate gets its own group (the Grinning God), in gold, above the ranks */
+.guild-bosses-group--raid { --rank-color: #f5b842; --rank-glow: rgba(245,184,66,0.55); --rank-soft: rgba(245,184,66,0.16); --rank-rule: rgba(245,184,66,0.50); }
+/* W1202 — every boss is on the log: one not beaten yet sits dimmed at 0, with nothing to tap */
+.guild-bosses-row--unslain { opacity: 0.42; cursor: default; }
+.guild-bosses-row--unslain .guild-bosses-capsule { filter: grayscale(1); }
 
 .guild-bosses-group-head {
   display: flex;
