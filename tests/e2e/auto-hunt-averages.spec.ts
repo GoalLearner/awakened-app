@@ -96,4 +96,20 @@ test.describe('The automatic duo hunts read the hunters’ averages (W1195)', ()
     }));
     expect(monarch.line).toBe('4 / 12 flights together');
   });
+
+  // W1204 — owner: "I want to just have the name of the person I am hunting with instead of the
+  // name of the boss here at this screen". The row's title is the partner; the boss stays in the art.
+  test('W1204: a co-op hunt row is titled by who you hunt with, not the boss', async ({ page }) => {
+    await boot(page, {});
+    const name = (inst: Record<string, unknown>) => page.evaluate((x) => (window as any).__huntCoopItem(x).name, inst);
+    const base = { boss_id: 'the_coursing_dread', metric: 'steps', boss_rank: 'C', status: 'active', goal_steps: 8000, combined_steps: 10, starts_at: new Date().toISOString() };
+    expect(await name({ ...base, id: 'd1', role: 'challenger', challenger: { alias: 'e2e' }, partner: { alias: 'Rendell' } })).toBe('Rendell');
+    expect(await name({ ...base, id: 'd2', role: 'partner', challenger: { alias: 'Sharr' }, partner: { alias: 'e2e' } })).toBe('Sharr');
+    expect(await name({ ...base, id: 't1', role: 'challenger', challenger: { alias: 'e2e' }, partner: { alias: 'Rendell' }, partner2: { alias: 'Sharr' } })).toBe('Rendell & Sharr');
+    expect(await name({ ...base, id: 'r1', party: [
+      { user_id: 'nobody-a', alias: 'Rendell' }, { user_id: 'nobody-b', alias: 'Sharr' }, { user_id: 'nobody-c', alias: 'Galilea' }, { user_id: 'nobody-d', alias: 'Killua' },
+    ] })).toBe('Rendell, Sharr +2');
+    // no partner name yet: the boss name stands in
+    expect(await name({ ...base, id: 'n1', role: 'challenger', challenger: { alias: 'e2e' } })).toBe('The Coursing Dread');
+  });
 });
