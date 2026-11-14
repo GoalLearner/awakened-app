@@ -23,7 +23,7 @@ interface CapturedCall {
   binds: unknown[];
 }
 
-function makeDb(snapshotRow: { current_value: number; best_value: number } | null = null) {
+function makeDb(snapshotRow: { current_value: number; best_value: number } | null = null, syncedDaily: Record<string, number> | null = null) {
   const calls: CapturedCall[] = [];
   return {
     prepare: (sql: string) => ({
@@ -33,6 +33,7 @@ function makeDb(snapshotRow: { current_value: number; best_value: number } | nul
           all:   async () => ({ results: [], success: true, meta: {} }),
           first: async () => {
             if (sql.includes('FROM leaderboard_snapshots')) return snapshotRow;
+            if (sql.includes('FROM user_state_snapshots')) return syncedDaily ? { d: JSON.stringify(syncedDaily) } : null;
             if (sql.includes('FROM users')) return { apple_sub: 'apple_real_user' };
             return null;
           },
@@ -676,6 +677,55 @@ describe('POST /v1/leaderboard/submit -- weekly scoping (1z.33)', () => {
       const env = makeEnv(db);
       const res = await handleLeaderboardSubmit(makeReq({ metric: 'step_total', current_value: 328394 }), env, session);
       expect(res.status).toBe(200);
+    });
+
+    // W1206 — phones before 3.0.25 cut the week at 150,000 before sending; the cloud save holds the
+    // real days. Killua's week of 2026-11-08, moved onto the 2026-05-17 test week.
+    const killuaDays = {
+      '2026-05-16': 39203,   // the Saturday before: not this week
+      '2026-05-17': 44469, '2026-05-18': 22190, '2026-05-19': 34632,
+      '2026-05-20': 47469, '2026-05-21': 61121, '2026-05-22': 33214,
+    };
+    const stored = (db: D1Database) => {
+      const calls = (db as unknown as { _calls(): CapturedCall[] })._calls();
+      return {
+        board: calls.find(c => c.sql.includes('INSERT INTO leaderboard_snapshots'))!.binds[2],
+        hof: calls.find(c => c.sql.includes('INSERT INTO weekly_step_records'))!.binds[3],
+        club: calls.find(c => c.sql.includes('INSERT INTO user_accolades'))!.binds[5],
+        read: calls.some(c => c.sql.includes('FROM user_state_snapshots')),
+      };
+    };
+
+    it('W1206: an old phone\'s 150,000 is replaced by the synced days of this week (243,095)', async () => {
+      vi.setSystemTime(new Date(Date.UTC(2026, 4, 23, 11, 0, 0)));   // Saturday 04:00 PDT, day 7
+      const db = makeDb({ current_value: 243095, best_value: 243095 }, killuaDays);
+      const res = await handleLeaderboardSubmit(makeReq({ metric: 'step_total', current_value: 150000 }), makeEnv(db), session);
+      expect(res.status).toBe(200);
+      expect(stored(db)).toEqual({ board: 243095, hof: 243095, club: 243095, read: true });
+    });
+
+    it('W1206: the synced days still answer to the velocity line', async () => {
+      vi.setSystemTime(new Date(Date.UTC(2026, 4, 18, 20, 0, 0)));   // Monday, day 2 → 200k
+      const db = makeDb(null, { '2026-05-17': 99000, '2026-05-18': 250000 });
+      await handleLeaderboardSubmit(makeReq({ metric: 'step_total', current_value: 150000 }), makeEnv(db), session);
+      expect(stored(db).board).toBe(199000);   // a 250k day counts as 100k, then the 200k line
+    });
+
+    it('W1206: no save, or a save that says less, keeps the 150,000', async () => {
+      vi.setSystemTime(new Date(Date.UTC(2026, 4, 23, 11, 0, 0)));
+      const none = makeDb(null, null);
+      await handleLeaderboardSubmit(makeReq({ metric: 'step_total', current_value: 150000 }), makeEnv(none), session);
+      expect(stored(none).board).toBe(150000);
+      const less = makeDb(null, { '2026-05-17': 20000 });
+      await handleLeaderboardSubmit(makeReq({ metric: 'step_total', current_value: 150000 }), makeEnv(less), session);
+      expect(stored(less).board).toBe(150000);
+    });
+
+    it('W1206: any other value is taken as sent, without reading the save', async () => {
+      vi.setSystemTime(new Date(Date.UTC(2026, 4, 23, 11, 0, 0)));
+      const db = makeDb(null, killuaDays);
+      await handleLeaderboardSubmit(makeReq({ metric: 'step_total', current_value: 149999 }), makeEnv(db), session);
+      expect(stored(db)).toEqual({ board: 149999, hof: 149999, club: 149999, read: false });
     });
 
     it('still rejects a number no one can walk: above 100k a day on average', async () => {

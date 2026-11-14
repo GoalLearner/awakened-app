@@ -37,9 +37,39 @@
 import type { Env } from '../env';
 import type { SessionPayload } from '../session-jwt';
 import { jsonOk, jsonError } from '../lib/responses';
-import { isValidMetric, isWeeklyMetric, METRIC_CAPS, maxPlausibleStepTotal, type Metric } from '../lib/metrics';
+import { isValidMetric, isWeeklyMetric, METRIC_CAPS, maxPlausibleStepTotal, STEP_TOTAL_PER_DAY_CEILING, type Metric } from '../lib/metrics';
 import { postOfficialFame } from '../lib/fame-posts';
 import { getAccoladeWeekStart } from '../lib/accolade-week';
+import { parseDaily } from '../lib/step-rank';
+
+// W1206 — owner 2026-11-14, Killua's row: "still shows 150,000 for her". W1203 took the cap out of
+// the server, but phones before 3.0.25 still cut the week at 150,000 BEFORE sending it, so the
+// server only ever sees 150,000. Their cloud save keeps the real days (hb_leaderboard →
+// steps_daily, Apple Health only — W799, the same days the phone sums), so a submit of exactly
+// the old cap is read from those days instead, under the same velocity line. Remove once no
+// hunter opens on a build older than 3.0.25.
+export const OLD_CLIENT_STEP_CAP = 150_000;
+
+/** W1206 — this week's steps from the hunter's cloud save (Pacific days weekStart..+6), or 0. */
+export async function syncedWeekSteps(env: Env, userId: string, weekStart: string): Promise<number> {
+  try {
+    const row = await env.DB.prepare(
+      `SELECT json_extract(json_extract(state_json, '$.keys.hb_leaderboard'), '$.steps_daily') AS d
+         FROM user_state_snapshots WHERE user_id = ?`,
+    ).bind(userId).first<{ d: string | null }>();
+    const daily = parseDaily(row ? row.d : null);
+    const t0 = Date.parse(weekStart + 'T00:00:00Z');
+    if (!daily || !Number.isFinite(t0)) return 0;
+    let sum = 0;
+    for (let i = 0; i < 7; i++) {
+      const v = Number(daily[new Date(t0 + i * 86_400_000).toISOString().slice(0, 10)]);
+      if (Number.isFinite(v) && v > 0) sum += Math.min(Math.floor(v), STEP_TOTAL_PER_DAY_CEILING);
+    }
+    return sum;
+  } catch {
+    return 0;
+  }
+}
 
 // v3 Phase 1z.27 -- 100K Step Club accolade. Awarded inline during
 // leaderboard submit when `metric === 'step_total'` and the submitted
@@ -141,7 +171,7 @@ export async function handleLeaderboardSubmit(
   if (!Number.isInteger(rawValue) || (rawValue as number) < 0) {
     return jsonError(400, 'INVALID_VALUE', 'current_value must be a non-negative integer.');
   }
-  const value = rawValue as number;
+  let value = rawValue as number;
   if (value > METRIC_CAPS[metric]) {
     return jsonError(
       400,
@@ -192,6 +222,11 @@ export async function handleLeaderboardSubmit(
         'INVALID_VALUE',
         `current_value (${value}) exceeds the plausible weekly step pace (${ceiling}) this far into the week.`,
       );
+    }
+    // W1206 — an old phone's 150,000 is a cut, not a total: take the synced days when they say more
+    if (value === OLD_CLIENT_STEP_CAP) {
+      const synced = await syncedWeekSteps(env, session.userId, weekStart);
+      if (synced > value) value = Math.min(synced, ceiling);
     }
   }
 
