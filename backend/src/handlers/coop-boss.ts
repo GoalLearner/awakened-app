@@ -225,6 +225,28 @@ interface CoopParticipant {
  *  The single seam the progress/serialize/notify/pact paths fan out over. Reads
  *  the N-participant array when present; falls back to the legacy partner columns
  *  for a row loaded without it (defensive — loadInstance/list always attach it). */
+/** W1211 — a raid: a hunt for more than three (today only The Grinning God). Owner 2026-11-14:
+ *  "you can only be in one raid at a time". */
+export function isRaidBoss(bossId: string): boolean {
+  const c = Object.prototype.hasOwnProperty.call(COOP_BOSS_CFG, bossId) ? COOP_BOSS_CFG[bossId] : undefined;
+  return !!c && (c.maxParty ?? c.partySize ?? 2) > 3;
+}
+
+/** W1211 — every hunter in a live raid of this boss: the summoner of a pending or active one, every
+ *  seat of an active one, and an answered seat of a pending one (an unanswered invite is not a raid
+ *  yet). `exceptId` leaves one hunt out (the one being joined). */
+export async function huntersInLiveRaid(env: Env, bossId: string, exceptId: string | null = null): Promise<Set<string>> {
+  const rows = (await env.DB.prepare(
+    `SELECT i.challenger_user_id AS uid FROM coop_boss_instances i
+      WHERE i.boss_id = ?1 AND i.status IN ('pending','active') AND i.id <> ?2
+     UNION
+     SELECT p.user_id AS uid FROM coop_boss_participants p JOIN coop_boss_instances i ON i.id = p.instance_id
+      WHERE i.boss_id = ?1 AND i.id <> ?2
+        AND (i.status = 'active' OR (i.status = 'pending' AND p.joined_at IS NOT NULL))`,
+  ).bind(bossId, exceptId ?? '').all<{ uid: string | null }>()).results ?? [];
+  return new Set(rows.map((r) => String(r.uid || '')).filter(Boolean));
+}
+
 export function participantIds(
   row: Pick<CoopBossRow, 'challenger_user_id' | 'partner_user_id' | 'partner2_user_id' | 'participants'>,
 ): string[] {
@@ -841,6 +863,13 @@ async function createCoopHunt(
     }
   }
 
+  // W1211 — one raid at a time (owner 2026-11-14), for the summoner and every ally
+  if (isRaidBoss(bossId)) {
+    const busy = await huntersInLiveRaid(env, bossId);
+    if (busy.has(session.userId)) return { deny: jsonError(409, 'IN_RAID', 'You are already in a raid. One raid at a time.') };
+    if (allies.some((a) => busy.has(a))) return { deny: jsonError(409, 'ALLY_IN_RAID', 'One of those hunters is already in a raid.') };
+  }
+
   // W955 — no concurrent-hunt cap. The duplicate-hunt guard below is the only
   // thing a summons can still trip.
 
@@ -1094,6 +1123,12 @@ export async function handleCoopBossJoin(
     if (!member) {
       return jsonError(403, 'MEMBERS_ONLY', 'The Grinning God answers only to members.');
     }
+  }
+
+  // W1211 — one raid at a time: answering a raid summons while already in another raid is refused
+  if (isRaidBoss(row.boss_id)) {
+    const busy = await huntersInLiveRaid(env, row.boss_id, row.id);
+    if (busy.has(session.userId)) return jsonError(409, 'IN_RAID', 'You are already in a raid. One raid at a time.');
   }
 
   // W955 — answering a summons is never refused for volume. Saying yes to a
@@ -1633,8 +1668,17 @@ export async function resolveCoopInstance(
     // post-win poll is a no-op here, so the push can't re-send. notifyUser never
     // throws and no-ops if push is unconfigured or a hunter has no device token.
     if (ctx && !stale && Number(upd?.meta?.changes ?? 0) > 0) {
-      if (isAuto) {
+      if (isAuto && !isRaidBoss(row.boss_id)) {
         await pushAutoWin(env, row, winners, aliasMap, ctx);
+      } else if (isAuto) {
+        // W1211 — an automatic raid's win is news every time: every hunter hears it, outside the
+        // once-a-day automatic claim
+        const bossName = COOP_BOSS_NAMES[row.boss_id] ?? 'the raid boss';
+        for (const uid of winners) {
+          ctx.waitUntil(notifyUser(env, uid, {
+            title: 'Raid Complete', body: `Your raid party brought down ${bossName}.`, type: 'coop_complete', data: { bossId: row.boss_id, instanceId: id },
+          }));
+        }
       } else {
         const data = { bossId: row.boss_id, instanceId: id };
         for (const uid of winners) {

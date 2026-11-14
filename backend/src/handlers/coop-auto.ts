@@ -96,6 +96,17 @@
  * twice in a day. After kept and mutual-friend trios, the next trio is the one that groups the
  * fewest pairs already grouped today, so a hunter's trios bring in different friends; W1209's today
  * rule then spreads their bosses.
+ *
+ * W1211 — THE AUTOMATIC RAID (owner 2026-11-14: "automate the raid with 5 active randoms .. so it
+ * doesn't have to be your friend ... puts you in with 5 random users that are active-active"; then
+ * "Keep 135k + 150", "Back to back", and "you can only be in one raid at a time"). Every pass, the
+ * very active hunters (a boss kill on AUTO_RAID_ACTIVE_DAYS (4) of the last 7 days) on the automatic
+ * client who have not switched automatic hunts off and are in no live raid are shuffled for the day
+ * and put into The Grinning God in parties of six (a remainder of four or five makes one more; fewer
+ * wait), nobody with someone they blocked. The raid runs from now for its 80 hours with its own goal
+ * (135,000 steps + 150 flights), every seat joined, auto = 1. When it ends, its hunters go into the
+ * next pass. One push when the party forms; a win tells everyone (coop-boss.ts); a loss is quiet.
+ * coop-boss.ts refuses a summons or an answer that would put anyone in a second raid.
  */
 import type { Env } from '../env';
 import type { SessionPayload } from '../session-jwt';
@@ -104,9 +115,14 @@ import { chunks } from '../lib/chunk';
 import { MERGED_FOR_WEEK } from '../lib/week-board';
 import { getAccoladeWeekStart, priorWeekStart } from '../lib/accolade-week';
 import { ptDayKey, nextDay, prevDay, ptMidnightIso } from '../lib/pact-streak';
+import { notifyUser } from '../lib/apns';
+import { MEMBERSHIP_OPEN } from '../lib/membership';
+import { readEntitlements } from './iap-entitlements';
 import {
   COOP_BOSS_CFG,
+  COOP_BOSS_NAMES,
   emptyProgress,
+  huntersInLiveRaid,
   getAliasMap,
   getCoopProgressForInstances,
   loadParticipants,
@@ -358,6 +374,96 @@ export function pickAutoTrios(
     take(best.t);
   }
   return out;
+}
+
+/** W1211 — THE AUTOMATIC RAID (owner 2026-11-14: "automate the raid with 5 active randoms .. so it
+ *  doesn't have to be your friend ... puts you in with 5 random users that are active-active";
+ *  goal: "Keep 135k + 150"; cadence: "Back to back"; "you can only be in one raid at a time"). */
+export const AUTO_RAID_BOSS = 'the_grinning_god';
+/** you + 5 */
+export const AUTO_RAID_PARTY = 6;
+/** "active-active": a boss killed on at least this many of the last 7 Pacific days (matching asks 2) */
+export const AUTO_RAID_ACTIVE_DAYS = 4;
+
+/** W1211 — the pool in a day's random order: a different order every Pacific day, the same order
+ *  all day (FNV-1a of day|id), so a raid's party is random but a test can pin it. */
+export function raidOrder(ids: readonly string[], day: string): string[] {
+  const h = (s: string) => {
+    let x = 0x811c9dc5;
+    for (let i = 0; i < s.length; i++) { x ^= s.charCodeAt(i); x = Math.imul(x, 0x01000193) >>> 0; }
+    return x >>> 0;
+  };
+  return [...ids]
+    .map((id) => ({ id, k: h(day + '|' + id) }))
+    .sort((a, b) => (a.k - b.k) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0))
+    .map((x) => x.id);
+}
+
+/** W1211 — parties from the ordered pool: full parties of `size` first; what is left makes one more
+ *  when it reaches `min`; fewer wait for the next pass. Nobody joins a party holding someone they
+ *  blocked or switched off (or who did so to them). Pure. */
+export function formRaidParties(
+  order: readonly string[],
+  isBlocked: (a: string, b: string) => boolean,
+  size: number = AUTO_RAID_PARTY,
+  min = 4,
+): string[][] {
+  const left = [...order];
+  const out: string[][] = [];
+  while (left.length >= min) {
+    const party = [left.shift()!];
+    for (let i = 0; i < left.length && party.length < size;) {
+      if (party.some((p) => isBlocked(p, left[i]))) { i++; continue; }
+      party.push(left.splice(i, 1)[0]);
+    }
+    if (party.length >= min) out.push(party);
+    else left.push(...party.slice(1));   // blocks left the first hunter short: they wait, the rest stay in line
+  }
+  return out;
+}
+
+const thousands = (n: number) => String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+
+/** W1211 — one automatic raid: every seat joined, live from now for the raid's window (80h), the
+ *  raid's own goal (no sizing — owner: "Keep 135k + 150"). auto = 1 (no leave button, quiet loss),
+ *  matched = 0, pair_key = every id sorted, idempotent on (pair_key, hunt_day). Drops the hunters'
+ *  raid-finder rows for this boss. True when this call created the row. */
+export async function createAutoRaid(env: Env, party: readonly string[], nowMs: number): Promise<boolean> {
+  const cfg = COOP_BOSS_CFG[AUTO_RAID_BOSS];
+  const ids = Array.from(new Set(party.filter(Boolean))).sort();
+  if (!cfg || ids.length < (cfg.minParty ?? 2) || ids.length > (cfg.maxParty ?? AUTO_RAID_PARTY)) return false;
+  const day = ptDayKey(nowMs);
+  if (!day) return false;
+  const id = crypto.randomUUID();
+  const startsAt = new Date(nowMs).toISOString();
+  const endsAt = new Date(nowMs + cfg.windowHours * 3_600_000).toISOString();
+  const [challenger, ...allies] = ids;
+  const res = await env.DB.batch([
+    env.DB
+      .prepare(
+        `INSERT OR IGNORE INTO coop_boss_instances
+           (id, boss_id, boss_rank, challenger_user_id, partner_user_id, partner2_user_id,
+            partner_joined_at, partner2_joined_at, goal_steps, goal_flights, reward_souls,
+            status, starts_at, ends_at, auto, hunt_day, pair_key, matched)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, ?, 1, ?, ?, 0)`,
+      )
+      .bind(id, AUTO_RAID_BOSS, cfg.rank, challenger, allies[0] ?? null, allies[1] ?? null,
+        allies[0] ? startsAt : null, allies[1] ? startsAt : null,
+        cfg.goalSteps, cfg.goalFlights ?? null, cfg.rewardSouls, startsAt, endsAt, day, ids.join('|')),
+    ...allies.map((uid) => env.DB
+      .prepare(
+        `INSERT OR IGNORE INTO coop_boss_participants (instance_id, user_id, joined_at)
+           SELECT ?1, ?2, ?3 WHERE EXISTS (SELECT 1 FROM coop_boss_instances WHERE id = ?1)`,
+      )
+      .bind(id, uid, startsAt)),
+    ...ids.map((uid) => env.DB
+      .prepare(
+        `DELETE FROM raid_queue WHERE user_id = ?1 AND boss_id = ?2
+            AND EXISTS (SELECT 1 FROM coop_boss_instances WHERE id = ?3)`,
+      )
+      .bind(uid, AUTO_RAID_BOSS, id)),
+  ]);
+  return Number(res[0]?.meta?.changes ?? 0) > 0;
 }
 
 /** The lookups both sweeps share: opt-outs, blocks, builds, ranks, steps this week and last, and
@@ -646,8 +752,8 @@ export async function createAutoTrio(env: Env, trio: readonly string[], dayKey: 
 /** Cron, every 2 minutes: today's hunt for every walking friend pair that has none yet, then
  *  (W1164) today's hunt for every matched pair of active hunters who have no friends, then
  *  (W1208) today's automatic trios. */
-export async function sweepCoopAutoHunts(env: Env, _ctx?: ExecutionContext): Promise<{ created: number; pairs: number; skipped: number; matched: number; trios: number }> {
-  const out = { created: 0, pairs: 0, skipped: 0, matched: 0, trios: 0 };
+export async function sweepCoopAutoHunts(env: Env, _ctx?: ExecutionContext): Promise<{ created: number; pairs: number; skipped: number; matched: number; trios: number; raids: number }> {
+  const out = { created: 0, pairs: 0, skipped: 0, matched: 0, trios: 0, raids: 0 };
   try {
     const nowMs = Date.now();
     const today = ptDayKey(nowMs);
@@ -717,6 +823,13 @@ export async function sweepCoopAutoHunts(env: Env, _ctx?: ExecutionContext): Pro
       if (pairs.size >= 2) out.trios = await sweepAutoTrios(env, today, elapsed, pairs, shared, out.created + out.matched, picks);
     } catch (err) {
       console.error('[coop-auto] trio sweep failed', err);
+    }
+
+    // ── W1211 — the automatic raid ──
+    try {
+      out.raids = await sweepAutoRaids(env, nowMs, today, shared, _ctx, out.created + out.matched + out.trios);
+    } catch (err) {
+      console.error('[coop-auto] raid sweep failed', err);
     }
   } catch (err) {
     console.error('[coop-auto] hunt sweep failed', err);
@@ -825,7 +938,8 @@ async function sweepAutoTrios(
   const rows = (await env.DB.prepare(
     `SELECT challenger_user_id AS a, partner_user_id AS b, partner2_user_id AS c, hunt_day AS d
        FROM coop_boss_instances
-      WHERE auto = 1 AND partner2_user_id IS NOT NULL AND hunt_day >= ? ORDER BY hunt_day DESC`,
+      WHERE auto = 1 AND partner2_user_id IS NOT NULL AND hunt_day >= ?
+        AND boss_id IN (${AUTO_TRIO_BOSSES.map((x) => `'${x}'`).join(', ')}) ORDER BY hunt_day DESC`,   // W1211 — never a raid row
   ).bind(yesterday).all<{ a: string; b: string; c: string; d: string }>()).results ?? [];
   const todayTrios: string[][] = [];
   const keep: string[][] = [];
@@ -854,6 +968,72 @@ async function sweepAutoTrios(
     const pick = pickAutoTrioBoss(trio.map((u) => ranks.get(u) ?? 'E'), trio.reduce((s, u) => s + (pattern(u) ?? 0), 0), prefs);
     if (!pick) continue;
     if (await createAutoTrio(env, trio, today, pick)) { made++; picks.add(trio, pick.bossId); }
+  }
+  return made;
+}
+
+/** W1211 — the automatic raid pass (see AUTO_RAID_BOSS). The very active hunters (a boss kill on
+ *  AUTO_RAID_ACTIVE_DAYS of the last 7) who are on the automatic client, have not switched automatic
+ *  hunts off and are in no live raid are shuffled for the day and put in parties of six; a raid that
+ *  ends frees its hunters for the next pass (back to back). Each hunter of a new raid is told once.
+ *  Returns how many raids it made. */
+async function sweepAutoRaids(
+  env: Env,
+  nowMs: number,
+  today: string,
+  shared: () => Promise<Shared>,
+  ctx: ExecutionContext | undefined,
+  madeSoFar: number,
+): Promise<number> {
+  const cfg = COOP_BOSS_CFG[AUTO_RAID_BOSS];
+  if (!cfg) return 0;
+  const min = cfg.minParty ?? 4;
+  const killRows = (await env.DB.prepare(
+    `SELECT k.user_id AS user_id,
+            COUNT(DISTINCT date(k.server_created_at / 1000, 'unixepoch', '-8 hours')) AS kill_days
+       FROM public_achievement_events k JOIN users u ON u.id = k.user_id
+      WHERE k.event_type = 'boss_kill' AND k.server_created_at >= ?
+        AND COALESCE(u.apple_sub, '') NOT LIKE 'sim_test_%'
+      GROUP BY k.user_id`,
+  )
+    .bind(nowMs - MATCH_WINDOW_MS)
+    .all<{ user_id: string; kill_days: number }>()).results ?? [];
+  const active = killRows
+    .filter((r) => r.user_id && (Number(r.kill_days) || 0) >= AUTO_RAID_ACTIVE_DAYS)
+    .map((r) => r.user_id);
+  if (active.length < min) return 0;
+
+  const [optouts, blocks, builds] = await shared();
+  const busy = await huntersInLiveRaid(env, AUTO_RAID_BOSS);   // one raid at a time
+  const pool: string[] = [];
+  for (const uid of active) {
+    if (busy.has(uid)) continue;
+    if (buildW(builds.get(uid)) < AUTO_HUNT_MIN_W) continue;   // the automatic client is not on their phone
+    if (optouts.has(uid + '>*')) continue;                     // switched automatic hunts off
+    if (cfg.memberOnly && !MEMBERSHIP_OPEN) {
+      try { if (!(await readEntitlements(env, uid)).member) continue; } catch { continue; }
+    }
+    pool.push(uid);
+  }
+  if (pool.length < min) return 0;
+
+  const isBlocked = (a: string, b: string) =>
+    blocks.has(pairKey(a, b)) || optouts.has(a + '>' + b) || optouts.has(b + '>' + a);
+  const goal = thousands(cfg.goalSteps) + ' steps' + (cfg.goalFlights ? ' and ' + thousands(cfg.goalFlights) + ' flights' : '');
+  let made = 0;
+  for (const party of formRaidParties(raidOrder(pool, today), isBlocked, AUTO_RAID_PARTY, min)) {
+    if (madeSoFar + made >= MAX_CREATE_PER_RUN) break;
+    if (!(await createAutoRaid(env, party, nowMs))) continue;
+    made++;
+    if (!ctx) continue;
+    for (const uid of party) {
+      ctx.waitUntil(notifyUser(env, uid, {
+        title: 'Raid Party Found',
+        body: `${COOP_BOSS_NAMES[AUTO_RAID_BOSS] ?? 'The raid'}: you and ${party.length - 1} hunters have ${cfg.windowHours} hours for ${goal} together.`,
+        type: 'coop_joined',
+        data: { bossId: AUTO_RAID_BOSS },
+      }));
+    }
   }
   return made;
 }

@@ -66,7 +66,7 @@ const TRIO_PENDING_ROW = {
 
 /** Substring-routed D1 mock. `sqlLog` captures every prepared statement so
  *  tests can assert on the cap query's semantics, not just its result. */
-function makeDb(opts: { running?: number; premiumExpiresAt?: number; instance?: Record<string, unknown> | null; rankTier?: string; emoteSentAt?: number }, sqlLog?: string[]) {
+function makeDb(opts: { running?: number; premiumExpiresAt?: number; instance?: Record<string, unknown> | null; rankTier?: string; emoteSentAt?: number; inRaid?: string[] }, sqlLog?: string[]) {
   // W692 — the instance the read-path (loadInstance / loadParticipants) resolves to.
   const inst = () => (opts.instance === undefined ? PENDING_ROW : opts.instance) as Record<string, unknown> | null;
   return {
@@ -75,6 +75,8 @@ function makeDb(opts: { running?: number; premiumExpiresAt?: number; instance?: 
       return {
         bind: (...args: unknown[]) => ({
           all: async () => {
+            // W1211 — huntersInLiveRaid (the one-raid-at-a-time check)
+            if (sql.includes('AS uid')) return { results: (opts.inRaid ?? []).map((uid) => ({ uid })), success: true, meta: {} };
             if (sql.includes('FROM users WHERE id IN')) {
               return { results: [{ id: 'u1', alias: 'challenger' }, { id: 'u2', alias: 'partner' }, { id: 'u3', alias: 'partner2' }], success: true, meta: {} };
             }
@@ -970,5 +972,48 @@ describe('W1040 — the resolve race and the award rows', () => {
     const batched: string[] = [];
     await handleCoopBossResolve(resolveReq(), makeEnv(racing('completed', batched)), session('u1'), 'inst-1');
     expect(batched.length).toBe(2);
+  });
+});
+
+// ── W1211 — one raid at a time (owner 2026-11-14) ──────────────────────────
+describe('W1211 — one raid at a time', () => {
+  const raidReq = (body: Record<string, unknown>) =>
+    new Request('http://test/v1/coop-boss', { method: 'POST', body: JSON.stringify(body) });
+  const member = Date.now() + 86_400_000;
+  const RAID_PENDING = { ...TRIO_PENDING_ROW, id: 'inst-r', boss_id: 'the_grinning_god', boss_rank: 'S', goal_steps: 135000, goal_flights: 150, reward_souls: 800 };
+
+  it('a hunter already in a raid cannot summon another: 409 IN_RAID', async () => {
+    const res = await handleCoopBossCreate(
+      raidReq({ ally_user_ids: ['u2', 'u3', 'u4'], boss_id: 'the_grinning_god' }),
+      makeEnv(makeDb({ premiumExpiresAt: member, inRaid: ['u1'] })), session('u1'));
+    expect(res.status).toBe(409);
+    expect(((await res.json()) as { error: string }).error).toBe('IN_RAID');
+  });
+
+  it('nor bring an ally who is: 409 ALLY_IN_RAID', async () => {
+    const res = await handleCoopBossCreate(
+      raidReq({ ally_user_ids: ['u2', 'u3', 'u4'], boss_id: 'the_grinning_god' }),
+      makeEnv(makeDb({ premiumExpiresAt: member, inRaid: ['u3'] })), session('u1'));
+    expect(res.status).toBe(409);
+    expect(((await res.json()) as { error: string }).error).toBe('ALLY_IN_RAID');
+  });
+
+  it('answering a raid summons while in another raid: 409 IN_RAID (this hunt left out of the check); free → the seat is taken', async () => {
+    const log: string[] = [];
+    const res = await handleCoopBossJoin(
+      createReq(), makeEnv(makeDb({ instance: { ...RAID_PENDING }, premiumExpiresAt: member, inRaid: ['u2'] }, log)), session('u2'), 'inst-r');
+    expect(res.status).toBe(409);
+    expect(((await res.json()) as { error: string }).error).toBe('IN_RAID');
+    expect(log.find((s) => s.includes('AS uid'))).toMatch(/i\.id <> \?2/);
+    const ok = await handleCoopBossJoin(
+      createReq(), makeEnv(makeDb({ instance: { ...RAID_PENDING }, premiumExpiresAt: member })), session('u2'), 'inst-r');
+    expect(ok.status).toBe(200);
+  });
+
+  it('an ordinary hunt never asks', async () => {
+    const log: string[] = [];
+    const res = await handleCoopBossCreate(createReq(), makeEnv(makeDb({}, log)), session('u1'));
+    expect(res.status).toBe(200);
+    expect(log.some((s) => s.includes('AS uid'))).toBe(false);
   });
 });

@@ -251,11 +251,14 @@ test.describe('Automatic friend hunts (W1094)', () => {
       instances: [
         inst({ id: 'a-dash', status: 'active', auto: true }),
         inst({ id: 'm-dash', status: 'active', auto: false, boss: 'the_coursing_dread', rank: 'C' }),
+        inst({ id: 'r-dash', status: 'active', auto: true, boss: 'the_grinning_god', rank: 'S' }),   // W1211
       ],
     });
     await page.evaluate(() => (window as any).__coopOpenDashboard());
     await expect(page.locator('[data-coop-hunt="a-dash"] .cph-daily')).toHaveText('DAILY', { timeout: 10_000 });
     await expect(page.locator('[data-coop-hunt="m-dash"] .cph-daily')).toHaveCount(0);
+    // W1211 — an automatic raid runs 80 hours: it is marked AUTO RAID, not DAILY
+    await expect(page.locator('[data-coop-hunt="r-dash"] .cph-daily')).toHaveText('AUTO RAID');
   });
 
   test('Pact Flames: stop one friend, then everything', async ({ page }) => {

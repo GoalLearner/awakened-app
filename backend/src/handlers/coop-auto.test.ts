@@ -32,7 +32,11 @@ import {
   AUTO_BOSS_DROPS,
   AUTO_TRIO_BOSSES,
   AUTO_TRIOS_PER_HUNTER,
+  AUTO_RAID_ACTIVE_DAYS,
+  AUTO_RAID_PARTY,
   choosePick,
+  formRaidParties,
+  raidOrder,
   ownedAutoDrops,
   pickAutoTrioBoss,
   pickAutoTrios,
@@ -261,6 +265,7 @@ interface SweepFixture {
   history?: { pair_key: string; boss_id: string; d: string }[];                       // W1209 — each group's last day on each boss
   todayRows?: { boss_id: string; a: string | null; b: string | null; c: string | null }[];   // W1209 — today's automatic hunts
   trioRows?: { a: string; b: string; c: string; d: string }[];   // W1208 — today's / yesterday's automatic trios
+  raidLive?: string[];   // W1211 — hunters already in a live raid
 }
 interface Call { sql: string; args: unknown[] }
 
@@ -270,6 +275,7 @@ function sweepDb(f: SweepFixture, calls: Call[]) {
   const results = (sql: string, args: unknown[]): unknown[] => {
     if (sql.includes('FROM friends')) return f.friends ?? [];
     if (sql.includes('partner2_user_id IS NOT NULL AND hunt_day')) return f.trioRows ?? [];   // W1208
+    if (sql.includes('AS uid')) return (f.raidLive ?? []).map((uid) => ({ uid }));   // W1211 — huntersInLiveRaid
     if (sql.includes('json_each(')) {   // W1209 — one row per (hunter, owned drop)
       return args.flatMap((id) => (f.owned?.[id as string] ?? []).map((item) => ({ user_id: id, item })));
     }
@@ -539,6 +545,84 @@ describe('sweepCoopAutoHunts — one sized hunt per walking friend pair per day'
   });
 });
 
+describe('sweepCoopAutoHunts — the automatic raid (W1211)', () => {
+  // owner 2026-11-14: "automate the raid with 5 active randoms ... active-active"; "Keep 135k + 150";
+  // "Back to back"; "you can only be in one raid at a time"
+  const kills = (n: Record<string, number>) => Object.entries(n).map(([user_id, kill_days]) => ({ user_id, kill_days, kills: kill_days * 2, created_at: 0 }));
+  const fix: SweepFixture = {
+    kills: kills({ u1: 7, u2: 6, u3: 5, u4: 4, u5: 4, u6: 5, u7: 3, u8: 6, u9: 6 }),
+    builds: { u1: NEW, u2: NEW, u3: NEW, u4: NEW, u5: NEW, u6: NEW, u7: NEW, u8: '3.0.16-w1096', u9: NEW },
+    optouts: [{ user_id: 'u9', friend_user_id: '*' }],
+  };
+  const raids = (calls: Call[]) => calls.filter((c) => c.sql.includes('INSERT OR IGNORE INTO coop_boss_instances') && c.args[1] === 'the_grinning_god');
+
+  it('six very active hunters (a kill on 4+ of 7 days) on the automatic client get one live raid: every seat joined, the full goal, 80 hours', async () => {
+    const calls: Call[] = [];
+    const res = await sweepCoopAutoHunts(makeEnv(sweepDb(fix, calls)), ctx);
+    expect(res.raids).toBe(1);
+    const r = raids(calls);
+    expect(r.length).toBe(1);
+    const a = r[0].args;
+    expect(a[14]).toBe('u1|u2|u3|u4|u5|u6');   // u7 has 3 kill days, u8 an old build, u9 switched automatic hunts off
+    expect(a.slice(1, 6)).toEqual(['the_grinning_god', 'S', 'u1', 'u2', 'u3']);
+    expect([a[8], a[9], a[10]]).toEqual([135000, 150, 800]);
+    expect(Date.parse(a[12] as string) - Date.parse(a[11] as string)).toBe(80 * 3_600_000);
+    expect(a[13]).toBe(today);
+    expect(r[0].sql).toContain("'active'");
+    expect(r[0].sql).toMatch(/, 1, \?, \?, 0\)/);   // auto = 1, matched = 0
+    const seats = calls.filter((c) => c.sql.includes('INTO coop_boss_participants') && c.args[0] === a[0]);
+    expect(seats.map((c) => c.args[1])).toEqual(['u2', 'u3', 'u4', 'u5', 'u6']);
+    expect(seats.every((c) => c.args[2] === a[11])).toBe(true);
+    expect(calls.filter((c) => c.sql.includes('DELETE FROM raid_queue')).length).toBe(6);
+    expect(mockNotify).toHaveBeenCalledTimes(6);
+    expect(mockNotify.mock.calls[0][2]).toMatchObject({
+      title: 'Raid Party Found',
+      body: 'The Grinning God: you and 5 hunters have 80 hours for 135,000 steps and 150 flights together.',
+    });
+  });
+
+  it('one raid at a time: a hunter in a live raid is left out; five still make a raid; under four wait', async () => {
+    const calls: Call[] = [];
+    await sweepCoopAutoHunts(makeEnv(sweepDb({ ...fix, raidLive: ['u1'] }, calls)), ctx);
+    expect(raids(calls).map((c) => c.args[14])).toEqual(['u2|u3|u4|u5|u6']);
+    const few: Call[] = [];
+    const res = await sweepCoopAutoHunts(makeEnv(sweepDb({ ...fix, raidLive: ['u1', 'u2', 'u3'] }, few)), ctx);
+    expect(res.raids).toBe(0);
+    expect(raids(few).length).toBe(0);
+    expect(few.find((c) => c.sql.includes('AS uid'))!.args).toEqual(['the_grinning_god', '']);
+  });
+
+  it('formRaidParties: sixes first, a remainder of 4-5 makes one more, fewer wait; nobody with someone they blocked', () => {
+    const ids = (n: number) => Array.from({ length: n }, (_, i) => 'h' + (i + 1));
+    const none = () => false;
+    expect(AUTO_RAID_PARTY).toBe(6);
+    expect(AUTO_RAID_ACTIVE_DAYS).toBe(4);
+    expect(formRaidParties(ids(6), none)).toEqual([ids(6)]);
+    expect(formRaidParties(ids(7), none)).toEqual([ids(6)]);
+    expect(formRaidParties(ids(10), none).map((p) => p.length)).toEqual([6, 4]);
+    expect(formRaidParties(ids(9), none).map((p) => p.length)).toEqual([6]);
+    expect(formRaidParties(ids(5), none)).toEqual([ids(5)]);
+    expect(formRaidParties(ids(3), none)).toEqual([]);
+    const blk = (a: string, b: string) => (a === 'h1' && b === 'h2') || (a === 'h2' && b === 'h1');
+    expect(formRaidParties(ids(6), blk)).toEqual([['h1', 'h3', 'h4', 'h5', 'h6']]);   // h2 waits
+  });
+
+  it('raidOrder: random, but the same order all day and a new one the next', () => {
+    const six = ['u1', 'u2', 'u3', 'u4', 'u5', 'u6'];
+    const a = raidOrder(six, '2026-11-14');
+    expect(raidOrder(six, '2026-11-14')).toEqual(a);
+    expect([...a].sort()).toEqual(six);
+    expect(raidOrder(six, '2026-11-15')).not.toEqual(a);
+  });
+
+  it('a raid row is never read as a trio: the trio pass reads only the trio bosses', async () => {
+    const calls: Call[] = [];
+    await sweepCoopAutoHunts(makeEnv(sweepDb({ friends: [{ a: 'u1', b: 'u2' }, { a: 'u1', b: 'u3' }] }, calls)), ctx);
+    const q = calls.find((c) => c.sql.includes('partner2_user_id IS NOT NULL AND hunt_day'))!;
+    expect(q.sql).toContain("boss_id IN ('the_trinity_colossus', 'the_triune_sentinel', 'the_threefold_court', 'the_crossroads_hound')");
+  });
+});
+
 describe('sweepCoopResolve — the server settles every active hunt', () => {
   const past = new Date(Date.now() - 3 * 3_600_000).toISOString();
   const future = new Date(Date.now() + 3 * 3_600_000).toISOString();
@@ -567,6 +651,29 @@ describe('sweepCoopResolve — the server settles every active hunt', () => {
     expect(first[1]).toBe('u1');
     expect((first[2] as { body: string }).body).toBe('You and anthony brought down The Twin Maw.');
     expect((first[2] as { type: string }).type).toBe('coop_complete');
+  });
+
+  it('W1211 — an automatic raid win tells every hunter, outside the once-a-day claim', async () => {
+    const calls: Call[] = [];
+    const f: SweepFixture = {
+      active: [row('r1', {
+        boss_id: 'the_grinning_god', boss_rank: 'S', goal_steps: 135000, goal_flights: 150, reward_souls: 800,
+        partner2_user_id: 'u3', partner2_joined_at: past, auto: 1, hunt_day: today, pair_key: 'u1|u2|u3|u4',
+      })],
+      participants: ['u2', 'u3', 'u4'].map((u) => ({ instance_id: 'r1', user_id: u, joined_at: past })),
+      progress: [
+        { bid: 'r1', user_id: 'u1', event_type: 'steps_total', s: 70000 },
+        { bid: 'r1', user_id: 'u2', event_type: 'steps_total', s: 65000 },
+        { bid: 'r1', user_id: 'u3', event_type: 'flights_total', s: 100 },
+        { bid: 'r1', user_id: 'u4', event_type: 'flights_total', s: 50 },
+      ],
+    };
+    const res = await sweepCoopResolve(makeEnv(sweepDb(f, calls)), ctx);
+    expect(res).toEqual({ won: 1, expired: 0 });
+    expect(calls.filter((c) => c.sql.includes('INTO coop_boss_awards')).length).toBe(4);
+    expect(calls.filter((c) => c.sql.includes('SET coop_auto_push_day')).length).toBe(0);
+    expect(mockNotify).toHaveBeenCalledTimes(4);
+    expect(mockNotify.mock.calls[0][2]).toMatchObject({ title: 'Raid Complete', body: 'Your raid party brought down The Grinning God.', type: 'coop_complete' });
   });
 
   it('a second automatic win the same day is quiet (the day stamp is already taken)', async () => {
