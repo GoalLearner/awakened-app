@@ -8,6 +8,9 @@
  * the other handler tests.
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 vi.mock('../lib/apns', () => ({ notifyUser: vi.fn(async () => {}) }));
 import { notifyUser } from '../lib/apns';
 import {
@@ -26,6 +29,9 @@ import {
   sweepCoopResolve,
   AUTO_FIT,
   AUTO_BOSSES,
+  AUTO_BOSS_ULTRAS,
+  ownedAutoUltras,
+  spentBossesFor,
   pairFlightsOf,
 } from './coop-auto';
 import { getAccoladeWeekStart, priorWeekStart } from '../lib/accolade-week';
@@ -83,6 +89,39 @@ describe('pickAutoBoss — the best one-day duo both ranks allow whose printed g
     expect(pickAutoBoss('B', 'B', 30000, null)).toEqual({ bossId: 'the_coursing_dread', goalSteps: 8000 });
     expect(pickAutoBoss('B', 'B', 30000)).toEqual({ bossId: 'the_coursing_dread', goalSteps: 8000 });
   });
+  // W1207 — owner: "if both hunters already own all the ultra rares from this duo boss, move onto
+  // another step boss that can be completed together"
+  it('W1207: a boss whose ultra rares both hunters own is passed over for the next that fits', () => {
+    expect(pickAutoBoss('C', 'C', 20000, null, new Set(['the_coursing_dread']))).toEqual({ bossId: 'the_twin_maw', goalSteps: 4000 });
+    expect(pickAutoBoss('B', 'B', 11000, 16, new Set(['the_hollow_monarch']))).toEqual({ bossId: 'the_gaunt_wardens', goalSteps: 8000, goalFlights: 6 });
+    expect(pickAutoBoss('B', 'B', 11000, 16, new Set(['the_hollow_monarch', 'the_gaunt_wardens']))).toEqual({ bossId: 'the_coursing_dread', goalSteps: 8000 });
+    // a spent boss that does not fit changes nothing
+    expect(pickAutoBoss('C', 'C', 20000, null, new Set(['the_sundered_choir']))).toEqual({ bossId: 'the_coursing_dread', goalSteps: 8000 });
+  });
+  it('W1207: every boss that fits spent → the best of them still runs; nothing fits → the sized Twin Maw as before', () => {
+    expect(pickAutoBoss('C', 'C', 20000, null, new Set(['the_coursing_dread', 'the_twin_maw']))).toEqual({ bossId: 'the_coursing_dread', goalSteps: 8000 });
+    expect(pickAutoBoss('C', 'C', 9999, null, new Set(['the_twin_maw']))).toEqual({ bossId: 'the_twin_maw', goalSteps: 4000 });
+  });
+  it('W1207: spent = both own every ultra rare; one owner, or no save, is not enough', () => {
+    const owned = new Map([
+      ['a', new Set(['the_long_pursuit', 'bothsight_longbow'])],
+      ['b', new Set(['the_long_pursuit'])],
+    ]);
+    expect(Array.from(spentBossesFor(owned, 'a', 'b'))).toEqual(['the_coursing_dread']);
+    expect(spentBossesFor(owned, 'a', 'nobody').size).toBe(0);
+  });
+  it('W1207: the ultra rares match the client catalog (app.js) for every automatic boss', () => {
+    const HERE = dirname(fileURLToPath(import.meta.url));
+    const app = readFileSync(join(HERE, '..', '..', '..', 'app.js'), 'utf8');
+    const re = /\n {4}([a-z0-9_]+): \{\r?\n {6}id: '([a-z0-9_]+)',[\s\S]*?source_boss: '([a-z0-9_]+)',\r?\n {6}rarity: '([a-z_]+)'/g;
+    const ultras: Record<string, string[]> = {};
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(app))) if (m[4] === 'ultra_rare') (ultras[m[3]] ??= []).push(m[2]);
+    for (const bossId of AUTO_BOSSES) {
+      expect(ultras[bossId] ?? [], bossId).not.toEqual([]);
+      expect([...(AUTO_BOSS_ULTRAS[bossId] ?? [])].sort(), bossId).toEqual([...(ultras[bossId] ?? [])].sort());
+    }
+  });
   it('the pair\'s flights: the sum, or nothing when either phone has not sent one', () => {
     const m = new Map([['a', 4.5], ['b', 3]]);
     expect(pairFlightsOf(m, 'a', 'b')).toBe(7.5);
@@ -135,6 +174,7 @@ interface SweepFixture {
   // this PT week's matched rows (newest first, as the sweep's query orders them)
   kills?: { user_id: string; kill_days: number; kills: number; created_at: number }[];
   matchedWeek?: { a: string; b: string; d: string }[];
+  ultras?: Record<string, string[]>;   // W1207 — the ultra rares each hunter's cloud save holds
 }
 interface Call { sql: string; args: unknown[] }
 
@@ -143,6 +183,13 @@ function sweepDb(f: SweepFixture, calls: Call[]) {
   const lastWeek = priorWeekStart(thisWeek);
   const results = (sql: string, args: unknown[]): unknown[] => {
     if (sql.includes('FROM friends')) return f.friends ?? [];
+    if (sql.includes('FROM user_state_snapshots')) {   // W1207 — one row per hunter with a save, a column per ultra rare
+      return args.filter((id) => f.ultras && (id as string) in f.ultras).map((id) => {
+        const row: Record<string, unknown> = { user_id: id };
+        for (const it of f.ultras![id as string]) row[it] = 1;
+        return row;
+      });
+    }
     if (sql.includes('auto = 1 AND hunt_day')) return (f.done ?? []).map((pair_key) => ({ pair_key }));
     if (sql.includes('FROM public_achievement_events')) return f.kills ?? [];      // W1164
     if (sql.includes('WHERE matched = 1 AND hunt_day')) return f.matchedWeek ?? []; // W1164
@@ -225,6 +272,33 @@ describe('sweepCoopAutoHunts — one sized hunt per walking friend pair per day'
     expect(parts[0].sql).toContain('WHERE EXISTS');
     // no phone sent a flights average: no steps-only row carries a flights goal
     for (const ins of inserts) expect(ins.args[7]).toBeNull();
+  });
+
+  it('W1207 — a friend pair who both own the Dread\'s ultra rare hunt the Twin Maw instead; one owner keeps the Dread', async () => {
+    const calls: Call[] = [];
+    const res = await sweepCoopAutoHunts(makeEnv(sweepDb({ ...base, ultras: { u1: ['the_long_pursuit'], u3: ['the_long_pursuit', 'bothsight_longbow'], u4: ['the_long_pursuit'] } }, calls)), ctx);
+    expect(res.created).toBe(3);
+    const byPair = new Map(calls.filter((c) => c.sql.includes('INSERT OR IGNORE INTO coop_boss_instances')).map((c) => [c.args[12], c]));
+    expect(byPair.get('u1|u3')!.args[1]).toBe('the_twin_maw');
+    expect(byPair.get('u1|u3')!.args[6]).toBe(4000);
+    const q = calls.find((c) => c.sql.includes('FROM user_state_snapshots') && c.args.includes('u3'))!;
+    expect(q.sql).toContain("'$.cards.the_long_pursuit.count'");
+    // with no saves at all the sweep picks exactly as before
+    const plain: Call[] = [];
+    await sweepCoopAutoHunts(makeEnv(sweepDb(base, plain)), ctx);
+    const plainPairs = new Map(plain.filter((c) => c.sql.includes('INSERT OR IGNORE INTO coop_boss_instances')).map((c) => [c.args[12], c]));
+    expect(plainPairs.get('u1|u3')!.args[1]).toBe('the_coursing_dread');
+  });
+
+  it('W1207 — ownedAutoUltras reads count > 0; a failed read owns nothing', async () => {
+    const calls: Call[] = [];
+    const owned = await ownedAutoUltras(makeEnv(sweepDb({ ultras: { u1: ['the_hollow_crown'] } }, calls)), ['u1', 'u2']);
+    expect(Array.from(owned.get('u1') ?? [])).toEqual(['the_hollow_crown']);
+    expect(owned.has('u2')).toBe(false);
+    const broken = { prepare: () => { throw new Error('boom'); } } as unknown as D1Database;
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    expect((await ownedAutoUltras(makeEnv(broken), ['u1'])).size).toBe(0);
+    errSpy.mockRestore();
   });
 
   it('W1195 — a pair whose phones both send flights averages gets a steps + flights boss with both goals on the row', async () => {

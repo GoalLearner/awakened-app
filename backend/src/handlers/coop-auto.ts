@@ -59,6 +59,14 @@
  * with"): a matched pair forms a Pact Flame like friends do (coop-pacts.ts and pact-flame-risk.ts
  * no longer skip matched rows), and a pair stays together for as long as both stay eligible —
  * each hunter's latest partner in the last MATCH_KEEP_DAYS is kept — so the flame can grow.
+ *
+ * W1207 (owner 2026-11-14: "if both hunters already own all the ultra rares from this duo boss,
+ * move onto another step boss that can be completed together .. lesser or better boss on
+ * automation"): a boss whose every ultra rare BOTH hunters already own (cloud save hb_inventory,
+ * count > 0 — a sold last copy counts as not owned) is passed over for the next boss in the list
+ * that still fits. A better boss is already the pick whenever it fits, so the move is down the
+ * list. When every boss that fits is spent for both, the best of them still runs: the day's hunt
+ * keeps the Pact Flame and pays its souls and rares.
  */
 import type { Env } from '../env';
 import type { SessionPayload } from '../session-jwt';
@@ -88,6 +96,15 @@ import {
 export const AUTO_HUNT_MIN_W = 1097;
 /** One-day duo bosses, best first (W1195: the flights bosses join; sleep duos still wait). */
 export const AUTO_BOSSES: readonly string[] = ['the_sundered_choir', 'the_hollow_monarch', 'the_gaunt_wardens', 'the_coursing_dread', 'the_twin_maw'];
+/** W1207 — each automatic boss's ultra rares, from the client catalog (rarity 'ultra_rare',
+ *  source_boss). A test reads app.js so the two cannot drift. */
+export const AUTO_BOSS_ULTRAS: Readonly<Record<string, readonly string[]>> = {
+  the_sundered_choir: ['the_choirmasters_vestment'],
+  the_hollow_monarch: ['the_hollow_crown'],
+  the_gaunt_wardens: ['the_wardens_vigil'],
+  the_coursing_dread: ['the_long_pursuit'],
+  the_twin_maw: ['bothsight_longbow'],
+};
 /** W1182 — 0.9 → 0.75: at 90% of a pair's usual walking, any slow day lost the hunt (39% lost).
  *  W1195 — 0.75 → 0.8: the owner's "within 80% of the averages of the two users". */
 export const AUTO_FIT = 0.8;
@@ -139,24 +156,31 @@ export interface AutoPick { bossId: string; goalSteps: number; goalFlights?: num
 /** The boss and goal for a pair: the best boss both ranks allow whose printed goals all fit
  *  AUTO_FIT × the pair's averages (steps a day; flights a day, null when either phone has not sent
  *  one), else The Twin Maw sized to the pair's walking. For a flights boss goalSteps holds the
- *  flights, as the catalog and isGoalMet do. */
-export function pickAutoBoss(rankA: string, rankB: string, pairPattern: number, pairFlights: number | null = null): AutoPick {
+ *  flights, as the catalog and isGoalMet do. W1207 — a boss in `spent` (both own all its ultra
+ *  rares) is passed over for the next that fits; if every boss that fits is spent, the best one. */
+export function pickAutoBoss(rankA: string, rankB: string, pairPattern: number, pairFlights: number | null = null, spent: ReadonlySet<string> = new Set()): AutoPick {
   const r = Math.min(RANK_ORDER[rankA] ?? 0, RANK_ORDER[rankB] ?? 0);
   const fit = AUTO_FIT * Math.max(0, Number(pairPattern) || 0);
   const fl = pairFlights == null || !Number.isFinite(Number(pairFlights)) ? null : AUTO_FIT * Math.max(0, Number(pairFlights));
+  let best: AutoPick | null = null;
   for (const bossId of AUTO_BOSSES) {
     const cfg = COOP_BOSS_CFG[bossId];
     if (!cfg || (RANK_ORDER[cfg.rank] ?? 0) > r) continue;
     if (cfg.windowHours !== 24 || (cfg.partySize ?? 2) !== 2) continue;
+    let pick: AutoPick | null = null;
     if (cfg.metric === 'steps') {
-      if (cfg.goalSteps <= fit) return { bossId, goalSteps: cfg.goalSteps };
+      if (cfg.goalSteps <= fit) pick = { bossId, goalSteps: cfg.goalSteps };
     } else if (cfg.metric === 'flights') {
-      if (fl !== null && cfg.goalSteps <= fl) return { bossId, goalSteps: cfg.goalSteps };
+      if (fl !== null && cfg.goalSteps <= fl) pick = { bossId, goalSteps: cfg.goalSteps };
     } else if (cfg.metric === 'both') {
       const gf = cfg.goalFlights ?? 0;
-      if (fl !== null && cfg.goalSteps <= fit && gf <= fl) return { bossId, goalSteps: cfg.goalSteps, goalFlights: gf };
+      if (fl !== null && cfg.goalSteps <= fit && gf <= fl) pick = { bossId, goalSteps: cfg.goalSteps, goalFlights: gf };
     }
+    if (!pick) continue;
+    if (!spent.has(bossId)) return pick;
+    best ??= pick;
   }
+  if (best) return best;
   const sized = Math.max(AUTO_MIN_GOAL, Math.round(fit / 100) * 100);
   return { bossId: AUTO_SIZED_BOSS, goalSteps: sized };
 }
@@ -225,6 +249,43 @@ async function flightsAvgByUser(env: Env, nowMs: number): Promise<Map<string, nu
   for (const r of rows.results ?? []) {
     const v = Number(r.flights_avg);
     if (r.user_id && Number.isFinite(v) && v >= 0) out.set(r.user_id, v);
+  }
+  return out;
+}
+
+/** W1207 — the automatic bosses' ultra rares each hunter owns now (cloud save hb_inventory →
+ *  cards[id].count > 0). A hunter with no save, or a failed read, owns none: nothing is passed over. */
+export async function ownedAutoUltras(env: Env, userIds: string[]): Promise<Map<string, Set<string>>> {
+  const out = new Map<string, Set<string>>();
+  const ids = Array.from(new Set(userIds.filter(Boolean)));
+  const items = Array.from(new Set(Object.values(AUTO_BOSS_ULTRAS).flat()));
+  if (!ids.length || !items.length) return out;
+  try {
+    // the item ids are this file's own constants ([a-z_]), never input
+    const cols = items.map((it) => `json_extract(inv, '$.cards.${it}.count') AS "${it}"`).join(', ');
+    const rows = (await env.DB.prepare(
+      `SELECT user_id, ${cols}
+         FROM (SELECT user_id, json_extract(state_json, '$.keys.hb_inventory') AS inv
+                 FROM user_state_snapshots WHERE user_id IN (${ids.map(() => '?').join(', ')}))`,
+    ).bind(...ids).all<Record<string, unknown>>()).results ?? [];
+    for (const r of rows) {
+      const own = new Set<string>();
+      for (const it of items) if ((Number(r[it]) || 0) > 0) own.add(it);
+      out.set(String(r.user_id), own);
+    }
+  } catch (err) {
+    console.error('[coop-auto] ultra ownership read failed', err);
+  }
+  return out;
+}
+
+/** W1207 — the automatic bosses whose every ultra rare both hunters already own. */
+export function spentBossesFor(owned: Map<string, Set<string>>, a: string, b: string): Set<string> {
+  const out = new Set<string>();
+  const oa = owned.get(a), ob = owned.get(b);
+  if (!oa || !ob) return out;
+  for (const [bossId, items] of Object.entries(AUTO_BOSS_ULTRAS)) {
+    if (items.length && items.every((it) => oa.has(it) && ob.has(it))) out.add(bossId);
   }
   return out;
 }
@@ -359,7 +420,8 @@ export async function sweepCoopAutoHunts(env: Env, _ctx?: ExecutionContext): Pro
           const pa = pattern(a);
           const pb = pattern(b);
           if (pa === null || pb === null) { out.skipped++; continue; }
-          const pick = pickAutoBoss(ranks.get(a) ?? 'E', ranks.get(b) ?? 'E', pa + pb, pairFlightsOf(flights, a, b));
+          const spent = spentBossesFor(await ownedAutoUltras(env, [a, b]), a, b);   // W1207
+          const pick = pickAutoBoss(ranks.get(a) ?? 'E', ranks.get(b) ?? 'E', pa + pb, pairFlightsOf(flights, a, b), spent);
           if (await createAutoHunt(env, a, b, today, pick)) out.created++;
         }
       }
@@ -448,7 +510,8 @@ async function sweepMatchedPairs(
   for (const [a, b] of pickMatchedPairs(pool, keep, busyToday, isBlocked)) {
     if (made >= MAX_CREATE_PER_RUN) break;
     if (doneToday.has(pairKey(a, b))) continue;   // today's row already stands
-    const pick = pickAutoBoss(ranks.get(a) ?? 'E', ranks.get(b) ?? 'E', (byId.get(a)?.pattern ?? 0) + (byId.get(b)?.pattern ?? 0), pairFlightsOf(flights, a, b));
+    const spent = spentBossesFor(await ownedAutoUltras(env, [a, b]), a, b);   // W1207
+    const pick = pickAutoBoss(ranks.get(a) ?? 'E', ranks.get(b) ?? 'E', (byId.get(a)?.pattern ?? 0) + (byId.get(b)?.pattern ?? 0), pairFlightsOf(flights, a, b), spent);
     if (await createAutoHunt(env, a, b, today, pick, true)) made++;
   }
   return made;
