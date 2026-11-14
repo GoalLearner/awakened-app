@@ -103,7 +103,7 @@ jobs:
 
   e2e:
     name: E2E smoke (Playwright)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04   # pinned 2026-11-14: ubuntu-latest moved to 26.04, which Playwright 1.60 cannot install chromium on
     # W492 — RUNS the Playwright smoke on every push (cross-platform via serve.mjs — was Windows-only
     # serve.ps1, which couldn't run on Linux CI).
     # W500 — now a BLOCKING gate: continue-on-error was dropped after the suite went green locally
