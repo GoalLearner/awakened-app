@@ -21,6 +21,8 @@ import {
   elapsedDaysPt,
   handleCoopAutoOptOut,
   MATCH_MIN_KILL_DAYS,
+  MATCH_NEW_DAYS,
+  MATCH_NEW_MIN_KILL_DAYS,
   MATCH_KEEP_DAYS,
   pairKey,
   pickAutoBoss,
@@ -853,6 +855,25 @@ describe('sweepCoopAutoHunts — matched partners (W1164)', () => {
     const res = await sweepCoopAutoHunts(makeEnv(sweepDb(f, calls)), ctx);
     expect(res.matched).toBe(0);
     expect(matchedInserts(calls).length).toBe(0);
+  });
+
+  // W1214 — owner 2026-11-15: "let them match after their first day of kills instead of two"
+  it('W1214 — a hunter who joined in the last week needs one day with a kill; never on their first day; older hunters still need two', async () => {
+    expect([MATCH_NEW_DAYS, MATCH_NEW_MIN_KILL_DAYS, MATCH_MIN_KILL_DAYS]).toEqual([7, 1, 2]);
+    const calls: Call[] = [];
+    const twoDaysAgo = Date.now() - 2 * 86_400_000;
+    const f: SweepFixture = {
+      ...friendsBase,
+      kills: [
+        kill('u5', 1, 2, twoDaysAgo),            // new, one kill day → in
+        kill('u6', 1, 1, twoDaysAgo),            // new, one kill day → in
+        kill('u7', 1, 3, Date.now() - 60_000),   // joined today → the first day stays quiet
+        kill('u8', 1, 2),                        // joined in September, one kill day → still needs two
+      ],
+    };
+    const res = await sweepCoopAutoHunts(makeEnv(sweepDb(f, calls)), ctx);
+    expect(res.matched).toBe(1);
+    expect(matchedInserts(calls).map((c) => c.args[12])).toEqual(['u5|u6']);
   });
 
   it('keeps this week\'s partner, re-pairs the rest, and leaves today\'s standing row alone', async () => {

@@ -185,6 +185,11 @@ const MAX_CREATE_PER_RUN = 40;
 const MAX_RESOLVE_PER_RUN = 200;
 /** W1164 — "active" for matching: a boss killed on at least this many of the last 7 days. */
 export const MATCH_MIN_KILL_DAYS = 2;
+/** W1214 (owner 2026-11-15, the Reddit wave: "let them match after their first day of kills instead
+ *  of two") — a hunter who joined in the last MATCH_NEW_DAYS needs only MATCH_NEW_MIN_KILL_DAYS day
+ *  with a kill. The first day in the app still stays quiet (joined before today). */
+export const MATCH_NEW_DAYS = 7;
+export const MATCH_NEW_MIN_KILL_DAYS = 1;
 const MATCH_WINDOW_MS = 7 * 86_400_000;
 /** W1179 — how far back a hunter's latest matched partner is kept (was: this PT week only). */
 export const MATCH_KEEP_DAYS = 14;
@@ -875,10 +880,13 @@ async function sweepMatchedPairs(
   )
     .bind(nowMs - MATCH_WINDOW_MS)
     .all<{ user_id: string; kill_days: number; kills: number; created_at: number | null }>()).results ?? [];
-  const first = killRows.filter((r) =>
-    r.user_id && !hasFriend.has(r.user_id) &&
-    (Number(r.kill_days) || 0) >= MATCH_MIN_KILL_DAYS &&
-    (Number(r.created_at) || 0) < dayStartMs);   // the quiet first day stays quiet
+  const first = killRows.filter((r) => {
+    const joined = Number(r.created_at) || 0;
+    const need = joined >= nowMs - MATCH_NEW_DAYS * 86_400_000 ? MATCH_NEW_MIN_KILL_DAYS : MATCH_MIN_KILL_DAYS;   // W1214
+    return !!r.user_id && !hasFriend.has(r.user_id) &&
+      (Number(r.kill_days) || 0) >= need &&
+      joined < dayStartMs;   // the quiet first day stays quiet
+  });
   if (first.length < 2) return 0;
 
   const [optouts, blocks, builds, ranks, stepsNow, stepsLast, flights] = await shared();
