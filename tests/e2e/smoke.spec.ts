@@ -3494,7 +3494,7 @@ test.describe('AC · Onboarding v4 (W936 → W1050)', () => {
     await page.locator('#cn-enter').click();
     await obOn(page, 'source');
     await expect(page.locator(SRC + ' .ob4-title')).toHaveText('How did you find the Gate?');
-    await expect(page.locator(SRC + ' .ob4-src-lab')).toHaveText(['App Store Search', 'App Store Recommendation', 'Friend Referral', 'Other']);
+    await expect(page.locator(SRC + ' .ob4-src-lab')).toHaveText(['App Store Search', 'App Store Recommendation', 'Friend Referral', 'Reddit or Social Media', 'Other']);   // W1213
     await expect(page.locator(OB + ' .ob4-seam-fill')).toHaveAttribute('style', /width: 100%/);
     const cont = page.locator('#cn-srcCont'), skip = page.locator(SRC + ' .ob4-src-skip');
     await expect(cont).toHaveClass(/is-off/);
@@ -3515,6 +3515,19 @@ test.describe('AC · Onboarding v4 (W936 → W1050)', () => {
     await obFinish(page);
   });
 
+  // W1213 — owner 2026-11-15: the Reddit wave had to type "Reddit" under Other
+  test('Reddit or Social Media is its own answer and sends "social"', async ({ page }) => {
+    await obFirstRun(page);
+    await obGo(page, 'source');
+    await obOn(page, 'source');
+    await page.locator(SRC + ' [data-v="social"] .ob4-src-lab').click();
+    await expect(page.locator(SRC + ' [data-v="social"]')).toHaveClass(/is-sel/);
+    await page.locator('#cn-srcCont').click();
+    await expect(page.locator(OB + ' .ob4-hand')).toHaveClass(/is-on/, { timeout: 4_000 });
+    expect(await sources(page)).toEqual([{ e: 'ob_source', d: 'social' }]);
+    await obFinish(page);
+  });
+
   test('Other: tapping into the box picks it and folds the rest away; the words ride along', async ({ page }) => {
     await obFirstRun(page);
     await obGo(page, 'source');
@@ -3527,7 +3540,7 @@ test.describe('AC · Onboarding v4 (W936 → W1050)', () => {
       w.scrollTo = (...a: unknown[]) => { w.__pins++; return real(...a); };
     });
     await page.locator('#cn-srcOther').click();
-    expect(await page.locator(SRC + ' .ob4-src-opt[hidden]').count()).toBe(3);
+    expect(await page.locator(SRC + ' .ob4-src-opt[hidden]').count()).toBe(4);   // W1213 — five answers, the four besides Other fold
     await expect(page.locator(SRC)).toHaveClass(/is-kb/);
     await expect(page.locator(SRC + ' .ob4-src-other')).toHaveClass(/is-sel/);
     expect(await page.evaluate(() => (window as any).__pins)).toBeGreaterThan(0);
