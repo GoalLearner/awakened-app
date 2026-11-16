@@ -290,6 +290,7 @@ interface SweepFixture {
   todayRows?: { boss_id: string; a: string | null; b: string | null; c: string | null }[];   // W1209 — today's automatic hunts
   trioRows?: { a: string; b: string; c: string; d: string }[];   // W1208 — today's / yesterday's automatic trios
   raidLive?: string[];   // W1211 — hunters already in a live raid
+  savedWins?: { user_id: string; created_at: number }[];   // W1216 — new hunters' wins from the save / funnel
 }
 interface Call { sql: string; args: unknown[] }
 
@@ -300,6 +301,7 @@ function sweepDb(f: SweepFixture, calls: Call[]) {
     if (sql.includes('FROM friends')) return f.friends ?? [];
     if (sql.includes('partner2_user_id IS NOT NULL AND hunt_day')) return f.trioRows ?? [];   // W1208
     if (sql.includes('AS uid')) return (f.raidLive ?? []).map((uid) => ({ uid }));   // W1211 — huntersInLiveRaid
+    if (sql.includes("'first_boss_kill'")) return f.savedWins ?? [];   // W1216 — newHunterSavedWins (before json_each)
     if (sql.includes('json_each(')) {   // W1209 — one row per (hunter, owned drop)
       return args.flatMap((id) => (f.owned?.[id as string] ?? []).map((item) => ({ user_id: id, item })));
     }
@@ -896,6 +898,38 @@ describe('sweepCoopAutoHunts — matched partners (W1164)', () => {
     const res = await sweepCoopAutoHunts(makeEnv(sweepDb(f, calls)), ctx);
     expect(res.matched).toBe(1);
     expect(matchedInserts(calls).map((c) => c.args[12])).toEqual(['u5|u6']);
+  });
+
+  // W1216 — owner 2026-11-15: "You make the call"
+  it('W1216 — a new hunter whose win is only in the save (or the first-kill ping) counts one kill day; an old hunter does not; the first day stays quiet', async () => {
+    const calls: Call[] = [];
+    const twoDaysAgo = Date.now() - 2 * 86_400_000;
+    const f: SweepFixture = {
+      ...friendsBase,
+      kills: [kill('u5', 1, 1, twoDaysAgo)],      // on the public list
+      savedWins: [
+        { user_id: 'u6', created_at: twoDaysAgo },             // save only → in
+        { user_id: 'u5', created_at: twoDaysAgo },             // on both → counted once
+        { user_id: 'u7', created_at: Date.now() - 60_000 },    // joined today → waits
+      ],
+    };
+    const res = await sweepCoopAutoHunts(makeEnv(sweepDb(f, calls)), ctx);
+    expect(res.matched).toBe(1);
+    expect(matchedInserts(calls).map((c) => c.args[12])).toEqual(['u5|u6']);
+    const q = calls.find((c) => c.sql.includes("'first_boss_kill'"))!;
+    expect(q.sql).toContain('json_valid');
+    expect(q.args[0]).toBe(Date.now() - MATCH_NEW_DAYS * 86_400_000);
+  });
+  it('W1216 — the saved-win read failing leaves the old rule in place', async () => {
+    const calls: Call[] = [];
+    const db = sweepDb({ ...friendsBase, kills: [kill('u5', 5, 10), kill('u6', 4, 8)] }, calls);
+    const prep = db.prepare.bind(db);
+    (db as unknown as { prepare: (sql: string) => unknown }).prepare = (sql: string) => {
+      if (sql.includes("'first_boss_kill'")) return { bind: () => ({ all: async () => { throw new Error('malformed JSON'); } }) };
+      return prep(sql);
+    };
+    const res = await sweepCoopAutoHunts(makeEnv(db), ctx);
+    expect(res.matched).toBe(1);
   });
 
   it('keeps this week\'s partner, re-pairs the rest, and leaves today\'s standing row alone', async () => {

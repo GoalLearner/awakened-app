@@ -914,6 +914,11 @@ async function sweepMatchedPairs(
   )
     .bind(nowMs - MATCH_WINDOW_MS)
     .all<{ user_id: string; kill_days: number; kills: number; created_at: number | null }>()).results ?? [];
+  // W1216 — a new hunter's win the public kill list never got still counts as their one day.
+  const listed = new Set(killRows.map((r) => r.user_id));
+  for (const w of await newHunterSavedWins(env, nowMs)) {
+    if (!listed.has(w.user_id)) killRows.push({ user_id: w.user_id, kill_days: 1, kills: 1, created_at: w.created_at });
+  }
   const first = killRows.filter((r) => {
     const joined = Number(r.created_at) || 0;
     const need = joined >= nowMs - MATCH_NEW_DAYS * 86_400_000 ? MATCH_NEW_MIN_KILL_DAYS : MATCH_MIN_KILL_DAYS;   // W1214
@@ -969,6 +974,36 @@ async function sweepMatchedPairs(
     if (await createAutoHunt(env, a, b, today, pick, true)) { made++; picks.add([a, b], pick.bossId); }
   }
   return made;
+}
+
+/** W1216 (owner 2026-11-15: "You make the call") — hunters who joined in the last MATCH_NEW_DAYS with
+ *  a win on record OUTSIDE the public kill list: a boss with kill_count > 0 in their cloud save, or the
+ *  app's first_boss_kill funnel ping. The phone's public kill post can be lost (it is queued in
+ *  memory only), and on 2026-11-15 10 of 16 new hunters' first Steel Wolf wins never reached the
+ *  list, so the matching never saw them. Only the last week's sign-ups are read (~250 rows read,
+ *  ~2 ms on 2026-11-15). Any JSON the save holds that is not an object is skipped, and a failure
+ *  here returns nothing, so the old rule still stands. */
+async function newHunterSavedWins(env: Env, nowMs: number): Promise<Array<{ user_id: string; created_at: number }>> {
+  try {
+    const since = nowMs - MATCH_NEW_DAYS * 86_400_000;
+    return (await env.DB.prepare(
+      `SELECT u.id AS user_id, u.created_at AS created_at
+         FROM users u JOIN user_state_snapshots s ON s.user_id = u.id
+        WHERE u.created_at >= ?1
+          AND EXISTS (
+            SELECT 1 FROM json_each(CASE WHEN json_valid(s.state_json)
+                                          AND json_valid(json_extract(s.state_json, '$.keys.hb_bosses'))
+                                         THEN json_extract(s.state_json, '$.keys.hb_bosses') ELSE '{}' END) b
+             WHERE b.type = 'object' AND CAST(json_extract(b.value, '$.kill_count') AS INTEGER) > 0)
+       UNION
+       SELECT u.id, u.created_at
+         FROM funnel_events f JOIN users u ON u.id = f.user_id
+        WHERE f.event = 'first_boss_kill' AND f.created_at >= ?1 AND u.created_at >= ?1`,
+    ).bind(since).all<{ user_id: string; created_at: number }>()).results ?? [];
+  } catch (err) {
+    console.error('[coop-auto] saved wins read failed', err);
+    return [];
+  }
 }
 
 /** W1208 — today's automatic trios (see the header). Returns how many rows it made. */
