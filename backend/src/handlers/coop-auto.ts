@@ -192,12 +192,16 @@ export const MATCH_NEW_DAYS = 7;
 export const MATCH_NEW_MIN_KILL_DAYS = 1;
 /** W1217 (owner 2026-11-15: "make sure those people are active that get paired so a person doesn't
  *  get paired with an inactive user") — a stranger is matched (duo) or put in a raid party only when
- *  their phone checked in (app_opens: any launch, return or Apple Health background sync) on one of
- *  the last MATCH_OPEN_DAYS Pacific days, today included; at the midnight run, that is yesterday.
- *  NOT app_open_counts: on 2026-11-15 it held a counted open for only 18 of the 36 hunters who
- *  pinged (a new hunter's first session and a launch before the session is restored are never
- *  counted), so it would have dropped real players. A kept partner who goes quiet leaves the pool,
- *  their pair breaks, and the active one is re-paired. Friends' hunts are untouched. */
+ *  they were IN the app on one of the last MATCH_OPEN_DAYS Pacific days, today included; at the
+ *  midnight run, that is yesterday. A kept partner who goes quiet leaves the pool, their pair breaks,
+ *  and the active one is re-paired. Friends' hunts are untouched.
+ *  W1218 (owner 2026-11-16: "Yes make the fix") — "in the app" = a counted open (app_open_counts) OR
+ *  a cloud save (user_state_snapshots.server_updated_at). NOT any app_opens ping (W1217 as shipped):
+ *  an Apple Health background sync pings too, and on 2026-11-15 eight phones were "active" only that
+ *  way, two of them (Killua, Bryant: no visit since the day they joined) paired with each other.
+ *  Background pings push no save. Neither signal alone: the counter misses a new hunter's first
+ *  session and a launch before the session is restored (18 of 36 on 2026-11-15); 29 of the 30 in the
+ *  app that Sunday saved. */
 export const MATCH_OPEN_DAYS = 2;
 const MATCH_WINDOW_MS = 7 * 86_400_000;
 /** W1179 — how far back a hunter's latest matched partner is kept (was: this PT week only). */
@@ -715,19 +719,19 @@ async function latestBuildByUser(env: Env, nowMs: number): Promise<Map<string, s
   return out;
 }
 
-/** W1217 — hunters whose phone checked in since Pacific midnight MATCH_OPEN_DAYS - 1 days ago
- *  (app_opens keeps each UTC day's LATEST ping, so a day row at or after that moment is enough;
- *  idx_app_opens_date, ~3 days of rows). */
+/** W1217 + W1218 — hunters who were in the app since Pacific midnight MATCH_OPEN_DAYS - 1 days ago:
+ *  a counted open on one of those Pacific days (idx_app_open_counts_day) or a cloud save since that
+ *  moment (one row per hunter with a save: 125 rows read, ~4 ms on 2026-11-16). */
 async function openedRecently(env: Env, today: string): Promise<Set<string>> {
   let since = today;
   for (let i = 1; i < MATCH_OPEN_DAYS; i++) since = prevDay(since) || since;
   const sinceMs = Date.parse(ptMidnightIso(since) || '');
   if (!Number.isFinite(sinceMs)) return new Set();
-  const sinceDay = new Date(sinceMs - 86_400_000).toISOString().slice(0, 10);
   const rows = await env.DB.prepare(
-    `SELECT user_id, MAX(opened_at) AS seen_at FROM app_opens INDEXED BY idx_app_opens_date
-      WHERE date_utc >= ?1 GROUP BY user_id HAVING MAX(opened_at) >= ?2`,
-  ).bind(sinceDay, Math.floor(sinceMs / 1000)).all<{ user_id: string }>();
+    `SELECT user_id, 'open' AS seen_by FROM app_open_counts WHERE day_pt >= ?1 AND opens > 0
+     UNION
+     SELECT user_id, 'save' AS seen_by FROM user_state_snapshots WHERE server_updated_at >= ?2`,
+  ).bind(since, sinceMs).all<{ user_id: string }>();
   return new Set((rows.results ?? []).map((r) => r.user_id).filter(Boolean));
 }
 
@@ -958,7 +962,7 @@ async function sweepMatchedPairs(
   const pattern = (uid: string) => dailyPattern(stepsLast.get(uid) ?? 0, stepsNow.get(uid) ?? 0, elapsed);
   const pool: MatchCandidate[] = [];
   for (const r of first) {
-    if (!opened.has(r.user_id)) continue;                           // W1217 — the phone was quiet today and yesterday
+    if (!opened.has(r.user_id)) continue;                           // W1217/W1218 — not in the app today or yesterday
     const p = pattern(r.user_id);
     if (p === null) continue;                                       // no steps on the server: no goal to size
     if (buildW(builds.get(r.user_id)) < AUTO_HUNT_MIN_W) continue;  // the automatic client is not on their phone
@@ -1126,7 +1130,7 @@ async function sweepAutoRaids(
   const pool: string[] = [];
   for (const uid of active) {
     if (busy.has(uid)) continue;
-    if (!opened.has(uid)) continue;                            // W1217 — the phone was quiet today and yesterday
+    if (!opened.has(uid)) continue;                            // W1217/W1218 — not in the app today or yesterday
     if (buildW(builds.get(uid)) < AUTO_HUNT_MIN_W) continue;   // the automatic client is not on their phone
     if (optouts.has(uid + '>*')) continue;                     // switched automatic hunts off
     if (cfg.memberOnly && !MEMBERSHIP_OPEN) {
