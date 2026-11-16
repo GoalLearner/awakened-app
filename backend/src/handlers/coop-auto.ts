@@ -194,14 +194,20 @@ export const MATCH_NEW_MIN_KILL_DAYS = 1;
  *  get paired with an inactive user") — a stranger is matched (duo) or put in a raid party only when
  *  they were IN the app on one of the last MATCH_OPEN_DAYS Pacific days, today included; at the
  *  midnight run, that is yesterday. A kept partner who goes quiet leaves the pool, their pair breaks,
- *  and the active one is re-paired. Friends' hunts are untouched.
+ *  and the active one is re-paired.
  *  W1218 (owner 2026-11-16: "Yes make the fix") — "in the app" = a counted open (app_open_counts) OR
  *  a cloud save (user_state_snapshots.server_updated_at). NOT any app_opens ping (W1217 as shipped):
  *  an Apple Health background sync pings too, and on 2026-11-15 eight phones were "active" only that
  *  way, two of them (Killua, Bryant: no visit since the day they joined) paired with each other.
  *  Background pings push no save. Neither signal alone: the counter misses a new hunter's first
  *  session and a launch before the session is restored (18 of 36 on 2026-11-15); 29 of the 30 in the
- *  app that Sunday saved. */
+ *  app that Sunday saved.
+ *  W1219 (owner 2026-11-16: "Justin and Anthony weren't on yesterday and it still gave me automatic
+ *  hunts with them. This needs to be fixed") — the same check now gates FRIENDS' automatic duos and
+ *  trios: a friend not in the app today or yesterday gets none (Anthony's last visit was 11/12,
+ *  Justin's and Zynfandel's 11/14; their phones only synced steps in the background). The sweep runs
+ *  every pass, so a friend who comes back gets the day's hunts then, and a hunt still starts at
+ *  Pacific midnight, so the whole day's steps count. Hunts already made are left alone. */
 export const MATCH_OPEN_DAYS = 2;
 const MATCH_WINDOW_MS = 7 * 86_400_000;
 /** W1179 — how far back a hunter's latest matched partner is kept (was: this PT week only). */
@@ -867,6 +873,9 @@ export async function sweepCoopAutoHunts(env: Env, _ctx?: ExecutionContext): Pro
       stepsByUser(env, lastWeek),
       flightsAvgByUser(env, nowMs),
     ]));
+    // W1217-W1219 — who was in the app today or yesterday, read once per pass and only when a gate needs it.
+    let inAppP: Promise<Set<string>> | null = null;
+    const inApp = () => (inAppP ??= openedRecently(env, today));
 
     if (pairs.size) {
       const doneRows = await env.DB.prepare('SELECT pair_key FROM coop_boss_instances WHERE auto = 1 AND hunt_day = ?')
@@ -876,12 +885,14 @@ export async function sweepCoopAutoHunts(env: Env, _ctx?: ExecutionContext): Pro
       const todo = Array.from(pairs.entries()).filter(([k]) => !done.has(k));
       if (todo.length) {
         const [optouts, blocks, builds, ranks, stepsNow, stepsLast, flights] = await shared();
+        const opened = await inApp();   // W1219
         const pattern = (uid: string) => dailyPattern(stepsLast.get(uid) ?? 0, stepsNow.get(uid) ?? 0, elapsed);
         for (const [key, [a, b]] of todo) {
           if (out.created >= MAX_CREATE_PER_RUN) break;
           if (optouts.has(a + '>*') || optouts.has(b + '>*') || optouts.has(a + '>' + b) || optouts.has(b + '>' + a)) { out.skipped++; continue; }
           if (blocks.has(key)) { out.skipped++; continue; }
           if (buildW(builds.get(a)) < AUTO_HUNT_MIN_W || buildW(builds.get(b)) < AUTO_HUNT_MIN_W) { out.skipped++; continue; }
+          if (!opened.has(a) || !opened.has(b)) { out.skipped++; continue; }   // W1219 — a friend not in the app today or yesterday
           const pa = pattern(a);
           const pb = pattern(b);
           if (pa === null || pb === null) { out.skipped++; continue; }
@@ -894,21 +905,21 @@ export async function sweepCoopAutoHunts(env: Env, _ctx?: ExecutionContext): Pro
 
     // ── W1164 — matched partners: active hunters with no friends, paired with each other ──
     try {
-      out.matched = await sweepMatchedPairs(env, nowMs, today, thisWeek, elapsed, hasFriend, shared, picks);
+      out.matched = await sweepMatchedPairs(env, nowMs, today, thisWeek, elapsed, hasFriend, shared, picks, inApp);
     } catch (err) {
       console.error('[coop-auto] matched sweep failed', err);
     }
 
     // ── W1208 — automatic trios ──
     try {
-      if (pairs.size >= 2) out.trios = await sweepAutoTrios(env, today, elapsed, pairs, shared, out.created + out.matched, picks);
+      if (pairs.size >= 2) out.trios = await sweepAutoTrios(env, today, elapsed, pairs, shared, out.created + out.matched, picks, inApp);
     } catch (err) {
       console.error('[coop-auto] trio sweep failed', err);
     }
 
     // ── W1211 — the automatic raid ──
     try {
-      out.raids = await sweepAutoRaids(env, nowMs, today, shared, _ctx, out.created + out.matched + out.trios);
+      out.raids = await sweepAutoRaids(env, nowMs, today, shared, _ctx, out.created + out.matched + out.trios, inApp);
     } catch (err) {
       console.error('[coop-auto] raid sweep failed', err);
     }
@@ -928,6 +939,7 @@ async function sweepMatchedPairs(
   hasFriend: Set<string>,
   shared: () => Promise<Shared>,
   picks: PickContext,
+  inApp: () => Promise<Set<string>>,
 ): Promise<number> {
   const dayStartMs = Date.parse(ptMidnightIso(today) || '');
   if (!Number.isFinite(dayStartMs)) return 0;
@@ -958,7 +970,7 @@ async function sweepMatchedPairs(
   if (first.length < 2) return 0;
 
   const [optouts, blocks, builds, ranks, stepsNow, stepsLast, flights] = await shared();
-  const opened = await openedRecently(env, today);   // W1217
+  const opened = await inApp();   // W1217
   const pattern = (uid: string) => dailyPattern(stepsLast.get(uid) ?? 0, stepsNow.get(uid) ?? 0, elapsed);
   const pool: MatchCandidate[] = [];
   for (const r of first) {
@@ -1046,6 +1058,7 @@ async function sweepAutoTrios(
   shared: () => Promise<Shared>,
   madeSoFar: number,
   picks: PickContext,
+  inApp: () => Promise<Set<string>>,
 ): Promise<number> {
   const friendsOf = new Map<string, Set<string>>();
   for (const [a, b] of pairs.values()) {
@@ -1070,9 +1083,11 @@ async function sweepAutoTrios(
   }
 
   const [optouts, blocks, builds, ranks, stepsNow, stepsLast] = await shared();
+  const opened = await inApp();   // W1219
   const pattern = (uid: string) => dailyPattern(stepsLast.get(uid) ?? 0, stepsNow.get(uid) ?? 0, elapsed);
   const pool = new Set<string>();
   for (const uid of friendsOf.keys()) {
+    if (!opened.has(uid)) continue;                                   // W1219 — not in the app today or yesterday
     if (pattern(uid) === null) continue;                              // no steps on the server: no goal to size
     if (buildW(builds.get(uid)) < AUTO_HUNT_MIN_W) continue;          // the automatic client is not on their phone
     if (optouts.has(uid + '>*')) continue;                            // switched automatic hunts off
@@ -1105,6 +1120,7 @@ async function sweepAutoRaids(
   shared: () => Promise<Shared>,
   ctx: ExecutionContext | undefined,
   madeSoFar: number,
+  inApp: () => Promise<Set<string>>,
 ): Promise<number> {
   const cfg = COOP_BOSS_CFG[AUTO_RAID_BOSS];
   if (!cfg) return 0;
@@ -1126,7 +1142,7 @@ async function sweepAutoRaids(
 
   const [optouts, blocks, builds] = await shared();
   const busy = await huntersInLiveRaid(env, AUTO_RAID_BOSS);   // one raid at a time
-  const opened = await openedRecently(env, today);   // W1217
+  const opened = await inApp();   // W1217
   const pool: string[] = [];
   for (const uid of active) {
     if (busy.has(uid)) continue;

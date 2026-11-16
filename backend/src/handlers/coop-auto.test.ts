@@ -292,7 +292,7 @@ interface SweepFixture {
   trioRows?: { a: string; b: string; c: string; d: string }[];   // W1208 — today's / yesterday's automatic trios
   raidLive?: string[];   // W1211 — hunters already in a live raid
   savedWins?: { user_id: string; created_at: number }[];   // W1216 — new hunters' wins from the save / funnel
-  opened?: string[];   // W1217/W1218 — in the app today or yesterday (default: every hunter in kills / savedWins)
+  opened?: string[];   // W1217-W1219 — in the app today or yesterday (default: every hunter in kills / savedWins / friends)
 }
 interface Call { sql: string; args: unknown[] }
 
@@ -304,8 +304,9 @@ function sweepDb(f: SweepFixture, calls: Call[]) {
     if (sql.includes('partner2_user_id IS NOT NULL AND hunt_day')) return f.trioRows ?? [];   // W1208
     if (sql.includes('AS uid')) return (f.raidLive ?? []).map((uid) => ({ uid }));   // W1211 — huntersInLiveRaid
     if (sql.includes("'first_boss_kill'")) return f.savedWins ?? [];   // W1216 — newHunterSavedWins (before json_each)
-    if (sql.includes('AS seen_by')) {   // W1217/W1218 — openedRecently
-      const ids = f.opened ?? [...(f.kills ?? []).map((k) => k.user_id), ...(f.savedWins ?? []).map((w) => w.user_id)];
+    if (sql.includes('AS seen_by')) {   // W1217-W1219 — openedRecently
+      const ids = f.opened ?? [...(f.kills ?? []).map((k) => k.user_id), ...(f.savedWins ?? []).map((w) => w.user_id),
+        ...(f.friends ?? []).flatMap((p) => [p.a, p.b])];
       return ids.map((user_id) => ({ user_id }));
     }
     if (sql.includes('json_each(')) {   // W1209 — one row per (hunter, owned drop)
@@ -479,6 +480,30 @@ describe('sweepCoopAutoHunts — one sized hunt per walking friend pair per day'
     const again: Call[] = [];
     const res2 = await sweepCoopAutoHunts(makeEnv(sweepDb({ ...trioFix, trioRows: [{ a: 'u1', b: 'u3', c: 'u5', d: today }] }, again)), ctx);
     expect(res2.trios).toBe(0);
+  });
+
+  // W1219 — owner 2026-11-16: "Justin and Anthony weren't on yesterday and it still gave me automatic hunts with them"
+  it('W1219 — a friend not in the app today or yesterday gets no automatic duo or trio; back in the app, they do', async () => {
+    const fix: SweepFixture = {
+      friends: [{ a: 'u1', b: 'u3' }, { a: 'u3', b: 'u5' }, { a: 'u5', b: 'u1' }, { a: 'u1', b: 'u2' }],
+      builds: { u1: NEW, u2: NEW, u3: NEW, u5: NEW },
+      ranks: { u1: 'C', u2: 'E', u3: 'C', u5: 'B' },
+      stepsThisWeek: { u1: 30000, u2: 15000, u3: 40000, u5: 30000 },
+      stepsLastWeek: { u1: 70000, u2: 35000, u3: 80000, u5: 60000 },
+    };
+    const calls: Call[] = [];
+    const res = await sweepCoopAutoHunts(makeEnv(sweepDb({ ...fix, opened: ['u1', 'u2', 'u3'] }, calls)), ctx);   // u5 quiet
+    expect(res.created).toBe(2);
+    expect(res.skipped).toBe(2);   // u1|u5, u3|u5
+    expect(res.trios).toBe(0);     // u5 out, u2 E-rank: no three left
+    const keys = calls.filter((c) => c.sql.includes('INSERT OR IGNORE INTO coop_boss_instances')).map((c) => c.args[12]).sort();
+    expect(keys).toEqual(['u1|u2', 'u1|u3']);
+    expect(calls.filter((c) => c.sql.includes('AS seen_by')).length).toBe(1);   // one read per pass
+    // u5 opens the app → the next pass makes their duos and the trio
+    const back: Call[] = [];
+    const res2 = await sweepCoopAutoHunts(makeEnv(sweepDb({ ...fix, opened: ['u1', 'u2', 'u3', 'u5'] }, back)), ctx);
+    expect(res2.created).toBe(4);
+    expect(res2.trios).toBe(1);
   });
 
   it('W1210 — a hunter with several friends gets up to three trios a day, with different friends and bosses', async () => {
