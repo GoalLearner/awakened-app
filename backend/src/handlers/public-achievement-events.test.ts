@@ -26,6 +26,8 @@ interface MakeDbOptions {
   feedRows?: Array<Record<string, unknown>>;
   /** W1118 — rows returned by the every-hunter shadow SELECT; defaults to feedRows. */
   publicShadowRows?: Array<Record<string, unknown>>;
+  /** W1220 — the viewer's accepted friends' user ids (the stranger check). */
+  friendIds?: string[];
 }
 
 function makeDb(opts: MakeDbOptions = {}) {
@@ -39,7 +41,8 @@ function makeDb(opts: MakeDbOptions = {}) {
         const isFeed   = /FROM public_achievement_events/.test(sql) && !isInsert;
         return {
           all:   async () => ({
-            results: !isFeed ? [] : (/\(e\.event_type = 'shadow_drop' OR e\.client_event_id LIKE 'official:%'\)/.test(sql) && opts.publicShadowRows) || (opts.feedRows ?? []),
+            results: /AS fid/.test(sql) ? (opts.friendIds ?? []).map((fid) => ({ fid }))   // W1220
+              : !isFeed ? [] : (/\(e\.event_type = 'shadow_drop' OR e\.client_event_id LIKE 'official:%'\)/.test(sql) && opts.publicShadowRows) || (opts.feedRows ?? []),
             success: true,
             meta: {},
           }),
@@ -1830,6 +1833,34 @@ describe('GET /v1/friends/activity — feed read (1z.200)', () => {
     expect(q.sql).toMatch(/NOT IN \(SELECT blocked_id FROM board_blocks WHERE blocker_id = \?\)/);
     expect(q.sql).toMatch(/NOT IN \(SELECT blocker_id FROM board_blocks WHERE blocked_id = \?\)/);
     expect(q.binds.slice(1)).toEqual(['user-abc', 'user-abc', 20]);
+  });
+
+  // W1220 — owner 2026-11-16: "Group up the stranger shadow drop posts in one so that it doesn't flood people's updates"
+  it('W1220 — a public post from someone who is neither you nor a friend is marked stranger; a friend\'s and your own are not', async () => {
+    const db = makeDb({
+      feedRows: [feedRow('f1', 'boss_kill', NOW_UTC - 1000)],
+      publicShadowRows: [
+        feedRow('s1', 'shadow_drop', NOW_UTC, 'stranger'),
+        feedRow('s2', 'shadow_drop', NOW_UTC - 2000, 'galilea'),   // a friend whose shadow came through the public read only
+        { ...feedRow('s3', 'shadow_drop', NOW_UTC - 3000, 'me'), user_id: 'user-abc' },
+      ],
+      friendIds: ['galilea-uid'],
+    });
+    const evs = (await feed(db)) as Array<{ id: string; stranger?: boolean }>;
+    expect(evs.map((e) => e.id)).toEqual(['s1', 'f1', 's2', 's3']);
+    expect(evs.filter((e) => e.stranger).map((e) => e.id)).toEqual(['s1']);
+    expect(evs.find((e) => e.id === 'f1')).not.toHaveProperty('stranger');
+    const q = db._calls().filter((c) => /AS fid/.test(c.sql));
+    expect(q.length).toBe(1);
+    expect(q[0].sql).toMatch(/FROM friends\s+WHERE status = 'accepted'/);
+    expect(q[0].binds).toEqual(['user-abc']);
+  });
+
+  it('W1220 — with no public post from outside, the friend list is not read', async () => {
+    const db = makeDb({ feedRows: [feedRow('s1', 'shadow_drop', NOW_UTC)], publicShadowRows: [feedRow('s1', 'shadow_drop', NOW_UTC)] });
+    const evs = (await feed(db)) as Array<{ id: string; stranger?: boolean }>;
+    expect(evs.some((e) => e.stranger)).toBe(false);
+    expect(db._calls().some((c) => /AS fid/.test(c.sql))).toBe(false);
   });
 });
 

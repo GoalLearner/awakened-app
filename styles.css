@@ -32992,6 +32992,10 @@ button.pc-shard { cursor: pointer; font: inherit; -webkit-appearance: none; appe
 .fa-like { display: inline-flex; align-items: center; gap: 4px; height: 22px; padding: 0 8px; border-radius: 7px; border: 1px solid rgba(245,184,66,0.45); color: var(--b-gold); font-family: var(--b-mono); font-size: 8px; font-weight: 800; letter-spacing: 1.2px; background: rgba(245,184,66,0.08); cursor: pointer; flex: none; -webkit-appearance: none; appearance: none; -webkit-tap-highlight-color: transparent; transition: all .15s; }
 .fa-like:active { transform: scale(.94); }
 .fa-like--on { background: var(--b-gold); color: #0a0a18; }
+/* W1220 — strangers' shadows folded into one row: the ✧ avatar, a plain title, each feat names its hunter */
+.fa-hh .fa-av--sh { font-size: 15px; color: #c4b5fd; }
+.fa-hn--group { cursor: inherit; color: #c4b5fd; }
+.fa-who { padding: 0; margin-right: 2px; border: 0; background: transparent; font-family: var(--b-mono); font-size: 11.5px; font-weight: 800; letter-spacing: .4px; color: var(--bc, #a78bfa); cursor: pointer; -webkit-appearance: none; appearance: none; -webkit-tap-highlight-color: transparent; }
 .fa-act--new .fa-act-txt::after { content: ''; display: inline-block; width: 5px; height: 5px; border-radius: 50%; background: var(--b-vio-lt); margin-left: 6px; vertical-align: middle; box-shadow: 0 0 6px rgba(167,139,250,0.8); }
 
 /* W914 — the spam guard: LOCKED pill, the composer's live cooldown note. */

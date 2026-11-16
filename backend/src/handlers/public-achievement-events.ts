@@ -1124,8 +1124,23 @@ export async function handleFriendsActivityGet(
 
   const friendRows = results.results ?? [];
   const friendIds = new Set(friendRows.map((r) => r.id));
+  const publicOnly = (publicShadows.results ?? []).filter((r) => !friendIds.has(r.id));
+  // W1220 (owner 2026-11-16: "Group up the stranger shadow drop posts in one so that it doesn't flood
+  // people's updates") — a public post from someone who is neither the viewer nor an accepted friend
+  // carries stranger: true, so the phone can fold strangers' shadows into one row. The friend list is
+  // read only when such a post is in the feed.
+  const strangerIds = new Set<string>();
+  if (publicOnly.some((r) => r.user_id !== session.userId)) {
+    const fr = await env.DB.prepare(
+      `SELECT CASE WHEN requester_user_id = ?1 THEN recipient_user_id ELSE requester_user_id END AS fid
+         FROM friends
+        WHERE status = 'accepted' AND (requester_user_id = ?1 OR recipient_user_id = ?1)`,
+    ).bind(session.userId).all<{ fid: string }>();
+    const friends = new Set((fr.results ?? []).map((r) => r.fid));
+    for (const r of publicOnly) if (r.user_id !== session.userId && !friends.has(r.user_id)) strangerIds.add(r.id);
+  }
   const rows = friendRows
-    .concat((publicShadows.results ?? []).filter((r) => !friendIds.has(r.id)))
+    .concat(publicOnly)
     .sort((a, b) => b.server_created_at - a.server_created_at);
   const events = rows
     // W389 — drop floor-contradicting 'earned the title' orphans: a write-once
@@ -1155,6 +1170,7 @@ export async function handleFriendsActivityGet(
     eventValue:  r.event_value,
     rarity:      r.rarity,
     createdAt:   new Date(r.server_created_at).toISOString(),
+    ...(strangerIds.has(r.id) ? { stranger: true } : {}),   // W1220
   }));
 
   // W913 — LIKES: count, whether the caller liked it, and the first likers'

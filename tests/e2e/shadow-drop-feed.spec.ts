@@ -131,4 +131,52 @@ test.describe('A risen shadow reaches the public feed (W1117)', () => {
     await ren.locator('.fa-hh').click();
     await expect(ren.locator('.fa-act-sub')).toHaveText('+2% in every Ascent fight');          // an S-rank boss
   });
+
+  // W1220 — owner 2026-11-16: "Group up the stranger shadow drop posts in one so that it doesn't flood people's updates"
+  test('strangers\' shadows fold into one row that names each hunter; a friend\'s keeps its row', async ({ page }) => {
+    const now = Date.now();
+    const row = (id: string, alias: string, key: string, boss: string, at: number, stranger: boolean) => ({
+      id, alias, rankLabel: 'C I', eventType: 'shadow_drop', eventKey: key, eventLabel: 'claimed the Shadow of ' + boss,
+      eventValue: null, rarity: null, createdAt: new Date(at).toISOString(), likes: 0, liked: false, likers: [], likedAt: null,
+      ...(stranger ? { stranger: true } : {}),
+    });
+    await boot(page, [
+      row('s1', 'Killua', 'the_steel_wolf', 'The Steel Wolf', now, true),
+      row('s2', 'Angelo', 'the_carouser', 'The Carouser', now - 1000, true),
+      row('s3', 'Angelo', 'the_footsore_herald', 'The Footsore Herald', now - 2000, true),
+      row('s4', 'Mercury', 'the_steel_wolf', 'The Steel Wolf', now - 3000, true),
+      row('f1', 'Galilea', 'the_insomniac', 'The Insomniac', now - 4000, false),
+    ]);
+    await page.evaluate(() => document.getElementById('tab-social')!.click());
+    await page.evaluate(() => (document.querySelector('[data-cm-pane="friends"]') as HTMLElement).click());
+    await page.locator('.fa-dh').first().click();
+    await expect(page.locator('.fa-dh .fa-cnt2').first()).toHaveText('5 · 4 HUNTERS');   // the folded hunters still count
+    const group = page.locator('.fa-hunter--shadows');
+    await expect(group).toHaveCount(1);
+    await expect(group.locator('.fa-hn')).toHaveText('Shadows raised');
+    await expect(group.locator('.fa-chip--sh')).toHaveText('3 hunters');
+    await expect(group.locator('.fa-num')).toHaveText('4');
+    await expect(page.locator('.fa-hunter').filter({ hasText: /killua|mercury/i }).filter({ hasNot: page.locator('.fa-av--sh') })).toHaveCount(0);
+    await group.locator('.fa-hh').click();
+    await expect(group.locator('.fa-act')).toHaveCount(4);
+    await expect(group.locator('.fa-act').first().locator('.fa-act-txt')).toHaveText('killua claimed the Shadow of The Steel Wolf');
+    await expect(group.locator('.fa-who')).toHaveText(['killua', 'angelo', 'angelo', 'mercury']);
+    await expect(group.locator('.fa-like')).toHaveCount(4);   // strangers' shadows can still be liked
+    // a friend's shadow stays in the friend's row
+    const gal = page.locator('.fa-hunter').filter({ hasText: /galilea/i }).filter({ hasNot: page.locator('.fa-av--sh') });
+    await expect(gal.locator('.fa-chip--sh')).toHaveText('Shadow of The Insomniac');
+  });
+
+  test('a lone stranger\'s shadow keeps its own row', async ({ page }) => {
+    const now = Date.now();
+    await boot(page, [{
+      id: 's1', alias: 'Nicole', rankLabel: 'E I', eventType: 'shadow_drop', eventKey: 'the_insomniac', eventLabel: 'claimed the Shadow of The Insomniac',
+      eventValue: null, rarity: null, createdAt: new Date(now).toISOString(), likes: 0, liked: false, likers: [], likedAt: null, stranger: true,
+    }]);
+    await page.evaluate(() => document.getElementById('tab-social')!.click());
+    await page.evaluate(() => (document.querySelector('[data-cm-pane="friends"]') as HTMLElement).click());
+    await page.locator('.fa-dh').first().click();
+    await expect(page.locator('.fa-hunter--shadows')).toHaveCount(0);
+    await expect(page.locator('.fa-hunter').filter({ hasText: /nicole/i }).locator('.fa-chip--sh')).toHaveText('Shadow of The Insomniac');
+  });
 });
