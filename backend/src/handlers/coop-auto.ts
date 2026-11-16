@@ -190,6 +190,15 @@ export const MATCH_MIN_KILL_DAYS = 2;
  *  with a kill. The first day in the app still stays quiet (joined before today). */
 export const MATCH_NEW_DAYS = 7;
 export const MATCH_NEW_MIN_KILL_DAYS = 1;
+/** W1217 (owner 2026-11-15: "make sure those people are active that get paired so a person doesn't
+ *  get paired with an inactive user") — a stranger is matched (duo) or put in a raid party only when
+ *  their phone checked in (app_opens: any launch, return or Apple Health background sync) on one of
+ *  the last MATCH_OPEN_DAYS Pacific days, today included; at the midnight run, that is yesterday.
+ *  NOT app_open_counts: on 2026-11-15 it held a counted open for only 18 of the 36 hunters who
+ *  pinged (a new hunter's first session and a launch before the session is restored are never
+ *  counted), so it would have dropped real players. A kept partner who goes quiet leaves the pool,
+ *  their pair breaks, and the active one is re-paired. Friends' hunts are untouched. */
+export const MATCH_OPEN_DAYS = 2;
 const MATCH_WINDOW_MS = 7 * 86_400_000;
 /** W1179 — how far back a hunter's latest matched partner is kept (was: this PT week only). */
 export const MATCH_KEEP_DAYS = 14;
@@ -706,6 +715,22 @@ async function latestBuildByUser(env: Env, nowMs: number): Promise<Map<string, s
   return out;
 }
 
+/** W1217 — hunters whose phone checked in since Pacific midnight MATCH_OPEN_DAYS - 1 days ago
+ *  (app_opens keeps each UTC day's LATEST ping, so a day row at or after that moment is enough;
+ *  idx_app_opens_date, ~3 days of rows). */
+async function openedRecently(env: Env, today: string): Promise<Set<string>> {
+  let since = today;
+  for (let i = 1; i < MATCH_OPEN_DAYS; i++) since = prevDay(since) || since;
+  const sinceMs = Date.parse(ptMidnightIso(since) || '');
+  if (!Number.isFinite(sinceMs)) return new Set();
+  const sinceDay = new Date(sinceMs - 86_400_000).toISOString().slice(0, 10);
+  const rows = await env.DB.prepare(
+    `SELECT user_id, MAX(opened_at) AS seen_at FROM app_opens INDEXED BY idx_app_opens_date
+      WHERE date_utc >= ?1 GROUP BY user_id HAVING MAX(opened_at) >= ?2`,
+  ).bind(sinceDay, Math.floor(sinceMs / 1000)).all<{ user_id: string }>();
+  return new Set((rows.results ?? []).map((r) => r.user_id).filter(Boolean));
+}
+
 async function rankByUser(env: Env): Promise<Map<string, string>> {
   const out = new Map<string, string>();
   const rows = await env.DB.prepare('SELECT user_id, rank_tier FROM public_profile_summary').all<{ user_id: string; rank_tier: string | null }>();
@@ -929,9 +954,11 @@ async function sweepMatchedPairs(
   if (first.length < 2) return 0;
 
   const [optouts, blocks, builds, ranks, stepsNow, stepsLast, flights] = await shared();
+  const opened = await openedRecently(env, today);   // W1217
   const pattern = (uid: string) => dailyPattern(stepsLast.get(uid) ?? 0, stepsNow.get(uid) ?? 0, elapsed);
   const pool: MatchCandidate[] = [];
   for (const r of first) {
+    if (!opened.has(r.user_id)) continue;                           // W1217 — the phone was quiet today and yesterday
     const p = pattern(r.user_id);
     if (p === null) continue;                                       // no steps on the server: no goal to size
     if (buildW(builds.get(r.user_id)) < AUTO_HUNT_MIN_W) continue;  // the automatic client is not on their phone
@@ -1095,9 +1122,11 @@ async function sweepAutoRaids(
 
   const [optouts, blocks, builds] = await shared();
   const busy = await huntersInLiveRaid(env, AUTO_RAID_BOSS);   // one raid at a time
+  const opened = await openedRecently(env, today);   // W1217
   const pool: string[] = [];
   for (const uid of active) {
     if (busy.has(uid)) continue;
+    if (!opened.has(uid)) continue;                            // W1217 — the phone was quiet today and yesterday
     if (buildW(builds.get(uid)) < AUTO_HUNT_MIN_W) continue;   // the automatic client is not on their phone
     if (optouts.has(uid + '>*')) continue;                     // switched automatic hunts off
     if (cfg.memberOnly && !MEMBERSHIP_OPEN) {

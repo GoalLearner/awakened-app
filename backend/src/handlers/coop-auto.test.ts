@@ -23,6 +23,7 @@ import {
   MATCH_MIN_KILL_DAYS,
   MATCH_NEW_DAYS,
   MATCH_NEW_MIN_KILL_DAYS,
+  MATCH_OPEN_DAYS,
   MATCH_KEEP_DAYS,
   pairKey,
   pickAutoBoss,
@@ -291,6 +292,7 @@ interface SweepFixture {
   trioRows?: { a: string; b: string; c: string; d: string }[];   // W1208 — today's / yesterday's automatic trios
   raidLive?: string[];   // W1211 — hunters already in a live raid
   savedWins?: { user_id: string; created_at: number }[];   // W1216 — new hunters' wins from the save / funnel
+  opened?: string[];   // W1217 — phones that checked in today or yesterday (default: every hunter in kills / savedWins)
 }
 interface Call { sql: string; args: unknown[] }
 
@@ -302,6 +304,10 @@ function sweepDb(f: SweepFixture, calls: Call[]) {
     if (sql.includes('partner2_user_id IS NOT NULL AND hunt_day')) return f.trioRows ?? [];   // W1208
     if (sql.includes('AS uid')) return (f.raidLive ?? []).map((uid) => ({ uid }));   // W1211 — huntersInLiveRaid
     if (sql.includes("'first_boss_kill'")) return f.savedWins ?? [];   // W1216 — newHunterSavedWins (before json_each)
+    if (sql.includes('AS seen_at')) {   // W1217 — openedRecently (before 'FROM app_opens')
+      const ids = f.opened ?? [...(f.kills ?? []).map((k) => k.user_id), ...(f.savedWins ?? []).map((w) => w.user_id)];
+      return ids.map((user_id) => ({ user_id }));
+    }
     if (sql.includes('json_each(')) {   // W1209 — one row per (hunter, owned drop)
       return args.flatMap((id) => (f.owned?.[id as string] ?? []).map((item) => ({ user_id: id, item })));
     }
@@ -618,6 +624,13 @@ describe('sweepCoopAutoHunts — the automatic raid (W1211)', () => {
     expect(few.find((c) => c.sql.includes('AS uid'))!.args).toEqual(['the_grinning_god', '']);
   });
 
+  // W1217 — owner 2026-11-15: "make sure those people are active that get paired"
+  it('W1217 — a hunter whose phone was quiet today and yesterday is never put in a raid party', async () => {
+    const calls: Call[] = [];
+    await sweepCoopAutoHunts(makeEnv(sweepDb({ ...fix, opened: ['u2', 'u3', 'u4', 'u5', 'u6', 'u7'] }, calls)), ctx);
+    expect(raids(calls).map((c) => c.args[14])).toEqual(['u2|u3|u4|u5|u6']);   // u1 (7 kill days) went quiet
+  });
+
   it('formRaidParties: sixes first, a remainder of 4-5 makes one more, fewer wait; nobody with someone they blocked', () => {
     const ids = (n: number) => Array.from({ length: n }, (_, i) => 'h' + (i + 1));
     const none = () => false;
@@ -919,6 +932,22 @@ describe('sweepCoopAutoHunts — matched partners (W1164)', () => {
     const q = calls.find((c) => c.sql.includes("'first_boss_kill'"))!;
     expect(q.sql).toContain('json_valid');
     expect(q.args[0]).toBe(Date.now() - MATCH_NEW_DAYS * 86_400_000);
+  });
+  // W1217 — owner 2026-11-15: "make sure those people are active that get paired"
+  it('W1217 — a hunter whose phone was quiet today and yesterday is never matched; the reader looks back to yesterday', async () => {
+    expect(MATCH_OPEN_DAYS).toBe(2);
+    const calls: Call[] = [];
+    const f: SweepFixture = { ...friendsBase, kills: [kill('u5', 5, 10), kill('u6', 4, 8), kill('u7', 3, 6)], opened: ['u5', 'u7'] };
+    const res = await sweepCoopAutoHunts(makeEnv(sweepDb(f, calls)), ctx);
+    expect(res.matched).toBe(1);
+    expect(matchedInserts(calls).map((c) => c.args[12])).toEqual(['u5|u7']);   // u6 (most kill days, never opened) left out
+    const q = calls.find((c) => c.sql.includes('AS seen_at'))!;
+    expect(q.sql).toContain('HAVING MAX(opened_at) >= ?2');
+    expect(q.args[1]).toBe(Math.floor(Date.parse(ptMidnightIso(prevDay(today)!)!) / 1000));
+    // nobody opened → nobody matched
+    const calls2: Call[] = [];
+    const res2 = await sweepCoopAutoHunts(makeEnv(sweepDb({ ...f, opened: [] }, calls2)), ctx);
+    expect(res2.matched).toBe(0);
   });
   it('W1216 — the saved-win read failing leaves the old rule in place', async () => {
     const calls: Call[] = [];
