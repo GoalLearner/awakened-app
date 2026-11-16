@@ -64,6 +64,17 @@ test.describe('W1213 — the Steps board lists the top 20', () => {
     await expect(sheet).toHaveClass(/lb-has-youfoot/);
   });
 
+  // W1221 — owner 2026-11-16, #21 on the board: "if you aren't in the top 20...you can't click on your profile card"
+  test('below the 20: tapping your pinned row opens your profile card', async ({ page }) => {
+    await boot(page);
+    const me: string = await page.evaluate(() => { const u = (window as any).Auth.getCurrentUser(); return (u && u.alias) || 'DevUser'; });
+    await openBoard(page, board(me, 21));
+    await expect(page.locator('#pc-sheet')).toBeHidden();
+    await page.locator('#lb-you-footer .lb-you-foot-row').click();
+    await expect(page.locator('#pc-sheet')).toBeVisible();
+    await expect(page.locator('#pc-overlay')).toBeVisible();
+  });
+
   test('inside the 20 (#15): you sit in the list, nothing pinned', async ({ page }) => {
     await boot(page);
     const me: string = await page.evaluate(() => { const u = (window as any).Auth.getCurrentUser(); return (u && u.alias) || 'DevUser'; });
