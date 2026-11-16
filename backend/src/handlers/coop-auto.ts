@@ -202,13 +202,16 @@ export function buildW(build: string | null | undefined): number {
 }
 
 /** A hunter's daily steps pattern from the board's weekly totals; null when the server has
- *  no steps for them in either week (no pattern → no automatic hunts). */
+ *  no steps for them in either week (no pattern → no automatic hunts).
+ *  W1215 (owner 2026-11-15: "yes do both fixes") — over last week's 7 days and this week's FINISHED
+ *  days. The day's hunts are made at midnight, when today has no steps yet, and counting today
+ *  anyway set every goal low: by an eighth on a Sunday (last week ÷ 8), a fourteenth on a Saturday. */
 export function dailyPattern(lastWeek: number, thisWeek: number, elapsedDays: number): number | null {
   const last = Math.max(0, Number(lastWeek) || 0);
   const cur = Math.max(0, Number(thisWeek) || 0);
   if (last <= 0 && cur <= 0) return null;
-  const days = 7 + Math.min(7, Math.max(1, Math.floor(Number(elapsedDays) || 1)));
-  return (last + cur) / days;
+  const finished = Math.min(6, Math.max(0, Math.floor(Number(elapsedDays) || 1) - 1));
+  return (last + cur) / (7 + finished);
 }
 
 /** Days elapsed in the PT week that starts on `weekStart`, as of `dayKey` (1 on Sunday, 7 on
@@ -256,6 +259,33 @@ export function choosePick<T extends { bossId: string }>(fits: T[], prefs: PickP
   return best;
 }
 
+/** W1215 — a stretched goal is never lower than this share of the boss's own goal. */
+export const STRETCH_MIN_SHARE = 0.75;
+
+/** W1215 (owner 2026-11-15: "yes do both fixes") — when every boss that fits is one the group has
+ *  fully collected (W1209 useful = false for all), the next steps boss UP the list that the ranks
+ *  allow and someone still needs a drop from, its goal lowered to AUTO_FIT × the group's walking
+ *  (nearest 100) — never under STRETCH_MIN_SHARE of its own goal (else null: keep the usual pick).
+ *  Richie + Anthony on 2026-11-15: ~9,550 a day together fits only the Twin Maw, both own all of
+ *  it, so The Coursing Dread at 7,600 instead of 8,000. `list` is best first. Pure. */
+export function stretchPick(list: readonly string[], fits: readonly AutoPick[], rank: number, fit: number, prefs: PickPrefs, partySize = 2): AutoPick | null {
+  if (!prefs.useful || !fits.length || fits.some((p) => prefs.useful!(p.bossId))) return null;
+  const fitIds = new Set(fits.map((p) => p.bossId));
+  const goal = Math.round(fit / 100) * 100;
+  for (let i = list.length - 1; i >= 0; i--) {   // weakest first, upward
+    const bossId = list[i];
+    if (fitIds.has(bossId)) continue;
+    const cfg = COOP_BOSS_CFG[bossId];
+    if (!cfg || (RANK_ORDER[cfg.rank] ?? 0) > rank) continue;
+    if (cfg.windowHours !== 24 || (cfg.partySize ?? 2) !== partySize || cfg.metric !== 'steps') continue;
+    if (goal >= cfg.goalSteps) continue;   // would fit as printed (it would be in `fits`)
+    if (goal < STRETCH_MIN_SHARE * cfg.goalSteps) return null;   // out of reach, and every boss above more so
+    if (!prefs.useful(bossId)) continue;
+    return { bossId, goalSteps: goal };
+  }
+  return null;
+}
+
 /** The boss and goal for a pair: among the bosses both ranks allow whose printed goals all fit
  *  AUTO_FIT × the pair's averages (steps a day; flights a day, null when either phone has not sent
  *  one), the one choosePick takes (W1209); none fits → The Twin Maw sized to the pair's walking.
@@ -278,6 +308,8 @@ export function pickAutoBoss(rankA: string, rankB: string, pairPattern: number, 
       if (fl !== null && cfg.goalSteps <= fit && gf <= fl) fits.push({ bossId, goalSteps: cfg.goalSteps, goalFlights: gf });
     }
   }
+  const stretched = stretchPick(AUTO_BOSSES, fits, r, fit, prefs, 2);   // W1215
+  if (stretched) return stretched;
   const chosen = choosePick(fits, prefs);
   if (chosen) return chosen;
   const sized = Math.max(AUTO_MIN_GOAL, Math.round(fit / 100) * 100);
@@ -299,6 +331,8 @@ export function pickAutoTrioBoss(ranks: string[], trioPattern: number, prefs: Pi
     open = true;
     if (cfg.goalSteps <= fit) fits.push({ bossId, goalSteps: cfg.goalSteps });
   }
+  const stretched = stretchPick(AUTO_TRIO_BOSSES, fits, r, fit, prefs, 3);   // W1215
+  if (stretched) return stretched;
   const chosen = choosePick(fits, prefs);
   if (chosen) return chosen;
   if (!open) return null;

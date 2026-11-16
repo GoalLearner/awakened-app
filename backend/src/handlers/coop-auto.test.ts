@@ -34,6 +34,7 @@ import {
   AUTO_BOSS_DROPS,
   AUTO_TRIO_BOSSES,
   AUTO_TRIOS_PER_HUNTER,
+  STRETCH_MIN_SHARE,
   AUTO_RAID_ACTIVE_DAYS,
   AUTO_RAID_PARTY,
   choosePick,
@@ -127,6 +128,26 @@ describe('pickAutoBoss — the best one-day duo both ranks allow whose printed g
     expect(pickAutoBoss('C', 'C', 20000, null, last({ the_coursing_dread: '2026-11-10', the_twin_maw: '2026-11-13' })).bossId).toBe('the_coursing_dread');
     expect(pickAutoBoss('B', 'B', 11000, 16, last({ the_hollow_monarch: '2026-11-13', the_gaunt_wardens: '2026-11-12', the_coursing_dread: '2026-11-11' })).bossId).toBe('the_twin_maw');
   });
+  // W1215 — owner 2026-11-15: "yes do both fixes"
+  it('W1215: everything that fits is collected → the next boss up, its goal lowered to the walking', () => {
+    const onlyDread = { useful: (b: string) => b === 'the_coursing_dread' };
+    // Richie + Anthony: ~9,550 a day → 7,640 fits only the Twin Maw, which both own → the Dread at 7,600
+    expect(pickAutoBoss('C', 'S', 9551, null, onlyDread)).toEqual({ bossId: 'the_coursing_dread', goalSteps: 7600 });
+    // nobody needs the Dread either → the Twin Maw as before
+    expect(pickAutoBoss('C', 'S', 9551, null, { useful: () => false })).toEqual({ bossId: 'the_twin_maw', goalSteps: 4000 });
+    // never under 75% of the boss's goal: 7,000 a day → 5,600 < 6,000 → the Twin Maw
+    expect(STRETCH_MIN_SHARE).toBe(0.75);
+    expect(pickAutoBoss('C', 'C', 7000, null, onlyDread)).toEqual({ bossId: 'the_twin_maw', goalSteps: 4000 });
+    // the rank still rules: an E hunter keeps the Twin Maw
+    expect(pickAutoBoss('E', 'S', 9551, null, onlyDread)).toEqual({ bossId: 'the_twin_maw', goalSteps: 4000 });
+    // a fitting boss someone still needs → no stretch
+    expect(pickAutoBoss('C', 'S', 9551, null, { useful: () => true })).toEqual({ bossId: 'the_twin_maw', goalSteps: 4000 });
+  });
+  it('W1215: trios stretch the same way', () => {
+    // three C hunters at 14,000 a day → 11,200 fits only the Hound; all own it → the Court at 11,200
+    expect(pickAutoTrioBoss(['C', 'C', 'C'], 14000, { useful: (b) => b !== 'the_crossroads_hound' })).toEqual({ bossId: 'the_threefold_court', goalSteps: 11200 });
+    expect(pickAutoTrioBoss(['C', 'C', 'C'], 14000, { useful: () => false })).toEqual({ bossId: 'the_crossroads_hound', goalSteps: 9000 });
+  });
   it('W1209: drops come first, then today, then the rotation', () => {
     // the Dread is the only boss with a drop still needed: it runs even though they are on it today
     expect(pickAutoBoss('C', 'C', 20000, null, { useful: (b) => b === 'the_coursing_dread', today: (b) => (b === 'the_coursing_dread' ? 2 : 0) }).bossId).toBe('the_coursing_dread');
@@ -219,9 +240,10 @@ describe('pickAutoBoss — the best one-day duo both ranks allow whose printed g
 });
 
 describe('dailyPattern / elapsedDaysPt / buildW', () => {
-  it('averages last week and this week over the days that have passed', () => {
-    expect(dailyPattern(70000, 30000, 3)).toBe(10000);
-    expect(dailyPattern(0, 7000, 7)).toBe(500);
+  it('averages last week and this week over the FINISHED days (W1215: today, at midnight, has none yet)', () => {
+    expect(dailyPattern(70000, 0, 1)).toBe(10000);        // Sunday: last week ÷ 7 (was ÷ 8)
+    expect(dailyPattern(70000, 30000, 4)).toBe(10000);    // Wednesday: 7 + 3 finished days
+    expect(dailyPattern(0, 6500, 7)).toBe(500);           // Saturday: 7 + 6
     expect(dailyPattern(0, 0, 3)).toBeNull();
     expect(dailyPattern(-5, 0, 3)).toBeNull();
   });
