@@ -207,7 +207,12 @@ export const MATCH_NEW_MIN_KILL_DAYS = 1;
  *  trios: a friend not in the app today or yesterday gets none (Anthony's last visit was 11/12,
  *  Justin's and Zynfandel's 11/14; their phones only synced steps in the background). The sweep runs
  *  every pass, so a friend who comes back gets the day's hunts then, and a hunt still starts at
- *  Pacific midnight, so the whole day's steps count. Hunts already made are left alone. */
+ *  Pacific midnight, so the whole day's steps count. Hunts already made are left alone.
+ *  OWNER'S STANDING RULE (2026-11-16): "if a person misses a day completely no use of the app then it
+ *  won't be automated for the next day unless they get on the app then it can restart the automation
+ *  .. the worse thing is pairing up with an inactive user". MATCH_OPEN_DAYS = 2 is exactly that: the
+ *  midnight run only takes hunters who were in the app yesterday, and a later pass picks them up the
+ *  moment they open it. Never widen this window. */
 export const MATCH_OPEN_DAYS = 2;
 const MATCH_WINDOW_MS = 7 * 86_400_000;
 /** W1179 — how far back a hunter's latest matched partner is kept (was: this PT week only). */
