@@ -139,6 +139,7 @@ export async function handleLeaderboardTop(
   const metric: Metric = metricParam;
 
   let limit = DEFAULT_LIMIT;
+  // (W1223 FLOOR_TIE_ORDER, FLOOR_PIN, FLOOR_ORD, FLOOR_NO_ORD are module constants, below the handler.)
   if (limitParam !== null) {
     const parsed = parseInt(limitParam, 10);
     if (Number.isFinite(parsed) && parsed > 0) {
@@ -205,7 +206,7 @@ export async function handleLeaderboardTop(
          LEFT JOIN public_profile_summary pps ON pps.user_id = ls.user_id
          LEFT JOIN hall_of_awakened hoa ON hoa.user_id = ls.user_id
          WHERE ls.metric = ?
-         ORDER BY ls.current_value DESC
+         ORDER BY ls.current_value DESC${metric === 'floor_best' ? FLOOR_TIE_ORDER : ''}
          LIMIT ?`,
       )
         .bind(metric, limit)
@@ -250,7 +251,31 @@ export async function handleLeaderboardTop(
         .first<MyRow>();
 
   let me: { rank: number; current_value: number } | null = null;
-  if (myRow) {
+  if (myRow && metric === 'floor_best') {
+    // W1223 — the caller's place under the same tie order as the list: everyone strictly higher, and
+    // on the caller's floor everyone the tie order puts first.
+    const key = await env.DB.prepare(
+      `SELECT ${FLOOR_PIN} AS pin, ${FLOOR_ORD} AS ord, u.alias AS alias
+         FROM users u
+         LEFT JOIN public_profile_summary pps ON pps.user_id = u.id
+         LEFT JOIN hall_of_awakened hoa ON hoa.user_id = u.id
+        WHERE u.id = ?`,
+    ).bind(session.userId).first<{ pin: number; ord: number; alias: string }>();
+    const pin = Number(key?.pin ?? 0), ord = Number(key?.ord ?? FLOOR_NO_ORD), alias = String(key?.alias ?? '');
+    const r = await env.DB.prepare(
+      `SELECT COUNT(*) + 1 AS rank
+         FROM leaderboard_snapshots ls
+         JOIN users u ON u.id = ls.user_id
+         LEFT JOIN public_profile_summary pps ON pps.user_id = ls.user_id
+         LEFT JOIN hall_of_awakened hoa ON hoa.user_id = ls.user_id
+        WHERE ls.metric = 'floor_best' AND ls.user_id <> ?1
+          AND (ls.current_value > ?2
+            OR (ls.current_value = ?2 AND (${FLOOR_PIN} > ?3
+              OR (${FLOOR_PIN} = ?3 AND (${FLOOR_ORD} < ?4
+                OR (${FLOOR_ORD} = ?4 AND u.alias < ?5)))))) `,
+    ).bind(session.userId, myRow.current_value, pin, ord, alias).first<RankRow>();
+    me = { rank: r?.rank ?? -1, current_value: myRow.current_value };
+  } else if (myRow) {
     // Rank = count of rows with strictly higher current_value + 1.
     // Ties get the same rank as the first of the tie group. The same
     // weekly filter applies so the rank is computed against the same
@@ -278,3 +303,14 @@ export async function handleLeaderboardTop(
 
   return jsonOk({ metric, top, me });
 }
+
+/** W1223 (owner 2026-11-16, the Highest Floor board with two hunters on floor 100: "Keep me at the top
+ *  but everyone else that gets to floor 100 goes by time...so anyone that gets floor 100 after us goes
+ *  after rendiesel.") — ties on a floor break: Founder #1 first (the owner's account; founder_seq is
+ *  assigned by the server, never by a phone), then the Hall of the Awakened's order (who cleared floor
+ *  100 first; RenDIESEL is #1, 2026-06-28), then the name, so the order never shuffles between reads.
+ *  A higher floor still ranks above, owner or not. */
+const FLOOR_NO_ORD = 1000000000;
+const FLOOR_PIN = 'COALESCE(pps.founder_seq = 1, 0)';
+const FLOOR_ORD = 'COALESCE(hoa.ordinal, ' + FLOOR_NO_ORD + ')';
+const FLOOR_TIE_ORDER = ', ' + FLOOR_PIN + ' DESC, ' + FLOOR_ORD + ' ASC, u.alias ASC';

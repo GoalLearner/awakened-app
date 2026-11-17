@@ -266,3 +266,30 @@ describe('GET /v1/leaderboard/top -- weekly scoping (1z.33)', () => {
     expect(body.me).toEqual({ rank: 12, current_value: 1776 });
   });
 });
+
+// W1223 — owner 2026-11-16: "Keep me at the top but everyone else that gets to floor 100 goes by time"
+describe('GET /v1/leaderboard/top -- the Highest Floor tie order (W1223)', () => {
+  const req = (metric: string) => new Request('https://example.com/v1/leaderboard/top?metric=' + metric);
+  it('floor ties break by Founder #1, then the Hall order, then the name', async () => {
+    const db = makeDb({ topRows: [{ alias: 'Richie', current_value: 100 }, { alias: 'RenDIESEL', current_value: 100 }] });
+    await handleLeaderboardTop(req('floor_best'), makeEnv(db), session as never);
+    const q = db._calls().find((c) => c.sql.includes('FROM leaderboard_snapshots ls') && c.sql.includes('ORDER BY'))!;
+    expect(q.sql).toMatch(/ORDER BY ls\.current_value DESC, COALESCE\(pps\.founder_seq = 1, 0\) DESC, COALESCE\(hoa\.ordinal, 1000000000\) ASC, u\.alias ASC/);
+    expect(q.binds).toEqual(['floor_best', 100]);
+  });
+  it('other all-time boards keep the plain order', async () => {
+    const db = makeDb({ topRows: [] });
+    await handleLeaderboardTop(req('relics_collected'), makeEnv(db), session as never);
+    const q = db._calls().find((c) => c.sql.includes('FROM leaderboard_snapshots ls') && c.sql.includes('ORDER BY'))!;
+    expect(q.sql).not.toMatch(/founder_seq = 1/);
+  });
+  it('the caller\'s Highest Floor rank counts the hunters the tie order puts first', async () => {
+    const db = makeDb({ topRows: [], myRow: { current_value: 100 }, rank: 2 });
+    const res = await handleLeaderboardTop(req('floor_best'), makeEnv(db), session as never);
+    expect((await res.json() as { me: unknown }).me).toEqual({ rank: 2, current_value: 100 });
+    const q = db._calls().find((c) => c.sql.includes('COUNT(*) + 1'))!;
+    expect(q.sql).toMatch(/ls\.current_value > \?2/);
+    expect(q.sql).toMatch(/ls\.current_value = \?2 AND \(COALESCE\(pps\.founder_seq = 1, 0\) > \?3/);
+    expect(q.binds).toEqual(['user-abc', 100, 0, 1000000000, '']);   // the key read found nothing: no pin, no Hall place, no name
+  });
+});
