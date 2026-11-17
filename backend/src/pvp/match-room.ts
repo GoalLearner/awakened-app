@@ -21,6 +21,7 @@ import type { Env } from '../env';
 import {
   buildCombatant, pvpStartBattle, pvpResolveTurn, pvpResult, pvpBotMove,
   defaultMoveForTimeout, WEAPON_MOVES,
+  ultIdValid, ultIdFor, surgeOf, SHADOW_PCT_MAX, SHADOWS_MAX,   // W1233
 } from './combat-core.js';
 import { eloTier, kFactor } from './elo';
 import { currentSeason, softResetElo } from './seasons';
@@ -37,7 +38,11 @@ const MAX_STAT_TOTAL = 480;           // across the six
 const REMATCH_OFFER_MS = 25_000;      // a rematch offer expires if unanswered in 25s
 
 type Slot = 'p' | 'b';
-interface RawCombatant { name: string; weaponId: string; weaponName: string; stats: Record<string, number>; avatar: string; exeMax?: boolean; }
+interface RawCombatant {
+  name: string; weaponId: string; weaponName: string; stats: Record<string, number>; avatar: string; exeMax?: boolean;
+  ultId?: string; shadows?: number; shadowPct?: number;   // W1233 — the chosen ultimate and the marching army
+  duelUlt?: boolean;                                        // W1233 — this app shows the Surge + UNLEASH in duels
+}
 interface PlayerSlot { userId: string; alias: string; combatant: RawCombatant; elo?: number; }
 interface MatchState {
   code: string;
@@ -103,7 +108,20 @@ export function sanitizeCombatant(raw: any): RawCombatant {
     // execute (W757) was dropped right here, so no duel ever armed it. buildCombatant still checks the
     // weapon against EXECUTE_ELIGIBLE, so the flag can't arm an ineligible weapon.
     ...(raw && raw.exeMax === true ? { exeMax: true } : {}),
+    ...sanitizeArmyAndUlt(raw),
+    ...(raw && raw.duelUlt === true ? { duelUlt: true } : {}),
   };
+}
+// W1233 — owner 2026-11-17: "make sure that your personal ultimate and special attack and shadows are there as well".
+// An earned ultimate id (else the weapon's Signature), the marching count (Arise) and the army's power, bounded.
+export function sanitizeArmyAndUlt(raw: any): { ultId?: string; shadows?: number; shadowPct?: number } {
+  const out: { ultId?: string; shadows?: number; shadowPct?: number } = {};
+  if (raw && ultIdValid(raw.ultId)) out.ultId = String(raw.ultId);
+  const n = Math.floor(Number(raw && raw.shadows));
+  if (Number.isFinite(n) && n > 0) out.shadows = Math.min(SHADOWS_MAX, n);
+  const pct = Number(raw && raw.shadowPct);
+  if (Number.isFinite(pct) && pct > 0) out.shadowPct = Math.round(Math.min(SHADOW_PCT_MAX, pct) * 100) / 100;
+  return out;
 }
 
 export class MatchRoom {
@@ -143,10 +161,15 @@ export class MatchRoom {
   // Rebuild the live combat-core session from the persisted record (replay).
   rebuild(m: MatchState): any | null {
     if (!m.p1 || !m.p2) return null;
-    const a = buildCombatant(m.p1.combatant);
-    const b = buildCombatant(m.p2.combatant);
-    const sess = pvpStartBattle(a, b, m.seed);
     const vsBot = this.isBot(m.p2);
+    // W1233 — a duel is ARMED (ultimates + armies, both sides) only when every human in it runs an app that shows the
+    // Surge and UNLEASH; otherwise it fights as before (no Echo ultimate an older app can't answer, no army it didn't send).
+    const armed = !!m.p1.combatant.duelUlt && (vsBot || !!m.p2.combatant.duelUlt);
+    const plain = (c: RawCombatant): RawCombatant => (armed ? c : { ...c, ultId: undefined, shadows: undefined, shadowPct: undefined });
+    const a = buildCombatant(plain(m.p1.combatant));
+    const b = buildCombatant(plain(m.p2.combatant));
+    const sess = pvpStartBattle(a, b, m.seed);
+    if (!armed) sess.ultsOff = true;
     for (const h of m.moveHistory) {
       if (sess.done) break;
       // vs-bot: RE-PICK the bot move on replay so the rebuilt session consumes the SAME
@@ -293,7 +316,9 @@ export class MatchRoom {
     if (!sess || sess.done) return { ok: false, code: 'DONE' };
     const kit = slot === 'p' ? sess.pMoves : sess.bMoves;
     const cd = slot === 'p' ? sess.cd : sess.bcd;
-    const legal = kit.some((x: any) => x.id === moveId) ? !(cd[moveId] > 0) : moveId === 'struggle';
+    // W1233 — the ultimate is legal at a full Surge
+    const legal = moveId === 'ultimate' ? (!sess.ultsOff && surgeOf(sess, slot) >= 1)
+      : kit.some((x: any) => x.id === moveId) ? !(cd[moveId] > 0) : moveId === 'struggle';
     if (!legal) return { ok: false, code: 'ILLEGAL_MOVE' };
     m.lastSeen[slot] = Date.now();   // an HTTP submit = present (poll-transport players never have a live WS)
     m.pending[slot] = moveId;
@@ -620,13 +645,20 @@ export class MatchRoom {
     const status = (slot: Slot) => sess ? (slot === 'p' ? sess.pS : sess.bS) : null;
     const myKit = sess ? (you === 'p' ? sess.pMoves : sess.bMoves) : (meP ? buildCombatant(meP.combatant).kit : []);
     const myCd = sess ? (you === 'p' ? sess.cd : sess.bcd) : {};
+    // W1233 — each side's Surge (0..1), the ultimate it fires (resolved: an earned one or its weapon's Signature)
+    // and its marching shadows, so the client draws the bar, the UNLEASH and the right cut-in for either side.
+    const armyView = (slot: Slot, P: PlayerSlot) => ({
+      surge: sess && !sess.ultsOff ? surgeOf(sess, slot) : 0,
+      ultId: sess ? ultIdFor(sess, slot) : null,
+      shadows: sess && !sess.ultsOff ? Number(P.combatant.shadows) || 0 : 0,
+    });
     return {
       code: m.code, phase: m.phase, ranked: m.ranked, turn: m.turn, you, seed: m.seed,
       deadlineMs: m.deadlineMs,
       youSubmitted: !!m.pending[meSlot], oppSubmitted: !!m.pending[oppSlot],
       oppConnected: m.connected[oppSlot],
-      me: meP ? { alias: meP.alias, name: meP.combatant.name, avatar: meP.combatant.avatar || '', hp: hp(meSlot), maxHP: maxhp(meSlot), eff: eff(meSlot), status: status(meSlot), kit: myKit, cd: myCd, elo: meP.elo != null ? meP.elo : null, tier: meP.elo != null ? eloTier(meP.elo) : null, weaponName: meP.combatant.weaponName } : null,
-      opp: oppP ? { alias: oppP.alias, name: oppP.combatant.name, avatar: oppP.combatant.avatar || '', hp: hp(oppSlot), maxHP: maxhp(oppSlot), eff: eff(oppSlot), status: status(oppSlot), elo: oppP.elo != null ? oppP.elo : null, tier: oppP.elo != null ? eloTier(oppP.elo) : null, weaponName: oppP.combatant.weaponName, isBot: this.isBot(oppP) } : null,
+      me: meP ? { alias: meP.alias, name: meP.combatant.name, avatar: meP.combatant.avatar || '', hp: hp(meSlot), maxHP: maxhp(meSlot), eff: eff(meSlot), status: status(meSlot), kit: myKit, cd: myCd, elo: meP.elo != null ? meP.elo : null, tier: meP.elo != null ? eloTier(meP.elo) : null, weaponName: meP.combatant.weaponName, ...armyView(meSlot, meP) } : null,
+      opp: oppP ? { alias: oppP.alias, name: oppP.combatant.name, avatar: oppP.combatant.avatar || '', hp: hp(oppSlot), maxHP: maxhp(oppSlot), eff: eff(oppSlot), status: status(oppSlot), elo: oppP.elo != null ? oppP.elo : null, tier: oppP.elo != null ? eloTier(oppP.elo) : null, weaponName: oppP.combatant.weaponName, isBot: this.isBot(oppP), ...armyView(oppSlot, oppP) } : null,
       result: m.result,
       rating: m.ratingResult ? { delta: m.ratingResult[meSlot].delta, elo: m.ratingResult[meSlot].elo, tier: eloTier(m.ratingResult[meSlot].elo) } : null,
     };

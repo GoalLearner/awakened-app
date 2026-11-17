@@ -78,7 +78,9 @@ export async function handlePvpFind(request: Request, env: Env, session: Session
   let res: Response;
   try {
     res = await forwardToDo(env, code, 'createVsBot', session.userId, session.alias, {
-      code, combatant: body.combatant, bot: { id: bot.id, alias: bot.name, elo: bot.elo, combatant: bot.combatant },
+      // W1233 — owner chose both sides armed: a rated Echo marches the same army you do (so ranked stays fair) and
+      // fires its weapon's Signature. The DO sanitizes both combatants.
+      code, combatant: body.combatant, bot: { id: bot.id, alias: bot.name, elo: bot.elo, combatant: { ...bot.combatant, ...mirrorArmy(body.combatant) } },
     });
   } catch { return jsonError(503, 'PVP_UNAVAILABLE', 'Matchmaking is busy. Try again in a moment.'); }
   let j: any = {};
@@ -86,6 +88,12 @@ export async function handlePvpFind(request: Request, env: Env, session: Session
   if (!j || !j.ok) return jsonError(503, 'PVP_UNAVAILABLE', 'Could not start the match. Try again.');
   j.vsBot = true; j.opponent = meta;
   return jsonOk(j);
+}
+
+/** W1233 — the player's army (count + power), for the rated Echo to match. Bounded again by the DO. */
+function mirrorArmy(c: any): { shadows?: unknown; shadowPct?: unknown } {
+  if (!c || typeof c !== 'object') return {};
+  return { shadows: c.shadows, shadowPct: c.shadowPct };
 }
 
 /** True iff the two users have an accepted friendship (either direction). */

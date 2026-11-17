@@ -37032,3 +37032,11 @@ button.mx-sh { cursor: pointer; min-height: 40px; }
 .cr-d { margin: 0 0 10px; border: 1px solid rgba(255,255,255,.08); border-radius: 14px; background: rgba(255,255,255,.03); }
 .cr-d summary { padding: 12px 14px; font-weight: 600; color: #fff; cursor: pointer; }
 .cr-d pre { margin: 0; padding: 0 14px 14px; white-space: pre-wrap; word-break: break-word; font: 12px/1.5 -apple-system, BlinkMacSystemFont, system-ui, sans-serif; color: #b9b6d2; }
+
+/* W1233 — duels: an opponent's ultimate cut-in faces the other way (their portrait unflipped, the slab tilted back),
+   and a duel opponent glows while its Surge is full. */
+.pkb2-cutin.foe .por img { transform: none; }
+.pkb2-cutin.foe .slab { transform: skewY(8deg); }
+.pkb2-cutin.foe .lines { transform: scaleX(-1); }
+.pkb.pkb2 .pkb-spot.foe.surged .spr { filter: drop-shadow(0 10px 14px rgba(0,0,0,0.6)) drop-shadow(0 0 10px rgba(248,113,113,0.85)); }
+@media (prefers-reduced-motion: reduce) { .pkb2-cutin.foe .slab { transform: skewY(8deg); } }

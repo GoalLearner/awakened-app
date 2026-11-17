@@ -59,6 +59,7 @@ import { maybeGrantFounderMark } from '../lib/founder-mark';
 import { readEntitlements } from './iap-entitlements';
 import { skinNeedsEntitlement } from '../lib/skin-products';
 import { WEAPON_MOVES } from '../pvp/combat-core.js';   // W1075 — the weapon allowlist
+import { sanitizeArmyAndUlt } from '../pvp/match-room';   // W1233
 import { resolveOathsOnFirstKill } from './oaths';   // W867 — Oathbound fulfillment
 
 // W706 — the member card-background catalog (ids only; art + achievement mapping
@@ -542,6 +543,7 @@ function validate(body: PutBody):
         avatar: av,
         stats,
         ...(c.exeMax === true ? { exeMax: true } : {}),   // W1232 — a friend's Echo keeps the special attack they earned
+        ...sanitizeArmyAndUlt(c),                          // W1233 — and fights with their ultimate and shadows
       };
       combatant = { set: true, value: JSON.stringify(clean) };
     } else {

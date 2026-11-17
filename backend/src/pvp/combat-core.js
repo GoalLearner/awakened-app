@@ -178,6 +178,62 @@ function _arRangerEvade(defC, hpFrac, power) {
 }
 function _arStatArmorShred(s) { let m = 1; s.mods.forEach((x) => { if (x.k === 'shred') m *= (1 - x.mag); }); return Math.max(_ARMOR_SHRED_MIN, m); }
 function _arStruggleMove() { return { id: 'struggle', name: 'Struggle', gl: 'sword', power: _STRUGGLE_POWER, acc: 0.95, cd: 0, desc: 'A desperate blow.' }; }
+
+// ── W1233 — SURGE + ULTIMATES + SHADOWS in duels (owner 2026-11-17, sparring a friend's Echo: "make sure that
+//    your personal ultimate and special attack and shadows are there as well"; he chose BOTH sides armed). The
+//    numbers mirror app.js ASCENT_ULTIMATES (the W1168 tuning) and its Surge (W1135); presentation (tint, copy,
+//    sequences) stays on the client. Side-generic: each fighter fills its own Surge from the damage it deals and
+//    takes, and spends it on the move id 'ultimate'. A combatant carries ultId (an earned one, else its weapon's
+//    Signature), shadows (the marching count, for Arise) and shadowPct (the army's power, as in the Ascent). ──
+const SURGE_DEALT_K = 0.9, SURGE_TAKEN_K = 1.1;
+const ULTS = {
+  verdict:  { name: 'Sundering Verdict', kind: 'MELEE', style: 'melee', gl: 'sword', power: 2.6, acc: 0.99, cd: 0 },
+  starfall: { name: 'Starfall', kind: 'MAGIC', style: 'magic', gl: 'magic', power: 2.6, acc: 0.99, cd: 0 },
+  rain:     { name: 'Heartpiercer Rain', kind: 'RANGED', style: 'ranged', gl: 'ranged', power: 2.6, acc: 0.99, cd: 0 },
+  feast:    { name: 'Crimson Feast', kind: 'DRAIN', gl: 'magic', power: 1.2, acc: 0.99, cd: 0,
+              fxs: [{ t: 'heal', mag: 0.10, onHit: true }], use: 'selfLow', patience: 3 },
+  quicksilver: { name: 'Quicksilver', kind: 'SWIFT', gl: 'dagger', power: 1.6, acc: 0.99, cd: 0, prio: 2,
+              fxs: [{ t: 'dodge', kind: 'quicksilver', mag: 0.25, dur: 2 }] },
+  hellfire: { name: 'Hellfire', kind: 'FIRE', gl: 'burst', power: 1.3, acc: 0.99, cd: 0,
+              fxs: [{ t: 'hellfire', mag: 0.11, dur: 4, onHit: true }] },
+  storm:    { name: 'Storm of Blades', kind: 'BLADES', gl: 'dagger', power: 2.0, acc: 0.99, cd: 0, pierce: true },
+  worldbreaker: { name: 'Worldbreaker', kind: 'QUAKE', gl: 'shield', power: 1.4, acc: 0.99, cd: 0,
+              fxs: [{ t: 'defDown', kind: 'worldbreak', mag: 0.2, dur: 3, onHit: true }, { t: 'atkDown', kind: 'worldbreak', mag: 0.3, dur: 2, onHit: true }] },
+  reaper:   { name: "Reaper's Due", kind: 'EXECUTE', gl: 'sword', power: 1.4, acc: 0.99, cd: 0, exe: { thr: 0.35, mult: 2.8 }, use: 'foeLow', patience: 4 },
+  arise:    { name: 'Arise', kind: 'SHADOWS', gl: 'magic', power: 2.2, acc: 0.99, cd: 0, scale: { per: 0.15, cap: 8 } },
+  dawnbreaker: { name: 'Dawnbreaker', kind: 'WARD', gl: 'shield', power: 1.6, acc: 0.99, cd: 0,
+              fxs: [{ t: 'defUp', kind: 'dawn', mag: -0.3, dur: 2 }, { t: 'atkUp', kind: 'dawn', mag: 0.25, dur: 2 }] },
+};
+const ULT_SIGNATURE = { melee: 'verdict', magic: 'starfall', ranged: 'rain' };
+// Bounds on what a client may claim (the stats are client-trusted the same way): every solo shadow at S rank is
+// ~70%, and a full army is well under 40.
+const SHADOW_PCT_MAX = 80, SHADOWS_MAX = 40;
+// An EARNED (non-Signature) ultimate id; anything else fights with its weapon's Signature.
+function ultIdValid(id) { return typeof id === 'string' && Object.prototype.hasOwnProperty.call(ULTS, id) && !ULTS[id].style; }
+function _ultStyle(moves) {
+  const gl = (moves && moves[0] && moves[0].gl) || 'sword';
+  return gl === 'magic' ? 'magic' : gl === 'ranged' ? 'ranged' : 'melee';
+}
+function ultIdFor(sess, side) {
+  const id = side === 'p' ? sess.pUltId : sess.bUltId;
+  return ultIdValid(id) ? id : ULT_SIGNATURE[_ultStyle(side === 'p' ? sess.pMoves : sess.bMoves)];
+}
+// The move a side's ultimate is this turn (mirrors app.js _arUltimateFor; Arise grows with that side's army).
+function ultMoveFor(sess, side) {
+  const uid = ultIdFor(sess, side), u = ULTS[uid];
+  const mv = Object.assign({ id: 'ultimate', ult: true, ultId: uid, style: u.style || _ultStyle(side === 'p' ? sess.pMoves : sess.bMoves) }, u);
+  if (u.scale) mv.power = u.power + u.scale.per * Math.min(u.scale.cap, Math.max(0, (side === 'p' ? sess.pShadows : sess.bShadows) | 0));
+  return mv;
+}
+// The moment a held ultimate is worth firing (app.js use(): Feast when you are losing, Reaper for the finish).
+function _ultUseNow(sess, side, u) {
+  const self = side === 'p' ? sess.pHP / Math.max(1, sess.pMax) : sess.bHP / Math.max(1, sess.bMax);
+  const foe = side === 'p' ? sess.bHP / Math.max(1, sess.bMax) : sess.pHP / Math.max(1, sess.pMax);
+  if (u.use === 'selfLow') return self <= 0.6;
+  if (u.use === 'foeLow') return foe <= 0.35;
+  return true;
+}
+function surgeOf(sess, side) { return (side === 'p' ? sess.pSurge : sess.bSurge) || 0; }
 function _arAccBonusOf(c) {
   const tot = (c.attack || 0) + (c.defense || 0) + (c.edge || 0) || 1e-6;
   return Math.min(_ACC_EDGE_MAXBONUS, ((c.edge || 0) / tot) * _ACC_EDGE_COEF);
@@ -320,6 +376,8 @@ function _arExecMove(sess, side, move, events) {
   const defName = side === 'p' ? esc(sess.m.bot.name) : 'You';
   if (atkS.stun > 0) { atkS.stun -= 1; events.push({ side, t: 'stun', text: atkName + ' — stunned, can\'t move.' }); return; }
   const power = move.power || 0;
+  const pierce = !!move.pierce;   // W1233 (app.js W1168) — Storm of Blades: no brace / ward, no guard block, no dodge
+  let landedHit = false;          // W1233 — onHit effects wait on this
   if (power > 0) {
     const atkBase  = (side === 'p' ? sess.m.player.attack : sess.m.bot.attack) || 0;
     // PvP generalization: the foe ('b') is a real player with a weapon, so it
@@ -330,8 +388,8 @@ function _arExecMove(sess, side, move, events) {
     const critCh   = side === 'p' ? sess.pCrit : sess.bCrit;
     const defBase  = (side === 'p' ? sess.m.bot.defense : sess.m.player.defense) || 0;
     const shred    = _arStatArmorShred(defS);
-    const takenM   = _arStatTakenMult(defS);
-    const dodge    = Math.min(_DODGE_CAP, _arStatDodge(defS) + _arRangerEvade(side === 'p' ? sess.m.bot : sess.m.player, side === 'p' ? sess.bHP / Math.max(1, sess.bMax) : sess.pHP / Math.max(1, sess.pMax), move.power || 0));   // W529 — ranger passive evasion
+    const takenM   = pierce ? Math.max(1, _arStatTakenMult(defS)) : _arStatTakenMult(defS);
+    const dodge    = pierce ? 0 : Math.min(_DODGE_CAP, _arStatDodge(defS) + _arRangerEvade(side === 'p' ? sess.m.bot : sess.m.player, side === 'p' ? sess.bHP / Math.max(1, sess.bMax) : sess.pHP / Math.max(1, sess.pMax), move.power || 0));   // W529 — ranger passive evasion
     const accBonus = side === 'p' ? sess.pAccB : sess.bAccB;
     const maxHPd   = side === 'p' ? sess.bMax : sess.pMax;
     const remBefore = side === 'p' ? sess.bHP : sess.pHP;
@@ -350,7 +408,7 @@ function _arExecMove(sess, side, move, events) {
       if (crit) { hit *= _CRIT_MULT; anyCrit = true; }
       else { hit *= takenM; }
       hit *= 1 + (sess.rng() * 2 - 1) * _DMG_VAR;
-      if (defS.guard > 0 && !guardUsed && hit > 0) { hit *= 0.5; guardUsed = true; }
+      if (!pierce && defS.guard > 0 && !guardUsed && hit > 0) { hit *= 0.5; guardUsed = true; }
       total += Math.max(0, hit); anyLanded = true;
     }
     if (guardUsed) defS.guard = 0;
@@ -363,14 +421,17 @@ function _arExecMove(sess, side, move, events) {
       if (side === 'p') sess.bHP = Math.max(0, sess.bHP - total);
       else { sess.pHP = Math.max(0, sess.pHP - total); sess.untouched = false; }
       sess.dmgDealt[side] += effective;
-      events.push({ side, t: 'hit', gl: move.gl, crit: anyCrit, exe: exeM > 1, dmg: shown, move: move.name, text: atkName + ' — ' + move.name + (hits > 1 ? ' ×' + hits : '') + ' for ' + shown + (anyCrit ? ' (CRIT!)' : '') + '.' });
+      events.push({ side, t: 'hit', gl: move.gl, crit: anyCrit, exe: exeM > 1, ult: !!move.ult, ultId: move.ult ? move.ultId : undefined, dmg: shown, move: move.name, text: atkName + ' — ' + move.name + (hits > 1 ? ' ×' + hits : '') + ' for ' + shown + (anyCrit ? ' (CRIT!)' : '') + '.' });
     } else if (dodged && !missed) {
-      events.push({ side, t: 'dodge', move: move.name, text: defName + ' dodges ' + move.name + '!' });
+      events.push({ side, t: 'dodge', ultId: move.ult ? move.ultId : undefined, move: move.name, text: defName + ' dodges ' + move.name + '!' });
     } else {
-      events.push({ side, t: 'miss', move: move.name, text: atkName + ' — ' + move.name + ' misses!' });
+      events.push({ side, t: 'miss', ultId: move.ult ? move.ultId : undefined, move: move.name, text: atkName + ' — ' + move.name + ' misses!' });
     }
+    landedHit = anyLanded;
   }
-  if (move.fx) _arApplyFx(sess, side, move.fx, events, atkName, defName);
+  // W1233 (app.js W1168) — an ultimate may carry several effects (fxs); onHit ones need the blow to have landed.
+  const fxList = move.fxs || (move.fx ? [move.fx] : null);
+  if (fxList) fxList.forEach((fx) => { if (!fx.onHit || landedHit) _arApplyFx(sess, side, fx, events, atkName, defName); });
   if (sess.bHP <= 0) { sess.done = true; sess.won = true; }
   else if (sess.pHP <= 0) { sess.done = true; sess.won = false; }
 }
@@ -378,7 +439,7 @@ function _arApplyFx(sess, side, fx, events, atkName, defName) {
   const selfS = side === 'p' ? sess.pS : sess.bS, foeS = side === 'p' ? sess.bS : sess.pS;
   const isAre = defName === 'You' ? 'are' : 'is';
   switch (fx.t) {
-    case 'burn': case 'bleed': {
+    case 'burn': case 'bleed': case 'hellfire': {   // W1233 (app.js W1168) — Hellfire stacks with a burn (under the intake cap)
       if (foeS.mods.some((x) => x.k === 'dotImmune')) {
         events.push({ side, t: 'fx', text: defName + ' — cauterized; the ' + fx.t + ' does not take.' }); break;
       }
@@ -390,7 +451,7 @@ function _arApplyFx(sess, side, fx, events, atkName, defName) {
       const ex = foeS.mods.find((x) => x.k === 'dot' && x.kind === fx.t);
       if (ex) { ex.dur = Math.max(ex.dur, fx.dur); ex.mag = Math.max(ex.mag, magEff); ex.src = side; }
       else foeS.mods.push({ k: 'dot', kind: fx.t, mag: magEff, dur: fx.dur, src: side });
-      events.push({ side, t: 'fx', text: defName + ' ' + isAre + ' ' + (fx.t === 'burn' ? 'burning' : 'bleeding') + '.' }); break;
+      events.push({ side, t: 'fx', text: fx.t === 'hellfire' ? defName + ' ' + isAre + ' wreathed in hellfire.' : defName + ' ' + isAre + ' ' + (fx.t === 'burn' ? 'burning' : 'bleeding') + '.' }); break;
     }
     case 'stun':
       if (foeS.stun > 0) { events.push({ side, t: 'fx', text: defName + ' ' + isAre + ' already reeling.' }); }
@@ -456,6 +517,8 @@ function _arEndTurn(sess, events) {
 //    Ascent (AI foe) and PvP (human foe) run THIS — one resolution path. ──
 function _arResolveTurn(sess, pMove, bMove) {
   const events = [];
+  const pStun0 = sess.pS.stun > 0, bStun0 = sess.bS.stun > 0;   // W1233 — a stun swallows the ultimate, and keeps the Surge
+  const d0p = sess.dmgDealt.p, d0b = sess.dmgDealt.b;
   const pPrio = pMove.prio || 0, bPrio = bMove.prio || 0;
   let pFirst;
   if (pPrio !== bPrio) pFirst = pPrio > bPrio;
@@ -468,6 +531,13 @@ function _arResolveTurn(sess, pMove, bMove) {
   if (pMove.cd) sess.cd[pMove.id] = pMove.cd + 1;
   if (bMove.cd) sess.bcd[bMove.id] = bMove.cd + 1;
   if (!sess.done) _arEndTurn(sess, events);
+  // W1233 (app.js W1135) — the Surge: the share of the foe's bar you took plus the share of yours it took, for each
+  // side. The ultimate spends it unless a stun swallowed the turn. No RNG: the parity results are untouched.
+  const dP = sess.dmgDealt.p - d0p, dB = sess.dmgDealt.b - d0b;
+  const gP = SURGE_DEALT_K * dP / Math.max(1, sess.bMax) + SURGE_TAKEN_K * dB / Math.max(1, sess.pMax);
+  const gB = SURGE_DEALT_K * dB / Math.max(1, sess.pMax) + SURGE_TAKEN_K * dP / Math.max(1, sess.bMax);
+  sess.pSurge = (pMove.ult && !pStun0) ? 0 : Math.max(0, Math.min(1, (sess.pSurge || 0) + gP));
+  sess.bSurge = (bMove.ult && !bStun0) ? 0 : Math.max(0, Math.min(1, (sess.bSurge || 0) + gB));
   sess.turn += 1;
   if (!sess.done && sess.turn > _BATTLE_TURN_CAP) {
     const dp = sess.dmgDealt.p, db = sess.dmgDealt.b;
@@ -485,6 +555,7 @@ function arenaTakeTurn(sess, moveId) {
   if (!sess || sess.done) return null;
   let pMove = sess.pMoves.find((x) => x.id === moveId);
   if (!pMove && moveId === 'struggle') pMove = _arStruggleMove();
+  if (!pMove && moveId === 'ultimate' && surgeOf(sess, 'p') >= 1) pMove = ultMoveFor(sess, 'p');   // W1233
   if (!pMove || sess.cd[pMove.id] > 0) return null;
   const bMove = _arenaFoePick(sess);
   return _arResolveTurn(sess, pMove, bMove);
@@ -505,10 +576,18 @@ function buildCombatant(input) {
   const profile = _arenaCombatProfile(stats);
   const arch = _arenaArchOf(profile);
   const weaponId = input.weaponId || 'unarmed';
+  // W1233 (app.js W862/W1057) — the marching shadows add their power, as in the Ascent: attack, defense and edge
+  // each x (1 + pct/100), so the bar grows with defense too. The archetype is read before (a uniform lift keeps it).
+  const shPct = _arClamp(Number(input.shadowPct) || 0, 0, SHADOW_PCT_MAX);
+  const shM = 1 + shPct / 100;
+  const attack = profile.attack * shM, defense = profile.defense * shM, edge = profile.edge * shM;
   return {
     name: String(input.name || 'Hunter'),
-    attack: profile.attack, defense: profile.defense, edge: profile.edge, power: profile.power,
+    attack, defense, edge, power: shPct > 0 ? attack + defense + edge : profile.power,
     stats, arch, weaponId,
+    ultId: ultIdValid(input.ultId) ? input.ultId : 'signature',                            // W1233
+    shadows: Math.max(0, Math.min(SHADOWS_MAX, Math.floor(Number(input.shadows) || 0))),    // W1233 — Arise's count
+    shadowPct: shPct,
     weaponName: String(input.weaponName || ''),
     kit: kitForWeapon(weaponId, !!input.exeMax),   // W757 -- earned execute (validated)
     attuned: attuneForWeapon(weaponId, arch),
@@ -537,6 +616,8 @@ function pvpStartBattle(pa, pb, seed) {
     pMoves: pa.kit, bMoves: pb.kit,
     cd: {}, bcd: {}, turn: 1, log: [], done: false, won: false, untouched: true,
     rng: _arMulberry32(s), dmgDealt: { p: 0, b: 0 }, aiTier: 2,
+    pSurge: 0, bSurge: 0, pUltId: pa.ultId || 'signature', bUltId: pb.ultId || 'signature',   // W1233
+    pShadows: pa.shadows | 0, bShadows: pb.shadows | 0, _bUltWait: 0,
   };
 }
 
@@ -552,11 +633,16 @@ function _validMove(moves, cdMap, moveId) {
 // Resolve ONE PvP turn given both players' submitted move ids. P1 = 'p' side,
 // P2 = 'b' side. Returns { ok, events } or { ok:false, code } if a move is
 // illegal. The DO calls this once it has both moves for the turn.
+// W1233 — 'ultimate' is legal for a side whose Surge is full; it spends it (see _arResolveTurn).
+function sideMove(sess, side, moveId) {
+  if (moveId === 'ultimate') return (!sess.ultsOff && surgeOf(sess, side) >= 1) ? ultMoveFor(sess, side) : null;   // ultsOff: an app without the UNLEASH is in this duel
+  return side === 'p' ? _validMove(sess.pMoves, sess.cd, moveId) : _validMove(sess.bMoves, sess.bcd, moveId);
+}
 function pvpResolveTurn(sess, moveIdP, moveIdB) {
   if (!sess || sess.done) return { ok: false, code: 'DONE' };
-  const pMove = _validMove(sess.pMoves, sess.cd, moveIdP);
+  const pMove = sideMove(sess, 'p', moveIdP);
   if (!pMove) return { ok: false, code: 'BAD_MOVE_P' };
-  const bMove = _validMove(sess.bMoves, sess.bcd, moveIdB);
+  const bMove = sideMove(sess, 'b', moveIdB);
   if (!bMove) return { ok: false, code: 'BAD_MOVE_B' };
   const events = _arResolveTurn(sess, pMove, bMove);
   return { ok: true, events };
@@ -577,6 +663,13 @@ function defaultMoveForTimeout(moves, cdMap) {
 // moveHistory and rebuild stays uniform with the human-vs-human path. PVP.md §11.1.
 function pvpBotMove(sess) {
   if (!sess || sess.done) return 'struggle';
+  // W1233 — the Echo fires its ultimate at a full Surge: at once, or (Feast, Reaper) when its moment comes, or after
+  // its patience runs out (app.js's smart sim player). No RNG is drawn, so a replay re-picks the same move.
+  if (!sess.ultsOff && surgeOf(sess, 'b') >= 1 && !(sess.bS.stun > 0)) {
+    const u = ULTS[ultIdFor(sess, 'b')];
+    if (!u.use || _ultUseNow(sess, 'b', u) || (sess._bUltWait || 0) >= (u.patience || 0)) { sess._bUltWait = 0; return 'ultimate'; }
+    sess._bUltWait = (sess._bUltWait || 0) + 1;
+  }
   const mv = _arenaFoePick(sess);
   return (mv && mv.id) ? mv.id : 'struggle';
 }
@@ -608,6 +701,8 @@ function pvpResult(sess) {
 export {
   // constants + tables (for validation + the client cross-check)
   ARENA_MOVE_LIB, WEAPON_MOVES, _WEAPON_ATTUNE, _BATTLE_TURN_CAP, _ATTUNED_MULT,
+  // W1233 — the duel's ultimates
+  ULTS, ULT_SIGNATURE, SHADOW_PCT_MAX, SHADOWS_MAX, SURGE_DEALT_K, SURGE_TAKEN_K, ultIdValid, ultIdFor, ultMoveFor, surgeOf,
   // pure engine (cross-check + Ascent parity)
   _arMulberry32, _arenaCombatProfile, _arenaArchOf, _arenaEffectiveness, _arenaSideOdds,
   _arExecMove, _arApplyFx, _arEndTurn, _arResolveTurn, _arenaPickMove, arenaTakeTurn,

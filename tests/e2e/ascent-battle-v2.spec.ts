@@ -413,13 +413,14 @@ for (const vp of [{ width: 390, height: 844 }, { width: 375, height: 667 }]) {
       await shot(page, '12-f100-battle');
     });
 
-    test('a duel keeps its turn status and shows no intent badge and no Surge', async ({ page }) => {
+    test('a duel keeps its turn status and shows no intent badge; the Surge shows (W1233), not yet full', async ({ page }) => {
       await boot(page, 37);
       await page.evaluate(() => (window as any).__pvpDemo());
       await expect(page.locator('#arena-body .pkb2.pkb2--pvp')).toBeVisible();
       await expect(page.locator('#pvp-status')).toHaveCount(1);
       await expect(page.locator('#pkb-intent')).toHaveClass(/hidden/);
-      await expect(page.locator('#pkb-surge')).toHaveCount(0);
+      await expect(page.locator('#pkb-surge')).toHaveCount(1);   // W1233 — owner: your ultimate in duels too
+      await expect(page.locator('#pkb-surge')).not.toHaveClass(/full/);
       await expect(page.locator('#pkb-rail')).toHaveCount(0);
       await page.waitForTimeout(1500);
       await shot(page, '08-duel');

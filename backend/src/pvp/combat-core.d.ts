@@ -15,6 +15,9 @@ export interface Combatant {
   kit: Array<Record<string, any>>;
   attuned: number;
   isBot: boolean;
+  ultId: string;      // W1233 — an earned ultimate, else 'signature'
+  shadows: number;    // W1233 — the marching count (Arise)
+  shadowPct: number;  // W1233 — the army's power, already in attack/defense/edge
 }
 
 export interface BattleSession {
@@ -49,6 +52,17 @@ export const WEAPON_MOVES: Record<string, string[]>;
 export const _WEAPON_ATTUNE: Record<string, string[]>;
 export const _BATTLE_TURN_CAP: number;
 export const _ATTUNED_MULT: number;
+// W1233 — the duel's Surge + ultimates
+export const ULTS: Record<string, Record<string, any>>;
+export const ULT_SIGNATURE: Record<string, string>;
+export const SHADOW_PCT_MAX: number;
+export const SHADOWS_MAX: number;
+export const SURGE_DEALT_K: number;
+export const SURGE_TAKEN_K: number;
+export function ultIdValid(id: unknown): boolean;
+export function ultIdFor(sess: BattleSession, side: 'p' | 'b'): string;
+export function ultMoveFor(sess: BattleSession, side: 'p' | 'b'): Record<string, any>;
+export function surgeOf(sess: BattleSession, side: 'p' | 'b'): number;
 
 export function buildCombatant(input: any): Combatant;
 export function pvpStartBattle(a: Combatant, b: Combatant, seed: number): BattleSession;
