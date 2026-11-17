@@ -192,3 +192,8 @@ describe('POST /v1/users/me/invite-rewards/claim', () => {
     expect(j.souls).toBe(0);
   });
 });
+
+// W1225 — owner 2026-11-16: "Maybe give more souls for inviting" → "500 each"
+describe("W1225 — the invite reward", () => {
+  it("is 500 souls for each side", () => { expect(INVITE_SOULS).toBe(500); });
+});

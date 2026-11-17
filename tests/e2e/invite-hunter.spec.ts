@@ -51,8 +51,9 @@ test.describe('Invite a Hunter (W596/W843/W898)', () => {
     expect(p.title).toBe('Awakened');
     expect(p.url).toBe(LINK);
     if (alias) expect(p.text).toContain('Add me by my name: ' + alias + '.');
-    expect(p.text).toContain('Enter code ' + CODE + ' under Community');
+    expect(p.text).toContain('Enter code ' + CODE + ' under Community and we both get 500 souls.');   // W1225
     expect(await page.evaluate(() => (window as any).__copied.length)).toBe(0);   // shared, so nothing copied
+    await expect(inviteBtn(page)).toContainText('You both get 500 souls');                            // W1225
   });
 
   test('no share sheet: the same text and link are copied, and the toast says so', async ({ page }) => {
@@ -80,7 +81,7 @@ test.describe('Invite a Hunter (W596/W843/W898)', () => {
     await boot(page, { link: null });
     await page.evaluate(() => {
       const w = window as any; w.__redeemed = [];
-      w.Auth.redeemInvite = async (c: string) => { w.__redeemed.push(c); return { ok: true, inviter_alias: 'Richie', reward_souls: 50, friendship_created: true }; };
+      w.Auth.redeemInvite = async (c: string) => { w.__redeemed.push(c); return { ok: true, inviter_alias: 'Richie', reward_souls: 500, friendship_created: true }; };
     });
     const input = page.locator('#social-invite-code');
     await input.scrollIntoViewIfNeeded();
@@ -89,6 +90,7 @@ test.describe('Invite a Hunter (W596/W843/W898)', () => {
     await expect.poll(() => page.evaluate(() => (window as any).__redeemed)).toEqual([CODE]);
     await expect(page.getByText('The call, answered')).toBeVisible();
     await expect(page.getByText(/entered through Richie/)).toBeVisible();
+    await expect(page.getByText(/\+500 souls/)).toBeVisible();   // W1225
     await expect(input).toHaveValue('');
     expect(await page.evaluate(() => localStorage.getItem('hb_pending_invite_code'))).toBeNull();
   });

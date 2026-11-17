@@ -36,7 +36,10 @@ import type { SessionPayload } from '../session-jwt';
 import { jsonOk, jsonError } from '../lib/responses';
 import { notifyUser } from '../lib/apns';
 
-export const INVITE_SOULS = 50; // both sides; owner-confirmable knob
+// W1225 (owner 2026-11-16: "Maybe give more souls for inviting" → "500 each") — 50 was one E-rank
+// kill and nobody knew it existed. Both sides; the redeemer's grant rides the redeem response and the
+// inviter's the claim, so every build already pays the new amount.
+export const INVITE_SOULS = 500;
 const REDEEM_WINDOW_DAYS = 14;
 // Unambiguous alphabet — no 0/o/1/l/i. 8 chars ≈ 1.1e12 combinations.
 const CODE_ALPHABET = '23456789abcdefghjkmnpqrstuvwxyz';
