@@ -28,7 +28,7 @@ interface MakeDbOptions {
   publicShadowRows?: Array<Record<string, unknown>>;
   /** W1220 — the viewer's accepted friends' user ids (the stranger check). */
   friendIds?: string[];
-  /** W1229 — rows returned by the every-hunter ultra-rare + mythic SELECT (?drops=1). */
+  /** W1229 — rows returned by the every-hunter mythic SELECT (?drops=1). */
   publicDropRows?: Array<Record<string, unknown>>;
 }
 
@@ -44,7 +44,7 @@ function makeDb(opts: MakeDbOptions = {}) {
         return {
           all:   async () => ({
             results: /AS fid/.test(sql) ? (opts.friendIds ?? []).map((fid) => ({ fid }))   // W1220
-              : !isFeed ? [] : /e\.event_type IN \('ultra_rare_drop', 'mythic_drop'\)/.test(sql) ? (opts.publicDropRows ?? []) /* W1229 */ : (/\(e\.event_type = 'shadow_drop' OR e\.client_event_id LIKE 'official:%'\)/.test(sql) && opts.publicShadowRows) || (opts.feedRows ?? []),
+              : !isFeed ? [] : /e\.event_type = 'mythic_drop'/.test(sql) ? (opts.publicDropRows ?? []) /* W1229 */ : (/\(e\.event_type = 'shadow_drop' OR e\.client_event_id LIKE 'official:%'\)/.test(sql) && opts.publicShadowRows) || (opts.feedRows ?? []),
             success: true,
             meta: {},
           }),
@@ -1899,21 +1899,21 @@ describe('GET /v1/friends/activity — feed read (1z.200)', () => {
   // ultimate is dropped. Make sure mythics have their own announcement as well"
   const feedDrops = async (db: D1Database, q = '?limit=2&drops=1') =>
     ((await (await handleFriendsActivityGet(new Request('https://example.com/v1/friends/activity' + q), makeEnv(db), session)).json()) as { events: Array<{ id: string; stranger?: boolean; eventType: string }> }).events;
-  it('W1229 — with ?drops=1 every hunter\'s ultra-rare and mythic drops join the feed, strangers\' marked stranger', async () => {
+  it('W1229 — with ?drops=1 every hunter\'s mythic drops join the feed, strangers\' marked stranger; W1230 — ultra-rares stay friends-only', async () => {
     const db = makeDb({
-      feedRows: [feedRow('f1', 'boss_kill', NOW_UTC - 1000), feedRow('u2', 'ultra_rare_drop', NOW_UTC - 4000, 'galilea')],
+      feedRows: [feedRow('f1', 'boss_kill', NOW_UTC - 1000), feedRow('m2', 'mythic_drop', NOW_UTC - 4000, 'galilea')],
       publicShadowRows: [],
       publicDropRows: [
-        feedRow('u1', 'ultra_rare_drop', NOW_UTC, 'stranger'),
         feedRow('m1', 'mythic_drop', NOW_UTC - 2000, 'stranger2'),
-        feedRow('u2', 'ultra_rare_drop', NOW_UTC - 4000, 'galilea'),   // a friend's: in both reads, shown once
+        feedRow('m2', 'mythic_drop', NOW_UTC - 4000, 'galilea'),   // a friend's: in both reads, shown once
       ],
       friendIds: ['galilea-uid'],
     });
     const evs = await feedDrops(db);
-    expect(evs.map((e) => e.id)).toEqual(['u1', 'f1', 'm1', 'u2']);
-    expect(evs.filter((e) => e.stranger).map((e) => e.id)).toEqual(['u1', 'm1']);
-    const q = db._calls().find((c) => /e\.event_type IN \('ultra_rare_drop', 'mythic_drop'\)/.test(c.sql))!;
+    expect(evs.map((e) => e.id)).toEqual(['f1', 'm1', 'm2']);
+    expect(evs.filter((e) => e.stranger).map((e) => e.id)).toEqual(['m1']);
+    const q = db._calls().find((c) => /e\.event_type = 'mythic_drop'/.test(c.sql))!;
+    expect(q.sql).not.toMatch(/ultra_rare_drop/);   // W1230 — owner: "I didn't want ultra rares to appear only mythics"
     expect(q.sql).not.toMatch(/FROM friends/);
     expect(q.sql).toMatch(/u\.apple_sub NOT LIKE 'sim_test_%'/);
     expect(q.sql).toMatch(/NOT IN \(SELECT blocked_id FROM board_blocks WHERE blocker_id = \?\)/);
@@ -1921,10 +1921,10 @@ describe('GET /v1/friends/activity — feed read (1z.200)', () => {
     expect(q.binds.slice(1)).toEqual(['user-abc', 'user-abc', 30]);
   });
   it('W1229 — without ?drops=1 (builds before 3.0.26) the every-hunter drop read never runs', async () => {
-    const db = makeDb({ feedRows: [feedRow('f1', 'boss_kill', NOW_UTC)], publicShadowRows: [], publicDropRows: [feedRow('u1', 'ultra_rare_drop', NOW_UTC, 'stranger')] });
+    const db = makeDb({ feedRows: [feedRow('f1', 'boss_kill', NOW_UTC)], publicShadowRows: [], publicDropRows: [feedRow('m1', 'mythic_drop', NOW_UTC, 'stranger')] });
     const evs = await feedDrops(db, '?limit=2');
     expect(evs.map((e) => e.id)).toEqual(['f1']);
-    expect(db._calls().some((c) => /'ultra_rare_drop', 'mythic_drop'/.test(c.sql))).toBe(false);
+    expect(db._calls().some((c) => /e\.event_type = 'mythic_drop'/.test(c.sql))).toBe(false);
   });
 
   it('W1220 — with no public post from outside, the friend list is not read', async () => {
@@ -2002,13 +2002,13 @@ describe('W913 — feed likes', () => {
     expect((await like(likeDb(st), 'evt-1', { rlWrite: denyRl })).status).toBe(429);
   });
 
-  it('the scope query admits accepted friends, and any unblocked hunter\'s shadow (W1118) or ultra-rare / mythic drop (W1229)', async () => {
+  it('the scope query admits accepted friends, and any unblocked hunter\'s shadow (W1118) or mythic drop (W1229); not a stranger\'s ultra-rare (W1230)', async () => {
     const st: LikeState = { event: { id: 'evt-1', user_id: 'james-uid' }, likes: new Set(), aliases: {} };
     const db = likeDb(st);
     await like(db, 'evt-1');
     const scope = db._calls().find((c) => /FROM public_achievement_events e/.test(c.sql))!;
     expect(scope.sql).toMatch(/f\.status = 'accepted'/);
-    expect(scope.sql).toMatch(/OR \(e\.event_type IN \('shadow_drop', 'ultra_rare_drop', 'mythic_drop'\)[^\n]*\s+AND e\.user_id NOT IN \(SELECT blocked_id FROM board_blocks WHERE blocker_id = \?\)\s+AND e\.user_id NOT IN \(SELECT blocker_id FROM board_blocks WHERE blocked_id = \?\)\)\)/);
+    expect(scope.sql).toMatch(/OR \(e\.event_type IN \('shadow_drop', 'mythic_drop'\)[^\n]*\s+AND e\.user_id NOT IN \(SELECT blocked_id FROM board_blocks WHERE blocker_id = \?\)\s+AND e\.user_id NOT IN \(SELECT blocker_id FROM board_blocks WHERE blocked_id = \?\)\)\)/);
     expect(scope.binds).toEqual(['evt-1', 'user-abc', 'user-abc', 'user-abc', 'user-abc', 'user-abc']);
   });
 });

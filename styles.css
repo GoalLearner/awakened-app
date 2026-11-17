@@ -32995,9 +32995,7 @@ button.pc-shard { cursor: pointer; font: inherit; -webkit-appearance: none; appe
 /* W1220 — strangers' shadows folded into one row: the ✧ avatar, a plain title, each feat names its hunter */
 .fa-hh .fa-av--sh { font-size: 15px; color: #c4b5fd; }
 .fa-hn--group { cursor: inherit; color: #c4b5fd; }
-/* W1229 — strangers' ultra-rares fold like shadows; a mythic drop is its own gold announcement */
-.fa-hh .fa-av--ul { font-size: 15px; color: #93c5fd; }
-.fa-hn--ultras { color: #93c5fd; }
+/* W1229 — a mythic drop is its own gold announcement */
 .fa-hunter--mythic { background: linear-gradient(90deg, rgba(255,210,74,0.10), rgba(255,93,177,0.05) 60%, transparent); box-shadow: inset 3px 0 0 #ffd24a; }
 .fa-hh .fa-av--my { font-size: 15px; color: #ffd24a; text-shadow: 0 0 10px rgba(255,210,74,0.7); }
 .fa-hn--mythic { color: #ffd24a; text-shadow: 0 0 12px rgba(255,210,74,0.45), 0 0 18px rgba(255,93,177,0.3); }

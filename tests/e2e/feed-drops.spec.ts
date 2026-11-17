@@ -1,10 +1,10 @@
 /**
- * Awakened — ultra-rare and mythic drops in Hunter Activity, and the crown on names (W1229).
+ * Awakened — mythic drops in Hunter Activity, and the crown on names (W1229, W1230).
  *
- * Owner 2026-11-16: "I want to add the ultimate drop like the shadows raised...so all hunters can see
- * when an ultimate is dropped. Make sure mythics have their own announcement as well on hunter
- * activity" → strangers' ultra-rare drops fold into one "Ultra-rare drops" row a day, like "Shadows
- * raised", and a mythic weapon is its own gold row at the top of its day. The server takes a
+ * Owner 2026-11-16: "Make sure mythics have their own announcement as well on hunter activity" → a
+ * mythic weapon is its own gold row at the top of its day, for every hunter. W1230: "I didn't want
+ * ultra rares to appear only mythics" → the server reads strangers' mythic_drop only, so there is no
+ * ultra-rare fold (a friend's ultra-rare stays in the friend's row, as before). The server takes a
  * mythic_drop only under the weapon's exact name, so the names are read from the backend here.
  * And: "me and rendiesel should have a crown next to our name and we don't here" (the profile card)
  * → "Even here too" (Hunter Activity).
@@ -64,7 +64,7 @@ const catchPosts = (page: Page) => page.evaluate(() => {
   w.Auth.getCurrentUser = () => ({ ...me, jwt: me.jwt || 'x' });
 });
 
-test.describe('Drops in Hunter Activity (W1229)', () => {
+test.describe('Mythic drops in Hunter Activity (W1229 · W1230)', () => {
   test('a mythic reveal posts one mythic_drop the server accepts, for each of the three weapons; an ultra-rare posts no mythic', async ({ page }) => {
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await boot(page);
@@ -95,46 +95,10 @@ test.describe('Drops in Hunter Activity (W1229)', () => {
     expect(src).toContain("'&drops=1'");
   });
 
-  test('strangers\' ultra-rares fold into one "Ultra-rare drops" row; a friend\'s stays in the friend\'s row; a lone one keeps its own', async ({ page }) => {
-    const now = Date.now();
-    await boot(page, [
-      ev('u1', 'Killua', 'ultra_rare_drop', now, true),
-      ev('u2', 'Angelo', 'ultra_rare_drop', now - 1000, true),
-      ev('u3', 'Angelo', 'ultra_rare_drop', now - 2000, true),
-      ev('u4', 'RenDIESEL', 'ultra_rare_drop', now - 3000, true),
-      ev('u5', 'Galilea', 'ultra_rare_drop', now - 4000, false),
-    ]);
-    await openFeed(page);
-    await expect(page.locator('.fa-dh .fa-cnt2').first()).toHaveText('5 · 4 HUNTERS');
-    const group = page.locator('.fa-hunter--ultras');
-    await expect(group).toHaveCount(1);
-    await expect(group.locator('.fa-hn')).toHaveText('Ultra-rare drops');
-    await expect(group.locator('.fa-chip--it')).toHaveText('3 hunters');
-    await expect(group.locator('.fa-num')).toHaveText('4');
-    await group.locator('.fa-hh').click();
-    await expect(group.locator('.fa-who')).toHaveText(['killua', 'angelo', 'angelo', 'rendiesel']);
-    await expect(group.locator('.fa-act').first().locator('.fa-act-txt')).toHaveText('killua looted an ultra-rare item');
-    await expect(group.locator('.fa-like')).toHaveCount(4);
-    // the crown rides RenDIESEL's name inside the fold, and no one else's
-    await expect(group.locator('.fa-who .name-crown')).toHaveCount(1);
-    await expect(group.locator('.fa-who').filter({ hasText: 'rendiesel' }).locator('.name-crown')).toHaveCount(1);
-    const gal = page.locator('.fa-hunter').filter({ hasText: /galilea/i }).filter({ hasNot: page.locator('.fa-av--ul') });
-    await expect(gal.locator('.fa-chip--it')).toHaveText('ultra-rare item');
-    await expect(page.locator('.fa-hunter--shadows')).toHaveCount(0);
-  });
-
-  test('a lone stranger\'s ultra-rare keeps its own row', async ({ page }) => {
-    await boot(page, [ev('u1', 'Nicole', 'ultra_rare_drop', Date.now(), true)]);
-    await openFeed(page);
-    await expect(page.locator('.fa-hunter--ultras')).toHaveCount(0);
-    await expect(page.locator('.fa-hunter').filter({ hasText: /nicole/i }).locator('.fa-chip--it')).toHaveText('ultra-rare item');
-  });
-
   test('a mythic drop is its own gold row at the top of its day, naming the weapon and the hunter, a friend\'s too', async ({ page }) => {
     const now = Date.now();
     await boot(page, [
       ev('b1', 'Galilea', 'boss_kill', now, false),
-      ev('u1', 'Killua', 'ultra_rare_drop', now - 500, true),
       ev('m1', 'Galilea', 'mythic_drop', now - 60_000, false),
       ev('m2', 'Mercury', 'mythic_drop', now - 120_000, true, { eventKey: 'vigil_bow', eventLabel: 'found ' + SERVER_MYTHICS.vigil_bow }),
     ]);

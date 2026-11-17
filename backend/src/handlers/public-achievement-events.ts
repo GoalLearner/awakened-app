@@ -370,7 +370,7 @@ const FEED_MIN_LIMIT       = 1;
 const FEED_MAX_LIMIT       = 50;
 // W1118 — shadows from every hunter, read on top of the limit so they never push a friend's feats out.
 const FEED_PUBLIC_SHADOWS_MAX = 20;
-// W1229 — ultra-rare and mythic drops from every hunter, read on top of the limit the same way.
+// W1229 — mythic drops from every hunter, read on top of the limit the same way.
 const FEED_PUBLIC_DROPS_MAX = 30;
 const FEED_SELECT = `SELECT e.id                AS id,
             e.user_id           AS user_id,
@@ -1163,15 +1163,15 @@ export async function handleFriendsActivityGet(
     .bind(Date.now() - FEED_LOOKBACK_MS, session.userId, session.userId, FEED_PUBLIC_SHADOWS_MAX)
     .all<FeedRow>();
 
-  // W1229 (owner 2026-11-16: "add the ultimate drop like the shadows raised...so all hunters can see
-  // when an ultimate is dropped. Make sure mythics have their own announcement as well") — ultra-rare
-  // and mythic drops reach every hunter too. Only a phone that folds strangers' drops asks for them
-  // (?drops=1); older builds would show each one as its own row.
+  // W1229 (owner 2026-11-16: "Make sure mythics have their own announcement as well on hunter
+  // activity") — a mythic drop reaches every hunter. W1230 (owner: "I didn't want ultra rares to
+  // appear only mythics") — ultra-rares stay friends-only. Only a phone that gives a mythic its own
+  // row asks for them (?drops=1).
   let publicDropRows: FeedRow[] = [];
   if (url.searchParams.get('drops') === '1') {
     const publicDrops = await env.DB.prepare(
       `${FEED_SELECT}
-        WHERE e.event_type IN ('ultra_rare_drop', 'mythic_drop')
+        WHERE e.event_type = 'mythic_drop'
           AND e.server_created_at > ?
           AND u.apple_sub NOT LIKE 'sim_test_%'
           AND e.user_id NOT IN (SELECT blocked_id FROM board_blocks WHERE blocker_id = ?)
@@ -1307,7 +1307,7 @@ export async function handleFeedLikePost(
               WHERE f.status = 'accepted'
                 AND (f.requester_user_id = ? OR f.recipient_user_id = ?)
            )
-         OR (e.event_type IN ('shadow_drop', 'ultra_rare_drop', 'mythic_drop')   -- W1229 — every hunter sees these
+         OR (e.event_type IN ('shadow_drop', 'mythic_drop')   -- W1229/W1230 — every hunter sees these
              AND e.user_id NOT IN (SELECT blocked_id FROM board_blocks WHERE blocker_id = ?)
              AND e.user_id NOT IN (SELECT blocker_id FROM board_blocks WHERE blocked_id = ?)))
       LIMIT 1`,
