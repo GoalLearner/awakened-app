@@ -116,6 +116,11 @@ const ALLOWED_EVENT_TYPES = [
   // id; the clientEventId is pinned to "shadow:<bossId>" so a hunter announces
   // each shadow once, ever (UNIQUE(user_id, client_event_id)).
   'shadow_drop',
+  // W1229 (owner 2026-11-16: "Make sure mythics have their own announcement as well on hunter
+  // activity") — a mythic weapon dropping. It reaches every hunter, so nothing of the client's own
+  // rides on it: the key is one of the three mythic ids (MYTHIC_DROP_NAMES), the label is "found
+  // <that weapon's name>", the clientEventId is "mythic:<nonce>" (a second copy is a second drop).
+  'mythic_drop',
 ] as const;
 type AllowedEventType = (typeof ALLOWED_EVENT_TYPES)[number];
 
@@ -170,6 +175,14 @@ export const SHADOW_BOSS_NAMES: Readonly<Record<string, string>> = {
   the_inferno_devourer: "The Inferno Devourer",
   the_calorie_colossus: "The Calorie Colossus",
 };
+// W1229 — the mythic weapons a mythic_drop may name, as app.js CARDS names them;
+// tests/e2e/feed-drops.spec.ts fails if the two lists drift.
+export const MYTHIC_DROP_NAMES: Readonly<Record<string, string>> = {
+  nightfall_blade: "Nightfall, Blade of the Shadow Sovereign",
+  reverie_staff: "Reverie, Staff of the Dreaming Court",
+  vigil_bow: "Vigil, Bow of the Sleepless Watch",
+};
+const RE_MYTHIC_DROP_CID = /^mythic:[A-Za-z0-9_\-]{4,64}$/;
 const RE_RANK_UP_LABEL     = /^reached (E|D|C|B|A|S|S\+)( III| II| I)?$/;
 const RE_STEP_BUCKET_LABEL  = /^crossed (10,000|20,000|30,000|40,000|50,000|60,000|70,000|80,000|90,000|100,000) steps today$/;
 
@@ -357,6 +370,8 @@ const FEED_MIN_LIMIT       = 1;
 const FEED_MAX_LIMIT       = 50;
 // W1118 — shadows from every hunter, read on top of the limit so they never push a friend's feats out.
 const FEED_PUBLIC_SHADOWS_MAX = 20;
+// W1229 — ultra-rare and mythic drops from every hunter, read on top of the limit the same way.
+const FEED_PUBLIC_DROPS_MAX = 30;
 const FEED_SELECT = `SELECT e.id                AS id,
             e.user_id           AS user_id,
             e.event_type        AS event_type,
@@ -526,6 +541,25 @@ function validateEvent(
     eventValue = null;
     if (raw.rarity !== undefined && raw.rarity !== null) {
       return { ok: false, code: 'INVALID_RARITY', detail: 'shadow_drop rarity must be null.' };
+    }
+    rarity = null;
+  } else if (eventType === 'mythic_drop') {
+    // W1229 — every field pinned to the weapon: the key is a mythic id, the label is its name.
+    if (!Object.prototype.hasOwnProperty.call(MYTHIC_DROP_NAMES, eventKey)) {
+      return { ok: false, code: 'INVALID_EVENT_KEY', detail: 'mythic_drop eventKey must be a mythic weapon id.' };
+    }
+    if (eventLabel !== 'found ' + MYTHIC_DROP_NAMES[eventKey]) {
+      return { ok: false, code: 'INVALID_EVENT_LABEL', detail: 'mythic_drop label must be "found <weapon name>".' };
+    }
+    if (!RE_MYTHIC_DROP_CID.test(clientEventId)) {
+      return { ok: false, code: 'INVALID_CLIENT_EVENT_ID', detail: 'mythic_drop clientEventId must be "mythic:<nonce>".' };
+    }
+    if (raw.eventValue !== undefined && raw.eventValue !== null) {
+      return { ok: false, code: 'INVALID_EVENT_VALUE', detail: 'mythic_drop eventValue must be null.' };
+    }
+    eventValue = null;
+    if (raw.rarity !== undefined && raw.rarity !== null) {
+      return { ok: false, code: 'INVALID_RARITY', detail: 'mythic_drop rarity must be null.' };
     }
     rarity = null;
   } else if (eventType === 'rank_up') {
@@ -1129,9 +1163,34 @@ export async function handleFriendsActivityGet(
     .bind(Date.now() - FEED_LOOKBACK_MS, session.userId, session.userId, FEED_PUBLIC_SHADOWS_MAX)
     .all<FeedRow>();
 
+  // W1229 (owner 2026-11-16: "add the ultimate drop like the shadows raised...so all hunters can see
+  // when an ultimate is dropped. Make sure mythics have their own announcement as well") — ultra-rare
+  // and mythic drops reach every hunter too. Only a phone that folds strangers' drops asks for them
+  // (?drops=1); older builds would show each one as its own row.
+  let publicDropRows: FeedRow[] = [];
+  if (url.searchParams.get('drops') === '1') {
+    const publicDrops = await env.DB.prepare(
+      `${FEED_SELECT}
+        WHERE e.event_type IN ('ultra_rare_drop', 'mythic_drop')
+          AND e.server_created_at > ?
+          AND u.apple_sub NOT LIKE 'sim_test_%'
+          AND e.user_id NOT IN (SELECT blocked_id FROM board_blocks WHERE blocker_id = ?)
+          AND e.user_id NOT IN (SELECT blocker_id FROM board_blocks WHERE blocked_id = ?)
+        ORDER BY e.server_created_at DESC
+        LIMIT ?`,
+    )
+      .bind(Date.now() - FEED_LOOKBACK_MS, session.userId, session.userId, FEED_PUBLIC_DROPS_MAX)
+      .all<FeedRow>();
+    publicDropRows = publicDrops.results ?? [];
+  }
+
   const friendRows = results.results ?? [];
   const friendIds = new Set(friendRows.map((r) => r.id));
-  const publicOnly = (publicShadows.results ?? []).filter((r) => !friendIds.has(r.id));
+  const publicOnly = (publicShadows.results ?? []).concat(publicDropRows).filter((r) => {
+    if (friendIds.has(r.id)) return false;
+    friendIds.add(r.id);   // W1229 — a row in both public reads appears once
+    return true;
+  });
   // W1220 (owner 2026-11-16: "Group up the stranger shadow drop posts in one so that it doesn't flood
   // people's updates") — a public post from someone who is neither the viewer nor an accepted friend
   // carries stranger: true, so the phone can fold strangers' shadows into one row. The friend list is
@@ -1248,7 +1307,7 @@ export async function handleFeedLikePost(
               WHERE f.status = 'accepted'
                 AND (f.requester_user_id = ? OR f.recipient_user_id = ?)
            )
-         OR (e.event_type = 'shadow_drop'
+         OR (e.event_type IN ('shadow_drop', 'ultra_rare_drop', 'mythic_drop')   -- W1229 — every hunter sees these
              AND e.user_id NOT IN (SELECT blocked_id FROM board_blocks WHERE blocker_id = ?)
              AND e.user_id NOT IN (SELECT blocker_id FROM board_blocks WHERE blocked_id = ?)))
       LIMIT 1`,

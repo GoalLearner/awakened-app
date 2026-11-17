@@ -28,6 +28,8 @@ interface MakeDbOptions {
   publicShadowRows?: Array<Record<string, unknown>>;
   /** W1220 — the viewer's accepted friends' user ids (the stranger check). */
   friendIds?: string[];
+  /** W1229 — rows returned by the every-hunter ultra-rare + mythic SELECT (?drops=1). */
+  publicDropRows?: Array<Record<string, unknown>>;
 }
 
 function makeDb(opts: MakeDbOptions = {}) {
@@ -42,7 +44,7 @@ function makeDb(opts: MakeDbOptions = {}) {
         return {
           all:   async () => ({
             results: /AS fid/.test(sql) ? (opts.friendIds ?? []).map((fid) => ({ fid }))   // W1220
-              : !isFeed ? [] : (/\(e\.event_type = 'shadow_drop' OR e\.client_event_id LIKE 'official:%'\)/.test(sql) && opts.publicShadowRows) || (opts.feedRows ?? []),
+              : !isFeed ? [] : /e\.event_type IN \('ultra_rare_drop', 'mythic_drop'\)/.test(sql) ? (opts.publicDropRows ?? []) /* W1229 */ : (/\(e\.event_type = 'shadow_drop' OR e\.client_event_id LIKE 'official:%'\)/.test(sql) && opts.publicShadowRows) || (opts.feedRows ?? []),
             success: true,
             meta: {},
           }),
@@ -739,6 +741,43 @@ describe('POST /v1/users/me/public-achievement-events — validation (1z.200)', 
       { ...VALID_SHADOW_DROP, eventKey: 'constructor', clientEventId: 'shadow:constructor' },
       { ...VALID_SHADOW_DROP, eventValue: 3 },
       { ...VALID_SHADOW_DROP, rarity: 'E' },
+    ];
+    for (const ev of bad) {
+      const res = await handlePublicAchievementEventsPost(makeReq({ events: [ev] }), makeEnv(makeDb()), session);
+      expect(res.status).toBe(400);
+    }
+  });
+
+  // W1229 — a mythic weapon's drop, announced to every hunter
+  const VALID_MYTHIC_DROP = {
+    eventType: 'mythic_drop', eventKey: 'nightfall_blade', eventLabel: 'found Nightfall, Blade of the Shadow Sovereign',
+    eventValue: null, rarity: null, clientEventId: 'mythic:ab12cd34', clientCreatedAt: NOW_ISO,
+  };
+  it('W1229 — accepts a mythic_drop for each of the three mythic weapons, named exactly', async () => {
+    const all = [
+      VALID_MYTHIC_DROP,
+      { ...VALID_MYTHIC_DROP, eventKey: 'reverie_staff', eventLabel: 'found Reverie, Staff of the Dreaming Court', clientEventId: 'mythic:x1y2z3' },
+      { ...VALID_MYTHIC_DROP, eventKey: 'vigil_bow', eventLabel: 'found Vigil, Bow of the Sleepless Watch', clientEventId: 'mythic:q9w8e7' },
+    ];
+    const db = makeDb({ perInsertChanges: [1, 1, 1] });
+    const res = await handlePublicAchievementEventsPost(makeReq({ events: all }), makeEnv(db), session);
+    expect(res.status).toBe(200);
+    const ins = db._calls().filter((c) => /INSERT INTO public_achievement_events/.test(c.sql));
+    expect(ins.map((c) => c.binds[3])).toEqual(['nightfall_blade', 'reverie_staff', 'vigil_bow']);
+    expect(ins.map((c) => c.binds[5])).toEqual([null, null, null]);
+    expect(ins.map((c) => c.binds[6])).toEqual([null, null, null]);
+  });
+  it('W1229 — rejects a mythic_drop that names another item, a made-up id, free words or an unpinned clientEventId', async () => {
+    const bad = [
+      { ...VALID_MYTHIC_DROP, eventLabel: 'found Vigil, Bow of the Sleepless Watch' },   // another mythic's name
+      { ...VALID_MYTHIC_DROP, eventLabel: 'found Crown of Eternal Night' },
+      { ...VALID_MYTHIC_DROP, eventLabel: 'found the best sword ever' },
+      { ...VALID_MYTHIC_DROP, eventKey: 'crown_of_eternal_night', eventLabel: 'found Crown of Eternal Night' },
+      { ...VALID_MYTHIC_DROP, eventKey: 'constructor' },
+      { ...VALID_MYTHIC_DROP, clientEventId: 'ultra_rare:ab12cd34' },
+      { ...VALID_MYTHIC_DROP, clientEventId: 'mythic:' },
+      { ...VALID_MYTHIC_DROP, eventValue: 1 },
+      { ...VALID_MYTHIC_DROP, rarity: 'mythic' },
     ];
     for (const ev of bad) {
       const res = await handlePublicAchievementEventsPost(makeReq({ events: [ev] }), makeEnv(makeDb()), session);
@@ -1856,6 +1895,38 @@ describe('GET /v1/friends/activity — feed read (1z.200)', () => {
     expect(q[0].binds).toEqual(['user-abc']);
   });
 
+  // W1229 — owner 2026-11-16: "add the ultimate drop like the shadows raised...so all hunters can see when an
+  // ultimate is dropped. Make sure mythics have their own announcement as well"
+  const feedDrops = async (db: D1Database, q = '?limit=2&drops=1') =>
+    ((await (await handleFriendsActivityGet(new Request('https://example.com/v1/friends/activity' + q), makeEnv(db), session)).json()) as { events: Array<{ id: string; stranger?: boolean; eventType: string }> }).events;
+  it('W1229 — with ?drops=1 every hunter\'s ultra-rare and mythic drops join the feed, strangers\' marked stranger', async () => {
+    const db = makeDb({
+      feedRows: [feedRow('f1', 'boss_kill', NOW_UTC - 1000), feedRow('u2', 'ultra_rare_drop', NOW_UTC - 4000, 'galilea')],
+      publicShadowRows: [],
+      publicDropRows: [
+        feedRow('u1', 'ultra_rare_drop', NOW_UTC, 'stranger'),
+        feedRow('m1', 'mythic_drop', NOW_UTC - 2000, 'stranger2'),
+        feedRow('u2', 'ultra_rare_drop', NOW_UTC - 4000, 'galilea'),   // a friend's: in both reads, shown once
+      ],
+      friendIds: ['galilea-uid'],
+    });
+    const evs = await feedDrops(db);
+    expect(evs.map((e) => e.id)).toEqual(['u1', 'f1', 'm1', 'u2']);
+    expect(evs.filter((e) => e.stranger).map((e) => e.id)).toEqual(['u1', 'm1']);
+    const q = db._calls().find((c) => /e\.event_type IN \('ultra_rare_drop', 'mythic_drop'\)/.test(c.sql))!;
+    expect(q.sql).not.toMatch(/FROM friends/);
+    expect(q.sql).toMatch(/u\.apple_sub NOT LIKE 'sim_test_%'/);
+    expect(q.sql).toMatch(/NOT IN \(SELECT blocked_id FROM board_blocks WHERE blocker_id = \?\)/);
+    expect(q.sql).toMatch(/NOT IN \(SELECT blocker_id FROM board_blocks WHERE blocked_id = \?\)/);
+    expect(q.binds.slice(1)).toEqual(['user-abc', 'user-abc', 30]);
+  });
+  it('W1229 — without ?drops=1 (builds before 3.0.26) the every-hunter drop read never runs', async () => {
+    const db = makeDb({ feedRows: [feedRow('f1', 'boss_kill', NOW_UTC)], publicShadowRows: [], publicDropRows: [feedRow('u1', 'ultra_rare_drop', NOW_UTC, 'stranger')] });
+    const evs = await feedDrops(db, '?limit=2');
+    expect(evs.map((e) => e.id)).toEqual(['f1']);
+    expect(db._calls().some((c) => /'ultra_rare_drop', 'mythic_drop'/.test(c.sql))).toBe(false);
+  });
+
   it('W1220 — with no public post from outside, the friend list is not read', async () => {
     const db = makeDb({ feedRows: [feedRow('s1', 'shadow_drop', NOW_UTC)], publicShadowRows: [feedRow('s1', 'shadow_drop', NOW_UTC)] });
     const evs = (await feed(db)) as Array<{ id: string; stranger?: boolean }>;
@@ -1931,13 +2002,13 @@ describe('W913 — feed likes', () => {
     expect((await like(likeDb(st), 'evt-1', { rlWrite: denyRl })).status).toBe(429);
   });
 
-  it('the scope query admits accepted friends, and any unblocked hunter\'s shadow (W1118)', async () => {
+  it('the scope query admits accepted friends, and any unblocked hunter\'s shadow (W1118) or ultra-rare / mythic drop (W1229)', async () => {
     const st: LikeState = { event: { id: 'evt-1', user_id: 'james-uid' }, likes: new Set(), aliases: {} };
     const db = likeDb(st);
     await like(db, 'evt-1');
     const scope = db._calls().find((c) => /FROM public_achievement_events e/.test(c.sql))!;
     expect(scope.sql).toMatch(/f\.status = 'accepted'/);
-    expect(scope.sql).toMatch(/OR \(e\.event_type = 'shadow_drop'\s+AND e\.user_id NOT IN \(SELECT blocked_id FROM board_blocks WHERE blocker_id = \?\)\s+AND e\.user_id NOT IN \(SELECT blocker_id FROM board_blocks WHERE blocked_id = \?\)\)\)/);
+    expect(scope.sql).toMatch(/OR \(e\.event_type IN \('shadow_drop', 'ultra_rare_drop', 'mythic_drop'\)[^\n]*\s+AND e\.user_id NOT IN \(SELECT blocked_id FROM board_blocks WHERE blocker_id = \?\)\s+AND e\.user_id NOT IN \(SELECT blocker_id FROM board_blocks WHERE blocked_id = \?\)\)\)/);
     expect(scope.binds).toEqual(['evt-1', 'user-abc', 'user-abc', 'user-abc', 'user-abc', 'user-abc']);
   });
 });
