@@ -81,6 +81,24 @@ test.describe('Duels armed (W1232 · W1233)', () => {
     await expect.poll(() => page.evaluate(() => { const g = document.querySelector('.pkb-mvfx') as HTMLElement | null; return g ? g.style.transform : ''; }), { timeout: 6000 }).toBe('scaleX(-1)');
   });
 
+  // W1235 — owner 2026-11-17: "The ultimate ability bar never filled it up during the match" (the bar was only ever
+  // painted at the start; a played turn never repainted it).
+  test('the bar fills as turns play, and a full one calls out the UNLEASH', async ({ page }) => {
+    await boot(page);
+    await page.evaluate(() => (window as any).__pvpDemo({ surge: 0 }));
+    const pill = page.locator('#pkb-surge');
+    await expect(pill.locator('.sv')).toHaveText('0%');
+    await page.waitForTimeout(900);
+    await page.evaluate(() => (window as any).__pvpDemoTurn(false, { surge: 0.6, foeSurge: 0.3 }));
+    await expect(pill.locator('.sv')).toHaveText('60%', { timeout: 8000 });
+    await expect(pill).not.toHaveClass(/full/);
+    await page.evaluate(() => (window as any).__pvpDemoTurn(false, { surge: 1, foeSurge: 1 }));
+    await expect(pill).toHaveClass(/full/, { timeout: 8000 });
+    await expect(pill).toHaveAttribute('data-move', 'ultimate');
+    await expect(page.locator('#pkb-spot-b')).toHaveClass(/surged/);
+    await expect(page.locator('#pkb-text-line')).toHaveText('Your Surge is full. Unleash it!', { timeout: 4000 });
+  });
+
   test('a duel opponent glows while its Surge is full', async ({ page }) => {
     await boot(page);
     await page.evaluate(() => (window as any).__pvpDemo({ foeSurge: 1 }));

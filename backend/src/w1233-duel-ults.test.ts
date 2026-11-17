@@ -180,6 +180,29 @@ describe('W1233 — what a client may claim, and what the duel shows', () => {
     expect(room.viewBySlot(m, 'b').me.ultId).toBe('starfall');
   });
 
+  // W1235 — owner 2026-11-17 (an Echo spar, turn 3): "The ultimate ability bar never filled it up during the match".
+  // The bar never repainted on the screen; this pins that the view it paints from does fill as turns are played.
+  it('an Echo spar\'s view carries the filling Surge for both sides as turns are played', () => {
+    const room = new MatchRoom({ storage: {} } as any, {} as any);
+    const m: any = {
+      code: 'ABCF', matchId: 'z', ranked: false, phase: 'active', seed: 5,
+      p1: { userId: 'u1', alias: 'Richie', combatant: sanitizeCombatant({ stats, weaponId: 'duskforge_greatblade', duelUlt: true }) },
+      p2: { userId: 'bot:echo:u2', alias: 'Galilea', combatant: sanitizeCombatant({ stats, weaponId: 'reverie_staff' }) },
+      turn: 1, moveHistory: [], pending: {}, deadlineMs: null, connected: { p: true, b: true }, lastSeen: { p: 0, b: 0 }, result: null,
+    };
+    const seen: number[] = [];
+    for (let i = 0; i < 3; i++) {
+      const sess = room.rebuild(m);
+      m.moveHistory.push({ p: pickP(sess, false), b: 'slash' });   // an Echo's move is re-picked on replay
+      m.turn += 1;
+      seen.push(room.viewBySlot(m, 'p').me.surge);
+    }
+    const v = room.viewBySlot(m, 'p');
+    expect(seen[0]).toBeGreaterThan(0);
+    expect(seen[2]).toBeGreaterThan(seen[0]);
+    expect(v.opp.surge).toBeGreaterThan(0);
+  });
+
   it('an app without the UNLEASH gets the duel as before: no ultimates either side, no armies, no Surge shown', () => {
     const room = new MatchRoom({ storage: {} } as any, {} as any);
     const m: any = {
