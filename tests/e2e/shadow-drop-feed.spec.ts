@@ -167,6 +167,27 @@ test.describe('A risen shadow reaches the public feed (W1117)', () => {
     await expect(gal.locator('.fa-chip--sh')).toHaveText('Shadow of The Insomniac');
   });
 
+  // W1222 — owner 2026-11-16: "Just give a message stating that there's a limit per minute."
+  test('a like over the per-minute limit says so; another refusal keeps the plain message', async ({ page }) => {
+    const now = Date.now();
+    await boot(page, [{
+      id: 's1', alias: 'Killua', rankLabel: 'E I', eventType: 'shadow_drop', eventKey: 'the_steel_wolf', eventLabel: 'claimed the Shadow of The Steel Wolf',
+      eventValue: null, rarity: null, createdAt: new Date(now).toISOString(), likes: 0, liked: false, likers: [], likedAt: null, stranger: true,
+    }]);
+    await page.evaluate(() => { (window as any).Auth.feedLike = async () => ({ ok: false, code: 'RATE_LIMITED', detail: 'Too many likes. Try again in a minute.' }); });
+    await page.evaluate(() => document.getElementById('tab-social')!.click());
+    await page.evaluate(() => (document.querySelector('[data-cm-pane="friends"]') as HTMLElement).click());
+    await page.locator('.fa-dh').first().click();
+    const row = page.locator('.fa-hunter').filter({ hasText: /killua/i });
+    await row.locator('.fa-hh').click();
+    await row.locator('.fa-like').click();
+    await expect(page.locator('.habit-toast').first()).toHaveText(/You can like up to 12 feats a minute\. Try again in a moment\./);
+    await expect(row.locator('.fa-like')).toHaveText('♡ LIKE');   // the optimistic like rolls back
+    await page.evaluate(() => { document.querySelectorAll('.habit-toast').forEach((t) => t.remove()); (window as any).Auth.feedLike = async () => ({ ok: false, code: 'SERVER_ERROR' }); });
+    await row.locator('.fa-like').click();
+    await expect(page.locator('.habit-toast').first()).toHaveText(/Could not like that right now\./);
+  });
+
   test('a lone stranger\'s shadow keeps its own row', async ({ page }) => {
     const now = Date.now();
     await boot(page, [{
