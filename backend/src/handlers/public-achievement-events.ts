@@ -1285,7 +1285,9 @@ async function feedLikes(env: Env, userId: string, ids: string[], ownIds?: Set<s
  * W913 — POST /v1/friends/activity/:id/like — toggle the caller's LIKE on a
  * friend's public achievement event. Only events inside the caller's feed
  * scope (an accepted friend's, or W1118 any unblocked hunter's shadow) can be
- * liked; your own feats cannot.
+ * liked; your own feats cannot. W1231 (owner 2026-11-17, a stranger's Hall of
+ * Fame post answered "That feat is not in your feed anymore"): the scope is the
+ * feed's public read, so the official:% record-book posts (W1199) are likeable.
  */
 export async function handleFeedLikePost(
   _request: Request,
@@ -1307,7 +1309,7 @@ export async function handleFeedLikePost(
               WHERE f.status = 'accepted'
                 AND (f.requester_user_id = ? OR f.recipient_user_id = ?)
            )
-         OR (e.event_type IN ('shadow_drop', 'mythic_drop')   -- W1229/W1230 — every hunter sees these
+         OR ((e.event_type IN ('shadow_drop', 'mythic_drop') OR e.client_event_id LIKE 'official:%')   -- W1229/W1230 + W1231: every hunter sees these, the record books (W1199) too
              AND e.user_id NOT IN (SELECT blocked_id FROM board_blocks WHERE blocker_id = ?)
              AND e.user_id NOT IN (SELECT blocker_id FROM board_blocks WHERE blocked_id = ?)))
       LIMIT 1`,

@@ -2002,13 +2002,14 @@ describe('W913 — feed likes', () => {
     expect((await like(likeDb(st), 'evt-1', { rlWrite: denyRl })).status).toBe(429);
   });
 
-  it('the scope query admits accepted friends, and any unblocked hunter\'s shadow (W1118) or mythic drop (W1229); not a stranger\'s ultra-rare (W1230)', async () => {
+  it('the scope query admits accepted friends, and any unblocked hunter\'s shadow (W1118), mythic drop (W1229) or record-book post (W1231); not a stranger\'s ultra-rare (W1230)', async () => {
     const st: LikeState = { event: { id: 'evt-1', user_id: 'james-uid' }, likes: new Set(), aliases: {} };
     const db = likeDb(st);
     await like(db, 'evt-1');
     const scope = db._calls().find((c) => /FROM public_achievement_events e/.test(c.sql))!;
     expect(scope.sql).toMatch(/f\.status = 'accepted'/);
-    expect(scope.sql).toMatch(/OR \(e\.event_type IN \('shadow_drop', 'mythic_drop'\)[^\n]*\s+AND e\.user_id NOT IN \(SELECT blocked_id FROM board_blocks WHERE blocker_id = \?\)\s+AND e\.user_id NOT IN \(SELECT blocker_id FROM board_blocks WHERE blocked_id = \?\)\)\)/);
+    expect(scope.sql).toMatch(/OR \(\(e\.event_type IN \('shadow_drop', 'mythic_drop'\) OR e\.client_event_id LIKE 'official:%'\)[^\n]*\s+AND e\.user_id NOT IN \(SELECT blocked_id FROM board_blocks WHERE blocker_id = \?\)\s+AND e\.user_id NOT IN \(SELECT blocker_id FROM board_blocks WHERE blocked_id = \?\)\)\)/);
+    expect(scope.sql).not.toMatch(/ultra_rare_drop/);
     expect(scope.binds).toEqual(['evt-1', 'user-abc', 'user-abc', 'user-abc', 'user-abc', 'user-abc']);
   });
 });
