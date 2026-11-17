@@ -60,7 +60,7 @@ test.describe('The calorie bosses (W1227)', () => {
     }
   });
 
-  test('drops: each pool is exactly its rank\'s sleep-boss relics, no mythics, and every roll lands inside it', async ({ page }) => {
+  test('drops: each pool is exactly its rank\'s sleep-boss relics (the S boss adds the three mythics), and every roll lands inside it', async ({ page }) => {
     await boot(page);
     const r = await page.evaluate(({ cal, src }) => {
       const w = window as any, CARDS = w.Drops.CARDS;
@@ -69,7 +69,7 @@ test.describe('The calorie bosses (W1227)', () => {
       for (const c of cal) {
         const pool: string[] = w.__weekBoss.pool(c.id);
         const want = src[c.id] === 'C_GATE' ? cGate
-          : c.id === 'the_calorie_colossus' ? ['crown_of_eternal_night', 'mantle_of_the_sovereign', 'greaves_of_the_umbral_throne']   // the Sentinel's regalia pool
+          : c.id === 'the_calorie_colossus' ? ['crown_of_eternal_night', 'mantle_of_the_sovereign', 'greaves_of_the_umbral_throne', 'nightfall_blade', 'reverie_staff', 'vigil_bow']   // the Sentinel's regalia + W1228 the three mythics
           : Object.keys(CARDS).filter((k) => (src[c.id] as string[]).includes(CARDS[k].source_boss) && CARDS[k].rarity !== 'mythic');
         const rolled = new Set<string>(); let nothing = 0;
         for (let i = 0; i < 400; i++) { const d = w.Drops.rollBossDrop(c.id); if (d && d.card) rolled.add(d.card.id); else nothing++; }
@@ -81,19 +81,19 @@ test.describe('The calorie bosses (W1227)', () => {
     for (const c of CAL) {
       const x = r[c.id];
       expect(x.pool, c.id + ' pool').toEqual(x.want);
-      expect(x.mythic, c.id + ' never a mythic').toEqual([]);
+      expect(x.mythic, c.id + ' mythics').toEqual(c.rank === 'S' ? ['nightfall_blade', 'reverie_staff', 'vigil_bow'] : []);   // W1228 — only the S boss
       expect(x.outside, c.id + ' rolls stay in the pool').toEqual([]);
       expect(x.rolledN, c.id + ' rolls something').toBeGreaterThan(0);
     }
   });
 
-  test('drop odds: E–B on their rank tables, A on the one-day A table, S at 7% regalia and nothing else', async ({ page }) => {
+  test('drop odds: E–B on their rank tables, A on the one-day A table, S at 7% regalia and 1% mythic, nothing else', async ({ page }) => {
     await boot(page);
     const sim = await page.evaluate((ids) => { const D = (window as any).Drops; const o: any = {}; ids.forEach((id: string) => { o[id] = D.simulateDrops(id, 20000); }); return o; }, CAL.map((c) => c.id));
     const pct = (t: any, k: string) => (t[k] || 0) / 20000 * 100;
     for (const c of CAL) {
       const t = sim[c.id];
-      expect(t.mythic || 0, c.id).toBe(0);
+      if (c.rank !== 'S') expect(t.mythic || 0, c.id).toBe(0);
       if ('EDCB'.includes(c.rank)) expect(pct(t, 'common'), c.id + ' drops commons').toBeGreaterThan(30);
     }
     expect(pct(sim.the_inferno_devourer, 'ultra_rare')).toBeGreaterThan(6);
@@ -102,6 +102,8 @@ test.describe('The calorie bosses (W1227)', () => {
     expect(pct(s, 'ultra_rare')).toBeGreaterThan(6);
     expect(pct(s, 'ultra_rare')).toBeLessThan(12);       // 7% plus the S mercy, not the Sentinel's 20%
     expect((s.rare || 0) + (s.common || 0)).toBe(0);     // the regalia or nothing, like the Sentinel
+    expect(pct(s, 'mythic')).toBeGreaterThan(0.6);       // W1228 — 1% a kill (200 in 20,000), never forced
+    expect(pct(s, 'mythic')).toBeLessThan(1.5);
   });
 
   test('shadows: all six raise one, worth their rank, and the server takes their names', async ({ page }) => {
