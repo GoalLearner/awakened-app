@@ -1747,7 +1747,8 @@
     const n = (typeof limit === 'number' && Number.isFinite(limit) && limit > 0) ? Math.floor(limit) : 30;
     // W772 — same disk snapshot as fetchFriends: last-good feed paints instantly
     // on cold launch; the live fetch swaps in when the network answers.
-    return _authedFetch('GET', '/v1/friends/activity?limit=' + encodeURIComponent(n)).then(function (res) {
+    // W1229 — drops=1: every hunter's ultra-rare and mythic drops come too (the feed folds strangers' ultra-rares)
+    return _authedFetch('GET', '/v1/friends/activity?limit=' + encodeURIComponent(n) + '&drops=1').then(function (res) {
       try { if (res && res.ok && Array.isArray(res.events)) localStorage.setItem('hb_friends_activity_cache_v1', JSON.stringify({ events: res.events, ts: Date.now() })); } catch (_) {}
       return res;
     });

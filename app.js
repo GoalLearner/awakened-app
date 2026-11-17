@@ -157,10 +157,10 @@
   // Single source of truth for the app's marketing version. Bump this
   // when shipping a new TestFlight / App Store build (and add the
   // matching WHATS_NEW entry below).
-  const APP_VERSION = '3.0.26';   // W1220 — 3.0.25 APPROVED 2026-11-16 9:44 AM PST (submitted 2026-11-15 2:06 PM PST, build 651, tag 3.0.25-w1213), so 3.0.26 opened carrying W1220 (strangers' shadows fold into one feed row), W1221 (your pinned row under a board opens your card), W1222 (the like limit says what it is), W1225 (invites say "You both get 500 souls"), W1226 (a refused audio start is caught, not reported as an error), W1227 (six calorie bosses, E to S, dropping the sleep bosses' relics) and W1228 (the S calorie boss drops a mythic at 1%). [history] W1205 — 3.0.25 opened 2026-11-14 BEFORE 3.0.24 was approved (3.0.24 = build 649, waiting for review since 2026-11-13): an upload under 3.0.24 is refused the moment Apple approves it, so build 650 goes up as 3.0.25 carrying W1202 (every boss in the Kill Log, the Raid group), W1203 (no 150k step cap) and W1204 (hunts named by partner). [history] W1169 — 3.0.23 APPROVED 2026-11-08 (submitted 2026-11-07 5:00 PM PST, LIVE 2:33 PM PST on the 8th; almost certainly build 628 = w1161: pins, the Wardrobe tap fix), so 3.0.24 opened carrying W1162-W1169 (the 3.0.23 store notes, the board update, matched hunt partners, Add as friend, late steps reach the board, The Patient Flame falls by itself, earned ultimates behind their flag). [history] W1134 — 3.0.22 APPROVED 2026-11-06 (submitted 4:53 AM PST from build 617 = w1132: the Shadowborn + the Elite Eight, the Rising redrawn, profile cards name the look, every open counted), so 3.0.23 opened carrying W1134 (the Worldgate counts a hunter's steps only after 2 days in the app that week). [history] W1127 — 3.0.21 LIVE on the App Store 2026-11-05 9:34 AM PST (built from w1126: no memberships, kill stamps without a title, the tier crests, the onboarding's "How did you find the Gate?"), so 3.0.22 opened carrying W1127 (the app-open ping says when it is a real open; the server counts every one per Pacific day). [history] W1124 — 3.0.20 LIVE on the App Store 2026-11-01 12:50 PM PST (built from w1120: final standings Sunday, shadows in the public feed, Shadow Army on Status); 3.0.21 opened carrying W1121 (its What's New, never shown: re-keyed to 3.0.21), W1122 (no memberships), W1124 (kill stamp without a title, inlined tier crests) and W1125 (the onboarding's last screen asks how the hunter found the app; W1126 keeps it in place when the keyboard opens). [history] W1114 — 3.0.19 approved 2026-10-30 (submitted 1:45 AM PST, w1113: shadows 1 in 5, armor upgrades, relic power by boss rank, relic cards three across); 3.0.20 opened with the feed's boss rank chips, no What's New entry yet. W1107 — 3.0.18 approved and LIVE 2026-10-28 8:02 AM PST (submitted 2026-10-27 7:41 PM PST, build 602 = w1106: the four steps trios, the Rising's nine looks, the earned line in the Wardrobe, the richer-backup offer); 3.0.19 opened at approval. [history] W1103 — 3.0.17 approved 2026-10-27 (build 600, submitted 2026-10-26 6:21 PM PST: the automatic friend hunts, the earned looks, the two-tab Wardrobe); 3.0.18 opened at approval, carrying W1102 (the app offers back a richer cloud backup). [history] W1097 — 3.0.16 approved + live 2026-10-26 (build 599, the iOS 27 fix); 3.0.17 opened at approval. Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.16 = the post-3.0.15 train, opened 2026-10-23 (W1085): 3.0.15 was submitted 2026-10-22 2:55 PM PST from build 595 (w1083: the tally, the preview row, the security pass) and approved the same day, so the train closed under it. It carries W1084 (the tally leads the 3.0.15 What's New) forward. [history] 3.0.15 = the post-3.0.14 train, opened 2026-10-22 (W1080): 3.0.14 was approved and LIVE 2026-10-21 5:08 PM PST from build 591 (w1074) — the first 592 upload was refused ("train closed"), the sixth time an approval closed a train under a build. It carries W1077/W1078 (sign-out ends the session, cloud save checksum + gzip, socket token out of the URL, invite links ask first) forward. [history] 3.0.14 = the post-3.0.13 train, opened 2026-10-21 (W1074): 3.0.13 was approved and went LIVE 2026-10-20 3:50 AM PST from build 587 (w1068), so it carries W1069 (the floor 100 curve), W1070-W1073 (the ten weekly step and sleep bosses and their drops) and the real-screen screenshots and header Apple asked for (App Review 2.3.3) forward. [history] 3.0.11 = the post-3.0.10 train, opened 2026-10-05: Apple's store lookup showed 3.0.10 LIVE (released 11:35 AM PST that day, built from w1024, so it carried W1023 the 9:45 PM finish-strong reminder and nothing after). It carries forward W1025 (Myrmidon King art), W1026 (one request for every co-op hunt) and W1027 (steps 'today' = the device's day), all pushed under the 3.0.10 tag after that build was cut. [history] 3.0.10 = the post-3.0.9 train, opened 2026-10-04 when the owner passed on Apple's approval of 3.0.9 (submitted 2026-10-02 12:41 PM PST, approved 2026-10-03; carried W1002–W1022: weekly to-do planner, to-dos first in the briefing, the Monday recap, times-a-week vows, the interactive Status tab, the Jump Manual program, the flights-hunt result fix). It carries W1023 (the 9:45 PM finish-strong reminder) forward. First TWO-DIGIT patch: every version compare in the app is numeric (_updVersionNewer, the What's New compare), never a string compare. [history] 3.0.9 = the post-3.0.8 train, opened 2026-09-25 the moment Apple approved 3.0.8 (submitted 4:57 PM PST, approved the same evening; carried W989–W1001: Items overhaul, Resolved + mod view counts, the sectioned Habits tab + to-dos v2, topic edit). [history] 3.0.8 = the post-3.0.7 train, opened 2026-09-24 the moment Apple approved 3.0.7 (build 543, submitted 1:15 AM PST, approved same day; the Worldgate In-App Event was approved in the same hour). Carries forward: the three description corrections (Ranked PvP / Streak Shields / five-hunter raid = Premium) go out WITH this version, since a description only changes with a new version. [history] 3.0.7 carried W968–W987 (vows yours + glory verified, morning briefing v2, hunt results, Worldgate MVPs + weekly line + strike freeze, Community Updates + briefing line, mod preview rows, awakened:// scheme). [history] 3.0.7 = the post-3.0.6 train, opened 2026-09-20 the moment Apple approved 3.0.6 (submitted 3:14 AM PST that day, approved same day) — an approval CLOSES a train, and uploading under the approved number is refused (CFBundleShortVersionString must exceed it). This has now bitten FOUR times; the bump is done at approval, not at upload. [history] 3.0.6 carried W960–W967 (Manage Vows fix, rank-bar hairline, Worldgate kill ceremony, division-up celebration, owner preview row, 3.0.6 release notes). [history] 3.0.4 = the post-3.0.3 train, opened 2026-09-11 because Apple approved 3.0.3 (live 2026-09-09) and an approval closes a train — carries W935 (weekly-board upload fix + Apple Health asked on every onboarding path). [history] 3.0.3 = the post-3.0.2 train, opened 2026-09-07 the morning after Apple approved 3.0.2 (submitted 2026-09-06 4:41 PM PT; approval closes a train — twice-bitten lesson) — carries W917-W919b (Ledger view, Streak Shields deleted, handoff 29) forward under the new number. [history] 3.0.2 = the post-release train, opened 2026-09-04 because Apple closes a train on approval (build 493 under 3.0.1 was refused: CFBundleShortVersionString must exceed the approved 3.0.1) — carries W903 (boss-sheet hotfix) + W905 (Status is the hunter profile again). 3.0.1 "MAKE IT LAND" = the repair release (W882-W890): Wave-2 progression joins cloud sync, the activation funnel is instrumented end to end, silent Wave-2 server failures leave breadcrumbs, the altar routes to a same-day first kill, the Double Dungeon stops reporting false failures and yields when the stair is unavailable, the beat What's New used to eat is chained, and every banked free engage is visible before the tap. 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
+  const APP_VERSION = '3.0.26';   // W1220 — 3.0.25 APPROVED 2026-11-16 9:44 AM PST (submitted 2026-11-15 2:06 PM PST, build 651, tag 3.0.25-w1213), so 3.0.26 opened carrying W1220 (strangers' shadows fold into one feed row), W1221 (your pinned row under a board opens your card), W1222 (the like limit says what it is), W1225 (invites say "You both get 500 souls"), W1226 (a refused audio start is caught, not reported as an error), W1227 (six calorie bosses, E to S, dropping the sleep bosses' relics), W1228 (the S calorie boss drops a mythic at 1%) and W1229 (every hunter sees ultra-rare drops, folded like shadows; a mythic drop is its own announcement; the crown on the card and feed names). [history] W1205 — 3.0.25 opened 2026-11-14 BEFORE 3.0.24 was approved (3.0.24 = build 649, waiting for review since 2026-11-13): an upload under 3.0.24 is refused the moment Apple approves it, so build 650 goes up as 3.0.25 carrying W1202 (every boss in the Kill Log, the Raid group), W1203 (no 150k step cap) and W1204 (hunts named by partner). [history] W1169 — 3.0.23 APPROVED 2026-11-08 (submitted 2026-11-07 5:00 PM PST, LIVE 2:33 PM PST on the 8th; almost certainly build 628 = w1161: pins, the Wardrobe tap fix), so 3.0.24 opened carrying W1162-W1169 (the 3.0.23 store notes, the board update, matched hunt partners, Add as friend, late steps reach the board, The Patient Flame falls by itself, earned ultimates behind their flag). [history] W1134 — 3.0.22 APPROVED 2026-11-06 (submitted 4:53 AM PST from build 617 = w1132: the Shadowborn + the Elite Eight, the Rising redrawn, profile cards name the look, every open counted), so 3.0.23 opened carrying W1134 (the Worldgate counts a hunter's steps only after 2 days in the app that week). [history] W1127 — 3.0.21 LIVE on the App Store 2026-11-05 9:34 AM PST (built from w1126: no memberships, kill stamps without a title, the tier crests, the onboarding's "How did you find the Gate?"), so 3.0.22 opened carrying W1127 (the app-open ping says when it is a real open; the server counts every one per Pacific day). [history] W1124 — 3.0.20 LIVE on the App Store 2026-11-01 12:50 PM PST (built from w1120: final standings Sunday, shadows in the public feed, Shadow Army on Status); 3.0.21 opened carrying W1121 (its What's New, never shown: re-keyed to 3.0.21), W1122 (no memberships), W1124 (kill stamp without a title, inlined tier crests) and W1125 (the onboarding's last screen asks how the hunter found the app; W1126 keeps it in place when the keyboard opens). [history] W1114 — 3.0.19 approved 2026-10-30 (submitted 1:45 AM PST, w1113: shadows 1 in 5, armor upgrades, relic power by boss rank, relic cards three across); 3.0.20 opened with the feed's boss rank chips, no What's New entry yet. W1107 — 3.0.18 approved and LIVE 2026-10-28 8:02 AM PST (submitted 2026-10-27 7:41 PM PST, build 602 = w1106: the four steps trios, the Rising's nine looks, the earned line in the Wardrobe, the richer-backup offer); 3.0.19 opened at approval. [history] W1103 — 3.0.17 approved 2026-10-27 (build 600, submitted 2026-10-26 6:21 PM PST: the automatic friend hunts, the earned looks, the two-tab Wardrobe); 3.0.18 opened at approval, carrying W1102 (the app offers back a richer cloud backup). [history] W1097 — 3.0.16 approved + live 2026-10-26 (build 599, the iOS 27 fix); 3.0.17 opened at approval. Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.16 = the post-3.0.15 train, opened 2026-10-23 (W1085): 3.0.15 was submitted 2026-10-22 2:55 PM PST from build 595 (w1083: the tally, the preview row, the security pass) and approved the same day, so the train closed under it. It carries W1084 (the tally leads the 3.0.15 What's New) forward. [history] 3.0.15 = the post-3.0.14 train, opened 2026-10-22 (W1080): 3.0.14 was approved and LIVE 2026-10-21 5:08 PM PST from build 591 (w1074) — the first 592 upload was refused ("train closed"), the sixth time an approval closed a train under a build. It carries W1077/W1078 (sign-out ends the session, cloud save checksum + gzip, socket token out of the URL, invite links ask first) forward. [history] 3.0.14 = the post-3.0.13 train, opened 2026-10-21 (W1074): 3.0.13 was approved and went LIVE 2026-10-20 3:50 AM PST from build 587 (w1068), so it carries W1069 (the floor 100 curve), W1070-W1073 (the ten weekly step and sleep bosses and their drops) and the real-screen screenshots and header Apple asked for (App Review 2.3.3) forward. [history] 3.0.11 = the post-3.0.10 train, opened 2026-10-05: Apple's store lookup showed 3.0.10 LIVE (released 11:35 AM PST that day, built from w1024, so it carried W1023 the 9:45 PM finish-strong reminder and nothing after). It carries forward W1025 (Myrmidon King art), W1026 (one request for every co-op hunt) and W1027 (steps 'today' = the device's day), all pushed under the 3.0.10 tag after that build was cut. [history] 3.0.10 = the post-3.0.9 train, opened 2026-10-04 when the owner passed on Apple's approval of 3.0.9 (submitted 2026-10-02 12:41 PM PST, approved 2026-10-03; carried W1002–W1022: weekly to-do planner, to-dos first in the briefing, the Monday recap, times-a-week vows, the interactive Status tab, the Jump Manual program, the flights-hunt result fix). It carries W1023 (the 9:45 PM finish-strong reminder) forward. First TWO-DIGIT patch: every version compare in the app is numeric (_updVersionNewer, the What's New compare), never a string compare. [history] 3.0.9 = the post-3.0.8 train, opened 2026-09-25 the moment Apple approved 3.0.8 (submitted 4:57 PM PST, approved the same evening; carried W989–W1001: Items overhaul, Resolved + mod view counts, the sectioned Habits tab + to-dos v2, topic edit). [history] 3.0.8 = the post-3.0.7 train, opened 2026-09-24 the moment Apple approved 3.0.7 (build 543, submitted 1:15 AM PST, approved same day; the Worldgate In-App Event was approved in the same hour). Carries forward: the three description corrections (Ranked PvP / Streak Shields / five-hunter raid = Premium) go out WITH this version, since a description only changes with a new version. [history] 3.0.7 carried W968–W987 (vows yours + glory verified, morning briefing v2, hunt results, Worldgate MVPs + weekly line + strike freeze, Community Updates + briefing line, mod preview rows, awakened:// scheme). [history] 3.0.7 = the post-3.0.6 train, opened 2026-09-20 the moment Apple approved 3.0.6 (submitted 3:14 AM PST that day, approved same day) — an approval CLOSES a train, and uploading under the approved number is refused (CFBundleShortVersionString must exceed it). This has now bitten FOUR times; the bump is done at approval, not at upload. [history] 3.0.6 carried W960–W967 (Manage Vows fix, rank-bar hairline, Worldgate kill ceremony, division-up celebration, owner preview row, 3.0.6 release notes). [history] 3.0.4 = the post-3.0.3 train, opened 2026-09-11 because Apple approved 3.0.3 (live 2026-09-09) and an approval closes a train — carries W935 (weekly-board upload fix + Apple Health asked on every onboarding path). [history] 3.0.3 = the post-3.0.2 train, opened 2026-09-07 the morning after Apple approved 3.0.2 (submitted 2026-09-06 4:41 PM PT; approval closes a train — twice-bitten lesson) — carries W917-W919b (Ledger view, Streak Shields deleted, handoff 29) forward under the new number. [history] 3.0.2 = the post-release train, opened 2026-09-04 because Apple closes a train on approval (build 493 under 3.0.1 was refused: CFBundleShortVersionString must exceed the approved 3.0.1) — carries W903 (boss-sheet hotfix) + W905 (Status is the hunter profile again). 3.0.1 "MAKE IT LAND" = the repair release (W882-W890): Wave-2 progression joins cloud sync, the activation funnel is instrumented end to end, silent Wave-2 server failures leave breadcrumbs, the altar routes to a same-day first kill, the Double Dungeon stops reporting false failures and yields when the stair is unavailable, the beat What's New used to eat is chained, and every banked free engage is visible before the tap. 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.26-w1228';
+  const APP_BUILD_TAG = '3.0.26-w1229';
   // W1192 — the relic and boss paintings are WebP now (the app was 376.9 MB, 290 MB of it these PNGs). A path saved
   // before (the drop history, a friend's card, a cloud save) still says .png: the first time one fails to load it is
   // pointed at the .webp beside it, before the image's own error handler can hide it.
@@ -12146,6 +12146,10 @@
     if (eventType === 'ultra_rare_drop' && label === 'looted an ultra-rare item') {
       return { prefix: 'looted an ', target: 'ultra-rare item', suffix: '', cls: 'ultra' };
     }
+    // W1229 — mythic_drop — "found <weapon>" → mythic gold
+    if (eventType === 'mythic_drop' && label.startsWith('found ')) {
+      return { prefix: 'found ', target: label.slice('found '.length), suffix: '', cls: 'mythic' };
+    }
     // rare_item_drop — fixed → azure blue (Tier 2)
     if (eventType === 'rare_item_drop' && label === 'found a rare item') {
       return { prefix: 'found a ', target: 'rare item', suffix: '', cls: 'rare' };
@@ -12233,6 +12237,7 @@
     else if (ev.eventType === 'rank_up')               { iconGlyph = '◆'; iconClsKey = 'rank';   }
     else if (ev.eventType === 'step_milestone_bucket') { iconGlyph = '⇈'; iconClsKey = 'step';   }
     else if (ev.eventType === 'ultra_rare_drop')       { iconGlyph = '✦'; iconClsKey = 'ultra';  }
+    else if (ev.eventType === 'mythic_drop')           { iconGlyph = '✦'; iconClsKey = 'ultra';  }   // W1229
     else if (ev.eventType === 'rare_item_drop')        { iconGlyph = '◆'; iconClsKey = 'rare';   }
     else if (ev.eventType === 'step_100k_club_unlocked') { iconGlyph = '⇈'; iconClsKey = 'club'; }
     else if (ev.eventType === 'hall_of_fame_entry')    { iconGlyph = '♛'; iconClsKey = 'club'; }   // W1199
@@ -12353,7 +12358,7 @@
   let _faWired = false;
   try { _faSeenTs = Number(localStorage.getItem('hb_fa_seen_ts') || 0) || 0; } catch (_) {}
   if (!_faSeenTs) { _faSeenTs = Date.now() - 86400000; try { localStorage.setItem('hb_fa_seen_ts', String(_faSeenTs)); } catch (_) {} }
-  const _FA_ICON = { shadow_drop: ['✧', 'shadow'], boss_kill: ['⚔', 'combat'], rank_up: ['◆', 'rank'], step_milestone_bucket: ['⇈', 'step'], ultra_rare_drop: ['✦', 'ultra'], rare_item_drop: ['◆', 'rare'], step_100k_club_unlocked: ['⇈', 'club'], verified_streak: ['✦', 'verify'], verified_workout: ['✦', 'verify'], verified_sleep_7h: ['☾', 'verify'], flights_milestone_bucket: ['▲', 'flight'], arena_title_earned: ['❖', 'arenatitle'], perfect_day: ['★', 'perfect'] , hall_of_fame_entry: ['♛', 'club']};
+  const _FA_ICON = { shadow_drop: ['✧', 'shadow'], boss_kill: ['⚔', 'combat'], rank_up: ['◆', 'rank'], step_milestone_bucket: ['⇈', 'step'], ultra_rare_drop: ['✦', 'ultra'], mythic_drop: ['✦', 'mythic'], rare_item_drop: ['◆', 'rare'], step_100k_club_unlocked: ['⇈', 'club'], verified_streak: ['✦', 'verify'], verified_workout: ['✦', 'verify'], verified_sleep_7h: ['☾', 'verify'], flights_milestone_bucket: ['▲', 'flight'], arena_title_earned: ['❖', 'arenatitle'], perfect_day: ['★', 'perfect'] , hall_of_fame_entry: ['♛', 'club']};
   function _faTs(ev) { const t = ev && ev.createdAt ? Date.parse(ev.createdAt) : 0; return Number.isFinite(t) ? t : 0; }
   function _faDayBucket(ts) {
     const dayStart = function (x) { return new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime(); };
@@ -12375,6 +12380,7 @@
     if (cls === 'verify') return 'wk';
     if (cls === 'rare' || cls === 'ultra') return 'it';
     if (cls === 'shadow') return 'sh';   // W1093
+    if (cls === 'mythic') return 'my';   // W1229
     return 'rk';
   }
   const _FA_CAR = '<i class="fa-car" aria-hidden="true"><svg viewBox="0 0 11 7"><path d="M1 1l4.5 4.5L10 1" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg></i>';
@@ -12392,11 +12398,12 @@
     const p = _faParts(ev);
     const ic = _FA_ICON[ev.eventType] || ['·', 'social'];
     const ts = _faTs(ev);
-    return '<div class="fa-act' + (ts > _faSeenTs ? ' fa-act--new' : '') + (ev.eventType === 'shadow_drop' ? ' fa-act--shadow' : '') + '" data-fa-ev="' + esc(ev.id || '') + '">' +
+    return '<div class="fa-act' + (ts > _faSeenTs ? ' fa-act--new' : '') + (ev.eventType === 'shadow_drop' ? ' fa-act--shadow' : '') + (ev.eventType === 'mythic_drop' ? ' fa-act--mythic' : '') + '" data-fa-ev="' + esc(ev.id || '') + '">' +
       '<span class="fa-ico fa-ico--' + ic[1] + '" aria-hidden="true">' + ic[0] + '</span>' +
       '<span class="fa-act-txt">' +
         // W1220 — in the folded shadows row each feat names its hunter (the name opens their card)
-        (who ? '<button type="button" class="fa-who" data-board-profile="' + esc(String(ev.alias || '')) + '" style="--bc:' + _faColor(ev.rankLabel) + '">' + esc(_dn(_displayAliasLower(String(ev.alias || 'a hunter')))) + '</button> ' : '') +
+        // W1229 — the crown rides the name here too (W969: "next to our name … everywhere")
+        (who ? '<button type="button" class="fa-who" data-board-profile="' + esc(String(ev.alias || '')) + '" style="--bc:' + _faColor(ev.rankLabel) + '">' + esc(_dn(_displayAliasLower(String(ev.alias || 'a hunter')))) + _crownFor(ev.alias) + '</button> ' : '') +
         esc(p.prefix) + (ev.eventType === 'boss_kill' ? _bossRankChipHtml(_faBossRank(ev, p.target)) : '') + '<b class="fa-c fa-c--' + _faChipCls(p.cls) + '">' + esc(p.target) + (p.verified ? ' ✓' : '') + '</b>' + esc(p.suffix) + '</span>' +
       '<span class="fa-t">' + esc(_guildhallFormatRelativeTs(ts)) + '</span>' +
       _faLikeHtml(ev) +
@@ -12424,19 +12431,45 @@
   // people's updates") — the shadows of hunters who are not your friends (the server marks them
   // stranger) fold into ONE row a day, "Shadows raised", that opens to every one of them with its
   // hunter's name. A lone stranger's shadow keeps its own row; friends' shadows stay in their rows.
+  // W1229 (owner 2026-11-16: "add the ultimate drop like the shadows raised...so all hunters can see when
+  // an ultimate is dropped") — strangers' ultra-rare drops fold the same way, into "Ultra-rare drops".
+  const _FA_FOLDS = {
+    shadows: { title: 'Shadows raised',   glyph: '✧', col: '#a78bfa', av: 'fa-av--sh', chip: 'sh' },
+    ultras:  { title: 'Ultra-rare drops', glyph: '✦', col: '#60a5fa', av: 'fa-av--ul', chip: 'it' },
+  };
   function _faShadowGroupHtml(day, g) {
-    const hkey = day.key + '|*shadows';
+    const kind = g.group === 'ultras' ? 'ultras' : 'shadows', F = _FA_FOLDS[kind];
+    const hkey = day.key + '|*' + kind;
     const hopen = _faOpenHunters.has(hkey);
     const sorted = g.evs.slice().sort(function (a, b) { return _faTs(b) - _faTs(a); });
     const who = {}; sorted.forEach(function (ev) { who[String(ev.alias || '').toLowerCase()] = 1; });
     const nh = Object.keys(who).length;
-    return '<div class="fa-hunter fa-hunter--shadows' + (hopen ? ' fa-hunter--open' : '') + '">' +
+    return '<div class="fa-hunter fa-hunter--' + kind + (hopen ? ' fa-hunter--open' : '') + '">' +
       '<div class="fa-hh" role="button" tabindex="0" data-fa-hunter="' + esc(hkey) + '" aria-expanded="' + (hopen ? 'true' : 'false') + '">' +
-        '<span class="board-av fa-av--sh" style="--bc:#a78bfa" aria-hidden="true">✧</span>' +
-        '<div class="fa-hmain"><span class="fa-hn fa-hn--group">Shadows raised</span><div class="fa-hs"><span class="fa-chip fa-chip--sh">' + nh + (nh === 1 ? ' hunter' : ' hunters') + '</span></div></div>' +
+        '<span class="board-av ' + F.av + '" style="--bc:' + F.col + '" aria-hidden="true">' + F.glyph + '</span>' +
+        '<div class="fa-hmain"><span class="fa-hn fa-hn--group fa-hn--' + kind + '">' + F.title + '</span><div class="fa-hs"><span class="fa-chip fa-chip--' + F.chip + '">' + nh + (nh === 1 ? ' hunter' : ' hunters') + '</span></div></div>' +
         '<div class="fa-hr2"><span class="fa-ago">' + esc(_guildhallFormatRelativeTs(g.latest)) + '</span><span class="fa-num">' + sorted.length + ' ' + _FA_CAR + '</span></div>' +
       '</div>' +
       '<div class="fa-acts"' + (hopen ? '' : ' hidden') + '>' + sorted.map(function (ev) { return _faActHtml(ev, true); }).join('') + '</div>' +
+    '</div>';
+  }
+  // W1229 (owner 2026-11-16: "Make sure mythics have their own announcement as well on hunter activity")
+  // — a mythic weapon is never folded into a hunter's row or a group: it is its own gold row at the
+  // top of its day, naming the weapon and the hunter, and opens to the feat and its like.
+  function _faMythicHtml(day, ev) {
+    const hkey = day.key + '|*mythic|' + String(ev.id || '');
+    const hopen = _faOpenHunters.has(hkey);
+    const weapon = String(_faParts(ev).target || '').split(',')[0];
+    return '<div class="fa-hunter fa-hunter--mythic' + (hopen ? ' fa-hunter--open' : '') + '">' +
+      '<div class="fa-hh" role="button" tabindex="0" data-fa-hunter="' + esc(hkey) + '" aria-expanded="' + (hopen ? 'true' : 'false') + '">' +
+        '<span class="board-av fa-av--my" style="--bc:#ffd24a" aria-hidden="true">✦</span>' +
+        '<div class="fa-hmain"><span class="fa-hn fa-hn--group fa-hn--mythic">Mythic drop</span><div class="fa-hs">' +
+          '<span class="fa-chip fa-chip--my">' + esc(weapon) + '</span>' +
+          '<span class="fa-chip fa-chip--who" style="--bc:' + _faColor(ev.rankLabel) + '">' + esc(_dn(_displayAliasLower(String(ev.alias || 'a hunter')))) + _crownFor(ev.alias) + '</span>' +
+        '</div></div>' +
+        '<div class="fa-hr2"><span class="fa-ago">' + esc(_guildhallFormatRelativeTs(_faTs(ev))) + '</span><span class="fa-num">1 ' + _FA_CAR + '</span></div>' +
+      '</div>' +
+      '<div class="fa-acts"' + (hopen ? '' : ' hidden') + '>' + _faActHtml(ev, true) + '</div>' +
     '</div>';
   }
   function _faGroupedHtml(events) {
@@ -12448,14 +12481,17 @@
     };
     events.forEach(function (ev) {
       const ts = _faTs(ev); const b = _faDayBucket(ts);
-      let day = days[b.key]; if (!day) day = days[b.key] = { key: b.key, label: b.label, order: b.order, hunters: {}, shadows: [], people: {}, n: 0 };
+      let day = days[b.key]; if (!day) day = days[b.key] = { key: b.key, label: b.label, order: b.order, hunters: {}, shadows: [], ultras: [], mythics: [], people: {}, n: 0 };
       day.n++; day.people[String(ev.alias || 'a hunter').toLowerCase()] = 1;
+      if (ev.eventType === 'mythic_drop') { day.mythics.push(ev); return; }   // W1229 — every mythic is its own row
       if (ev.stranger && ev.eventType === 'shadow_drop') { day.shadows.push(ev); return; }   // W1220 — folded below
+      if (ev.stranger && ev.eventType === 'ultra_rare_drop') { day.ultras.push(ev); return; }   // W1229 — folded below
       addTo(day, ev, ts);
     });
-    Object.keys(days).forEach(function (k) {   // W1220 — one stranger's shadow is a row of its own
+    Object.keys(days).forEach(function (k) {   // W1220 — one stranger's shadow is a row of its own (W1229 — an ultra-rare too)
       const day = days[k];
       if (day.shadows.length === 1) { addTo(day, day.shadows[0], _faTs(day.shadows[0])); day.shadows = []; }
+      if (day.ultras.length === 1) { addTo(day, day.ultras[0], _faTs(day.ultras[0])); day.ultras = []; }
     });
     const list = Object.keys(days).map(function (k) { return days[k]; }).sort(function (a, b) { return a.order - b.order; });
     // W931 — every day group starts FOLDED (owner, 2026-09-08: "friend activity
@@ -12464,12 +12500,16 @@
     // hunter opens stays open for this visit only (the Sets are in-memory).
     return list.map(function (day) {
       const hunters = Object.keys(day.hunters).map(function (k) { return day.hunters[k]; });
-      if (day.shadows.length) hunters.push({ group: true, evs: day.shadows, latest: Math.max.apply(null, day.shadows.map(_faTs)) });   // W1220
-      hunters.sort(function (a, b) { return b.latest - a.latest; });
+      if (day.shadows.length) hunters.push({ group: 'shadows', evs: day.shadows, latest: Math.max.apply(null, day.shadows.map(_faTs)) });   // W1220
+      if (day.ultras.length) hunters.push({ group: 'ultras', evs: day.ultras, latest: Math.max.apply(null, day.ultras.map(_faTs)) });   // W1229
+      day.mythics.forEach(function (ev) { hunters.push({ mythic: ev, latest: _faTs(ev) }); });   // W1229
+      // W1229 — a mythic leads its day; everything else newest first
+      hunters.sort(function (a, b) { return ((b.mythic ? 1 : 0) - (a.mythic ? 1 : 0)) || (b.latest - a.latest); });
       const people = Object.keys(day.people).length;   // W1220 — everyone, the folded hunters too
       const open = _faOpenDays.has(day.key);
       const stack = hunters.slice(0, 4).map(function (h) {
-        if (h.group) return '<span class="fa-mini" style="--bc:#a78bfa">✧</span>';
+        if (h.mythic) return '<span class="fa-mini" style="--bc:#ffd24a">✦</span>';   // W1229
+        if (h.group) return '<span class="fa-mini" style="--bc:' + _FA_FOLDS[h.group].col + '">' + _FA_FOLDS[h.group].glyph + '</span>';
         return '<span class="fa-mini" style="--bc:' + _faColor(h.rankLabel) + '">' + esc(_faInitial(h.alias)) + '</span>';
       }).join('');
       return '<div class="fa-day' + (open ? ' fa-day--open' : '') + '">' +
@@ -12478,7 +12518,8 @@
           '<span class="fa-sum"><span class="fa-stack">' + stack + '</span><span class="fa-cnt2">' + day.n + ' · ' + people + (people === 1 ? ' HUNTER' : ' HUNTERS') + '</span>' + _FA_CAR + '</span>' +
         '</button>' +
         '<div class="fa-dbody"' + (open ? '' : ' hidden') + '>' + hunters.map(function (h) {
-          if (h.group) return _faShadowGroupHtml(day, h);   // W1220
+          if (h.mythic) return _faMythicHtml(day, h.mythic);   // W1229
+          if (h.group) return _faShadowGroupHtml(day, h);   // W1220 (W1229 — shadows or ultra-rares)
           const hkey = day.key + '|' + h.alias.toLowerCase();
           const hopen = _faOpenHunters.has(hkey);
           const col = _faColor(h.rankLabel);
@@ -12486,7 +12527,7 @@
           return '<div class="fa-hunter' + (hopen ? ' fa-hunter--open' : '') + '">' +
             '<div class="fa-hh" role="button" tabindex="0" data-fa-hunter="' + esc(hkey) + '" aria-expanded="' + (hopen ? 'true' : 'false') + '">' +
               '<span class="board-av" style="--bc:' + col + '">' + esc(_faInitial(h.alias)) + '</span>' +
-              '<div class="fa-hmain"><button type="button" class="fa-hn" data-board-profile="' + esc(h.alias) + '" style="--bc:' + col + '">' + esc(_dn(h.alias)) + '</button><div class="fa-hs">' + _faHunterChips(sorted) + '</div></div>' +
+              '<div class="fa-hmain"><button type="button" class="fa-hn" data-board-profile="' + esc(h.alias) + '" style="--bc:' + col + '">' + esc(_dn(h.alias)) + _crownFor(h.alias) + '</button><div class="fa-hs">' + _faHunterChips(sorted) + '</div></div>' +
               '<div class="fa-hr2"><span class="fa-ago">' + esc(_guildhallFormatRelativeTs(h.latest)) + '</span><span class="fa-num">' + sorted.length + ' ' + _FA_CAR + '</span></div>' +
             '</div>' +
             '<div class="fa-acts"' + (hopen ? '' : ' hidden') + '>' + sorted.map(function (ev) { return _faActHtml(ev); }).join('') + '</div>' +
@@ -27754,6 +27795,27 @@
       }
     } catch (_) {}
 
+    // W1229 (owner 2026-11-16: "Make sure mythics have their own announcement as well on hunter
+    // activity") — a mythic weapon announces itself to every hunter, by name. The server takes only
+    // the three mythic weapons, each under its exact catalog name (MYTHIC_DROP_NAMES in
+    // backend public-achievement-events.ts; tests/e2e/feed-drops.spec.ts keeps the two in step), so
+    // nothing else is sent: one refused event would sink the whole batch beside it (W1117).
+    try {
+      const _myCard = card && card.rarity === 'mythic' ? ((typeof CARDS !== 'undefined' && CARDS[card.id]) || card) : null;
+      if (_myCard && ['nightfall_blade', 'reverie_staff', 'vigil_bow'].indexOf(_myCard.id) !== -1
+          && typeof _queuePublicAchievementEvent === 'function') {
+        _queuePublicAchievementEvent({
+          eventType:       'mythic_drop',
+          eventKey:        _myCard.id,
+          eventLabel:      'found ' + _myCard.name,
+          eventValue:      null,
+          rarity:          null,
+          clientEventId:   'mythic:' + _publicUltraRareNonce('mythic:' + _myCard.id),
+          clientCreatedAt: new Date().toISOString(),
+        });
+      }
+    } catch (_) {}
+
     // v3 Phase 1z.226C — generic public RARE-tier drop event.
     // Backend (1z.226A) accepts ultra-narrow shape: fixed eventKey
     // "rare", fixed eventLabel "found a rare item", null value &
@@ -31313,7 +31375,7 @@
       subtitle: 'Burn calories, beat bosses.',
       items: [
         { emoji: '', title: 'Six calorie bosses', description: "New bosses from E to S, beaten by burning active calories in a day: 150 at E, up to 1,000 at S. They drop the sleep bosses' relics, so you can earn those without a sleep tracker, and the S boss can drop a mythic weapon." },   // W1227, W1228
-        { emoji: '', title: 'Shadows raised', description: "Shadows raised by hunters you don't follow now share one row in the feed, so your friends' news stays easy to find." },   // W1220
+        { emoji: '', title: 'Drops for everyone', description: "Every hunter now sees ultra-rare drops in Hunter Activity. Drops and shadows from hunters you don't follow share one row each, and every mythic drop gets its own announcement." },   // W1220, W1229
         { emoji: '', title: 'Invite a friend', description: "When a friend joins with your code, you both get 500 souls." },   // W1225
         { emoji: '', title: 'Your card, from any rank', description: "Below the top 20 on the Steps board? Tap your own row to open your profile card." },   // W1221
       ],
@@ -35784,6 +35846,7 @@
     'arena_title_earned',   // W258 — Arena title unlocked (Ascent tower prestige)
     'perfect_day',          // W469 — Perfect Day streak milestone (7/14/21/30/60/100)
     'shadow_drop',          // W1117 — W1093 sent it but never listed it here, so no shadow ever reached the feed
+    'mythic_drop',          // W1229 — a mythic weapon, announced to every hunter
   ]);
 
   // v3 Phase 1z.273M — Submit helpers for the three event types
@@ -60402,7 +60465,9 @@
         '<div class="pc-crest" style="--pc-rank:' + rankColor + '">' + esc(rankLetter) + '</div>' +
       '</div><div class="pc-med-floor"></div>' +
       (isOwn ? '<button class="pc-skintag" type="button" data-wardrobe="1"><i></i><span>CHANGE LOOK \u203A</span></button>' : '<div class="pc-skintag"' + (look.color ? ' style="--pc-skin:' + look.color + '"' : '') + '><i></i><span>' + esc(look.name.toUpperCase()) + '</span></div>') + '</div>' +
-      '<div class="pc-identity"><div class="pc-alias' + ink.cls + '"' + (ink.style ? ' style="' + ink.style + '"' : '') + '>' + esc(_dn(data.alias) || '—') + '</div><div class="pc-idrow">' + shard + crownBadge + founderBadge + '</div>' +
+      // W1229 (owner 2026-11-16: "me and rendiesel should have a crown next to our name and we don't here") —
+      // the crown rides the username on the card too (W969b took away only the badge-row crown).
+      '<div class="pc-identity"><div class="pc-alias' + ink.cls + '"' + (ink.style ? ' style="' + ink.style + '"' : '') + '>' + esc(_dn(data.alias) || '—') + _crownFor(data.alias) + '</div><div class="pc-idrow">' + shard + crownBadge + founderBadge + '</div>' +
         _pinsRowHtml(isOwn ? _pinsPayload() : data.cardPins, isOwn, data) + '</div>' +   // W1156 — up to two pins under the title; the own row opens the Wardrobe's Pins
       '<div class="pc-stats"><div class="pc-grid">' +
         '<div class="pc-stat"><span class="k">POWER</span><span class="v gold">' + num(data.power) + '</span></div>' +
@@ -80255,6 +80320,8 @@
         setTimeout(function(){ try { openCardRevealModal(CARDS['nightfall_blade']); } catch (_) {} }, 700);
       }
     } catch (_) {}
+    // W1229 QA — the reveal of a catalog relic, as #megareveal opens it (no grant, no inventory write)
+    try { window.__openCardReveal = function (id) { if (typeof CARDS !== 'undefined' && CARDS[id]) openCardRevealModal(CARDS[id]); }; } catch (_) {}
     setupPokedex();
     setupCardDetailModal();
     setupMysteryCardModal();
