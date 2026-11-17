@@ -622,7 +622,7 @@ describe('sweepCoopAutoHunts — the automatic raid (W1211)', () => {
     const a = r[0].args;
     expect(a[14]).toBe('u1|u2|u3|u4|u5|u6');   // u7 has 3 kill days, u8 an old build, u9 switched automatic hunts off
     expect(a.slice(1, 6)).toEqual(['the_grinning_god', 'S', 'u1', 'u2', 'u3']);
-    expect([a[8], a[9], a[10]]).toEqual([135000, 150, 800]);
+    expect([a[8], a[9], a[10]]).toEqual([200000, 200, 800]);   // W1234
     expect(Date.parse(a[12] as string) - Date.parse(a[11] as string)).toBe(80 * 3_600_000);
     expect(a[13]).toBe(today);
     expect(r[0].sql).toContain("'active'");
@@ -634,7 +634,7 @@ describe('sweepCoopAutoHunts — the automatic raid (W1211)', () => {
     expect(mockNotify).toHaveBeenCalledTimes(6);
     expect(mockNotify.mock.calls[0][2]).toMatchObject({
       title: 'Raid Party Found',
-      body: 'The Grinning God: you and 5 hunters have 80 hours for 135,000 steps and 150 flights together.',
+      body: 'The Grinning God: you and 5 hunters have 80 hours for 200,000 steps and 200 flights together.',
     });
   });
 

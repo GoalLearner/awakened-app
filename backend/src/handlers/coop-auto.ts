@@ -99,7 +99,7 @@
  *
  * W1211 — THE AUTOMATIC RAID (owner 2026-11-14: "automate the raid with 5 active randoms .. so it
  * doesn't have to be your friend ... puts you in with 5 random users that are active-active"; then
- * "Keep 135k + 150", "Back to back", and "you can only be in one raid at a time"). Every pass, the
+ * "Keep 135k + 150", "Back to back", and "you can only be in one raid at a time"; W1234 raised the goal to 200k + 200). Every pass, the
  * very active hunters (a boss kill on AUTO_RAID_ACTIVE_DAYS (4) of the last 7 days) on the automatic
  * client who have not switched automatic hunts off and are in no live raid are shuffled for the day
  * and put into The Grinning God in parties of six (a remainder of four or five makes one more; fewer
