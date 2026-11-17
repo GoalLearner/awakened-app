@@ -717,6 +717,17 @@ describe('PUT /v1/users/me/public-profile-summary — combatant / Echo (W440)', 
     expect(stored.avatar).toBe('avatar-sage.png');
   });
 
+  it('W1232 — keeps an earned special attack (exeMax true) and drops anything else in that field', async () => {
+    const put = async (exeMax: unknown) => {
+      const db = makeDb();
+      await handlePublicProfileSummaryPut(makeReq({ ...validPayload, combatant: { ...goodCombatant, exeMax } }), makeEnv(db), session);
+      return JSON.parse(String((db as unknown as { _calls: () => { binds: unknown[] }[] })._calls()[0].binds[16]));
+    };
+    expect((await put(true)).exeMax).toBe(true);
+    expect('exeMax' in (await put('yes'))).toBe(false);
+    expect('exeMax' in (await put(false))).toBe(false);
+  });
+
   it('clamps over-max stats, floors negatives, and drops an unsafe avatar', async () => {
     const db = makeDb();
     const res = await handlePublicProfileSummaryPut(

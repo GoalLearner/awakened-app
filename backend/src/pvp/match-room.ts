@@ -37,7 +37,7 @@ const MAX_STAT_TOTAL = 480;           // across the six
 const REMATCH_OFFER_MS = 25_000;      // a rematch offer expires if unanswered in 25s
 
 type Slot = 'p' | 'b';
-interface RawCombatant { name: string; weaponId: string; weaponName: string; stats: Record<string, number>; avatar: string; }
+interface RawCombatant { name: string; weaponId: string; weaponName: string; stats: Record<string, number>; avatar: string; exeMax?: boolean; }
 interface PlayerSlot { userId: string; alias: string; combatant: RawCombatant; elo?: number; }
 interface MatchState {
   code: string;
@@ -99,6 +99,10 @@ export function sanitizeCombatant(raw: any): RawCombatant {
     weaponName: String((raw && raw.weaponName) || '').slice(0, 60),
     stats,
     avatar,
+    // W1232 — owner 2026-11-17 ("make sure that your ... special attack ... are there"): the earned
+    // execute (W757) was dropped right here, so no duel ever armed it. buildCombatant still checks the
+    // weapon against EXECUTE_ELIGIBLE, so the flag can't arm an ineligible weapon.
+    ...(raw && raw.exeMax === true ? { exeMax: true } : {}),
   };
 }
 

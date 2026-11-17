@@ -541,6 +541,7 @@ function validate(body: PutBody):
         weaponName: String(c.weaponName || '').slice(0, 60),
         avatar: av,
         stats,
+        ...(c.exeMax === true ? { exeMax: true } : {}),   // W1232 — a friend's Echo keeps the special attack they earned
       };
       combatant = { set: true, value: JSON.stringify(clean) };
     } else {
