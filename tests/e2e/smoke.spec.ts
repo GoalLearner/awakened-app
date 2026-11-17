@@ -377,8 +377,8 @@ test.describe('F · Boss detail Souls readout', () => {
       const out: { id: string; opened: boolean }[] = [];
       const fn = (window as any).openBossFullScreen;
       if (typeof fn !== 'function') return { missing: true, out };
-      // one per condition shape: steps, sleep, flights
-      for (const id of ['the_steel_wolf', 'the_insomniac', 'the_carouser']) {
+      // one per condition shape: steps, sleep, flights, calories (W1227)
+      for (const id of ['the_steel_wolf', 'the_insomniac', 'the_carouser', 'the_sweat_imp', 'the_calorie_colossus']) {
         fn(id);
         const ov = document.getElementById('boss-fs-overlay');
         out.push({ id, opened: !!ov && !ov.classList.contains('hidden') });
@@ -10112,11 +10112,11 @@ test.describe('CB · The ready hunt (W1034 · W1039)', () => {
   test('W1039 — the rank lock stays: an E-rank hunter with 10,400 steps is offered the Wolf alone', async ({ page }) => {
     await hunter(page, {});
     await health(page, { steps: 10400, flights: 22, workoutMin: 40, kcal: 500, sleepH: 6 });
-    expect(await offers(page)).toEqual(['the_steel_wolf', 'the_carouser']);   // the two E bosses the day beats; nothing above
+    expect(await offers(page)).toEqual(['the_steel_wolf', 'the_carouser', 'the_sweat_imp']);   // the three E bosses the day beats (W1227: 500 kcal beats the Sweat Imp's 150); nothing above
   });
 
   test('W1039 — workouts count: ten minutes takes the Iron Warden; a strength workout and 300 kcal the Furnace Knight', async ({ page }) => {
-    await hunter(page, { the_glass_strider: past(), the_ascendant_colossus: past() });   // D and C gates open
+    await hunter(page, { the_glass_strider: past(), the_ascendant_colossus: past(), the_sweat_imp: past(0), the_ember_glutton: past(0) });   // D and C gates open; W1227 — the calorie bosses already cleared today
     await health(page, { workoutMin: 20, kcal: 120 });
     expect(await offers(page)).toEqual(['the_iron_warden']);
     await expect(sheet(page).locator('.rh-name')).toHaveText('The Iron Warden', { timeout: 8000 });
@@ -10131,10 +10131,45 @@ test.describe('CB · The ready hunt (W1034 · W1039)', () => {
     expect([(await boss(page, 'the_furnace_knight')).kill_count, (await boss(page, 'the_iron_warden')).kill_count]).toEqual([1, 1]);
   });
 
+  // W1227 — owner 2026-11-16: calorie bosses E to S, one day each, active calories alone.
+  test('W1227 — calories alone: 149 kcal offers nothing, 160 offers the Sweat Imp, a strike kills it; 340 brings the Ember Glutton once D is open', async ({ page }) => {
+    await hunter(page, {});
+    await health(page, { kcal: 149 });
+    expect(await offers(page)).toEqual([]);
+    expect(await page.evaluate(() => (window as any).__huntSoloProgress('the_sweat_imp').line)).toMatch(/kcal$/);
+    await health(page, { kcal: 160 });
+    expect(await offers(page)).toEqual(['the_sweat_imp']);
+    await expect(sheet(page).locator('.rh-name')).toHaveText('The Sweat Imp', { timeout: 8000 });
+    await expect(sheet(page).locator('.rh-cond')).toContainText(/150 active calories/);
+    await sheet(page).locator('[data-rh-strike]').click();
+    await expect(page.locator('#boss-result-overlay .hr-boss')).toHaveText('The Sweat Imp', { timeout: 6000 });
+    expect((await boss(page, 'the_sweat_imp')).kill_count).toBe(1);
+  });
+  test('W1227 — an engaged hunt: 90 kcal shows 90 / 150 on the card and the hunt row; 150 kills it and the card fills', async ({ page }) => {
+    await hunter(page, {});
+    expect(await page.evaluate(() => (window as any).Bosses.engageBoss('the_sweat_imp'))).toBe(true);
+    await health(page, { kcal: 90 });
+    await page.evaluate(() => (window as any).resolveBossHuntsAcrossWindow());
+    const st = await boss(page, 'the_sweat_imp');
+    expect([st.engaged, st.energy_progress, st.kill_count || 0]).toEqual([true, 90, 0]);
+    expect(await page.evaluate(() => (window as any).__huntSoloProgress('the_sweat_imp').line)).toBe('90 / 150 kcal');
+    await health(page, { kcal: 150 });
+    await page.evaluate(() => (window as any).resolveBossHuntsAcrossWindow());
+    expect((await boss(page, 'the_sweat_imp')).kill_count).toBe(1);
+  });
+  test('W1227 — the D, C and higher calorie bosses wait for their gates; a cleared C gate offers the Burn Warden at 500', async ({ page }) => {
+    await hunter(page, { the_glass_strider: past(), the_ascendant_colossus: past(), the_sweat_imp: past(0) });   // D and C gates open
+    await health(page, { kcal: 499 });
+    expect(await offers(page)).toEqual(['the_ember_glutton']);
+    await health(page, { kcal: 500 });
+    expect(await offers(page)).toEqual(['the_burn_warden', 'the_ember_glutton']);   // the higher rank first
+    expect(await offers(page)).not.toContain('the_furnace_hydra');   // B is not open
+  });
+
   // W1054 — owner 2026-10-14: "Yes Iron Warden fix". RenDIESEL's 31-minute workout posted "verified
   // workout" and never offered the Warden: the look-back read strength training only.
   test('W1054 — any workout type takes the Iron Warden: a run counts, a few minutes do not, the Knight still wants strength', async ({ page }) => {
-    await hunter(page, { the_glass_strider: past(), the_ascendant_colossus: past() });   // D and C gates open
+    await hunter(page, { the_glass_strider: past(), the_ascendant_colossus: past(), the_sweat_imp: past(0), the_ember_glutton: past(0), the_burn_warden: past(0) });   // D and C gates open; W1227 — the calorie bosses already cleared today
     await health(page, { runMin: 5, kcal: 500 } as any);
     expect(await offers(page)).toEqual([]);                                  // five minutes is not ten
     await health(page, { runMin: 31, kcal: 500 } as any);
@@ -10707,7 +10742,7 @@ test.describe('CC · The Shadow Army drops like a pet (W1035 · W1047)', () => {
   // W1058 — owner 2026-10-15: "make sure the shadows get shown on this stats page for the boosts".
   // The matchup's YOUR POWER is the number the fight uses; the boosts open what each one added.
   test('W1058 — the matchup shows the fight power; Blood, Shadows and a banner add whole points that sum, on a milestone too (W1060)', async ({ page }) => {
-    await army(page, 14000, ['the_steel_wolf', 'the_unbroken_anvil', 'the_worldspine'], ['the_steel_wolf', 'the_unbroken_anvil', 'the_worldspine'], { slotsSeen: 29 });   // W1071 — 29 solo bosses since the weekly ten
+    await army(page, 14000, ['the_steel_wolf', 'the_unbroken_anvil', 'the_worldspine'], ['the_steel_wolf', 'the_unbroken_anvil', 'the_worldspine'], { slotsSeen: 35 });   // W1227 — 35 solo bosses (29 + the six calorie bosses); W1071 — 29 solo bosses since the weekly ten
     await page.addInitScript(() => {
       try {
         localStorage.setItem('hb_ascent_opening_seen_v1', '1');
@@ -10770,7 +10805,7 @@ test.describe('CC · The Shadow Army drops like a pet (W1035 · W1047)', () => {
   // W1059 — owner 2026-10-15: "revamp this page to make it more inviting and aesthetic for users when
   // they go into the tower". The next fight, a rail of the whole climb, the climb behind folded by band.
   test('W1059 — the tower: the next fight, a 100-cell rail, bands folded with the current one open; the odds match the matchup', async ({ page }) => {
-    await army(page, 14000, ['the_steel_wolf', 'the_unbroken_anvil', 'the_worldspine'], ['the_steel_wolf', 'the_unbroken_anvil', 'the_worldspine'], { slotsSeen: 29 });   // W1071 — 29 solo bosses since the weekly ten
+    await army(page, 14000, ['the_steel_wolf', 'the_unbroken_anvil', 'the_worldspine'], ['the_steel_wolf', 'the_unbroken_anvil', 'the_worldspine'], { slotsSeen: 35 });   // W1227 — 35 solo bosses (29 + the six calorie bosses); W1071 — 29 solo bosses since the weekly ten
     const arena = (o: Record<string, unknown>) => page.evaluate(async (o) => {
       const a = Object.assign({ rating: 1000, bestRating: 1000, currentFloor: 47, highestCleared: 46, wins: 0, losses: 0, streak: 0, bestStreak: 0,
         dailyDate: '', dailyLosses: 0, reclaimDate: '', reclaimFloors: [], reclaimSouls: 0 }, o);
@@ -10857,8 +10892,8 @@ test.describe('CC · The Shadow Army drops like a pet (W1035 · W1047)', () => {
     const power = parseInt(((await page.locator(T + ' .tw-power .num').textContent()) || '').replace(/[^0-9]/g, ''), 10);
     expect(power).toBeGreaterThan(5500);                                   // every stat 20, the best relic in every slot
     await page.evaluate(() => (document.querySelector('#arena-body [data-ar="fight"]') as HTMLElement).click());
-    await expect(page.locator('#arena-body .mx-marks')).toHaveText(/\+40\.75%/);    // every shadow: 29 since the weekly ten (W1070, W1071)
-    await expect(page.locator('#arena-body .mx-sh')).toHaveCount(29);
+    await expect(page.locator('#arena-body .mx-marks')).toHaveText(/\+49%/);    // every shadow: 35 with the six calorie bosses (W1227: +8.25%); 29 since the weekly ten (W1070, W1071)
+    await expect(page.locator('#arena-body .mx-sh')).toHaveCount(35);   // W1227
     await expect(page.locator('#arena-body .mx-stakes')).toHaveText('Test build. Nothing counts.');
     await expect(page.locator('#arena-body .mx-ldt-h')).toContainText('8 RELICS');
     expect(await page.evaluate(() => (window as any).Arena.matchup(47).advances)).toBe(false);
@@ -10901,14 +10936,14 @@ test.describe('CC · The Shadow Army drops like a pet (W1035 · W1047)', () => {
   const marchingIds = (page: Page) => page.evaluate(() => (JSON.parse(localStorage.getItem('hb_shadows_v1') || '{}').active || []).slice().sort());
 
   test('W1062 — the matchup\'s panel marches or rests each shadow; the power follows at once and a resting army still has its mark', async ({ page }) => {
-    await army(page, 14000, ['the_carouser', 'the_unbroken_anvil', 'the_worldspine'], ['the_carouser'], { slotsSeen: 29 });   // W1071 — 29 solo bosses since the weekly ten
+    await army(page, 14000, ['the_carouser', 'the_unbroken_anvil', 'the_worldspine'], ['the_carouser'], { slotsSeen: 35 });   // W1227 — 35 solo bosses (29 + the six calorie bosses); W1071 — 29 solo bosses since the weekly ten
     await intoMatchup(page, 99);
     const M = '#arena-body';
     await expect(page.locator(M + ' .mx-marks')).toHaveText('+0.75%');
     await tap(page, '.mx-marks');
     await expect(page.locator(M + ' .mx')).toHaveClass(/mx-panel-open/);
     await expect(page.locator(M + ' .mx-sh .st')).toHaveText(['AT REST', 'AT REST', 'MARCHING']);   // strongest first
-    await expect(page.locator(M + ' .mx-pl.army small')).toHaveText(/1 OF 29 MARCHING/);
+    await expect(page.locator(M + ' .mx-pl.army small')).toHaveText(/1 OF 35 MARCHING/);   // W1227
     // the Worldspine marches: saved, the panel stays open, the number on the screen is the panel's
     await tap(page, '.mx-sh[data-id="the_worldspine"]');
     await expect(page.locator(M + ' .mx')).toHaveClass(/mx-panel-open/);
@@ -10922,7 +10957,7 @@ test.describe('CC · The Shadow Army drops like a pet (W1035 · W1047)', () => {
     await tap(page, '.mx-sh[data-id="the_carouser"]');
     expect(await marchingIds(page)).toEqual([]);
     await expect(page.locator(M + ' .mx-marks')).toHaveText('AT REST');
-    await expect(page.locator(M + ' .mx-pl.army small')).toHaveText(/0 OF 29 MARCHING/);
+    await expect(page.locator(M + ' .mx-pl.army small')).toHaveText(/0 OF 35 MARCHING/);   // W1227
     await expect(page.locator(M + ' .mx-sh')).toHaveCount(3);
     // and the roster agrees
     await tap(page, '.mx-sh[data-id="the_unbroken_anvil"]');
@@ -11084,17 +11119,17 @@ test.describe('CC · The Shadow Army drops like a pet (W1035 · W1047)', () => {
   test('W1048 — the slots by rank: 1, 2, 4, 7, 12, and at S one for every solo boss', async ({ page }) => {
     await freshApp(page);
     const r = await page.evaluate(() => { const f = (window as any).__shadowSlots; return ['E', 'D', 'C', 'B', 'A', 'S', 'S+', 'nonsense'].map((k) => f(k)); });
-    expect(r).toEqual([1, 2, 4, 7, 12, 29, 29, 1]);   // W1070, W1071 — S counts the weekly ten too
+    expect(r).toEqual([1, 2, 4, 7, 12, 35, 35, 1]);   // W1227 — and the six calorie bosses; W1070, W1071 — S counts the weekly ten too
   });
 
   test('W1048 — an S-rank hunter held to the old five: every shadow marches, by itself, and each is worth 1%', async ({ page }) => {
     await army(page, 14000, SOLO.slice(0, 8), SOLO.slice(0, 5));
     await freshApp(page);
     const m = await marchingNow(page);
-    expect([m.n, m.slots]).toEqual([8, 29]);
+    expect([m.n, m.slots]).toEqual([8, 35]);   // W1227
     expect(m.active.slice().sort()).toEqual(SOLO.slice(0, 8).sort());
     await page.evaluate(() => { document.getElementById('tab-profile')!.click(); (document.querySelector('[data-open-shadows]') as HTMLElement).click(); });   // W1119 — the strip lives on Status
-    await expect(page.locator('#shadow-roster .shr-slots')).toHaveText(/^8 MARCHING · 29 SLOTS AT YOUR RANK/);
+    await expect(page.locator('#shadow-roster .shr-slots')).toHaveText(/^8 MARCHING · 35 SLOTS AT YOUR RANK/);   // W1227
     await expect(page.locator('#shadow-roster .shr-toggle.on')).toHaveCount(8);
   });
 

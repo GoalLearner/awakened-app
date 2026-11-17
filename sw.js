@@ -1,6 +1,6 @@
 // ─────────────────────────────────────────────────────────────
 // INCREMENT THIS VERSION NUMBER WITH EVERY NETLIFY DEPLOYMENT
-const CACHE_VERSION = 'v6.482';
+const CACHE_VERSION = 'v6.483';
 // ─────────────────────────────────────────────────────────────
 
 const CACHE_NAME = 'awakened-cache-' + CACHE_VERSION;
@@ -334,6 +334,12 @@ const PRECACHE_ASSETS = [
   '/assets/bosses/the-ascendant-colossus.webp',
   // v3 Phase 1z.68 — second C-rank boss (dual-condition)
   '/assets/bosses/the-furnace-knight.webp',
+  '/assets/bosses/the-sweat-imp.webp',          // W1227 — the calorie bosses
+  '/assets/bosses/the-ember-glutton.webp',
+  '/assets/bosses/the-burn-warden.webp',
+  '/assets/bosses/the-furnace-hydra.webp',
+  '/assets/bosses/the-inferno-devourer.webp',
+  '/assets/bosses/the-calorie-colossus.webp',
   // v3 Phase 1z.70 — third C-rank boss (10k-steps daily)
   '/assets/bosses/the-marathon-wraith.webp',
   // v3 Phase 1z.271B/C — three B-rank bosses (verified-only,

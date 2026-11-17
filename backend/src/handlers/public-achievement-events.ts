@@ -162,6 +162,13 @@ export const SHADOW_BOSS_NAMES: Readonly<Record<string, string>> = {
   the_moonwell_keeper: "The Moonwell Keeper",
   the_oracle_of_deep_hours: "The Oracle of Deep Hours",
   the_seventh_night: "The Seventh Night",
+  // W1227 — the calorie bosses (deployed before the 3.0.26 build that can raise them)
+  the_sweat_imp: "The Sweat Imp",
+  the_ember_glutton: "The Ember Glutton",
+  the_burn_warden: "The Burn Warden",
+  the_furnace_hydra: "The Furnace Hydra",
+  the_inferno_devourer: "The Inferno Devourer",
+  the_calorie_colossus: "The Calorie Colossus",
 };
 const RE_RANK_UP_LABEL     = /^reached (E|D|C|B|A|S|S\+)( III| II| I)?$/;
 const RE_STEP_BUCKET_LABEL  = /^crossed (10,000|20,000|30,000|40,000|50,000|60,000|70,000|80,000|90,000|100,000) steps today$/;
