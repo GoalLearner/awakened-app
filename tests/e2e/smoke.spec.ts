@@ -6924,6 +6924,10 @@ test.describe('BE · Rating moments (W974)', () => {
          'hb_notif_perm_requested', 'hb_tour_quests_v1', 'hb_tour_items_v1', 'hb_healthkit_prompted'].forEach((k) => localStorage.setItem(k, '1'));
         localStorage.setItem('hb_dd_v1', JSON.stringify({ day: 3, sealed: [true, true, true], done: true, startedAt: 1 }));
         localStorage.setItem('hb_onboarding_first_xp_date', '2026-01-01');   // not a first-day hunter
+        // W1236 — and seasoned: five days played (a card waits for 7 days in and 5 played)
+        const dd: string[] = [];
+        for (let i = 10; i >= 6; i--) { const x = new Date(); x.setDate(x.getDate() - i); dd.push(x.getFullYear() + '-' + String(x.getMonth() + 1).padStart(2, '0') + '-' + String(x.getDate()).padStart(2, '0')); }
+        localStorage.setItem('hb_rm_days_v1', JSON.stringify(dd));
         Object.keys(ex || {}).forEach((k) => localStorage.setItem(k, (ex as any)[k]));
       } catch (_) {}
     }, [extra || {}] as [Record<string, string>]);
@@ -7025,6 +7029,55 @@ test.describe('BE · Rating moments (W974)', () => {
     await page.waitForTimeout(1_500);
     expect(await card(page)).toBeNull();
     expect(await page.evaluate(() => (window as any).__rm.shown())).toEqual([]);   // not spent — it can come later
+  });
+
+  // W1236 — owner 2026-11-17: "I think I need the review needs to be later on in the app experience...I think it
+  // might be too soon". No card until 7+ days in AND 5+ days played; a held-back moment is not spent.
+  const setDays = (page: Page, joined: number, played: number[]) => page.evaluate(([j, p]) => {
+    const day = (off: number) => { const x = new Date(); x.setDate(x.getDate() + off); return x.getFullYear() + '-' + String(x.getMonth() + 1).padStart(2, '0') + '-' + String(x.getDate()).padStart(2, '0'); };
+    localStorage.setItem('hb_onboarding_first_xp_date', day(j));
+    localStorage.setItem('hb_rm_days_v1', JSON.stringify(p.map(day)));
+  }, [joined, played] as [number, number[]]);
+
+  test('W1236 — no card before 7 days in and 5 days played; the held-back boss moment is not spent', async ({ page }) => {
+    await seed(page);
+    await setDays(page, -4, [-4, -3, -2, -1]);              // 5 days played (today counts) but only 4 days in
+    expect(await page.evaluate(() => (window as any).__rm.seasoned())).toBe(false);
+    await page.evaluate(() => (window as any).__rm.maybe('boss', { bossName: 'The Steel Wolf', bossRank: 'D' }));
+    await page.waitForTimeout(1_500);
+    expect(await card(page)).toBeNull();
+    expect(await page.evaluate(() => (window as any).__rm.shown())).toEqual([]);   // not spent: it comes later
+    await setDays(page, -30, [-30, -20, -10]);               // 30 days in but only 4 days played
+    expect(await page.evaluate(() => (window as any).__rm.seasoned())).toBe(false);
+    await setDays(page, -8, [-8, -6, -4, -2]);               // 8 days in, 5 played: the card comes
+    expect(await page.evaluate(() => (window as any).__rm.seasoned())).toBe(true);
+    await page.evaluate(() => (window as any).__rm.maybe('boss', { bossName: 'The Steel Wolf', bossRank: 'D' }));
+    await expect.poll(() => card(page).then((c) => c && c.title), { timeout: 5_000 }).toMatch(/The Steel Wolf/);
+  });
+
+  test('W1236 — the app writes down each day it is open', async ({ page }) => {
+    await seed(page, { hb_rm_days_v1: '[]' });
+    const r = await page.evaluate(() => {
+      const x = new Date(); const t = x.getFullYear() + '-' + String(x.getMonth() + 1).padStart(2, '0') + '-' + String(x.getDate()).padStart(2, '0');
+      return { t, days: JSON.parse(localStorage.getItem('hb_rm_days_v1') || '[]') };
+    });
+    expect(r.days).toContain(r.t);
+  });
+
+  test('W1236 — a veteran from before the ledger is seasoned by their sealed days', async ({ page }) => {
+    await seed(page, { ...WEEK(), hb_rm_days_v1: '[]' });   // no ledger, but seven sealed days from a hunter who joined in January
+    expect(await page.evaluate(() => (window as any).__rm.played().length)).toBeGreaterThanOrEqual(5);
+    expect(await page.evaluate(() => (window as any).__rm.seasoned())).toBe(true);
+  });
+
+  test('W1236 — a later perfect day or co-op clear does not claim a first', async ({ page }) => {
+    await seed(page);
+    await page.evaluate(() => (window as any).__rm.show('perfect', { count: 5, thirdDate: 'Tue 18 Nov' }, { preview: true }));
+    await expect(page.locator('#review-pp-overlay .rm-eyebrow')).toHaveText('Perfect days');
+    await expect(page.locator('#review-pp-overlay .rm-title')).toContainText('5 perfect days');
+    await page.evaluate(() => (window as any).__rm.show('coop', { dungeonName: 'The Twin Maw', partySize: 3, first: false }, { preview: true }));
+    await expect(page.locator('#review-pp-overlay .rm-eyebrow')).toHaveText('Co-op win');
+    await expect(page.locator('#review-pp-overlay .rm-stat')).toHaveText('Party of 3');
   });
 
   test('the old card and its summit / mythic moments are gone', async ({ page }) => {
