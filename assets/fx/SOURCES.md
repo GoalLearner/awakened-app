@@ -33,3 +33,18 @@ Settings > Help & About > Credits & licenses (`openCredits`).
 
 The full downloaded library (35 animations, 80 particles, 4,239 game-icons) is on the owner's Desktop in
 awakened-battle-assets, with LICENSES.txt.
+
+## ss/*.webp — W1237 (2026-11-18): animated sprite sheets
+Played frame by frame by `_bfxSheet` (4 frames across, 256 px frames, screen-blended on `.bfx-glow`); the
+Kenney clouds by `_bfxSmoke` (CSS grow + fade). Made by the W1237 asset script from the owner's downloads.
+
+- **sw1, sw2, heavy, crit, star, stab, claw, flurry, spin, fire, bolt, boltspin, firespin** — from
+  "2D Sword Slash VFX – Spritesheets" by CartoonCoffee (https://cartooncoffee.itch.io), bought by the owner
+  2026-11-18. License: use in personal or commercial projects; the files may not be redistributed, sold or
+  shared on their own; the owner has the author's written OK by email to ship them in this app.
+  Only these 13 effects, downscaled from 512 px to 256 px frames (fire, bolt, boltspin: every 2nd of the
+  first 32 frames; firespin: every 3rd of the first 48). Sources: Blue Slash v1, v3, v14, v19, Impact_Cut_V2,
+  Stab_V5, Claw Slash v2, Blue Slash v1 - Flurry_A, Blue Slash v1 - Spin_A, Fire Slash v1, Lightning Slash v1,
+  Lightning Slash v1 - Spin, Fire Slash v1 - Spin_A.
+- **k-boom, k-puff, k-dust** — Kenney Smoke Particles (https://kenney.nl/assets/smoke-particles), CC0:
+  Explosion/explosion04, White puff/whitePuff05, Black smoke/blackSmoke08, fit into 256 px.

@@ -157,6 +157,8 @@ fi
 mkdir -p www/assets/fx/lottie www/lib
 cp assets/fx/*.png www/assets/fx/
 cp assets/fx/lottie/*.json www/assets/fx/lottie/
+mkdir -p www/assets/fx/ss   # W1237 — the sword pack's sheets + Kenney smoke
+cp assets/fx/ss/*.webp www/assets/fx/ss/
 cp lib/lottie_light.min.js www/lib/
 mkdir -p www/assets/arena
 if compgen -G "assets/arena/*.webp" > /dev/null; then

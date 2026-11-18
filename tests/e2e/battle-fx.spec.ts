@@ -11,6 +11,11 @@
  *   - reduced motion: no Lottie, the particles only fade;
  *   - Settings › Help & About › Credits & licenses names the artists and carries both license texts.
  *
+ * W1237 — the owner's sword pack (CartoonCoffee "2D Sword Slash VFX") + Kenney Smoke: every sheet ships and loads, a real
+ * hit plays its family's sheet on the screen-blended layer, a foe rakes the hunter with a claw, a multi-hit is a flurry,
+ * magic is violet lightning, a crit adds the wide arc and the star, a killing blow the smoke cloud, a miss the puff,
+ * Hellfire its fire spin; reduced motion plays no sheet; the credits name CartoonCoffee and Kenney's smoke.
+ *
  * BFX_SHOTS=<dir> saves phone-size screenshots for the owner.
  */
 import { test, expect, Page } from '@playwright/test';
@@ -70,7 +75,7 @@ async function intoFight(page: Page, floor: number) {
   if (await page.locator('#arena-body .pkb2-intro').count()) await page.locator('#arena-body .pkb2-intro').click();
   await expect(page.locator('#arena-body .ar-bmoves:not(.lock) [data-ar="move"]').first()).toBeVisible({ timeout: 12_000 });
 }
-const allReady = (page: Page) => page.evaluate(() => { const s = (window as any).__bfx.state(); return s.lib === 'ready' && Object.values(s.json).every((v) => v === 'ready'); });
+const allReady = (page: Page) => page.evaluate(() => { const s = (window as any).__bfx.state(); return s.lib === 'ready' && Object.values(s.json).every((v) => v === 'ready') && Object.values(s.sheets).every((v) => v === 'ready'); });
 const OWN_ALL = JSON.stringify(['feast', 'quicksilver', 'hellfire', 'storm', 'worldbreaker', 'reaper', 'arise', 'dawnbreaker']);
 
 test.use({ viewport: { width: 390, height: 844 } });
@@ -85,7 +90,9 @@ test.describe('W1188 — battle FX from the free packs', () => {
       const lib = await fetch('lib/lottie_light.min.js'); if (!lib.ok) out.push('lib');
       // every family's shapes and every ultimate's element name a shipped file
       Object.values(B.fam).forEach((f: any) => f.main.concat(f.acc).forEach((n: string) => { if (B.png.indexOf(n) < 0) out.push('fam ' + n); }));
-      Object.keys(B.ult).forEach((u) => B.ult[u].forEach((o: any) => { if (B.files.indexOf(o.id) < 0) out.push('ult ' + u + ' ' + o.id); }));
+      Object.keys(B.ult).forEach((u) => B.ult[u].forEach((o: any) => { if (o.ss ? !B.ss[o.ss] : B.files.indexOf(o.id) < 0) out.push('ult ' + u + ' ' + (o.ss || o.id)); }));
+      // W1237 — every sheet of the sword pack and every Kenney smoke cloud
+      for (const id of Object.keys(B.ss).concat(B.smokes)) { const res = await fetch('assets/fx/ss/' + id + '.webp'); if (!res.ok || !/image\/webp/.test(res.headers.get('content-type') || '')) out.push('ss ' + id); }
       return { bad: out, ults: Object.keys(B.ult).sort() };
     });
     expect(r.bad).toEqual([]);
@@ -100,24 +107,56 @@ test.describe('W1188 — battle FX from the free packs', () => {
     // the next exchange lands without a crit
     await page.evaluate(() => { const s = (window as any).Arena._live.sess(); s.rng = () => 0.5; });
     await page.locator('#arena-body .ar-bmoves:not(.lock) [data-ar="move"]').first().click();
-    const p = page.locator('#pkb-stage .bfx-layer .bfx-p.bfx-main').first();
+    // W1237 — the hit plays the sword pack's sheet for its family on the screen-blended layer (no W1188 particle then)
+    const p = page.locator('#pkb-stage .bfx-glow .bfx-ss:not([data-ss="claw"])').first();   // the foe may strike first: its claw rakes the hunter
     await expect(p).toBeAttached({ timeout: 8000 });
-    const look = await p.evaluate((el) => ({ tint: getComputedStyle(el).getPropertyValue('--c').trim(), mask: (el.querySelector('b') as HTMLElement).style.webkitMaskImage || (el.querySelector('b') as HTMLElement).style.maskImage }));
-    expect(look.tint).toMatch(/^#/);
-    expect(look.mask).toMatch(/assets\/fx\/k-[a-z]+_\d+\.png/);
-    // a crit, straight through the hook: a second slash, a ring and the Lottie shockwave
+    const look = await p.evaluate((el) => ({ bg: (el as HTMLElement).style.backgroundImage, blend: getComputedStyle(el.parentElement!).mixBlendMode }));
+    expect(look.bg).toMatch(/assets\/fx\/ss\/(sw1|sw2|stab|heavy|fire|bolt|flurry)\.webp/);
+    expect(look.blend).toBe('screen');
+    // a crit, straight through the hook: the wide arc and the star, a ring and the Lottie shockwave
     await page.evaluate(() => (window as any).__bfx.hit({ gl: 'sword', crit: true }, 'b', false));
     await expect(page.locator('#pkb-stage .bfx-layer .bfx-ring')).toHaveCount(1);
     await expect(page.locator('#pkb-stage .bfx-layer [data-bfx="poof"] svg')).toHaveCount(1);
+    await expect(page.locator('#pkb-stage .bfx-glow [data-ss="crit"]')).toHaveCount(1);
+    await expect(page.locator('#pkb-stage .bfx-glow [data-ss="star"]')).toHaveCount(1);
     await page.waitForTimeout(90);
     await shot(page, 'bfx-01-crit');
     // a killing blow on the foe gets the boom; the particles clean themselves up
     await page.evaluate(() => (window as any).__bfx.hit({ gl: 'magic' }, 'b', true));
     await expect(page.locator('#pkb-stage [data-bfx="explosion-anisimov"]')).toHaveCount(1);
+    await expect(page.locator('#pkb-stage .bfx-layer [data-sm="k-boom"]')).toHaveCount(1);   // W1237 — the smoke cloud under it
     await page.waitForTimeout(150);
     await shot(page, 'bfx-02-ko-boom');
     await expect(page.locator('#pkb-stage .bfx-layer .bfx-p')).toHaveCount(0, { timeout: 4000 });
+    await expect(page.locator('#pkb-stage .bfx-glow .bfx-ss')).toHaveCount(0, { timeout: 4000 });
+    await expect(page.locator('#pkb-stage .bfx-layer .bfx-sm')).toHaveCount(0, { timeout: 4000 });
     await expect(page.locator('#pkb-stage .bfx-layer .bfx-lot')).toHaveCount(0, { timeout: 6000 });
+  });
+
+  test('W1237 — a foe rakes the hunter with a claw; a multi-hit is a flurry; magic is violet lightning; a blunt blow raises dust; a miss leaves a puff', async ({ page }) => {
+    await boot(page, 37);
+    await intoFight(page, 37);
+    await expect.poll(() => allReady(page), { timeout: 15_000 }).toBe(true);
+    const G = '#pkb-stage .bfx-glow ';
+    await page.evaluate(() => (window as any).__bfx.hit({ gl: 'sword' }, 'p', false));
+    const claw = page.locator(G + '[data-ss="claw"]');
+    await expect(claw).toHaveCount(1);
+    expect(await claw.evaluate((el) => (el as HTMLElement).style.transform)).toMatch(/scaleX\(-1\)/);   // it comes from the foe's side
+    await page.waitForTimeout(120);
+    await shot(page, 'bfx-07-claw');
+    await page.evaluate(() => (window as any).__bfx.hit({ gl: 'sword', text: 'You — Twin Cut ×2 for 30.' }, 'b', false));
+    await expect(page.locator(G + '[data-ss="flurry"]')).toHaveCount(1);
+    await page.evaluate(() => (window as any).__bfx.hit({ gl: 'magic' }, 'b', false));
+    const bolt = page.locator(G + '[data-ss="bolt"]');
+    await expect(bolt).toHaveCount(1);
+    expect(await bolt.evaluate((el) => (el as HTMLElement).style.filter)).toMatch(/hue-rotate/);
+    await page.evaluate(() => (window as any).__bfx.hit({ gl: 'shield' }, 'b', false));
+    await expect(page.locator(G + '[data-ss="heavy"]')).toHaveCount(1);
+    await expect(page.locator('#pkb-stage .bfx-layer [data-sm="k-dust"]')).toHaveCount(1);
+    await page.waitForTimeout(120);
+    await shot(page, 'bfx-08-heavy');
+    await page.evaluate(() => (window as any).__bfx.smoke('k-puff', 'b', { size: 170, dy: 34 }));
+    await expect(page.locator('#pkb-stage .bfx-layer [data-sm="k-puff"]')).toHaveCount(1);
   });
 
   test('Hellfire in a real fight: its fire pillar rises at the foe with the blow', async ({ page }) => {
@@ -128,6 +167,7 @@ test.describe('W1188 — battle FX from the free packs', () => {
     await page.locator('#pkb-surge').click();
     const fire = page.locator('#pkb-stage [data-bfx="fire-element"]');
     await expect(fire).toHaveCount(1, { timeout: 12_000 });
+    await expect(page.locator('#pkb-stage .bfx-glow [data-ss="firespin"]')).toHaveCount(1);   // W1237 — and the pack's fire spin
     await page.waitForTimeout(250);
     await shot(page, 'bfx-03-hellfire');
     // it sits on the foe's side of the stage
@@ -159,9 +199,11 @@ test.describe('W1188 — battle FX from the free packs', () => {
     await intoFight(page, 37);
     await expect.poll(() => allReady(page), { timeout: 15_000 }).toBe(true);
     expect(await page.evaluate(() => (window as any).__bfx.lottie('poof', 'b', {}))).toBeNull();
+    expect(await page.evaluate(() => (window as any).__bfx.sheet('sw1', 'b', {}))).toBeNull();   // W1237 — no sheet either
     await page.evaluate(() => (window as any).__bfx.hit({ gl: 'sword', crit: true }, 'b', true));
     await expect(page.locator('#pkb-stage .bfx-layer .bfx-p').first()).toBeAttached();
     expect(await page.locator('#pkb-stage .bfx-lot').count()).toBe(0);
+    expect(await page.locator('#pkb-stage .bfx-ss').count()).toBe(0);
     expect(await page.locator('#pkb-stage .bfx-layer .bfx-p').first().evaluate((el) => getComputedStyle(el).animationName)).toBe('bfx-fade');
   });
 
@@ -173,6 +215,8 @@ test.describe('W1188 — battle FX from the free packs', () => {
     await expect(sh).toHaveClass(/cr-open/);
     await expect(sh.locator('.cr-h')).toHaveText('Credits & licenses');
     await expect(sh).toContainText('Particle Pack by Kenney');
+    await expect(sh).toContainText('2D Sword Slash VFX by CartoonCoffee');   // W1237
+    await expect(sh).toContainText('Smoke Particles by Kenney');
     await expect(sh.locator('.cr-list li')).toHaveCount(11);
     for (const who of ['Zoro', 'Vinzenz', 'MRouquin', 'Viktor Anisimov', 'SMNV', 'Milad Ghiravani', 'Souvik Sur', 'Whitesushi', 'Nareswara Widito', 'Ladon Sklyarov']) await expect(sh.locator('.cr-list')).toContainText(who);
     await expect(sh.locator('details.cr-d')).toHaveCount(2);

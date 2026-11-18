@@ -37006,6 +37006,13 @@ button.mx-sh { cursor: pointer; min-height: 40px; }
 .bfx-lot { position: absolute; transform: translate(-50%, -50%); pointer-events: none; }
 .bfx-lot svg { display: block; width: 100% !important; height: 100% !important; overflow: visible; }
 @media (prefers-reduced-motion: reduce) { .bfx-main, .bfx-acc, .bfx-ring { animation: bfx-fade 300ms ease-out forwards; } }
+/* W1237 — the sword pack's sprite sheets (their own layer, screen-blended against the stage: only the light shows) + Kenney smoke */
+.bfx-glow { position: absolute; inset: 0; z-index: 7; pointer-events: none; overflow: visible; mix-blend-mode: screen; }
+.bfx-ss { position: absolute; display: block; background-repeat: no-repeat; pointer-events: none; will-change: background-position, opacity; }
+.bfx-sm { position: absolute; display: block; background: center / contain no-repeat; pointer-events: none; opacity: 0; transform: translate(-50%, -50%) scale(.4);
+  animation: bfx-smoke calc(760ms * var(--spd, 1)) cubic-bezier(.2,.8,.3,1) forwards; }
+.bfx-sm-k-puff { animation-duration: calc(560ms * var(--spd, 1)); }
+@keyframes bfx-smoke { 0% { opacity: 0; transform: translate(-50%, -50%) scale(.4) rotate(0deg); } 18% { opacity: .85; } 100% { opacity: 0; transform: translate(-50%, -50%) scale(1.35) rotate(var(--r, 12deg)); } }
 @keyframes bfx-fade { 0% { opacity: .9; transform: rotate(var(--r)) scale(1); } 100% { opacity: 0; transform: rotate(var(--r)) scale(1); } }
 
 /* ── W1188 · Settings › Credits & licenses ── */

@@ -1,6 +1,6 @@
 // ─────────────────────────────────────────────────────────────
 // INCREMENT THIS VERSION NUMBER WITH EVERY NETLIFY DEPLOYMENT
-const CACHE_VERSION = 'v6.490';
+const CACHE_VERSION = 'v6.491';
 // ─────────────────────────────────────────────────────────────
 
 const CACHE_NAME = 'awakened-cache-' + CACHE_VERSION;
@@ -54,6 +54,11 @@ const PRECACHE_ASSETS = [
   '/assets/fx/lottie/golden-glow.json',
   '/assets/fx/lottie/charge-aura.json',
   '/assets/fx/lottie/fog-smoke.json',
+  // W1237 — the sword pack's sheets + Kenney smoke
+  '/assets/fx/ss/sw1.webp', '/assets/fx/ss/sw2.webp', '/assets/fx/ss/heavy.webp', '/assets/fx/ss/crit.webp', '/assets/fx/ss/star.webp',
+  '/assets/fx/ss/stab.webp', '/assets/fx/ss/claw.webp', '/assets/fx/ss/flurry.webp', '/assets/fx/ss/spin.webp', '/assets/fx/ss/fire.webp',
+  '/assets/fx/ss/bolt.webp', '/assets/fx/ss/boltspin.webp', '/assets/fx/ss/firespin.webp',
+  '/assets/fx/ss/k-boom.webp', '/assets/fx/ss/k-puff.webp', '/assets/fx/ss/k-dust.webp',
   '/sandbox.js',
   '/auth.js',
   '/simulated-leaderboard.js',

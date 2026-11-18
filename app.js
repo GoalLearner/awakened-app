@@ -160,7 +160,7 @@
   const APP_VERSION = '3.0.27';   // W1233 — 3.0.26 SUBMITTED for review 2026-11-17 (build 655, tag 3.0.26-w1230), so 3.0.27 opened early, as W1205 did (an approval refuses an upload under the approved number), carrying W1233 (duels: your ultimate, special attack and shadows, and the Echo's own). [history] W1220 — 3.0.25 APPROVED 2026-11-16 9:44 AM PST (submitted 2026-11-15 2:06 PM PST, build 651, tag 3.0.25-w1213), so 3.0.26 opened carrying W1220 (strangers' shadows fold into one feed row), W1221 (your pinned row under a board opens your card), W1222 (the like limit says what it is), W1225 (invites say "You both get 500 souls"), W1226 (a refused audio start is caught, not reported as an error), W1227 (six calorie bosses, E to S, dropping the sleep bosses' relics), W1228 (the S calorie boss drops a mythic at 1%), W1229 (a mythic drop is its own announcement to every hunter; the crown on the card and feed names) and W1230 (ultra-rares stay friends-only: the owner wanted only mythics). [history] W1205 — 3.0.25 opened 2026-11-14 BEFORE 3.0.24 was approved (3.0.24 = build 649, waiting for review since 2026-11-13): an upload under 3.0.24 is refused the moment Apple approves it, so build 650 goes up as 3.0.25 carrying W1202 (every boss in the Kill Log, the Raid group), W1203 (no 150k step cap) and W1204 (hunts named by partner). [history] W1169 — 3.0.23 APPROVED 2026-11-08 (submitted 2026-11-07 5:00 PM PST, LIVE 2:33 PM PST on the 8th; almost certainly build 628 = w1161: pins, the Wardrobe tap fix), so 3.0.24 opened carrying W1162-W1169 (the 3.0.23 store notes, the board update, matched hunt partners, Add as friend, late steps reach the board, The Patient Flame falls by itself, earned ultimates behind their flag). [history] W1134 — 3.0.22 APPROVED 2026-11-06 (submitted 4:53 AM PST from build 617 = w1132: the Shadowborn + the Elite Eight, the Rising redrawn, profile cards name the look, every open counted), so 3.0.23 opened carrying W1134 (the Worldgate counts a hunter's steps only after 2 days in the app that week). [history] W1127 — 3.0.21 LIVE on the App Store 2026-11-05 9:34 AM PST (built from w1126: no memberships, kill stamps without a title, the tier crests, the onboarding's "How did you find the Gate?"), so 3.0.22 opened carrying W1127 (the app-open ping says when it is a real open; the server counts every one per Pacific day). [history] W1124 — 3.0.20 LIVE on the App Store 2026-11-01 12:50 PM PST (built from w1120: final standings Sunday, shadows in the public feed, Shadow Army on Status); 3.0.21 opened carrying W1121 (its What's New, never shown: re-keyed to 3.0.21), W1122 (no memberships), W1124 (kill stamp without a title, inlined tier crests) and W1125 (the onboarding's last screen asks how the hunter found the app; W1126 keeps it in place when the keyboard opens). [history] W1114 — 3.0.19 approved 2026-10-30 (submitted 1:45 AM PST, w1113: shadows 1 in 5, armor upgrades, relic power by boss rank, relic cards three across); 3.0.20 opened with the feed's boss rank chips, no What's New entry yet. W1107 — 3.0.18 approved and LIVE 2026-10-28 8:02 AM PST (submitted 2026-10-27 7:41 PM PST, build 602 = w1106: the four steps trios, the Rising's nine looks, the earned line in the Wardrobe, the richer-backup offer); 3.0.19 opened at approval. [history] W1103 — 3.0.17 approved 2026-10-27 (build 600, submitted 2026-10-26 6:21 PM PST: the automatic friend hunts, the earned looks, the two-tab Wardrobe); 3.0.18 opened at approval, carrying W1102 (the app offers back a richer cloud backup). [history] W1097 — 3.0.16 approved + live 2026-10-26 (build 599, the iOS 27 fix); 3.0.17 opened at approval. Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.16 = the post-3.0.15 train, opened 2026-10-23 (W1085): 3.0.15 was submitted 2026-10-22 2:55 PM PST from build 595 (w1083: the tally, the preview row, the security pass) and approved the same day, so the train closed under it. It carries W1084 (the tally leads the 3.0.15 What's New) forward. [history] 3.0.15 = the post-3.0.14 train, opened 2026-10-22 (W1080): 3.0.14 was approved and LIVE 2026-10-21 5:08 PM PST from build 591 (w1074) — the first 592 upload was refused ("train closed"), the sixth time an approval closed a train under a build. It carries W1077/W1078 (sign-out ends the session, cloud save checksum + gzip, socket token out of the URL, invite links ask first) forward. [history] 3.0.14 = the post-3.0.13 train, opened 2026-10-21 (W1074): 3.0.13 was approved and went LIVE 2026-10-20 3:50 AM PST from build 587 (w1068), so it carries W1069 (the floor 100 curve), W1070-W1073 (the ten weekly step and sleep bosses and their drops) and the real-screen screenshots and header Apple asked for (App Review 2.3.3) forward. [history] 3.0.11 = the post-3.0.10 train, opened 2026-10-05: Apple's store lookup showed 3.0.10 LIVE (released 11:35 AM PST that day, built from w1024, so it carried W1023 the 9:45 PM finish-strong reminder and nothing after). It carries forward W1025 (Myrmidon King art), W1026 (one request for every co-op hunt) and W1027 (steps 'today' = the device's day), all pushed under the 3.0.10 tag after that build was cut. [history] 3.0.10 = the post-3.0.9 train, opened 2026-10-04 when the owner passed on Apple's approval of 3.0.9 (submitted 2026-10-02 12:41 PM PST, approved 2026-10-03; carried W1002–W1022: weekly to-do planner, to-dos first in the briefing, the Monday recap, times-a-week vows, the interactive Status tab, the Jump Manual program, the flights-hunt result fix). It carries W1023 (the 9:45 PM finish-strong reminder) forward. First TWO-DIGIT patch: every version compare in the app is numeric (_updVersionNewer, the What's New compare), never a string compare. [history] 3.0.9 = the post-3.0.8 train, opened 2026-09-25 the moment Apple approved 3.0.8 (submitted 4:57 PM PST, approved the same evening; carried W989–W1001: Items overhaul, Resolved + mod view counts, the sectioned Habits tab + to-dos v2, topic edit). [history] 3.0.8 = the post-3.0.7 train, opened 2026-09-24 the moment Apple approved 3.0.7 (build 543, submitted 1:15 AM PST, approved same day; the Worldgate In-App Event was approved in the same hour). Carries forward: the three description corrections (Ranked PvP / Streak Shields / five-hunter raid = Premium) go out WITH this version, since a description only changes with a new version. [history] 3.0.7 carried W968–W987 (vows yours + glory verified, morning briefing v2, hunt results, Worldgate MVPs + weekly line + strike freeze, Community Updates + briefing line, mod preview rows, awakened:// scheme). [history] 3.0.7 = the post-3.0.6 train, opened 2026-09-20 the moment Apple approved 3.0.6 (submitted 3:14 AM PST that day, approved same day) — an approval CLOSES a train, and uploading under the approved number is refused (CFBundleShortVersionString must exceed it). This has now bitten FOUR times; the bump is done at approval, not at upload. [history] 3.0.6 carried W960–W967 (Manage Vows fix, rank-bar hairline, Worldgate kill ceremony, division-up celebration, owner preview row, 3.0.6 release notes). [history] 3.0.4 = the post-3.0.3 train, opened 2026-09-11 because Apple approved 3.0.3 (live 2026-09-09) and an approval closes a train — carries W935 (weekly-board upload fix + Apple Health asked on every onboarding path). [history] 3.0.3 = the post-3.0.2 train, opened 2026-09-07 the morning after Apple approved 3.0.2 (submitted 2026-09-06 4:41 PM PT; approval closes a train — twice-bitten lesson) — carries W917-W919b (Ledger view, Streak Shields deleted, handoff 29) forward under the new number. [history] 3.0.2 = the post-release train, opened 2026-09-04 because Apple closes a train on approval (build 493 under 3.0.1 was refused: CFBundleShortVersionString must exceed the approved 3.0.1) — carries W903 (boss-sheet hotfix) + W905 (Status is the hunter profile again). 3.0.1 "MAKE IT LAND" = the repair release (W882-W890): Wave-2 progression joins cloud sync, the activation funnel is instrumented end to end, silent Wave-2 server failures leave breadcrumbs, the altar routes to a same-day first kill, the Double Dungeon stops reporting false failures and yields when the stair is unavailable, the beat What's New used to eat is chained, and every banked free engage is visible before the tap. 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.27-w1236';
+  const APP_BUILD_TAG = '3.0.27-w1237';
   // W1192 — the relic and boss paintings are WebP now (the app was 376.9 MB, 290 MB of it these PNGs). A path saved
   // before (the drop history, a friend's card, a cloud save) still says .png: the first time one fails to load it is
   // pointed at the .webp beside it, before the image's own error handler can hide it.
@@ -20139,20 +20139,105 @@
     'star_06', 'star_07', 'star_08', 'star_09', 'circle_02', 'circle_03', 'magic_03', 'magic_05', 'light_02', 'fire_01', 'fire_02', 'muzzle_02', 'scorch_02', 'dirt_02', 'smoke_10', 'flare_01'];
   // each ultimate's element at its blow; at 'atk' = on the hunter (a ward), else on the foe. size = width in px; dy = px down.
   const BFX_ULT = {
-    hellfire:     [{ id: 'fire-element', size: 230, dy: -40 }],
-    storm:        [{ id: 'thunder-element', size: 260, h: 600, dy: 60, fade: true }],   // W1193 — stretched to run the stage's full height: its square frame cut the bolt off flat at both ends, mid-air
+    hellfire:     [{ id: 'fire-element', size: 230, dy: -40 }, { ss: 'firespin', size: 300 }],   // W1237 — + the pack's spins
+    storm:        [{ id: 'thunder-element', size: 260, h: 600, dy: 60, fade: true }, { ss: 'boltspin', size: 310 }],   // W1193 — stretched to run the stage's full height: its square frame cut the bolt off flat at both ends, mid-air
     worldbreaker: [{ id: 'smoke-dust', size: 300, dy: 30 }, { id: 'explosion-anisimov', size: 250, dy: -10 }],
-    reaper:       [{ id: 'red-explosion', size: 230 }],
+    reaper:       [{ id: 'red-explosion', size: 230 }, { ss: 'crit', size: 290, filter: 'hue-rotate(138deg) saturate(1.5)' }],
     feast:        [{ id: 'explosion-red-particles', size: 320 }],
     quicksilver:  [{ id: 'poof', size: 230, filter: 'sepia(1) saturate(4) hue-rotate(130deg) brightness(1.1)' }],
     arise:        [{ id: 'fog-smoke', size: 320, dy: 20, filter: 'brightness(.6) sepia(1) saturate(3.2) hue-rotate(215deg)' }],
     dawnbreaker:  [{ id: 'golden-glow', size: 190, at: 'atk' }, { id: 'charge-aura', size: 260, at: 'atk', dy: -10 }],
-    verdict:      [{ id: 'explosion-anisimov', size: 260, dy: -10 }],
+    verdict:      [{ id: 'explosion-anisimov', size: 260, dy: -10 }, { ss: 'spin', size: 300 }],
     starfall:     [{ id: 'sparkles-burst', size: 280 }],
     rain:         [{ id: 'smoke-dust', size: 290, dy: 30 }],
   };
   const BFX_LOTTIE = ['poof', 'explosion-red-particles', 'red-explosion', 'explosion-anisimov', 'fire-element', 'thunder-element', 'smoke-dust',
     'sparkles-burst', 'golden-glow', 'charge-aura', 'fog-smoke'];
+  // ── W1237 · owner 2026-11-18: bought CartoonCoffee's "2D Sword Slash VFX" (its author OK'd shipping it in the app) and
+  // took Kenney's Smoke Particles (CC0) → "Check them all out". Animated sprite sheets (assets/fx/ss/<id>.webp: 256 px
+  // frames, 4 across, made by the W1237 asset script from the pack's 512 px sheets), played frame by frame at a fighter
+  // on their own screen-blended layer, so only the light shows over the stage. Every hit plays one by its family (a
+  // sword's crescent, a dagger's or a bolt's stab, a blunt weapon's heavy arc and dust, fire's flame cut, magic's
+  // lightning cut in violet, an execute's wide arc in red, a multi-hit's flurry); a foe in the Ascent rakes the hunter
+  // with a claw; a crit adds a wide arc and a star; a killing blow a smoke cloud under the boom; a dodge or a miss a
+  // puff; Storm of Blades, Hellfire, the Sundering Verdict and Reaper's Due add their spins. Until a sheet has loaded,
+  // and under reduced motion, the W1188 particle plays instead.
+  const BFX_SS = {   // id → frames + how long they play (ms at normal speed)
+    sw1: { n: 16, ms: 480 }, sw2: { n: 16, ms: 480 }, heavy: { n: 16, ms: 520 }, crit: { n: 16, ms: 480 }, star: { n: 16, ms: 420 },
+    stab: { n: 16, ms: 380 }, claw: { n: 16, ms: 480 }, flurry: { n: 16, ms: 560 }, spin: { n: 16, ms: 640 },
+    fire: { n: 16, ms: 560 }, bolt: { n: 16, ms: 520 }, boltspin: { n: 16, ms: 720 }, firespin: { n: 16, ms: 760 },
+  };
+  const BFX_SS_COLS = 4;
+  const BFX_SMOKE = ['k-boom', 'k-puff', 'k-dust'];   // Kenney Smoke Particles: single clouds, grown and faded by CSS
+  const BFX_VIOLET = 'hue-rotate(62deg) saturate(1.3)', BFX_RED = 'hue-rotate(138deg) saturate(1.5)';
+  const _bfxSsImg = {};
+  function _bfxSsReady(id) { const im = _bfxSsImg[id]; return !!(im && im.complete && im.naturalWidth > 0); }
+  function _bfxGlow() {   // the sheets' own layer: screen-blended against the stage (the particle layer isolates its children)
+    const stage = _pkbEl('pkb-stage'); if (!stage) return null;
+    let G = stage.querySelector(':scope > .bfx-glow');
+    if (!G) { G = document.createElement('div'); G.className = 'bfx-glow'; stage.appendChild(G); }
+    return G;
+  }
+  /** Play one sprite sheet at a fighter. Skipped (null) under reduced motion or while it is still loading. */
+  function _bfxSheet(id, side, o) {
+    o = o || {};
+    const S = BFX_SS[id]; if (!S || _bfxReduced() || !_bfxSsReady(id)) return null;
+    const G = _bfxGlow(), at = _bfxAt(side); if (!G || !at) return null;
+    const rows = Math.ceil(S.n / BFX_SS_COLS), size = Math.round(o.size || 220);
+    const el = document.createElement('i');
+    el.className = 'bfx-ss'; el.setAttribute('data-ss', id);
+    el.style.cssText = 'left:' + (at.x + (o.dx || 0)).toFixed(1) + 'px;top:' + (at.y + (o.dy || 0)).toFixed(1) + 'px;width:' + size + 'px;height:' + size + 'px;' +
+      'background-image:url(' + BFX_DIR + 'ss/' + id + '.webp);background-size:' + (BFX_SS_COLS * 100) + '% ' + (rows * 100) + '%;background-position:0 0;' +
+      'transform:translate(-50%,-50%) rotate(' + Math.round(o.rot || 0) + 'deg) scaleX(' + (o.flip ? -1 : 1) + ')' + (o.filter ? ';filter:' + o.filter : '') + (o.delay ? ';opacity:0' : '');
+    G.appendChild(el);
+    const dur = S.ms * (_pkbFF ? 0.5 : 1), delay = (o.delay || 0) * (_pkbFF ? 0.5 : 1), t0 = performance.now() + delay;
+    let last = 0, gone = false;
+    const end = function () { if (gone) return; gone = true; try { el.remove(); } catch (_) {} };
+    const step = function (now) {
+      if (gone) return;
+      if (now < t0) { requestAnimationFrame(step); return; }
+      if (o.delay) el.style.opacity = '';
+      const k = Math.floor((now - t0) / dur * S.n);
+      if (k >= S.n) { end(); return; }
+      if (k !== last) { last = k; const c = k % BFX_SS_COLS, r = Math.floor(k / BFX_SS_COLS); el.style.backgroundPosition = (c * 100 / (BFX_SS_COLS - 1)) + '% ' + (rows > 1 ? r * 100 / (rows - 1) : 0) + '%'; }
+      requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+    setTimeout(end, dur + delay + 1500);   // a safety net: a hidden page pauses requestAnimationFrame
+    return el;
+  }
+  /** A Kenney smoke cloud at a fighter: grows and fades (CSS). */
+  function _bfxSmoke(id, side, o) {
+    o = o || {};
+    if (_bfxReduced() || !_bfxSsReady(id)) return null;
+    const L = _bfxLayer(), at = _bfxAt(side); if (!L || !at) return null;
+    const el = document.createElement('i'), size = Math.round(o.size || 220);
+    el.className = 'bfx-sm bfx-sm-' + id; el.setAttribute('data-sm', id);
+    el.style.cssText = 'left:' + (at.x + (o.dx || 0)).toFixed(1) + 'px;top:' + (at.y + (o.dy || 0)).toFixed(1) + 'px;width:' + size + 'px;height:' + size + 'px;' +
+      'background-image:url(' + BFX_DIR + 'ss/' + id + '.webp);--r:' + Math.round((Math.random() - 0.5) * 40) + 'deg';
+    L.appendChild(el);
+    _pkbAfter(1100, function () { try { el.remove(); } catch (_) {} });
+    return el;
+  }
+  // a hit's sheet: by who is struck and the strike's family
+  function _bfxSsFor(e, famKey, defSide) {
+    const multi = / ×\d+/.test(String((e && e.text) || ''));
+    let pvp = false; try { pvp = !!(_arSess && _arSess._pvp); } catch (_) {}
+    if (defSide === 'p' && !pvp && !e.exe) return { id: 'claw', size: 230 };   // a foe of the Ascent rakes the hunter
+    if (famKey === 'execute') return { id: 'crit', size: 270, filter: BFX_RED };
+    if (multi && (famKey === 'sword' || famKey === 'dagger')) return { id: 'flurry', size: 250 };
+    switch (famKey) {
+      case 'sword':  return { id: _bfxPick(['sw1', 'sw2']), size: 230 };
+      case 'dagger': return { id: 'stab', size: 210 };
+      case 'arrow':  return { id: 'stab', size: 230 };
+      case 'bolt':   return { id: 'stab', size: 230 };
+      case 'blunt':  return { id: 'heavy', size: 250, dust: true };
+      case 'fire':   return { id: 'fire', size: 240 };
+      case 'arcane': return { id: 'bolt', size: 240, filter: BFX_VIOLET };
+      case 'frost':  return { id: 'bolt', size: 240 };
+      default:       return { id: 'sw1', size: 230 };
+    }
+  }
   let _bfxLib = '';   // '' · 'loading' · 'ready' · 'failed'
   const _bfxJson = {};   // id → the file's text (parsed fresh for each play: the player writes into its data)
   function _bfxReduced() { try { return _arReduceMotion(); } catch (_) { return false; } }
@@ -20174,6 +20259,7 @@
     if (!_bfxWarm.png) {   // the particle masks, cached before the first hit needs one
       _bfxWarm.png = true;
       BFX_PNG.forEach(function (n) { try { const im = new Image(); im.src = BFX_DIR + 'k-' + n + '.png'; } catch (_) {} });
+      Object.keys(BFX_SS).concat(BFX_SMOKE).forEach(function (id) { try { const im = new Image(); im.decoding = 'async'; im.src = BFX_DIR + 'ss/' + id + '.webp'; _bfxSsImg[id] = im; } catch (_) {} });   // W1237
     }
     BFX_LOTTIE.forEach(function (id) {
       if (_bfxJson[id] !== undefined) return;
@@ -20238,16 +20324,24 @@
     const F = BFX_FAM[famKey] || BFX_FAM.sword, tint = ((_PKB_FX[famKey] || _PKB_FX.sword).tint) || '#f5b842';
     const k = e.crit ? 1.3 : 1, jx = (Math.random() - 0.5) * 24, jy = (Math.random() - 0.5) * 20;
     const rot = (Math.random() - 0.5) * F.spin * 2 + (defSide === 'p' ? 180 : 0);
-    _bfxPart(L, _bfxPick(F.main), at.x + jx, at.y + jy, F.size * k, rot, tint, 'main', 0);
+    // W1237 — the sword pack's sheet for this strike; the W1188 particle only when it can't play (reduced motion, loading)
+    const ss = _bfxSsFor(e, famKey, defSide), flip = defSide === 'p';
+    const sheet = ss ? _bfxSheet(ss.id, defSide, { size: ss.size * (e.crit ? 1.15 : 1), rot: (Math.random() - 0.5) * 36, flip: flip, filter: ss.filter, dx: jx, dy: jy }) : null;
+    if (!sheet) _bfxPart(L, _bfxPick(F.main), at.x + jx, at.y + jy, F.size * k, rot, tint, 'main', 0);
+    else if (ss.dust) _bfxSmoke('k-dust', defSide, { size: 190, dy: 40 });
     _bfxPart(L, _bfxPick(F.acc), at.x + jx * 0.5, at.y + jy * 0.5, F.size * 0.55 * k, Math.random() * 90, '#fff6dc', 'acc', 40);
     if (e.crit) {
-      _bfxPart(L, _bfxPick(F.main), at.x - jx, at.y - jy, F.size * k, rot + 90, tint, 'main', 70);
+      if (sheet) {
+        _bfxSheet('crit', defSide, { size: 270, rot: (Math.random() - 0.5) * 30, flip: !flip, filter: ss.filter, delay: 70 });
+        _bfxSheet('star', defSide, { size: 210, delay: 30 });
+      } else _bfxPart(L, _bfxPick(F.main), at.x - jx, at.y - jy, F.size * k, rot + 90, tint, 'main', 70);
       _bfxPart(L, 'circle_02', at.x, at.y, F.size * 1.1, 0, tint, 'ring', 30);
       _bfxLottie('poof', defSide, { size: 200 });
     }
     if (defSide === 'p' && (e.crit || lethal)) _bfxLottie('explosion-red-particles', 'p', { size: 260 });
     if (e.exe) _bfxLottie('red-explosion', defSide, { size: 220 });
     else if (lethal) _bfxLottie('explosion-anisimov', defSide, { size: 230, dy: -10 });
+    if (lethal) _bfxSmoke('k-boom', defSide, { size: 300, dy: -6 });   // W1237 — a smoke cloud under the boom
   }
   /** An ultimate's element, as a step at its blow (added by _pkbUltSeqFor, played by _pkbMvApply). */
   function _bfxUltStep(ultId, opts) {
@@ -20256,9 +20350,12 @@
   }
   function _bfxPlayUlt(list, atk) {
     const a = atk === 'b' ? 'b' : 'p', d = a === 'p' ? 'b' : 'p';   // W1233 — a duel opponent's ultimate lands on you
-    (list || []).forEach(function (o) { _bfxLottie(o.id, o.at === 'atk' ? a : d, o); });
+    (list || []).forEach(function (o) {
+      if (o.ss) { _bfxSheet(o.ss, o.at === 'atk' ? a : d, Object.assign({ flip: a === 'b' }, o)); return; }   // W1237
+      _bfxLottie(o.id, o.at === 'atk' ? a : d, o);
+    });
   }
-  try { window.__bfx = { warm: _bfxWarm, hit: _bfxHit, lottie: _bfxLottie, ult: BFX_ULT, fam: BFX_FAM, png: BFX_PNG, files: BFX_LOTTIE, state: function () { const j = {}; BFX_LOTTIE.forEach(function (id) { j[id] = typeof _bfxJson[id] === 'string' ? 'ready' : _bfxJson[id] === 0 ? 'loading' : _bfxJson[id] === null ? 'failed' : 'idle'; }); return { lib: _bfxLib, json: j }; } }; } catch (_) {}   // QA
+  try { window.__bfx = { warm: _bfxWarm, hit: _bfxHit, lottie: _bfxLottie, sheet: _bfxSheet, smoke: _bfxSmoke, ult: BFX_ULT, fam: BFX_FAM, png: BFX_PNG, files: BFX_LOTTIE, ss: BFX_SS, smokes: BFX_SMOKE, state: function () { const j = {}; BFX_LOTTIE.forEach(function (id) { j[id] = typeof _bfxJson[id] === 'string' ? 'ready' : _bfxJson[id] === 0 ? 'loading' : _bfxJson[id] === null ? 'failed' : 'idle'; }); const sh = {}; Object.keys(BFX_SS).concat(BFX_SMOKE).forEach(function (id) { sh[id] = _bfxSsReady(id) ? 'ready' : _bfxSsImg[id] ? 'loading' : 'idle'; }); return { lib: _bfxLib, json: j, sheets: sh }; } }; } catch (_) {}   // QA (W1237: sheet, smoke, ss, smokes, state().sheets)
   // ── W260 Patch 2 — down-to-the-wire presentation. PURE READS of the HP
   // meters; the outcome is already decided by the engine. No rubber-banding —
   // this layer only changes pacing, light, and sound. Predicates are split out
@@ -20491,6 +20588,7 @@
         if (ctx) { const seq = ultMiss ? _pkbUltSeqFor(e, s, ctx) : _pkbCompose(row, ctx, { land: false, dodge }); _pkbMvPlay(seq, ctx, ultMiss ? { ult: true } : {}); at = seq.T; }
         _pkbAfter(at, () => {
           try { _audCue('miss_dodge'); } catch (_) {}
+          try { _bfxSmoke('k-puff', e.side === 'p' ? 'b' : 'p', { size: 170, dy: 34 }); } catch (_) {}   // W1237 — the blow finds air
           if (dodge && !ctx) { try { _pkbReactFx(e.side === 'p' ? 'b' : 'p', 'dodge'); } catch (_) {} }
           _pkbToast(dodge ? 'DODGED!' : 'MISS', 'miss', 'miss', next);
         });
@@ -31497,12 +31595,17 @@
     // (server, live since 2026-11-07) and Add as friend, and the late-steps board fix.
     // W1205 — 3.0.25: the Kill Log's whole roster leads (owner 2026-11-13), then the step cap's removal (2026-11-14) and the partner-named hunts.
     // W1227 — 3.0.26: the calorie bosses lead (owner 2026-11-16), then the feed, invites and the board.
+    // W1237 — 3.0.26 was pulled from review (2026-11-17) and never released, and this sheet shows only the newest version,
+    // so its news rides here too: the new strikes lead (every fight shows them), then duels, then the 3.0.26 items.
     '3.0.27': {
-      subtitle: 'Duels, fully armed.',
+      subtitle: 'Sharper strikes, armed duels.',
       items: [
-        { emoji: '', title: 'Your ultimate in duels', description: "Sparring an Echo or a friend, your Surge fills as you trade blows. When it's full, UNLEASH your ultimate. The Echo has one of its own." },   // W1233
-        { emoji: '', title: 'Shadows and special attacks', description: "Your marching shadows add their power in duels too, and a maxed weapon brings its special attack." },   // W1232, W1233
+        { emoji: '', title: 'Sharper strikes', description: "Every blow has a new look: blade arcs, stabs, flame and lightning cuts, a claw when a foe hits you, and smoke when a fight ends." },   // W1237
+        { emoji: '', title: 'Your ultimate in duels', description: "Sparring an Echo or a friend, your Surge fills as you trade blows. When it's full, UNLEASH your ultimate. Your shadows and a maxed weapon's special attack join in too." },   // W1232, W1233, W1235
+        { emoji: '', title: 'Six calorie bosses', description: "New bosses from E to S, beaten by burning active calories in a day: 150 at E, up to 1,000 at S. They drop the sleep bosses' relics, and the S boss can drop a mythic weapon." },   // W1227, W1228 (from 3.0.26)
+        { emoji: '', title: 'Mythic drops for everyone', description: "When any hunter finds a mythic weapon, every hunter sees it in Hunter Activity." },   // W1229, W1230 (from 3.0.26)
         { emoji: '', title: 'The Grinning God grows', description: "The raid now asks 200,000 steps and 200 flights in 80 hours. Raids already under way keep their goal." },   // W1234
+        { emoji: '', title: 'Invite a friend', description: "When a friend joins with your code, you both get 500 souls." },   // W1225 (from 3.0.26)
       ],
     },
     '3.0.26': {
@@ -55344,7 +55447,9 @@
       '<div class="cr-body">' +
         '<h2 class="cr-h">Credits &amp; licenses</h2>' +
         '<h3 class="cr-k">Battle effects</h3>' +
+        '<p class="cr-p"><b>Sword effects</b> · 2D Sword Slash VFX by CartoonCoffee (cartooncoffee.itch.io), used under its license. Thank you, CartoonCoffee.</p>' +   // W1237
         '<p class="cr-p"><b>Particles</b> · Particle Pack by Kenney (kenney.nl). Public domain (CC0). Thank you, Kenney.</p>' +
+        '<p class="cr-p"><b>Smoke</b> · Smoke Particles by Kenney (kenney.nl). Public domain (CC0).</p>' +   // W1237
         '<p class="cr-p"><b>Animations</b> · from LottieFiles (lottiefiles.com), under the Lottie Simple License:</p>' +
         '<ul class="cr-list">' + CREDITS_LOTTIE.map(function (c) { return '<li><span>' + esc(c[0]) + '</span><i>' + esc(c[1]) + '</i></li>'; }).join('') + '</ul>' +
         '<p class="cr-p"><b>Animation player</b> · lottie-web by Airbnb (MIT License).</p>' +
