@@ -117,6 +117,11 @@ jobs:
         with:
           node-version: '20'
       - name: Install dependencies
+        # 2026-11-18 — onnxruntime-node (under @imgly/background-removal-node, an art tool) saw CUDA on
+        # the runner and fetched its GPU binaries, a 404 on Microsoft's release page: npm ci failed before
+        # a single test ran. CI never needs the GPU build, so skip it.
+        env:
+          npm_config_onnxruntime_node_install_cuda: skip
         run: npm ci
       - name: Install Chromium
         # W609 — retry with backoff. `--with-deps` does an apt-get + a browser
