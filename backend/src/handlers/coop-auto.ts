@@ -99,12 +99,13 @@
  *
  * W1211 — THE AUTOMATIC RAID (owner 2026-11-14: "automate the raid with 5 active randoms .. so it
  * doesn't have to be your friend ... puts you in with 5 random users that are active-active"; then
- * "Keep 135k + 150", "Back to back", and "you can only be in one raid at a time"; W1234 raised the goal to 200k + 200). Every pass, the
- * very active hunters (a boss kill on AUTO_RAID_ACTIVE_DAYS (4) of the last 7 days) on the automatic
- * client who have not switched automatic hunts off and are in no live raid are shuffled for the day
- * and put into The Grinning God in parties of six (a remainder of four or five makes one more; fewer
- * wait), nobody with someone they blocked. The raid runs from now for its 80 hours with its own goal
- * (135,000 steps + 150 flights), every seat joined, auto = 1. When it ends, its hunters go into the
+ * "Keep 135k + 150", "Back to back", and "you can only be in one raid at a time"; W1234 raised the goal to 200k + 200).
+ * W1239 (owner 2026-11-18: "automated at 6 hunters ... completely random with active hunters", active = "opened the
+ * app at least 5x this week since sunday"): every pass, the hunters with AUTO_RAID_MIN_OPENS (5) app opens since
+ * Sunday who were in the app today or yesterday, are on the automatic client, have not switched automatic hunts off
+ * and are in no live raid are shuffled afresh and put into The Grinning God in parties of exactly six (fewer wait),
+ * nobody with someone they blocked. The raid runs from now for its 80 hours with its own goal
+ * (200,000 steps + 200 flights), every seat joined, auto = 1. When it ends, its hunters go into the
  * next pass. One push when the party forms; a win tells everyone (coop-boss.ts); a loss is quiet.
  * coop-boss.ts refuses a summons or an answer that would put anyone in a second raid.
  */
@@ -443,23 +444,32 @@ export function pickAutoTrios(
  *  doesn't have to be your friend ... puts you in with 5 random users that are active-active";
  *  goal: "Keep 135k + 150"; cadence: "Back to back"; "you can only be in one raid at a time"). */
 export const AUTO_RAID_BOSS = 'the_grinning_god';
-/** you + 5 */
+/** you + 5. W1239 — owner 2026-11-18: "automated at 6 hunters": a raid forms only when six are free (was 4-6). */
 export const AUTO_RAID_PARTY = 6;
-/** "active-active": a boss killed on at least this many of the last 7 Pacific days (matching asks 2) */
-export const AUTO_RAID_ACTIVE_DAYS = 4;
+/** W1239 — "active" (owner 2026-11-18: "opened the app at least 5x this week since sunday"): app opens counted
+ *  since Sunday 12 AM PST (the app's week). Replaced W1211's "a boss kill on 4 of the last 7 days", which left
+ *  only four hunters (all friends) for the raid of 2026-11-18. */
+export const AUTO_RAID_MIN_OPENS = 5;
 
-/** W1211 — the pool in a day's random order: a different order every Pacific day, the same order
- *  all day (FNV-1a of day|id), so a raid's party is random but a test can pin it. */
-export function raidOrder(ids: readonly string[], day: string): string[] {
-  const h = (s: string) => {
-    let x = 0x811c9dc5;
-    for (let i = 0; i < s.length; i++) { x ^= s.charCodeAt(i); x = Math.imul(x, 0x01000193) >>> 0; }
-    return x >>> 0;
-  };
-  return [...ids]
-    .map((id) => ({ id, k: h(day + '|' + id) }))
-    .sort((a, b) => (a.k - b.k) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0))
-    .map((x) => x.id);
+/** W1239 — "completely random": a fresh shuffle every pass (Fisher-Yates). W1211 used one order for the whole
+ *  Pacific day, so the same hunters kept landing together. `rnd` is injectable for tests. */
+export function raidShuffle(ids: readonly string[], rnd: () => number = Math.random): string[] {
+  const a = [...ids];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(rnd() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+/** W1239 — each hunter's app opens since `weekStart` (a PT day key): the raid's "active" bar. */
+async function opensSince(env: Env, weekStart: string): Promise<Map<string, number>> {
+  const rows = (await env.DB.prepare(
+    `SELECT a.user_id AS user_id, SUM(a.opens) AS week_opens
+       FROM app_open_counts a JOIN users u ON u.id = a.user_id
+      WHERE a.day_pt >= ?1 AND a.opens > 0 AND COALESCE(u.apple_sub, '') NOT LIKE 'sim_test_%'
+      GROUP BY a.user_id`,
+  ).bind(weekStart).all<{ user_id: string; week_opens: number }>()).results ?? [];
+  return new Map(rows.filter((r) => r.user_id).map((r) => [r.user_id, Number(r.week_opens) || 0]));
 }
 
 /** W1211 — parties from the ordered pool: full parties of `size` first; what is left makes one more
@@ -924,7 +934,7 @@ export async function sweepCoopAutoHunts(env: Env, _ctx?: ExecutionContext): Pro
 
     // ── W1211 — the automatic raid ──
     try {
-      out.raids = await sweepAutoRaids(env, nowMs, today, shared, _ctx, out.created + out.matched + out.trios, inApp);
+      out.raids = await sweepAutoRaids(env, nowMs, today, thisWeek, shared, _ctx, out.created + out.matched + out.trios, inApp);
     } catch (err) {
       console.error('[coop-auto] raid sweep failed', err);
     }
@@ -1113,36 +1123,28 @@ async function sweepAutoTrios(
   return made;
 }
 
-/** W1211 — the automatic raid pass (see AUTO_RAID_BOSS). The very active hunters (a boss kill on
- *  AUTO_RAID_ACTIVE_DAYS of the last 7) who are on the automatic client, have not switched automatic
- *  hunts off and are in no live raid are shuffled for the day and put in parties of six; a raid that
- *  ends frees its hunters for the next pass (back to back). Each hunter of a new raid is told once.
- *  Returns how many raids it made. */
+/** W1211 — the automatic raid pass (see AUTO_RAID_BOSS). W1239: the hunters with AUTO_RAID_MIN_OPENS app opens
+ *  since Sunday who were in the app today or yesterday (W1217), are on the automatic client, have not switched
+ *  automatic hunts off and are in no live raid are shuffled afresh and put in parties of exactly six; fewer wait
+ *  for the next pass. A raid that ends frees its hunters for the next pass (back to back). Each hunter of a new
+ *  raid is told once. Returns how many raids it made. */
 async function sweepAutoRaids(
   env: Env,
   nowMs: number,
   today: string,
+  thisWeek: string,
   shared: () => Promise<Shared>,
   ctx: ExecutionContext | undefined,
   madeSoFar: number,
   inApp: () => Promise<Set<string>>,
+  rnd: () => number = Math.random,
 ): Promise<number> {
   const cfg = COOP_BOSS_CFG[AUTO_RAID_BOSS];
   if (!cfg) return 0;
-  const min = cfg.minParty ?? 4;
-  const killRows = (await env.DB.prepare(
-    `SELECT k.user_id AS user_id,
-            COUNT(DISTINCT date(k.server_created_at / 1000, 'unixepoch', '-8 hours')) AS kill_days
-       FROM public_achievement_events k JOIN users u ON u.id = k.user_id
-      WHERE k.event_type = 'boss_kill' AND k.server_created_at >= ?
-        AND COALESCE(u.apple_sub, '') NOT LIKE 'sim_test_%'
-      GROUP BY k.user_id`,
-  )
-    .bind(nowMs - MATCH_WINDOW_MS)
-    .all<{ user_id: string; kill_days: number }>()).results ?? [];
-  const active = killRows
-    .filter((r) => r.user_id && (Number(r.kill_days) || 0) >= AUTO_RAID_ACTIVE_DAYS)
-    .map((r) => r.user_id);
+  void today;
+  const min = AUTO_RAID_PARTY;   // W1239 — exactly six
+  const opens = await opensSince(env, thisWeek);
+  const active = Array.from(opens.entries()).filter(([, n]) => n >= AUTO_RAID_MIN_OPENS).map(([uid]) => uid).sort();
   if (active.length < min) return 0;
 
   const [optouts, blocks, builds] = await shared();
@@ -1165,7 +1167,7 @@ async function sweepAutoRaids(
     blocks.has(pairKey(a, b)) || optouts.has(a + '>' + b) || optouts.has(b + '>' + a);
   const goal = thousands(cfg.goalSteps) + ' steps' + (cfg.goalFlights ? ' and ' + thousands(cfg.goalFlights) + ' flights' : '');
   let made = 0;
-  for (const party of formRaidParties(raidOrder(pool, today), isBlocked, AUTO_RAID_PARTY, min)) {
+  for (const party of formRaidParties(raidShuffle(pool, rnd), isBlocked, AUTO_RAID_PARTY, min)) {
     if (madeSoFar + made >= MAX_CREATE_PER_RUN) break;
     if (!(await createAutoRaid(env, party, nowMs))) continue;
     made++;

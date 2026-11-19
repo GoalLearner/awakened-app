@@ -36,11 +36,11 @@ import {
   AUTO_TRIO_BOSSES,
   AUTO_TRIOS_PER_HUNTER,
   STRETCH_MIN_SHARE,
-  AUTO_RAID_ACTIVE_DAYS,
+  AUTO_RAID_MIN_OPENS,
   AUTO_RAID_PARTY,
   choosePick,
   formRaidParties,
-  raidOrder,
+  raidShuffle,
   ownedAutoDrops,
   pickAutoTrioBoss,
   pickAutoTrios,
@@ -291,6 +291,7 @@ interface SweepFixture {
   todayRows?: { boss_id: string; a: string | null; b: string | null; c: string | null }[];   // W1209 — today's automatic hunts
   trioRows?: { a: string; b: string; c: string; d: string }[];   // W1208 — today's / yesterday's automatic trios
   raidLive?: string[];   // W1211 — hunters already in a live raid
+  weekOpens?: Record<string, number>;   // W1239 — each hunter's app opens since Sunday (the raid's "active" bar)
   savedWins?: { user_id: string; created_at: number }[];   // W1216 — new hunters' wins from the save / funnel
   opened?: string[];   // W1217-W1219 — in the app today or yesterday (default: every hunter in kills / savedWins / friends)
 }
@@ -303,6 +304,7 @@ function sweepDb(f: SweepFixture, calls: Call[]) {
     if (sql.includes('FROM friends')) return f.friends ?? [];
     if (sql.includes('partner2_user_id IS NOT NULL AND hunt_day')) return f.trioRows ?? [];   // W1208
     if (sql.includes('AS uid')) return (f.raidLive ?? []).map((uid) => ({ uid }));   // W1211 — huntersInLiveRaid
+    if (sql.includes('AS week_opens')) return Object.entries(f.weekOpens ?? {}).map(([user_id, week_opens]) => ({ user_id, week_opens }));   // W1239
     if (sql.includes("'first_boss_kill'")) return f.savedWins ?? [];   // W1216 — newHunterSavedWins (before json_each)
     if (sql.includes('AS seen_by')) {   // W1217-W1219 — openedRecently
       const ids = f.opened ?? [...(f.kills ?? []).map((k) => k.user_id), ...(f.savedWins ?? []).map((w) => w.user_id),
@@ -604,23 +606,26 @@ describe('sweepCoopAutoHunts — one sized hunt per walking friend pair per day'
 
 describe('sweepCoopAutoHunts — the automatic raid (W1211)', () => {
   // owner 2026-11-14: "automate the raid with 5 active randoms ... active-active"; "Keep 135k + 150";
-  // "Back to back"; "you can only be in one raid at a time"
+  // "Back to back"; "you can only be in one raid at a time". W1239 (2026-11-18): "automated at 6 hunters and
+  // ... completely random with active hunters", active = "opened the app at least 5x this week since sunday".
   const kills = (n: Record<string, number>) => Object.entries(n).map(([user_id, kill_days]) => ({ user_id, kill_days, kills: kill_days * 2, created_at: 0 }));
   const fix: SweepFixture = {
-    kills: kills({ u1: 7, u2: 6, u3: 5, u4: 4, u5: 4, u6: 5, u7: 3, u8: 6, u9: 6 }),
-    builds: { u1: NEW, u2: NEW, u3: NEW, u4: NEW, u5: NEW, u6: NEW, u7: NEW, u8: '3.0.16-w1096', u9: NEW },
+    kills: kills({ u1: 7, u2: 6, u3: 5, u4: 4, u5: 4, u6: 5, u7: 3, u8: 6, u9: 6, u10: 1 }),
+    weekOpens: { u1: 30, u2: 12, u3: 9, u4: 5, u5: 7, u6: 20, u7: 4, u8: 15, u9: 10 },
+    builds: { u1: NEW, u2: NEW, u3: NEW, u4: NEW, u5: NEW, u6: NEW, u7: NEW, u8: '3.0.16-w1096', u9: NEW, u10: NEW },
     optouts: [{ user_id: 'u9', friend_user_id: '*' }],
   };
   const raids = (calls: Call[]) => calls.filter((c) => c.sql.includes('INSERT OR IGNORE INTO coop_boss_instances') && c.args[1] === 'the_grinning_god');
 
-  it('six very active hunters (a kill on 4+ of 7 days) on the automatic client get one live raid: every seat joined, the full goal, 80 hours', async () => {
+  it('W1239 — six hunters with 5+ opens since Sunday on the automatic client get one live raid: every seat joined, the full goal, 80 hours', async () => {
     const calls: Call[] = [];
     const res = await sweepCoopAutoHunts(makeEnv(sweepDb(fix, calls)), ctx);
     expect(res.raids).toBe(1);
     const r = raids(calls);
     expect(r.length).toBe(1);
     const a = r[0].args;
-    expect(a[14]).toBe('u1|u2|u3|u4|u5|u6');   // u7 has 3 kill days, u8 an old build, u9 switched automatic hunts off
+    expect(a[14]).toBe('u1|u2|u3|u4|u5|u6');   // u7 has 4 opens, u8 an old build, u9 switched automatic hunts off, u10 no opens
+    expect(calls.find((c) => c.sql.includes('AS week_opens'))!.args).toEqual([getAccoladeWeekStart(Date.now())]);   // since Sunday
     expect(a.slice(1, 6)).toEqual(['the_grinning_god', 'S', 'u1', 'u2', 'u3']);
     expect([a[8], a[9], a[10]]).toEqual([200000, 200, 800]);   // W1234
     expect(Date.parse(a[12] as string) - Date.parse(a[11] as string)).toBe(80 * 3_600_000);
@@ -638,29 +643,46 @@ describe('sweepCoopAutoHunts — the automatic raid (W1211)', () => {
     });
   });
 
-  it('one raid at a time: a hunter in a live raid is left out; five still make a raid; under four wait', async () => {
+  it('one raid at a time, and W1239 exactly six: with a hunter in a live raid the other five wait; a sixth makes the raid', async () => {
+    const five: Call[] = [];
+    const res = await sweepCoopAutoHunts(makeEnv(sweepDb({ ...fix, raidLive: ['u1'] }, five)), ctx);
+    expect(res.raids).toBe(0);   // W1239 — five never make a raid (W1211 made one of 4-5)
+    expect(raids(five).length).toBe(0);
+    expect(five.find((c) => c.sql.includes('AS uid'))!.args).toEqual(['the_grinning_god', '']);
     const calls: Call[] = [];
-    await sweepCoopAutoHunts(makeEnv(sweepDb({ ...fix, raidLive: ['u1'] }, calls)), ctx);
-    expect(raids(calls).map((c) => c.args[14])).toEqual(['u2|u3|u4|u5|u6']);
-    const few: Call[] = [];
-    const res = await sweepCoopAutoHunts(makeEnv(sweepDb({ ...fix, raidLive: ['u1', 'u2', 'u3'] }, few)), ctx);
-    expect(res.raids).toBe(0);
-    expect(raids(few).length).toBe(0);
-    expect(few.find((c) => c.sql.includes('AS uid'))!.args).toEqual(['the_grinning_god', '']);
+    await sweepCoopAutoHunts(makeEnv(sweepDb({ ...fix, raidLive: ['u1'], weekOpens: { ...fix.weekOpens, u10: 8 } }, calls)), ctx);
+    expect(raids(calls).map((c) => c.args[14])).toEqual(['u10|u2|u3|u4|u5|u6']);
+  });
+
+  it('W1239 — twelve eligible make two raids of six; thirteen leave one waiting', async () => {
+    const ids = Array.from({ length: 13 }, (_, i) => 'r' + String(i + 1).padStart(2, '0'));
+    const many: SweepFixture = {
+      kills: kills(Object.fromEntries(ids.map((id) => [id, 1]))),
+      weekOpens: Object.fromEntries(ids.map((id) => [id, 6])),
+      builds: Object.fromEntries(ids.map((id) => [id, NEW])),
+    };
+    const calls: Call[] = [];
+    const res = await sweepCoopAutoHunts(makeEnv(sweepDb(many, calls)), ctx);
+    expect(res.raids).toBe(2);
+    const parties = raids(calls).map((c) => String(c.args[14]).split('|'));
+    expect(parties.map((p) => p.length)).toEqual([6, 6]);
+    expect(new Set(parties.flat()).size).toBe(12);
   });
 
   // W1217 — owner 2026-11-15: "make sure those people are active that get paired"
   it('W1217/W1218 — a hunter not in the app today or yesterday is never put in a raid party', async () => {
     const calls: Call[] = [];
-    await sweepCoopAutoHunts(makeEnv(sweepDb({ ...fix, opened: ['u2', 'u3', 'u4', 'u5', 'u6', 'u7'] }, calls)), ctx);
-    expect(raids(calls).map((c) => c.args[14])).toEqual(['u2|u3|u4|u5|u6']);   // u1 (7 kill days) went quiet
+    await sweepCoopAutoHunts(makeEnv(sweepDb({ ...fix, weekOpens: { ...fix.weekOpens, u10: 8 }, opened: ['u2', 'u3', 'u4', 'u5', 'u6', 'u7', 'u10'] }, calls)), ctx);
+    expect(raids(calls).map((c) => c.args[14])).toEqual(['u10|u2|u3|u4|u5|u6']);   // u1 (30 opens this week) went quiet
   });
 
   it('formRaidParties: sixes first, a remainder of 4-5 makes one more, fewer wait; nobody with someone they blocked', () => {
     const ids = (n: number) => Array.from({ length: n }, (_, i) => 'h' + (i + 1));
     const none = () => false;
     expect(AUTO_RAID_PARTY).toBe(6);
-    expect(AUTO_RAID_ACTIVE_DAYS).toBe(4);
+    expect(AUTO_RAID_MIN_OPENS).toBe(5);   // W1239
+    expect(formRaidParties(ids(10), none, 6, 6)).toEqual([ids(6)]);   // W1239 — the sweep asks for exactly six
+    expect(formRaidParties(ids(5), none, 6, 6)).toEqual([]);
     expect(formRaidParties(ids(6), none)).toEqual([ids(6)]);
     expect(formRaidParties(ids(7), none)).toEqual([ids(6)]);
     expect(formRaidParties(ids(10), none).map((p) => p.length)).toEqual([6, 4]);
@@ -671,12 +693,16 @@ describe('sweepCoopAutoHunts — the automatic raid (W1211)', () => {
     expect(formRaidParties(ids(6), blk)).toEqual([['h1', 'h3', 'h4', 'h5', 'h6']]);   // h2 waits
   });
 
-  it('raidOrder: random, but the same order all day and a new one the next', () => {
+  it('W1239 — raidShuffle: a fresh random order every pass, always the same hunters', () => {
     const six = ['u1', 'u2', 'u3', 'u4', 'u5', 'u6'];
-    const a = raidOrder(six, '2026-11-14');
-    expect(raidOrder(six, '2026-11-14')).toEqual(a);
+    const seq = (xs: number[]) => { let i = 0; return () => xs[i++ % xs.length]; };
+    const a = raidShuffle(six, seq([0.9, 0.1, 0.5, 0.3, 0.7]));
+    const b = raidShuffle(six, seq([0.1, 0.9, 0.2, 0.8, 0.4]));
     expect([...a].sort()).toEqual(six);
-    expect(raidOrder(six, '2026-11-15')).not.toEqual(a);
+    expect([...b].sort()).toEqual(six);
+    expect(a).not.toEqual(b);
+    expect(six).toEqual(['u1', 'u2', 'u3', 'u4', 'u5', 'u6']);   // never shuffles its input
+    expect([...raidShuffle(six)].sort()).toEqual(six);
   });
 
   it('a raid row is never read as a trio: the trio pass reads only the trio bosses', async () => {
