@@ -112,4 +112,26 @@ test.describe('The automatic duo hunts read the hunters’ averages (W1195)', ()
     // no partner name yet: the boss name stands in
     expect(await name({ ...base, id: 'n1', role: 'challenger', challenger: { alias: 'e2e' } })).toBe('The Coursing Dread');
   });
+
+  // W1243 — owner 2026-11-18: "Rendiesel and me should have a crown here...it is missing here".
+  test('W1243: the crown rides the owner\'s and the moderator\'s names on a hunt row, and no one else\'s', async ({ page }) => {
+    await page.addInitScript(() => {   // before boot: the roster is read once and kept in memory
+      localStorage.setItem('hb_crown_roster_v1', JSON.stringify({ at: Date.now(), list: [{ alias: 'Richie', role: 'owner' }, { alias: 'RenDIESEL', role: 'mod' }] }));
+    });
+    await boot(page, {});
+    const html = (inst: Record<string, unknown>) => page.evaluate((x) => (window as any).__huntCoopItem(x).nameHtml as string, inst);
+    const base = { boss_id: 'the_coursing_dread', metric: 'steps', boss_rank: 'C', status: 'active', goal_steps: 8000, combined_steps: 10, starts_at: new Date().toISOString() };
+    const crowns = (h: string) => (h.match(/name-crown/g) || []).length;
+    const text = (h: string) => h.replace(/<svg[\s\S]*?<\/svg>/g, '').replace(/<[^>]+>/g, '');
+    const duo = await html({ ...base, id: 'c1', role: 'challenger', challenger: { alias: 'e2e' }, partner: { alias: 'RenDIESEL' } });
+    expect(text(duo)).toBe('RenDIESEL');
+    expect(crowns(duo)).toBe(1);
+    const trio = await html({ ...base, id: 'c2', role: 'challenger', challenger: { alias: 'e2e' }, partner: { alias: 'Galilea' }, partner2: { alias: 'Richie' } });
+    expect(text(trio)).toBe('Galilea &amp; Richie');
+    expect(trio.indexOf('Richie</span><span class="hunter-crown')).toBeGreaterThan(0);   // the crown sits right after Richie
+    expect(crowns(trio)).toBe(1);
+    expect(crowns(await html({ ...base, id: 'c3', role: 'challenger', challenger: { alias: 'e2e' }, partner: { alias: 'Galilea' } }))).toBe(0);
+    // the plain name is unchanged
+    expect(await page.evaluate((x) => (window as any).__huntCoopItem(x).name, { ...base, id: 'c4', role: 'challenger', challenger: { alias: 'e2e' }, partner: { alias: 'RenDIESEL' } })).toBe('RenDIESEL');
+  });
 });

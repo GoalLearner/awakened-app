@@ -512,6 +512,12 @@ h1 {
   color: var(--text-primary, #f4f4fb);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
+/* W1243 — partner names with their crowns: each name shortens (…) on its own, the crowns and the "&" never do */
+.hunt-row-name--ppl { display: flex; align-items: center; min-width: 0; text-overflow: clip; }
+.hunt-row-name--ppl .hrn { flex: 0 1 auto; min-width: 1.6em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hunt-row-name--ppl .hrn:first-child { flex-shrink: 0.3; }   /* the second name gives way first, as the old single ellipsis did */
+.hunt-row-name--ppl .hrs { flex: none; white-space: pre; }
+.hunt-row-name--ppl .name-crown { flex: none; }
 .hunt-row-more {
   flex: none; padding: 2px 7px;
   border-radius: 9px; border: 1px solid rgba(255, 255, 255, 0.18);
