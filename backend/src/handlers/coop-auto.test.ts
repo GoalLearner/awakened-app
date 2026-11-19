@@ -789,6 +789,26 @@ describe('sweepCoopResolve — the server settles every active hunt', () => {
     expect(calls.filter((c) => c.sql.includes('SET coop_auto_push_day')).length).toBe(0);
     expect(mockNotify).toHaveBeenCalledTimes(4);
     expect(mockNotify.mock.calls[0][2]).toMatchObject({ title: 'Raid Complete', body: 'Your raid party brought down The Grinning God.', type: 'coop_complete' });
+    // W1241 — one post for every hunter's feed, under the MVP (u1, the most steps), naming the rest of the party
+    const posts = calls.filter((c) => c.sql.includes('INSERT INTO public_achievement_events') && c.sql.includes("'raid_won'"));
+    expect(posts.length).toBe(1);
+    const p = posts[0].args;
+    expect(p[1]).toBe('u1');
+    expect(p[2]).toBe('the_grinning_god');
+    expect(p[3]).toBe('defeated The Grinning God with anthony, ren and gali');
+    expect([p[4], p[5], p[6]]).toEqual([4, 'S', 'official:raid:r1']);
+    expect(posts[0].sql).toContain('ON CONFLICT(user_id, client_event_id) DO NOTHING');
+  });
+
+  it('W1241 — a won duo or trio hunt posts nothing to everyone; only a raid does', async () => {
+    const calls: Call[] = [];
+    const f: SweepFixture = {
+      active: [row('a9', { auto: 1 })],
+      participants: [{ instance_id: 'a9', user_id: 'u2', joined_at: past }],
+      progress: [{ bid: 'a9', user_id: 'u1', event_type: 'steps_total', s: 14000 }, { bid: 'a9', user_id: 'u2', event_type: 'steps_total', s: 1 }],
+    };
+    await sweepCoopResolve(makeEnv(sweepDb(f, calls)), ctx);
+    expect(calls.filter((c) => c.sql.includes("'raid_won'")).length).toBe(0);
   });
 
   it('a second automatic win the same day is quiet (the day stamp is already taken)', async () => {

@@ -127,6 +127,31 @@ test.describe('Mythic drops in Hunter Activity (W1229 · W1230)', () => {
     await page.evaluate(() => { const o = document.querySelector('.fa-hunter--mythic') as HTMLElement; o.scrollIntoView(); });
   });
 
+  // W1241 — owner 2026-11-18: "If a team completes a grinning god raid, it gets put on the friend's activity to be
+  // recognized by everyone". The server posts it (official:raid:<id>) under the MVP, naming the party.
+  test('W1241 — a raid team\'s win is its own gold row: Raid cleared, the boss, the party size, the names', async ({ page }) => {
+    const now = Date.now();
+    await boot(page, [
+      ev('b1', 'Galilea', 'boss_kill', now, false),
+      ev('r1', 'Techniz', 'raid_won', now - 30_000, true, { eventKey: 'the_grinning_god', eventLabel: 'defeated The Grinning God with Amanda, Anducal, Angelo, Galilea and Renaldo', eventValue: 6, rarity: 'S' }),
+    ]);
+    await openFeed(page);
+    const raid = page.locator('.fa-hunter--raid');
+    await expect(raid).toHaveCount(1);
+    const SHOT = process.env.FD_SHOTS || '';
+    if (SHOT) { await page.setViewportSize({ width: 390, height: 844 }); await raid.scrollIntoViewIfNeeded(); await page.waitForTimeout(300); await page.screenshot({ path: SHOT + '/raid-feed-closed.png' }); }
+    await expect(raid.locator('.fa-hn')).toHaveText('Raid cleared');
+    await expect(raid.locator('.fa-chip--my')).toHaveText('The Grinning God');
+    await expect(raid.locator('.fa-chip--who')).toHaveText('6 hunters');
+    await raid.locator('.fa-hh').click();
+    const act = raid.locator('.fa-act');
+    await expect(act.locator('.fa-ico--mythic')).toHaveText('♛');
+    await expect(act.locator('.fa-act-txt')).toHaveText('techniz defeated The Grinning God with Amanda, Anducal, Angelo, Galilea and Renaldo');
+    await expect(act.locator('.fa-like')).toHaveCount(1);
+    await expect(page.locator('.fa-day').first().locator('.fa-stack .fa-mini').first()).toHaveText('♛');
+    if (SHOT) { await page.waitForTimeout(300); await page.screenshot({ path: SHOT + '/raid-feed-open.png' }); }
+  });
+
   test('the crown rides Richie\'s and RenDIESEL\'s names in Hunter Activity, and no one else\'s', async ({ page }) => {
     const now = Date.now();
     await boot(page, [

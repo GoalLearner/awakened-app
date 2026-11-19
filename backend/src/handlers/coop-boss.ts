@@ -1609,6 +1609,44 @@ export function allPosted(row: CoopBossRow, p: CoopProgress): boolean {
  *  guarded on status='active', awards back-fill on a lost race (W1040), and only the caller
  *  whose UPDATE flipped the row sends pushes (W662/W838). Automatic hunts (auto=1): `committed`
  *  is stamped at the flip, a defeat is silent, and a win pushes a hunter at most once a day. */
+/** W1241 — owner 2026-11-18: "If a team completes a grinning god raid, it gets put on the friend's activity to be
+ *  recognized by everyone". One post per won raid, under its MVP (the most steps; a tie goes to the first in the
+ *  party's order), naming the rest of the party: "defeated The Grinning God with A, B, C, D and E". Its
+ *  client_event_id 'official:raid:<id>' puts it in every hunter's Hunter Activity and makes it likeable (the W1199
+ *  record-book read), and UNIQUE(user_id, client_event_id) keeps it to one however many resolvers race. Builds
+ *  before the one that styles it show it as a plain line. Never throws. */
+export async function postRaidWin(
+  env: Env,
+  row: CoopBossRow,
+  winners: readonly string[],
+  prog: CoopProgress,
+  aliasMap: Map<string, string>,
+  nowMs: number = Date.now(),
+): Promise<boolean> {
+  try {
+    const ids = winners.filter(Boolean);
+    if (!ids.length) return false;
+    const steps = (uid: string) => prog.steps.get(uid) || 0;
+    let mvp = ids[0];
+    for (const uid of ids) if (steps(uid) > steps(mvp)) mvp = uid;
+    const names = ids.filter((uid) => uid !== mvp).map((uid) => aliasMap.get(uid) || 'a hunter');
+    const list = names.length <= 1 ? names.join('') : names.slice(0, -1).join(', ') + ' and ' + names[names.length - 1];
+    const boss = COOP_BOSS_NAMES[row.boss_id] ?? 'the raid boss';
+    const label = (names.length ? 'defeated ' + boss + ' with ' + list : 'defeated ' + boss).slice(0, 200);
+    const r = await env.DB.prepare(
+      `INSERT INTO public_achievement_events (
+          id, user_id, event_type, event_key, event_label, event_value, rarity,
+          client_event_id, client_created_at, server_created_at, metadata_json
+        ) VALUES (?, ?, 'raid_won', ?, ?, ?, ?, ?, ?, ?, NULL)
+        ON CONFLICT(user_id, client_event_id) DO NOTHING`,
+    ).bind(crypto.randomUUID(), mvp, row.boss_id, label, ids.length, row.boss_rank || 'S', 'official:raid:' + row.id, new Date(nowMs).toISOString(), nowMs).run();
+    return Number(r?.meta?.changes ?? 0) > 0;
+  } catch (err) {
+    console.error('[coop] raid win post failed', err);
+    return false;
+  }
+}
+
 export async function resolveCoopInstance(
   env: Env,
   row: CoopBossRow,
@@ -1661,6 +1699,7 @@ export async function resolveCoopInstance(
           env.DB.prepare('INSERT OR IGNORE INTO coop_boss_awards (instance_id, user_id) VALUES (?, ?)').bind(id, uid),
         ),
       );
+      if (!stale && isRaidBoss(row.boss_id)) await postRaidWin(env, row, winners, prog, aliasMap);   // W1241 — every hunter sees it
     }
     // W662 — push EVERY hunter that the hunt is won, EXACTLY ONCE. All clients
     // poll /resolve (and re-poll), but the `WHERE status='active'` guard means
