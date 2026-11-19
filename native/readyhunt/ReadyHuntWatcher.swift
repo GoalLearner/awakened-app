@@ -462,8 +462,29 @@ enum ReadyHuntMath {
         return lower.contains("iphone") || lower.contains("apple watch") || lower.contains("applewatch")
     }
 
-    /// app.js `_totalFromHealthSamples`: one source → its total; several → the largest Apple
-    /// device's total, or the largest of all when no Apple device wrote any.
+    /// W1245 — a known wearable's app (Fitbit / Google Health, Oura, Garmin, Whoop, ...).
+    static let wearableWords: [String] = ["oura", "fitbit", "google", "garmin", "whoop", "withings", "polar", "suunto",
+                                          "coros", "zepp", "huami", "amazfit", "samsung", "galaxy", "xiaomi", "mifit",
+                                          "mi fitness", "huawei", "ultrahuman", "ringconn", "wahoo", "pixel"]
+
+    static func looksWearable(_ text: String) -> Bool {
+        let lower: String = text.lowercased()
+        for word in wearableWords {
+            if lower.contains(word) { return true }
+        }
+        return false
+    }
+
+    /// W1245 — the iPhone, an Apple Watch, or a known wearable's app.
+    static func isLegit(_ bundle: String, _ name: String) -> Bool {
+        if bundle.isEmpty { return looksApple(name) || looksWearable(name) }
+        if bundle.lowercased().hasPrefix("com.apple.health.") { return true }
+        return looksWearable(bundle + " " + name)
+    }
+
+    /// app.js `_totalFromHealthSamples` for today (W1245): one source → its total; several → the
+    /// legitimate source with the most (phone, watch, ring, band; never added together), or the
+    /// largest of all when no legitimate source wrote any.
     static func total(_ samples: [HKSample]) -> Double {
         var raw: Double = 0
         var bySource: [String: Double] = [:]
@@ -480,11 +501,7 @@ enum ReadyHuntMath {
             if key.isEmpty { continue }
             if bySource[key] == nil {
                 bySource[key] = 0
-                if bundle.isEmpty {
-                    apple[key] = looksApple(source.name)
-                } else {
-                    apple[key] = bundle.lowercased().hasPrefix("com.apple.health.")
-                }
+                apple[key] = isLegit(bundle, source.name)
             }
             let soFar: Double = bySource[key] ?? 0
             bySource[key] = soFar + value

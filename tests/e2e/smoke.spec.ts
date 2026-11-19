@@ -1748,13 +1748,15 @@ test.describe('R · Compound reward caption on the Habits tab (W514/W515)', () =
 // ~15-30% over what the Apple Health app displays (wrist-motion "steps"),
 // and the old max-single-source rule let the ring win. Pin the picker via
 // the Health.__totalFromSamples test seam (pure function, real bundle):
-// Apple DEVICE source preferred even when SMALLER; ring-only falls back to
-// the ring; one source sums; untagged samples keep the raw-sum fallback.
+// W1245 (supersedes W681's Apple-first pick): per day, the legitimate source
+// (phone, watch, known wearable app) with the MOST wins, never added together;
+// an unknown app only counts when no legitimate source wrote that day; one
+// source sums; untagged samples keep the raw-sum fallback.
 // W799 — manual entries are DROPPED, not preferred: hand-typed Health-app
 // samples (bundle exactly com.apple.Health) and Shortcuts writes
 // (com.apple.shortcuts) never count; a manual-only sample set totals 0.
-test.describe('S · HealthKit source dedup (W681/W799)', () => {
-  test('Apple-preferred totals across source mixes', async ({ page }) => {
+test.describe('S · HealthKit source dedup (W681/W799/W1245)', () => {
+  test('one legitimate source per day across source mixes', async ({ page }) => {
     await page.goto('/');
     await expect(page.locator('#tab-profile')).toBeVisible({ timeout: 15_000 });
     const results = await page.evaluate(() => {
@@ -1762,8 +1764,18 @@ test.describe('S · HealthKit source dedup (W681/W799)', () => {
       const iphone = (v: number) => ({ value: v, sourceBundleId: 'com.apple.health.ABC', source: 'iPhone' });
       const oura = (v: number) => ({ value: v, sourceBundleId: 'com.ouraring.oura', source: 'Oura' });
       const manual = (v: number) => ({ value: v, sourceBundleId: 'com.apple.Health', source: 'Health' });
+      // W1245 — one source per day, the legitimate one with the most; never added together.
+      const day = (d: number) => new Date(2026, 10, d, 12).toISOString();
+      const on = (s: any, d: number) => ({ ...s, startDate: day(d) });
+      const fitbit = (v: number) => ({ value: v, sourceBundleId: 'com.fitbit.FitbitMobile', source: 'Google Health' });
+      const faker = (v: number) => ({ value: v, sourceBundleId: 'com.example.stepbooster', source: 'Step Booster' });
       return {
-        appleWinsEvenSmaller: f([iphone(6147), oura(8263)]),
+        biggestDeviceWins: f([iphone(6147), oura(8263)]),
+        phoneBeatsSmallerRing: f([iphone(9000), oura(4000)]),
+        fitbitBeatsPhone: f([iphone(4000), fitbit(9000)]),
+        unknownAppNeverBeatsPhone: f([iphone(6000), faker(20000)]),
+        unknownOnlyFallsBack: f([faker(3000), { value: 5000, sourceBundleId: 'com.example.other', source: 'Other' }]),
+        perDayWinnersSum: f([on(fitbit(9000), 17), on(iphone(4000), 17), on(iphone(5000), 18), on(fitbit(300), 18)]),
         ringOnlyFallback: f([oura(4000), oura(2450)]),
         singleSourceSums: f([iphone(100), iphone(200)]),
         untaggedRawSum: f([{ value: 100 }, { value: 50 }]),
@@ -1774,7 +1786,12 @@ test.describe('S · HealthKit source dedup (W681/W799)', () => {
         manualNeverBeatsDevice: f([manual(50000), iphone(6147)]),
       };
     });
-    expect(results.appleWinsEvenSmaller).toBe(6147);
+    expect(results.biggestDeviceWins).toBe(8263);
+    expect(results.phoneBeatsSmallerRing).toBe(9000);
+    expect(results.fitbitBeatsPhone).toBe(9000);
+    expect(results.unknownAppNeverBeatsPhone).toBe(6000);
+    expect(results.unknownOnlyFallsBack).toBe(5000);
+    expect(results.perDayWinnersSum).toBe(14000);
     expect(results.ringOnlyFallback).toBe(6450);
     expect(results.singleSourceSums).toBe(300);
     expect(results.untaggedRawSum).toBe(150);
