@@ -142,11 +142,13 @@ test.describe('Mythic drops in Hunter Activity (W1229 · W1230)', () => {
     if (SHOT) { await page.setViewportSize({ width: 390, height: 844 }); await raid.scrollIntoViewIfNeeded(); await page.waitForTimeout(300); await page.screenshot({ path: SHOT + '/raid-feed-closed.png' }); }
     await expect(raid.locator('.fa-hn')).toHaveText('Raid cleared');
     await expect(raid.locator('.fa-chip--my')).toHaveText('The Grinning God');
-    await expect(raid.locator('.fa-chip--who')).toHaveText('6 hunters');
+    await expect(raid.locator('.fa-chip--mvp')).toHaveText('technizMVP');   // W1242 — the MVP beside their name
+    await expect(raid.locator('.fa-chip--n')).toHaveText('6 hunters');
     await raid.locator('.fa-hh').click();
     const act = raid.locator('.fa-act');
     await expect(act.locator('.fa-ico--mythic')).toHaveText('♛');
-    await expect(act.locator('.fa-act-txt')).toHaveText('techniz defeated The Grinning God with Amanda, Anducal, Angelo, Galilea and Renaldo');
+    await expect(act.locator('.fa-act-txt')).toHaveText('technizMVP defeated The Grinning God with Amanda, Anducal, Angelo, Galilea and Renaldo');
+    await expect(act.locator('.fa-who + .fa-mvp')).toHaveText('MVP');   // W1242
     await expect(act.locator('.fa-like')).toHaveCount(1);
     await expect(page.locator('.fa-day').first().locator('.fa-stack .fa-mini').first()).toHaveText('♛');
     if (SHOT) { await page.waitForTimeout(300); await page.screenshot({ path: SHOT + '/raid-feed-open.png' }); }

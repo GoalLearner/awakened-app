@@ -37006,6 +37006,10 @@ button.mx-sh { cursor: pointer; min-height: 40px; }
 .bfx-lot { position: absolute; transform: translate(-50%, -50%); pointer-events: none; }
 .bfx-lot svg { display: block; width: 100% !important; height: 100% !important; overflow: visible; }
 @media (prefers-reduced-motion: reduce) { .bfx-main, .bfx-acc, .bfx-ring { animation: bfx-fade 300ms ease-out forwards; } }
+/* W1242 — the raid MVP's tag in Hunter Activity, beside their name (the raid screen's .chd-crown look) */
+.fa-mvp { display: inline-block; margin-left: 5px; padding: 1.5px 5px; border-radius: 4px; border: 1px solid rgba(245, 158, 11, .38); background: rgba(245, 158, 11, .10);
+  font: 800 8px/1.2 ui-monospace, monospace; letter-spacing: 1px; color: #ffd574; text-transform: uppercase; vertical-align: 1px; }
+.fa-chip--n { color: rgba(255, 255, 255, .62); }
 /* W1238 — the Ascent nudge (after the third boss): one card, two buttons */
 .ascn { position: fixed; inset: 0; z-index: 12450; display: flex; align-items: center; justify-content: center; padding: 28px; opacity: 0; transition: opacity .25s ease; }
 .ascn.ascn-on { opacity: 1; }
