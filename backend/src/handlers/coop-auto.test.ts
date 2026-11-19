@@ -37,6 +37,8 @@ import {
   AUTO_TRIOS_PER_HUNTER,
   STRETCH_MIN_SHARE,
   AUTO_RAID_MIN_OPENS,
+  ACTIVE_OPEN_DAYS,
+  activeWindowStart,
   AUTO_RAID_PARTY,
   choosePick,
   formRaidParties,
@@ -617,7 +619,7 @@ describe('sweepCoopAutoHunts — the automatic raid (W1211)', () => {
   };
   const raids = (calls: Call[]) => calls.filter((c) => c.sql.includes('INSERT OR IGNORE INTO coop_boss_instances') && c.args[1] === 'the_grinning_god');
 
-  it('W1239 — six hunters with 5+ opens since Sunday on the automatic client get one live raid: every seat joined, the full goal, 80 hours', async () => {
+  it('W1239/W1240 — six active hunters (5+ opens in the last 7 days) on the automatic client get one live raid: every seat joined, the full goal, 80 hours', async () => {
     const calls: Call[] = [];
     const res = await sweepCoopAutoHunts(makeEnv(sweepDb(fix, calls)), ctx);
     expect(res.raids).toBe(1);
@@ -625,7 +627,7 @@ describe('sweepCoopAutoHunts — the automatic raid (W1211)', () => {
     expect(r.length).toBe(1);
     const a = r[0].args;
     expect(a[14]).toBe('u1|u2|u3|u4|u5|u6');   // u7 has 4 opens, u8 an old build, u9 switched automatic hunts off, u10 no opens
-    expect(calls.find((c) => c.sql.includes('AS week_opens'))!.args).toEqual([getAccoladeWeekStart(Date.now())]);   // since Sunday
+    expect(calls.find((c) => c.sql.includes('AS week_opens'))!.args).toEqual([activeWindowStart(today)]);   // W1240 — the last 7 days
     expect(a.slice(1, 6)).toEqual(['the_grinning_god', 'S', 'u1', 'u2', 'u3']);
     expect([a[8], a[9], a[10]]).toEqual([200000, 200, 800]);   // W1234
     expect(Date.parse(a[12] as string) - Date.parse(a[11] as string)).toBe(80 * 3_600_000);
@@ -691,6 +693,14 @@ describe('sweepCoopAutoHunts — the automatic raid (W1211)', () => {
     expect(formRaidParties(ids(3), none)).toEqual([]);
     const blk = (a: string, b: string) => (a === 'h1' && b === 'h2') || (a === 'h2' && b === 'h1');
     expect(formRaidParties(ids(6), blk)).toEqual([['h1', 'h3', 'h4', 'h5', 'h6']]);   // h2 waits
+  });
+
+  it('W1240 — "active" is 5+ opens over a rolling 7 Pacific days, today included', () => {
+    expect(AUTO_RAID_MIN_OPENS).toBe(5);
+    expect(ACTIVE_OPEN_DAYS).toBe(7);
+    expect(activeWindowStart('2026-11-18')).toBe('2026-11-12');
+    expect(activeWindowStart('2026-11-15')).toBe('2026-11-09');   // a Sunday still sees the week before
+    expect(activeWindowStart('2026-03-03')).toBe('2026-02-25');
   });
 
   it('W1239 — raidShuffle: a fresh random order every pass, always the same hunters', () => {

@@ -101,8 +101,9 @@
  * doesn't have to be your friend ... puts you in with 5 random users that are active-active"; then
  * "Keep 135k + 150", "Back to back", and "you can only be in one raid at a time"; W1234 raised the goal to 200k + 200).
  * W1239 (owner 2026-11-18: "automated at 6 hunters ... completely random with active hunters", active = "opened the
- * app at least 5x this week since sunday"): every pass, the hunters with AUTO_RAID_MIN_OPENS (5) app opens since
- * Sunday who were in the app today or yesterday, are on the automatic client, have not switched automatic hunts off
+ * app at least 5x this week since sunday"; W1240, the owner's definition of active: "opened the app at least 5x in
+ * the last 7 days"): every pass, the hunters with AUTO_RAID_MIN_OPENS (5) app opens in the last 7 days who were
+ * in the app today or yesterday, are on the automatic client, have not switched automatic hunts off
  * and are in no live raid are shuffled afresh and put into The Grinning God in parties of exactly six (fewer wait),
  * nobody with someone they blocked. The raid runs from now for its 80 hours with its own goal
  * (200,000 steps + 200 flights), every seat joined, auto = 1. When it ends, its hunters go into the
@@ -446,10 +447,19 @@ export function pickAutoTrios(
 export const AUTO_RAID_BOSS = 'the_grinning_god';
 /** you + 5. W1239 — owner 2026-11-18: "automated at 6 hunters": a raid forms only when six are free (was 4-6). */
 export const AUTO_RAID_PARTY = 6;
-/** W1239 — "active" (owner 2026-11-18: "opened the app at least 5x this week since sunday"): app opens counted
- *  since Sunday 12 AM PST (the app's week). Replaced W1211's "a boss kill on 4 of the last 7 days", which left
- *  only four hunters (all friends) for the raid of 2026-11-18. */
+/** "Active" — W1240, the owner's definition (2026-11-18): "We will call a person active if they've opened the app
+ *  at least 5x in the last 7 days": AUTO_RAID_MIN_OPENS app opens over ACTIVE_OPEN_DAYS Pacific days, today
+ *  included (a rolling window; W1239 counted from Sunday, which left nobody active early on a Sunday). Replaced
+ *  W1211's "a boss kill on 4 of the last 7 days", which left only four hunters (all friends) for the raid of
+ *  2026-11-18. */
 export const AUTO_RAID_MIN_OPENS = 5;
+export const ACTIVE_OPEN_DAYS = 7;
+/** W1240 — the first PT day of the rolling ACTIVE_OPEN_DAYS window that ends today. */
+export function activeWindowStart(today: string): string {
+  let d = today;
+  for (let i = 1; i < ACTIVE_OPEN_DAYS; i++) d = prevDay(d) || d;
+  return d;
+}
 
 /** W1239 — "completely random": a fresh shuffle every pass (Fisher-Yates). W1211 used one order for the whole
  *  Pacific day, so the same hunters kept landing together. `rnd` is injectable for tests. */
@@ -461,14 +471,14 @@ export function raidShuffle(ids: readonly string[], rnd: () => number = Math.ran
   }
   return a;
 }
-/** W1239 — each hunter's app opens since `weekStart` (a PT day key): the raid's "active" bar. */
-async function opensSince(env: Env, weekStart: string): Promise<Map<string, number>> {
+/** W1239 — each hunter's app opens since `since` (a PT day key): the raid's "active" bar (W1240: the last 7 days). */
+async function opensSince(env: Env, since: string): Promise<Map<string, number>> {
   const rows = (await env.DB.prepare(
     `SELECT a.user_id AS user_id, SUM(a.opens) AS week_opens
        FROM app_open_counts a JOIN users u ON u.id = a.user_id
       WHERE a.day_pt >= ?1 AND a.opens > 0 AND COALESCE(u.apple_sub, '') NOT LIKE 'sim_test_%'
       GROUP BY a.user_id`,
-  ).bind(weekStart).all<{ user_id: string; week_opens: number }>()).results ?? [];
+  ).bind(since).all<{ user_id: string; week_opens: number }>()).results ?? [];
   return new Map(rows.filter((r) => r.user_id).map((r) => [r.user_id, Number(r.week_opens) || 0]));
 }
 
@@ -934,7 +944,7 @@ export async function sweepCoopAutoHunts(env: Env, _ctx?: ExecutionContext): Pro
 
     // ── W1211 — the automatic raid ──
     try {
-      out.raids = await sweepAutoRaids(env, nowMs, today, thisWeek, shared, _ctx, out.created + out.matched + out.trios, inApp);
+      out.raids = await sweepAutoRaids(env, nowMs, today, activeWindowStart(today), shared, _ctx, out.created + out.matched + out.trios, inApp);   // W1240
     } catch (err) {
       console.error('[coop-auto] raid sweep failed', err);
     }
@@ -1132,7 +1142,7 @@ async function sweepAutoRaids(
   env: Env,
   nowMs: number,
   today: string,
-  thisWeek: string,
+  activeSince: string,
   shared: () => Promise<Shared>,
   ctx: ExecutionContext | undefined,
   madeSoFar: number,
@@ -1143,7 +1153,7 @@ async function sweepAutoRaids(
   if (!cfg) return 0;
   void today;
   const min = AUTO_RAID_PARTY;   // W1239 — exactly six
-  const opens = await opensSince(env, thisWeek);
+  const opens = await opensSince(env, activeSince);   // W1240 — 5+ opens in the last 7 days
   const active = Array.from(opens.entries()).filter(([, n]) => n >= AUTO_RAID_MIN_OPENS).map(([uid]) => uid).sort();
   if (active.length < min) return 0;
 
