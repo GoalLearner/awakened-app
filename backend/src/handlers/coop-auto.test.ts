@@ -55,6 +55,8 @@ import {
   planRaidMoves,
   SHORT_TEAM_ACTIVE,
   STANDIN_MIN_ACTIVE,
+  handleRaidsLive,
+  MUSTER_AWAY_HOURS,
   type RaidView,
 } from './coop-auto';
 import { getAccoladeWeekStart, priorWeekStart } from '../lib/accolade-week';
@@ -307,6 +309,9 @@ interface SweepFixture {
   lastSeen?: Record<string, number>;   // W1248 — each hunter's last app ping / save, ms (default: every weekOpens hunter, now)
   raidRows?: Record<string, unknown>[];   // W1248 — the live automatic raids the stand-in pass reads
   queue?: string[];   // W1248 — the raid finder, oldest first
+  doneRows?: Record<string, unknown>[];   // W1254 — finished raids for The Muster
+  swapRows?: { instance_id: string; in_user_id: string }[];   // W1254 — stand-ins
+  myOpens?: { day_pt: string; opens: number }[];   // W1254 — the viewer's draw
 }
 interface Call { sql: string; args: unknown[] }
 
@@ -320,6 +325,9 @@ function sweepDb(f: SweepFixture, calls: Call[]) {
     }
     if (sql.includes('AND auto = 1 AND boss_id')) return f.raidRows ?? [];   // W1248 — live automatic raids
     if (sql.includes('FROM raid_queue')) return (f.queue ?? []).map((user_id) => ({ user_id }));   // W1248
+    if (sql.includes("status IN ('completed', 'expired')")) return f.doneRows ?? [];   // W1254
+    if (sql.includes('FROM coop_raid_swaps WHERE instance_id IN')) return f.swapRows ?? [];   // W1254
+    if (sql.includes('FROM app_open_counts WHERE user_id = ?1')) return f.myOpens ?? [];   // W1254
     if (sql.includes('FROM friends')) return f.friends ?? [];
     if (sql.includes('partner2_user_id IS NOT NULL AND hunt_day')) return f.trioRows ?? [];   // W1208
     if (sql.includes('AS uid')) return (f.raidLive ?? []).map((uid) => ({ uid }));   // W1211 — huntersInLiveRaid
@@ -1414,5 +1422,50 @@ describe('W1251/W1253 — raid moves: a short team behind pace is broken up; its
     // on pace (200k-step team at 60% of the goal at 51% of the window): nothing moves
     const onPace: Call[] = [];
     expect((await sweepCoopAutoHunts(makeEnv(sweepDb(base3(120000, 130), onPace)), ctx)).moves).toBe(0);
+  });
+});
+
+// W1254 — The Muster's Raids tab feed
+describe('W1254 — GET /v1/coop-boss/raids/live', () => {
+  const H = 3_600_000;
+  it('every live raid by name with steps, flights and the away / stand-in flags (no times); finished raids; the viewer\'s draw', async () => {
+    const now = Date.now();
+    const start = new Date(now - 40 * H).toISOString();
+    const raid = { id: 'R1', boss_id: 'the_grinning_god', status: 'active', auto: 1, challenger_user_id: 'u1', partner_user_id: 'u2',
+      partner2_user_id: 'u3', starts_at: start, ends_at: new Date(now + 40 * H).toISOString(), goal_steps: 200000, goal_flights: 200,
+      banked_steps: 4210, banked_flights: 3 };
+    const won = { id: 'D1', boss_id: 'the_grinning_god', status: 'completed', result: 'success', challenger_user_id: 'u4', partner_user_id: 'u1',
+      starts_at: '2026-10-20T00:00:00.000Z', ends_at: '2026-10-23T08:00:00.000Z', resolved_at: '2026-10-22 13:00:00', goal_steps: 200000, goal_flights: 200 };
+    const f: SweepFixture = {
+      raidRows: [raid], doneRows: [won],
+      participants: [{ instance_id: 'R1', user_id: 'u2', joined_at: start }, { instance_id: 'R1', user_id: 'u3', joined_at: start }, { instance_id: 'D1', user_id: 'u1', joined_at: start }],
+      progress: [{ bid: 'R1', user_id: 'u1', event_type: 'steps_total', s: 10394 }, { bid: 'R1', user_id: 'u1', event_type: 'flights_total', s: 11 },
+        { bid: 'D1', user_id: 'u4', event_type: 'steps_total', s: 90000 }, { bid: 'D1', user_id: 'u1', event_type: 'steps_total', s: 120000 }],
+      lastSeen: { u1: now - H, u2: now - 13 * H },
+      swapRows: [{ instance_id: 'R1', in_user_id: 'u3' }],
+      ranks: { u1: 'B', u2: 'S+' },
+      myOpens: [{ day_pt: today, opens: 3 }],
+    };
+    const env = { DB: sweepDb(f, []), RL_FRIENDS_READ: { limit: async () => ({ success: true }) } } as unknown as Env;
+    const res = await handleRaidsLive(new Request('https://x/v1/coop-boss/raids/live'), env, { userId: 'u1' } as SessionPayload);
+    const body = await res.json() as any;
+    expect(MUSTER_AWAY_HOURS).toBe(12);
+    expect(body.goal_steps).toBe(200000);
+    expect(body.raids.length).toBe(1);
+    const r = body.raids[0];
+    expect(r.mine).toBe(true);
+    expect(r.banked_steps).toBe(4210);
+    expect(r.members).toEqual([
+      { alias: 'richie', rank: 'B', steps: 10394, flights: 11, me: true },
+      { alias: 'anthony', rank: 'S', steps: 0, flights: 0, away: true },   // 13h since the last open
+      { alias: 'ren', rank: 'E', steps: 0, flights: 0, away: true, sub: true },   // never opened, seated 40h ago, a stand-in
+    ]);
+    expect(JSON.stringify(body)).not.toMatch(/last_seen|joined_at|opened/);   // names only, never a time
+    expect(body.finished).toEqual([{ won: true, hours: 61, mvp: 'richie', pct: 100, at: '2026-10-22T13:00:00Z' }]);
+    expect(body.draw.need).toBe(5);
+    expect(body.draw.days.length).toBe(7);
+    expect(body.draw.days[6]).toBe(true);
+    expect(body.draw.opens).toBe(3);
+    expect(body.draw.in_raid).toBe(true);
   });
 });

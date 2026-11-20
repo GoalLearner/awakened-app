@@ -1797,6 +1797,123 @@ async function sweepRaidMoves(
   return moved;
 }
 
+/** W1254 — GET /v1/coop-boss/raids/live: The Muster's Raids tab (owner 2026-11-20: "...another tab that you can see raid
+ *  performance per teams because these two are big team battles" → the Claude Design handoff "The Muster"). Any hunter
+ *  may read it. Every live automatic raid of The Grinning God with each hunter by NAME only: rank letter, raid steps
+ *  and flights, and two flags, never a time (the handoff's privacy rule): away = no real app open for MUSTER_AWAY_HOURS,
+ *  counted from the later of their last open and their seat; stand-in = took the seat by a swap or move (W1248/W1251).
+ *  Plus what swapped-out hunters left (banked), the last four finished raids (won: hours taken + MVP; time ran out:
+ *  the share of the goal, steps and flights each capped at 100% and averaged) and the viewer's draw: real opens over
+ *  the last 7 Pacific days against AUTO_RAID_MIN_OPENS, and whether they are in a live raid. */
+export const MUSTER_AWAY_HOURS = 12;
+const isoOf = (s: string | null | undefined): string => {
+  const v = String(s || '');
+  if (!v) return '';
+  return v.includes('T') ? v : v.replace(' ', 'T') + 'Z';   // resolved_at is stored as SQLite UTC text
+};
+export async function handleRaidsLive(_request: Request, env: Env, session: SessionPayload): Promise<Response> {
+  const rl = await env.RL_FRIENDS_READ.limit({ key: session.userId });
+  if (!rl.success) return jsonError(429, 'RATE_LIMITED', 'Slow down.');
+  const cfg = COOP_BOSS_CFG[AUTO_RAID_BOSS];
+  if (!cfg) return jsonOk({ ok: true, raids: [], finished: [], draw: null });
+  const nowMs = Date.now();
+  const today = ptDayKey(nowMs) || '';
+  const live = (await env.DB.prepare(
+    `SELECT * FROM coop_boss_instances
+      WHERE status = 'active' AND auto = 1 AND boss_id = ?1 AND ends_at > ?2
+      ORDER BY starts_at ASC LIMIT 40`,
+  ).bind(AUTO_RAID_BOSS, new Date(nowMs).toISOString()).all<CoopBossRow>()).results ?? [];
+  const done = (await env.DB.prepare(
+    `SELECT * FROM coop_boss_instances
+      WHERE boss_id = ?1 AND status IN ('completed', 'expired') AND resolved_at IS NOT NULL
+      ORDER BY resolved_at DESC LIMIT 4`,
+  ).bind(AUTO_RAID_BOSS).all<CoopBossRow>()).results ?? [];
+  const rows = [...live, ...done];
+  const ids = rows.map((r) => r.id);
+  const parts = new Map<string, { user_id: string; joined_at: string | null }[]>();
+  const prog = new Map<string, CoopProgress>();
+  for (const slice of chunks(ids)) {
+    for (const [k, v] of await loadParticipants(env, slice)) parts.set(k, v);
+    for (const [k, v] of await getCoopProgressForInstances(env, slice)) prog.set(k, v);
+  }
+  for (const r of rows) r.participants = parts.get(r.id) ?? [];
+  const people = Array.from(new Set(rows.flatMap((r) => participantIds(r))));
+  const aliases = new Map<string, string>();
+  for (const slice of chunks(people)) for (const [k, v] of await getAliasMap(env, slice)) aliases.set(k, v);
+  const subs = new Set<string>();
+  for (const slice of chunks(live.map((r) => r.id))) {
+    const ph = slice.map(() => '?').join(',');
+    const rs = (await env.DB.prepare(`SELECT instance_id, in_user_id FROM coop_raid_swaps WHERE instance_id IN (${ph})`)
+      .bind(...slice).all<{ instance_id: string; in_user_id: string }>()).results ?? [];
+    for (const s of rs) subs.add(s.instance_id + '|' + s.in_user_id);
+  }
+  const [ranks, seen] = await Promise.all([rankByUser(env), lastSeenByUser(env, nowMs)]);
+  const awayMs = MUSTER_AWAY_HOURS * 3_600_000;
+  const raids = live.map((r) => {
+    const p = prog.get(r.id) ?? emptyProgress();
+    const startMs = Date.parse(r.starts_at || '');
+    const joined = new Map<string, number>([[r.challenger_user_id, startMs]]);
+    for (const pt of r.participants ?? []) joined.set(pt.user_id, Date.parse(pt.joined_at || r.starts_at || ''));
+    const ids6 = participantIds(r);
+    return {
+      id: r.id,
+      mine: ids6.includes(session.userId),
+      starts_at: r.starts_at,
+      ends_at: r.ends_at,
+      banked_steps: Math.max(0, Number(r.banked_steps) || 0),
+      banked_flights: Math.max(0, Number(r.banked_flights) || 0),
+      members: ids6.map((u) => {
+        const me = u === session.userId;
+        const since = Math.max(seen.get(u) ?? 0, joined.get(u) ?? startMs);
+        return {
+          alias: aliases.get(u) ?? 'Hunter',
+          rank: String(ranks.get(u) || 'E').charAt(0).toUpperCase(),
+          steps: p.steps.get(u) || 0,
+          flights: p.flights.get(u) || 0,
+          ...(me ? { me: true } : {}),
+          ...(!me && nowMs - since >= awayMs ? { away: true } : {}),
+          ...(subs.has(r.id + '|' + u) ? { sub: true } : {}),
+        };
+      }),
+    };
+  });
+  const finished = done.map((r) => {
+    const p = prog.get(r.id) ?? emptyProgress();
+    const ids6 = participantIds(r);
+    const s = ids6.reduce((n, u) => n + (p.steps.get(u) || 0), 0) + (Number(r.banked_steps) || 0);
+    const f = ids6.reduce((n, u) => n + (p.flights.get(u) || 0), 0) + (Number(r.banked_flights) || 0);
+    const won = r.status === 'completed' && r.result === 'success';
+    const at = isoOf(r.resolved_at);
+    let mvp: string | null = null;
+    if (won) {
+      let best = -1;
+      for (const u of ids6) { const v = p.steps.get(u) || 0; if (v > best) { best = v; mvp = aliases.get(u) ?? null; } }
+    }
+    const pct = Math.round(((Math.min(1, r.goal_steps ? s / r.goal_steps : 1) + Math.min(1, r.goal_flights ? f / r.goal_flights : 1)) / 2) * 100);
+    const hours = won ? Math.max(1, Math.round((Date.parse(at) - Date.parse(r.starts_at || '')) / 3_600_000)) : null;
+    return { won, hours, mvp, pct: won ? 100 : pct, at };
+  });
+  // the viewer's draw: real opens over the last 7 Pacific days, oldest first
+  const since = activeWindowStart(today);
+  const mine = (await env.DB.prepare('SELECT day_pt, opens FROM app_open_counts WHERE user_id = ?1 AND day_pt >= ?2 AND opens > 0')
+    .bind(session.userId, since).all<{ day_pt: string; opens: number }>()).results ?? [];
+  const byDay = new Map(mine.map((m) => [m.day_pt, Number(m.opens) || 0]));
+  const days: boolean[] = [];
+  let d = since;
+  for (let i = 0; i < ACTIVE_OPEN_DAYS; i++) { days.push((byDay.get(d) || 0) > 0); d = nextDay(d) || d; }
+  const opens = Array.from(byDay.values()).reduce((a, b) => a + b, 0);
+  return jsonOk({
+    ok: true,
+    boss_id: AUTO_RAID_BOSS,
+    goal_steps: cfg.goalSteps,
+    goal_flights: cfg.goalFlights ?? 0,
+    window_hours: cfg.windowHours,
+    raids,
+    finished,
+    draw: { opens, need: AUTO_RAID_MIN_OPENS, days, in_raid: raids.some((r) => r.mine) },
+  });
+}
+
 /** Cron, every 2 minutes: settle every active hunt whose goal is met or whose window has
  *  closed (manual hunts included). The decision itself is resolveCoopInstance, shared with
  *  POST /:id/resolve, so the sweep and a phone can never disagree. */
