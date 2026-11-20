@@ -37347,3 +37347,41 @@ button.mx-sh { cursor: pointer; min-height: 40px; }
 .mu-rm .mu-frame,.mu-rm .mu-thumb,.mu-rm .mu-tbody,.mu-rm .mu-how,.mu-rm .mu-tmore svg{transition:none}
 .mu-rm .mu-pane.in-r,.mu-rm .mu-pane.in-l,.mu-rm .is-open .mu-tbody .mu-mem{animation:mu-fade .2s backwards}
 .mu-rm .mu-tc:active{transform:none}
+
+/* W1257 — the 200K seal: a 200,000-step week. Not a bigger 100K: an obsidian blade-ended bar
+   with a moving prism edge (gold → white → violet → cyan), a gold star and a light sweep.
+   The glow is a blurred layer under the <b> because the clip-path would cut a box-shadow. */
+.lb-rank-club200k {
+  position: relative; display: inline-flex; flex: none; margin-left: 2px; font-style: normal; line-height: 1;
+}
+.lb-rank-club200k::before {
+  content: ''; position: absolute; left: 2px; right: 2px; top: 1px; bottom: 1px; border-radius: 8px;
+  background: linear-gradient(90deg, rgba(245,184,66,0.75), rgba(180,140,255,0.85), rgba(94,231,245,0.75));
+  filter: blur(4px); opacity: .7; pointer-events: none;
+}
+.lb-rank-club200k > b {
+  position: relative; display: block; box-sizing: border-box; height: 16px; padding: 1.2px;
+  clip-path: polygon(0 50%, 7px 0, calc(100% - 7px) 0, 100% 50%, calc(100% - 7px) 100%, 7px 100%);
+  background: linear-gradient(90deg, #f5b842, #fff4d6, #b48cff, #5ee7f5, #f5b842, #fff4d6, #b48cff);
+  background-size: 300% 100%;
+  animation: lbClub200kEdge 4s linear infinite;
+}
+.lb-rank-club200k > b > span {
+  position: relative; overflow: hidden; display: flex; align-items: center; gap: 2px; height: 100%;
+  padding: 0 8px 0 7px;
+  clip-path: polygon(0 50%, 6.2px 0, calc(100% - 6.2px) 0, 100% 50%, calc(100% - 6.2px) 100%, 6.2px 100%);
+  background: radial-gradient(120% 140% at 50% 0%, #3a2466 0%, #160d2c 60%, #0b0716 100%);
+  font-family: "JetBrains Mono", monospace; font-size: 7.5px; font-weight: 800; letter-spacing: 0.2px;
+  color: #ffe9b0; text-shadow: 0 0 4px rgba(245,184,66,0.8);
+}
+.lb-rank-club200k svg { flex: none; fill: #ffd56a; filter: drop-shadow(0 0 2px rgba(255,213,106,0.9)); }
+.lb-rank-club200k > b > span::after {
+  content: ''; position: absolute; top: 0; bottom: 0; left: -40%; width: 30%;
+  background: linear-gradient(100deg, transparent, rgba(255,255,255,0.55), transparent);
+  transform: skewX(-20deg); animation: lbClub200kSweep 3.2s ease-in-out infinite;
+}
+@keyframes lbClub200kEdge  { from { background-position: 0% 50%; } to { background-position: 100% 50%; } }
+@keyframes lbClub200kSweep { 0%, 55% { left: -40%; } 100% { left: 130%; } }
+@media (prefers-reduced-motion: reduce) {
+  .lb-rank-club200k > b, .lb-rank-club200k > b > span::after { animation: none; }
+}
