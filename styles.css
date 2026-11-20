@@ -29029,16 +29029,35 @@ button.pc-shard { cursor: pointer; font: inherit; -webkit-appearance: none; appe
 /* W387 — 100K Step Club stamp: compact gold hexagon that sits right after the
    class title (ClaudeDesign "Global Leaderboard - Redesign" → Club100k atom).
    Only rendered for hunters who genuinely joined the 100K Step Club. */
+/* W1258 — upgraded (owner 2026-11-20, after the 200K seal): a bright gold rim around a dark
+   bronze core, glowing gold text, a light sweep and a soft gold glow underneath. Still the gold
+   hexagon, one step below the 200K seal. */
 .lb-rank-club100k {
-  display: inline-flex; align-items: center; justify-content: center; flex: none;
-  box-sizing: border-box; width: 22px; height: 15px; margin-left: 1px; padding-bottom: 0.5px;
-  clip-path: polygon(25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%, 0 50%);
-  background: linear-gradient(180deg, #f7c558, #f5b842 55%, #c08418);
-  box-shadow: 0 0 6px rgba(245,184,66,0.45);
-  font-family: "JetBrains Mono", monospace; font-style: normal;
-  font-size: 7px; font-weight: 800; letter-spacing: 0.1px; line-height: 1;
-  text-transform: none; color: #241a05;
+  position: relative; display: inline-flex; flex: none; margin-left: 2px;
+  font-style: normal; line-height: 1; text-transform: none;
 }
+.lb-rank-club100k::before {
+  content: ''; position: absolute; left: 3px; right: 3px; top: 2px; bottom: 2px; border-radius: 6px;
+  background: rgba(245,184,66,0.85); filter: blur(4px); opacity: .55; pointer-events: none;
+}
+.lb-rank-club100k > b {
+  position: relative; display: block; box-sizing: border-box; width: 28px; height: 16px; padding: 1.2px;
+  clip-path: polygon(25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%, 0 50%);
+  background: linear-gradient(180deg, #fff1c4, #f5b842 45%, #b9790f 100%);
+}
+.lb-rank-club100k > b > span {
+  position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; height: 100%;
+  clip-path: polygon(25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%, 0 50%);
+  background: radial-gradient(120% 140% at 50% 0%, #5a3c0c 0%, #2c1d06 60%, #170f03 100%);
+  font-family: "JetBrains Mono", monospace; font-size: 7px; font-weight: 800; letter-spacing: 0.1px;
+  color: #ffe3a3; text-shadow: 0 0 4px rgba(245,184,66,0.85);
+}
+.lb-rank-club100k > b > span::after {
+  content: ''; position: absolute; top: 0; bottom: 0; left: -40%; width: 30%;
+  background: linear-gradient(100deg, transparent, rgba(255,240,200,0.5), transparent);
+  transform: skewX(-20deg); animation: lbClub200kSweep 4.2s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) { .lb-rank-club100k > b > span::after { animation: none; } }
 
 /* W388 — 100-boss-kills stamp. Crimson sibling of the gold 100K stamp; the
    crossed-blades mark + crimson read as combat, distinct from the step badge. */
