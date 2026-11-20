@@ -1,5 +1,7 @@
-Your best device counts.
+Team Battles, and your best device counts.
 
+• Team Battles: the Worldgate and the raids now share one screen. Watch the world boss go down, and see every raid team's steps and flights against the goal, ranked, with your own team first.
+• Full raid teams: a raider away for a day gives their seat to a hunter ready to walk, and the steps they already walked stay with the team.
 • Steps from your best device: your iPhone, Apple Watch, Fitbit, or another band, ring or watch. Each day, Awakened counts whichever one recorded the most steps, and devices never add together. Your device's app needs to share steps with Apple Health.
 • Morning briefing for everyone: some hunters never got the morning briefing or their daily souls. Now everyone does.
 • Sharper strikes: every blow has a new look: blade arcs, stabs, flame and lightning cuts, a claw when a foe hits you, and smoke when a fight ends.
