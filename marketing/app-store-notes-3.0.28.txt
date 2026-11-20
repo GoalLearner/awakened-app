@@ -1,6 +1,7 @@
 Team Battles, and your best device counts.
 
 • Team Battles: the Worldgate and the raids now share one screen. Watch the world boss go down, and see every raid team's steps and flights against the goal, ranked, with your own team first.
+• The 200K badge: walk 200,000 steps in one week and a new 200K badge takes the place of your 100K badge on the Steps board. The 100K badge has a new look too.
 • Full raid teams: a raider away for a day gives their seat to a hunter ready to walk, and the steps they already walked stay with the team.
 • Steps from your best device: your iPhone, Apple Watch, Fitbit, or another band, ring or watch. Each day, Awakened counts whichever one recorded the most steps, and devices never add together. Your device's app needs to share steps with Apple Health.
 • Morning briefing for everyone: some hunters never got the morning briefing or their daily souls. Now everyone does.
