@@ -1228,6 +1228,27 @@ describe('W1248 — raid stand-ins: a raider away 24 hours gives the seat to som
     expect((await sweepCoopAutoHunts(makeEnv(db), ctx)).swaps).toBe(1);
   });
 
+  it('W1252 — no stand-in for a raid with 2 or fewer active members (it gives its walkers away instead)', async () => {
+    const f = base();
+    f.lastSeen = { ...f.lastSeen, p2: now() - 30 * H, p3: now() - 30 * H, p4: now() - 30 * H };   // c1 + p1 active only
+    f.progress = [];
+    const calls: Call[] = [];
+    expect((await sweepCoopAutoHunts(makeEnv(sweepDb(f, calls)), ctx)).swaps).toBe(0);
+    expect(batchSql(calls, 'SET banked_steps').length).toBe(0);
+  });
+
+  it('W1252 — with one free hunter and two raids needing one, the raid closest to winning gets them', async () => {
+    const f = base();
+    f.raidRows = [raidRow({ id: 'LOW' }), raidRow({ id: 'HIGH' })];
+    f.participants = [...seats(new Date(now() - 40 * H).toISOString()).map((s) => ({ ...s, instance_id: 'LOW' })),
+      ...seats(new Date(now() - 40 * H).toISOString()).map((s) => ({ ...s, instance_id: 'HIGH' }))];
+    f.progress = [{ bid: 'HIGH', user_id: 'p1', event_type: 'steps_total', s: 90000 }, { bid: 'HIGH', user_id: 'p1', event_type: 'flights_total', s: 90 },
+      { bid: 'LOW', user_id: 'p1', event_type: 'steps_total', s: 5000 }, { bid: 'LOW', user_id: 'p1', event_type: 'flights_total', s: 5 }];
+    const calls: Call[] = [];
+    expect((await sweepCoopAutoHunts(makeEnv(sweepDb(f, calls)), ctx)).swaps).toBe(1);
+    expect(batchSql(calls, 'SET banked_steps = banked_steps + ?4')[0].args[0]).toBe('HIGH');
+  });
+
   it('a hunter away 24 hours is never drawn into a new raid either', async () => {
     const ids = ['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'h7'];
     const f: SweepFixture = {

@@ -1396,7 +1396,22 @@ async function sweepRaidStandIns(
     if (open.length) idleBy.set(iid, open);
     else idleBy.delete(iid);
   }
+  // W1252 — owner 2026-11-20 ("...that'll leave mercury on the sideline waiting for a team"): a stand-in only joins a raid
+  // that can still use them: more than SHORT_TEAM_ACTIVE members in the app in the last 24 hours (a shorter one gives its
+  // walkers away instead, W1251), and the raid closest to winning is filled first.
+  const pct = (r: CoopBossRow) => {
+    const p = prog.get(r.id) ?? emptyProgress();
+    const ids = participantIds(r);
+    const s = ids.reduce((n, u) => n + (p.steps.get(u) || 0), 0) + (Number(r.banked_steps) || 0);
+    const f = ids.reduce((n, u) => n + (p.flights.get(u) || 0), 0) + (Number(r.banked_flights) || 0);
+    return Math.min(r.goal_steps ? s / r.goal_steps : 1, r.goal_flights ? f / r.goal_flights : 1);
+  };
+  for (const r of rows) {
+    if (!idleBy.has(r.id)) continue;
+    if (participantIds(r).filter((u) => seenWithin(seen, u, nowMs)).length <= SHORT_TEAM_ACTIVE) idleBy.delete(r.id);
+  }
   if (!idleBy.size) return 0;
+  rows.sort((a, b) => pct(b) - pct(a));
 
   const [optouts, blocks, builds] = await shared();
   const busy = await huntersInLiveRaid(env, AUTO_RAID_BOSS);
