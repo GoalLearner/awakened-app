@@ -1878,6 +1878,8 @@
   // + goal/reward are server-authoritative; these only drive the
   // create/join/decline/cancel/resolve lifecycle + list/detail reads.
   function coopBossList()      { return _authedFetch('GET',  '/v1/coop-boss'); }
+  // W1255 — The Muster's Raids tab: every live raid team (W1254).
+  function coopRaidsLive()     { return _authedFetch('GET',  '/v1/coop-boss/raids/live'); }
   function coopBossGet(id)     { return _authedFetch('GET',  '/v1/coop-boss/' + encodeURIComponent(id)); }
   // W692 — N-hunter model: summon with an ARRAY of ally user_ids (1..4). The server
   // reads ally_user_ids[]; we also dual-write partner_user_id/partner2_user_id so an
@@ -2595,6 +2597,7 @@
     submitVerifiedEvents,
     // Co-op Dungeon Bosses v1 (W370)
     coopBossList,
+    coopRaidsLive,   // W1255
     coopBossGet,
     coopBossCreate,
     coopBossJoin,

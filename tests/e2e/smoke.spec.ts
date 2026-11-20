@@ -2409,8 +2409,10 @@ test.describe('Z · Worldgate placement (W933 → W934)', () => {
     await expect(page.locator('#worldgate-card')).toHaveCount(0);
     await expect(pulse).toBeVisible();
     await page.evaluate(() => (document.getElementById('wg-pulse') as HTMLElement).click());
-    await expect(page.locator('.wg2-sheet-wrap')).toHaveCount(1);
-    await expect(page.locator('.wg2-sheet-wrap .wg2-eyebrow')).toContainText('THE WORLDGATE');
+    // W1255 — the pulse opens The Muster on its Worldgate tab
+    await expect(page.locator('.mu-wrap')).toHaveCount(1);
+    await expect(page.locator('.mu-wrap .mu-eye')).toContainText('Team Battles');
+    await expect(page.locator('.mu-frame')).toHaveAttribute('data-tab', 'wg');
   });
 });
 
@@ -6579,8 +6581,8 @@ test.describe('BA · The crown is part of the name (W969)', () => {
     await withRoster(page);
     await page.evaluate(() => document.getElementById('wg-pulse')!.click());
     await page.evaluate(() => { const t = document.querySelector('[data-wg-tab="rank"]') as HTMLElement; if (t) t.click(); });
-    await expect(page.locator('.wg2-pane .wg2-nmbtn').first()).toBeVisible({ timeout: 8_000 });
-    const rows = await page.evaluate(() => [].map.call(document.querySelectorAll('.wg2-pane .wg2-nmbtn'),
+    await expect(page.locator('.mu-rank [data-wg-profile]').first()).toBeVisible({ timeout: 8_000 });
+    const rows = await page.evaluate(() => [].map.call(document.querySelectorAll('.mu-rank [data-wg-profile]'),
       (n: any) => ({ name: n.textContent.trim(), crown: !!n.querySelector('.name-crown') })));
     expect(rows).toContainEqual({ name: 'rendiesel', crown: true });   // W1092 — names display lowercase
     expect(rows).toContainEqual({ name: 'zynfandel', crown: false });
@@ -6591,9 +6593,9 @@ test.describe('BA · The crown is part of the name (W969)', () => {
     await withRoster(page);
     await page.evaluate(() => document.getElementById('wg-pulse')!.click());
     await page.evaluate(() => { const t = document.querySelector('[data-wg-tab="rank"]') as HTMLElement; if (t) t.click(); });
-    await expect(page.locator('.wg2-pane .name-crown').first()).toBeVisible({ timeout: 8_000 });
+    await expect(page.locator('.mu-rank .name-crown').first()).toBeVisible({ timeout: 8_000 });
     const m = await page.evaluate(() => {
-      const btn = document.querySelector('.wg2-pane .wg2-nmbtn .name-crown')!.parentElement as HTMLElement;
+      const btn = document.querySelector('.mu-rank .mu-nmb .name-crown')!.parentElement as HTMLElement;
       const probe = document.createElement('span');
       probe.style.cssText = 'display:inline-block;width:0;height:0;vertical-align:baseline';
       btn.insertBefore(probe, btn.querySelector('.name-crown'));
@@ -7152,13 +7154,13 @@ test.describe('BF · Worldgate MVPs (W975)', () => {
   test('the sheet tells every hunter a new boss rises each Sunday, and when', async ({ page }) => {
     await seed(page, { kill: KILL() });   // this week's gate (2026-09-20) is down
     await page.evaluate(() => document.getElementById('wg-pulse')!.click());
-    await expect(page.locator('.wg2-next')).toBeVisible({ timeout: 8_000 });
-    const t = await page.locator('.wg2-next').innerText();
-    expect(t).toMatch(/new Worldgate boss rises every Sunday/i);
+    await expect(page.locator('.mu-clock')).toBeVisible({ timeout: 8_000 });   // W1255 — the Muster's BossClock
+    const t = await page.locator('.mu-clock').innerText();
+    expect(t).toMatch(/new boss rises every Sunday/i);
     expect(t).toMatch(/Next: Sun 27 Sep/);
     expect(t).not.toMatch(/\bfell(ed)?\b/i);
     // W1003 — a fallen gate says the number stopped on purpose (W983 freezes damage at the kill)
-    await expect(page.locator('.wg2-you .wg2-frozen')).toHaveText(/Step count frozen at the kill/);
+    await expect(page.locator('.mu-share .mu-sf')).toHaveText(/Step count frozen at the kill/);
   });
 
   const KILL = (over?: Record<string, unknown>) => ({
@@ -7260,9 +7262,9 @@ test.describe('BF · Worldgate MVPs (W975)', () => {
     await seed(page, { kill: KILL() });
     await page.evaluate(() => document.getElementById('wg-pulse')!.click());
     await page.evaluate(() => { const t = document.querySelector('[data-wg-tab="rank"]') as HTMLElement; if (t) t.click(); });
-    await expect(page.locator('.wg2-pane .wg2-nmbtn').first()).toBeVisible({ timeout: 8_000 });
-    const rows = await page.evaluate(() => [].map.call(document.querySelectorAll('.wg2-rank .wg2-ri'), (r: any) => ({
-      name: (r.querySelector('.wg2-nmbtn')?.textContent || '').trim(), badge: r.querySelector('.wg-mvpb')?.getAttribute('data-p') || null,
+    await expect(page.locator('.mu-rank [data-wg-profile]').first()).toBeVisible({ timeout: 8_000 });
+    const rows = await page.evaluate(() => [].map.call(document.querySelectorAll('.mu-rank .mu-hrow'), (r: any) => ({
+      name: (r.querySelector('.nmt')?.textContent || '').trim(), badge: r.querySelector('.wg-mvpb')?.getAttribute('data-p') || null,
       text: (r.querySelector('.wg-mvpb text')?.textContent || '') })));
     // Live order, not the frozen podium: Zynfandel leads the list now.
     expect(rows.slice(0, 5).map((r: any) => [r.name, r.badge, r.text])).toEqual([
@@ -7273,11 +7275,11 @@ test.describe('BF · Worldgate MVPs (W975)', () => {
     await seed(page, { status: 'open', kill: null });
     await page.evaluate(() => document.getElementById('wg-pulse')!.click());
     await page.evaluate(() => { const t = document.querySelector('[data-wg-tab="rank"]') as HTMLElement; if (t) t.click(); });
-    await expect(page.locator('.wg2-pane .wg2-nmbtn').first()).toBeVisible({ timeout: 8_000 });
-    const badges = await page.evaluate(() => [].map.call(document.querySelectorAll('.wg2-rank .wg2-ri'), (r: any) => r.querySelector('.wg-mvpb')?.getAttribute('data-p') || null));
+    await expect(page.locator('.mu-rank [data-wg-profile]').first()).toBeVisible({ timeout: 8_000 });
+    const badges = await page.evaluate(() => [].map.call(document.querySelectorAll('.mu-rank .mu-hrow'), (r: any) => r.querySelector('.wg-mvpb')?.getAttribute('data-p') || null));
     expect(badges.slice(0, 5)).toEqual(['1', '2', '3', null, null]);
     // Your own pinned row below the list never wears one.
-    expect(await page.locator('.wg2-ri--me .wg-mvpb').count()).toBe(0);
+    expect(await page.locator('.mu-hrow.is-you .wg-mvpb').count()).toBe(0);
   });
 
   test('the old kill ceremony is gone', async ({ page }) => {
@@ -7738,7 +7740,7 @@ test.describe('BJ · URL scheme routes (W987)', () => {
     await freshApp(page);
     await page.evaluate(() => localStorage.setItem('hb_worldgate_v1', JSON.stringify({ at: Date.now(), week: '2026-09-20', hp: 243293, pool: 120000, status: 'open', my: 4000, floor: 15000, souls: 200, hunters: 9, guild: { steps: 0, hunters: 0 }, top: [], wall: [], recent: [], kill: null })));
     expect(await page.evaluate(() => (window as any).__routeSchemeUrl('awakened://worldgate'))).toBe(true);
-    await expect(page.locator('.wg2-hero')).toBeVisible({ timeout: 6_000 });
+    await expect(page.locator('.mu-frame[data-tab="wg"] .mu-foe')).toBeVisible({ timeout: 6_000 });   // W1255 — The Muster's Worldgate tab
     expect(await page.evaluate(() => (window as any).__routeSchemeUrl('https://example.com/i/ABC'))).toBe(false);
     expect(await page.evaluate(() => (window as any).__routeSchemeUrl('awakened://nothing-here'))).toBe(false);
   });

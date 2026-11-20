@@ -160,7 +160,7 @@
   const APP_VERSION = '3.0.28';   // W1246 — 3.0.27 APPROVED by 2026-11-19 12:15 PM PST (Apple refused build 664 under 3.0.27: "train version '3.0.27' is closed"), so 3.0.28 opened carrying W1245 (steps: one device per day, the legitimate one with the most). [history] W1233 — 3.0.26 SUBMITTED for review 2026-11-17 (build 655, tag 3.0.26-w1230), so 3.0.27 opened early, as W1205 did (an approval refuses an upload under the approved number), carrying W1233 (duels: your ultimate, special attack and shadows, and the Echo's own). [history] W1220 — 3.0.25 APPROVED 2026-11-16 9:44 AM PST (submitted 2026-11-15 2:06 PM PST, build 651, tag 3.0.25-w1213), so 3.0.26 opened carrying W1220 (strangers' shadows fold into one feed row), W1221 (your pinned row under a board opens your card), W1222 (the like limit says what it is), W1225 (invites say "You both get 500 souls"), W1226 (a refused audio start is caught, not reported as an error), W1227 (six calorie bosses, E to S, dropping the sleep bosses' relics), W1228 (the S calorie boss drops a mythic at 1%), W1229 (a mythic drop is its own announcement to every hunter; the crown on the card and feed names) and W1230 (ultra-rares stay friends-only: the owner wanted only mythics). [history] W1205 — 3.0.25 opened 2026-11-14 BEFORE 3.0.24 was approved (3.0.24 = build 649, waiting for review since 2026-11-13): an upload under 3.0.24 is refused the moment Apple approves it, so build 650 goes up as 3.0.25 carrying W1202 (every boss in the Kill Log, the Raid group), W1203 (no 150k step cap) and W1204 (hunts named by partner). [history] W1169 — 3.0.23 APPROVED 2026-11-08 (submitted 2026-11-07 5:00 PM PST, LIVE 2:33 PM PST on the 8th; almost certainly build 628 = w1161: pins, the Wardrobe tap fix), so 3.0.24 opened carrying W1162-W1169 (the 3.0.23 store notes, the board update, matched hunt partners, Add as friend, late steps reach the board, The Patient Flame falls by itself, earned ultimates behind their flag). [history] W1134 — 3.0.22 APPROVED 2026-11-06 (submitted 4:53 AM PST from build 617 = w1132: the Shadowborn + the Elite Eight, the Rising redrawn, profile cards name the look, every open counted), so 3.0.23 opened carrying W1134 (the Worldgate counts a hunter's steps only after 2 days in the app that week). [history] W1127 — 3.0.21 LIVE on the App Store 2026-11-05 9:34 AM PST (built from w1126: no memberships, kill stamps without a title, the tier crests, the onboarding's "How did you find the Gate?"), so 3.0.22 opened carrying W1127 (the app-open ping says when it is a real open; the server counts every one per Pacific day). [history] W1124 — 3.0.20 LIVE on the App Store 2026-11-01 12:50 PM PST (built from w1120: final standings Sunday, shadows in the public feed, Shadow Army on Status); 3.0.21 opened carrying W1121 (its What's New, never shown: re-keyed to 3.0.21), W1122 (no memberships), W1124 (kill stamp without a title, inlined tier crests) and W1125 (the onboarding's last screen asks how the hunter found the app; W1126 keeps it in place when the keyboard opens). [history] W1114 — 3.0.19 approved 2026-10-30 (submitted 1:45 AM PST, w1113: shadows 1 in 5, armor upgrades, relic power by boss rank, relic cards three across); 3.0.20 opened with the feed's boss rank chips, no What's New entry yet. W1107 — 3.0.18 approved and LIVE 2026-10-28 8:02 AM PST (submitted 2026-10-27 7:41 PM PST, build 602 = w1106: the four steps trios, the Rising's nine looks, the earned line in the Wardrobe, the richer-backup offer); 3.0.19 opened at approval. [history] W1103 — 3.0.17 approved 2026-10-27 (build 600, submitted 2026-10-26 6:21 PM PST: the automatic friend hunts, the earned looks, the two-tab Wardrobe); 3.0.18 opened at approval, carrying W1102 (the app offers back a richer cloud backup). [history] W1097 — 3.0.16 approved + live 2026-10-26 (build 599, the iOS 27 fix); 3.0.17 opened at approval. Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.16 = the post-3.0.15 train, opened 2026-10-23 (W1085): 3.0.15 was submitted 2026-10-22 2:55 PM PST from build 595 (w1083: the tally, the preview row, the security pass) and approved the same day, so the train closed under it. It carries W1084 (the tally leads the 3.0.15 What's New) forward. [history] 3.0.15 = the post-3.0.14 train, opened 2026-10-22 (W1080): 3.0.14 was approved and LIVE 2026-10-21 5:08 PM PST from build 591 (w1074) — the first 592 upload was refused ("train closed"), the sixth time an approval closed a train under a build. It carries W1077/W1078 (sign-out ends the session, cloud save checksum + gzip, socket token out of the URL, invite links ask first) forward. [history] 3.0.14 = the post-3.0.13 train, opened 2026-10-21 (W1074): 3.0.13 was approved and went LIVE 2026-10-20 3:50 AM PST from build 587 (w1068), so it carries W1069 (the floor 100 curve), W1070-W1073 (the ten weekly step and sleep bosses and their drops) and the real-screen screenshots and header Apple asked for (App Review 2.3.3) forward. [history] 3.0.11 = the post-3.0.10 train, opened 2026-10-05: Apple's store lookup showed 3.0.10 LIVE (released 11:35 AM PST that day, built from w1024, so it carried W1023 the 9:45 PM finish-strong reminder and nothing after). It carries forward W1025 (Myrmidon King art), W1026 (one request for every co-op hunt) and W1027 (steps 'today' = the device's day), all pushed under the 3.0.10 tag after that build was cut. [history] 3.0.10 = the post-3.0.9 train, opened 2026-10-04 when the owner passed on Apple's approval of 3.0.9 (submitted 2026-10-02 12:41 PM PST, approved 2026-10-03; carried W1002–W1022: weekly to-do planner, to-dos first in the briefing, the Monday recap, times-a-week vows, the interactive Status tab, the Jump Manual program, the flights-hunt result fix). It carries W1023 (the 9:45 PM finish-strong reminder) forward. First TWO-DIGIT patch: every version compare in the app is numeric (_updVersionNewer, the What's New compare), never a string compare. [history] 3.0.9 = the post-3.0.8 train, opened 2026-09-25 the moment Apple approved 3.0.8 (submitted 4:57 PM PST, approved the same evening; carried W989–W1001: Items overhaul, Resolved + mod view counts, the sectioned Habits tab + to-dos v2, topic edit). [history] 3.0.8 = the post-3.0.7 train, opened 2026-09-24 the moment Apple approved 3.0.7 (build 543, submitted 1:15 AM PST, approved same day; the Worldgate In-App Event was approved in the same hour). Carries forward: the three description corrections (Ranked PvP / Streak Shields / five-hunter raid = Premium) go out WITH this version, since a description only changes with a new version. [history] 3.0.7 carried W968–W987 (vows yours + glory verified, morning briefing v2, hunt results, Worldgate MVPs + weekly line + strike freeze, Community Updates + briefing line, mod preview rows, awakened:// scheme). [history] 3.0.7 = the post-3.0.6 train, opened 2026-09-20 the moment Apple approved 3.0.6 (submitted 3:14 AM PST that day, approved same day) — an approval CLOSES a train, and uploading under the approved number is refused (CFBundleShortVersionString must exceed it). This has now bitten FOUR times; the bump is done at approval, not at upload. [history] 3.0.6 carried W960–W967 (Manage Vows fix, rank-bar hairline, Worldgate kill ceremony, division-up celebration, owner preview row, 3.0.6 release notes). [history] 3.0.4 = the post-3.0.3 train, opened 2026-09-11 because Apple approved 3.0.3 (live 2026-09-09) and an approval closes a train — carries W935 (weekly-board upload fix + Apple Health asked on every onboarding path). [history] 3.0.3 = the post-3.0.2 train, opened 2026-09-07 the morning after Apple approved 3.0.2 (submitted 2026-09-06 4:41 PM PT; approval closes a train — twice-bitten lesson) — carries W917-W919b (Ledger view, Streak Shields deleted, handoff 29) forward under the new number. [history] 3.0.2 = the post-release train, opened 2026-09-04 because Apple closes a train on approval (build 493 under 3.0.1 was refused: CFBundleShortVersionString must exceed the approved 3.0.1) — carries W903 (boss-sheet hotfix) + W905 (Status is the hunter profile again). 3.0.1 "MAKE IT LAND" = the repair release (W882-W890): Wave-2 progression joins cloud sync, the activation funnel is instrumented end to end, silent Wave-2 server failures leave breadcrumbs, the altar routes to a same-day first kill, the Double Dungeon stops reporting false failures and yields when the stair is unavailable, the beat What's New used to eat is chained, and every banked free engage is visible before the tap. 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.28-w1247';
+  const APP_BUILD_TAG = '3.0.28-w1255';
   // W1192 — the relic and boss paintings are WebP now (the app was 376.9 MB, 290 MB of it these PNGs). A path saved
   // before (the drop history, a friend's card, a cloud save) still says .png: the first time one fails to load it is
   // pointed at the .webp beside it, before the image's own error handler can hide it.
@@ -8226,25 +8226,6 @@
   } catch (_) {}
 
   // ── the HP bar (card + sheet share it): all hunters · your guild · you, in gold ──
-  function _wgBarHtml(c, tall) {
-    const hp = Math.max(1, Number(c.hp) || 1);
-    const my = Math.max(0, Number(c.my) || 0);
-    const guild = Math.max(0, (c.guild && Number(c.guild.steps)) || 0);
-    const others = Math.max(0, (Number(c.pool) || 0) - my - guild);
-    const w = function (v) { return Math.max(0, Math.min(100, v / hp * 100)); };
-    return '<div class="wg2-track' + (tall ? ' wg2-track--tall' : '') + '" data-wg-track>' +
-      '<div class="wg2-seg wg2-seg--others" data-wg-seg="others" style="width:' + w(others).toFixed(2) + '%"></div>' +
-      '<div class="wg2-seg wg2-seg--guild" data-wg-seg="guild" style="width:' + w(guild).toFixed(2) + '%"></div>' +
-      '<div class="wg2-seg wg2-seg--you" data-wg-seg="you" style="width:' + (my > 0 ? Math.max(w(my), 0.9) : 0).toFixed(2) + '%"></div>' +
-      '<div class="wg2-flash" data-wg-flash></div>' +
-      [25, 50, 75].map(function (pp) { return '<div class="wg2-phase" style="left:' + pp + '%">' + (tall ? '<i>PH ' + (pp / 25 + 1) + '</i>' : '') + '</div>'; }).join('') +
-    '</div>';
-  }
-  function _wgLegendHtml(c) {
-    const g = (c.guild && Number(c.guild.hunters)) || 0;
-    return '<div class="wg2-legend"><span class="wg2-lg--o"><i></i>ALL HUNTERS</span>' + (g ? '<span class="wg2-lg--g"><i></i>YOUR GUILD</span>' : '') + '<span class="wg2-lg--y"><i></i>YOU</span></div>';
-  }
-
   // ── W934 — the Worldgate CARD is gone (owner, 2026-09-09: "I change my mind
   // on the worldgate card on the co-op … let's remove it"). It led the Habits
   // tab W915–W932 and the Co-op hub for one build (W933). Outside the sheet the
@@ -8280,150 +8261,364 @@
     const _c = _wgCache(); el.classList.toggle('wg-pulse--down', !!html && !_wgStale(_c) && (_c || {}).status === 'slain');   // W1006
   }
 
-  // ── the sheet ──
-  function _wgSegInfoHtml(c) {
-    if (!_wgSeg) return '<div class="wg2-seginfo"></div>';
-    const my = Number(c.my) || 0; const gs = (c.guild && Number(c.guild.steps)) || 0; const gh = (c.guild && Number(c.guild.hunters)) || 0;
-    const others = Math.max(0, (Number(c.pool) || 0) - my - gs);
-    const oh = Math.max(0, (Number(c.hunters) || 0) - gh - (my > 0 ? 1 : 0));
-    const m = { others: ['#6d3fd9', _wgFmt(oh) + (oh === 1 ? ' other hunter' : ' other hunters'), others], guild: ['#a78bfa', 'Your guild · ' + _wgFmt(gh) + (gh === 1 ? ' hunter' : ' hunters'), gs], you: ['#f5b842', 'You · walk more, the gold grows', my] }[_wgSeg];
-    if (!m) return '<div class="wg2-seginfo"></div>';
-    return '<div class="wg2-seginfo wg2-seginfo--show"><i style="background:' + m[0] + '"></i><span>' + esc(m[1]) + '</span><b>' + _wgFmt(m[2]) + ' strikes</b></div>';
+  // ═══ W1255 — TEAM BATTLES · NO HUNTER WALKS ALONE (the handoff called it "The Muster"; owner 2026-11-20: "The Muster is
+  // such a weird name..." → chose "Team Battles", his own words for the two fights; the code keeps the mu- names) ═══
+  // Owner 2026-11-20: "It would also be cool if there was a tab here that has the world gate boss and another tab that
+  // you can see raid performance per teams because these two are big team battles" → the Claude Design handoff
+  // "The Muster - Worldgate + Raids" → "yes port the muster". One sheet, two tabs: Worldgate (the old sheet, tightened)
+  // and Raids (every live Grinning God team, GET /v1/coop-boss/raids/live, W1254). Home's world boss bar opens
+  // Worldgate, the Co-op Raid gate opens Raids, anything else opens the last tab (hb_muster_tab); each tab keeps its
+  // scroll. Kept from the old sheet on purpose (they do something): STRIKE, RALLY YOUR GUILD, SHARE PROGRESS, the
+  // 15,000-step Kill Wall rule and the running MVP badges (W977). Names only on the Raids tab: never a time.
+  const MU_TAB_KEY = 'hb_muster_tab', MU_RAIDS_KEY = 'hb_muster_raids_v1';
+  let _muTab = 'wg', _muRaids = null, _muRaidsErr = false, _muRaidsBusy = false, _muSeen = {}, _muPos = {}, _muInfo = false, _muOpenTeam = null;
+  const _MU_RC = { S: '#ec4899', A: '#ff6b6b', B: '#f5b842', C: '#34d399', D: '#22d3ee', E: '#a78bfa' };
+  const _muSv = function (w, h, vb, inner) { return '<svg width="' + w + '" height="' + h + '" viewBox="' + vb + '" fill="none" aria-hidden="true">' + inner + '</svg>'; };
+  const _MU_ST = 'stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"';
+  const _MU_IC = {
+    x: _muSv(14, 14, '0 0 14 14', '<path d="M3 3l8 8M11 3l-8 8" ' + _MU_ST + ' stroke-width="1.8"/>'),
+    info: _muSv(14, 14, '0 0 14 14', '<circle cx="7" cy="7" r="6" stroke="currentColor" stroke-width="1.2"/><path d="M7 6.3v3.9M7 4.2v.1" ' + _MU_ST + ' stroke-width="1.6"/>'),
+    glass: _muSv(8, 10, '0 0 14 16', '<path d="M2.5 1h9M2.5 15h9M3.5 1c0 3.5 6.9 4 6.9 7s-6.9 3.5-6.9 7M10.5 1c0 3.5-6.9 4-6.9 7s6.9 3.5 6.9 7" ' + _MU_ST + ' stroke-width="1.6"/>'),
+    feet: _muSv(11, 12, '0 0 14 16', '<path d="M4 1.5c1.5 0 2.2 1.5 2.2 3.3S5.4 8 4 8 1.8 6.6 1.8 4.8 2.5 1.5 4 1.5zM2.4 9.8h3.2v1.6a1.6 1.6 0 0 1-3.2 0zM10 4.5c1.5 0 2.2 1.5 2.2 3.3S11.4 11 10 11 7.8 9.6 7.8 7.8 8.5 4.5 10 4.5zM8.4 12.8h3.2v1.6a1.6 1.6 0 0 1-3.2 0z" ' + _MU_ST + ' stroke-width="1.3"/>'),
+    stairs: _muSv(11, 11, '0 0 14 14', '<path d="M1.5 12.5h3v-3h3v-3h3v-3h2" ' + _MU_ST + ' stroke-width="1.5"/>'),
+    crown: _muSv(10, 9, '0 0 14 12', '<path d="M1.5 10.5h11l.8-7-3.6 2.8L7 1.5 4.3 6.3.7 3.5z" ' + _MU_ST + ' stroke-width="1.3"/>'),
+    swap: _muSv(11, 11, '0 0 14 14', '<path d="M2 4.5h9l-2.2-2.2M12 9.5H3l2.2 2.2" ' + _MU_ST + ' stroke-width="1.5"/>'),
+    check: _muSv(9, 9, '0 0 14 14', '<path d="M2 7.5l3.2 3.2L12 3.5" ' + _MU_ST + ' stroke-width="2.2"/>'),
+    chev: _muSv(10, 10, '0 0 12 12', '<path d="M2.5 4.5L6 8l3.5-3.5" ' + _MU_ST + ' stroke-width="1.6"/>'),
+    snow: _muSv(11, 11, '0 0 14 14', '<path d="M7 1v12M1.8 4l10.4 6M1.8 10l10.4-6M5.2 1.8 7 3.4l1.8-1.6M5.2 12.2 7 10.6l1.8 1.6" ' + _MU_ST + ' stroke-width="1.2"/>'),
+    clock: _muSv(16, 16, '0 0 16 16', '<circle cx="8" cy="8" r="6.3" stroke="currentColor" stroke-width="1.3"/><path d="M8 4.6V8l2.4 1.6" ' + _MU_ST + ' stroke-width="1.3"/>'),
+    shield: _muSv(11, 11, '0 0 16 16', '<path d="M8 1.5 13.5 4v4c0 3.2-2.3 5.6-5.5 6.5C4.8 13.6 2.5 11.2 2.5 8V4z" ' + _MU_ST + ' stroke-width="1.4"/><path d="M5.5 8l1.8 1.8L10.8 6" ' + _MU_ST + ' stroke-width="1.5"/>'),
+    bolt: _muSv(10, 11, '0 0 16 16', '<path d="M9.5 1.5 3 9h4l-1 5.5L13 7H9z" ' + _MU_ST + ' stroke-width="1.4"/>'),
+  };
+  const _MU_EYE_ALIVE = _muSv(38, 38, '0 0 28 28', '<path d="M14 3 24 9v10L14 25 4 19V9z" stroke="#ef4444" stroke-width="1.6" stroke-linejoin="round"/><path d="M8.6 14c1.6-3.1 9.2-3.1 10.8 0-1.6 3.1-9.2 3.1-10.8 0z" fill="#ef4444"/><circle cx="14" cy="14" r="1.7" fill="#fff"/>');
+  const _MU_EYE_DOWN = _muSv(38, 38, '0 0 28 28', '<path d="M14 3 24 9v10L14 25 4 19V9z" stroke="#ef4444" stroke-opacity=".6" stroke-width="1.5" stroke-linejoin="round"/><path d="M8.6 14.2c2.2 1.9 8.6 1.9 10.8 0M10.5 16l-.8 1.3M14 16.7v1.5M17.5 16l.8 1.3" stroke="#ef4444" stroke-opacity=".8" stroke-width="1.4" stroke-linecap="round"/><path class="mu-crack" d="M16.2 3.9 13.4 9.2l2.3 2.1-2.9 4.9 2 2.3-1.8 5.9" stroke="#f5b842" stroke-width="1.2" stroke-linejoin="round" stroke-linecap="round"/>');
+  function _muRm() { try { return window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (_) { return false; } }
+  function _muHap(k) { try { _hapticTick(k || 'LIGHT'); } catch (_) {} }
+  function _muOrd(n) { n = n | 0; return n + (['th', 'st', 'nd', 'rd'][(n % 100 > 10 && n % 100 < 14) ? 0 : n % 10] || 'th'); }
+  function _muRank(r) { const k = String(r || 'E').charAt(0).toUpperCase(); return _MU_RC[k] ? k : 'E'; }
+  function _muAv(alias, rank, cls) { return '<span class="mu-av' + (cls ? ' ' + cls : '') + '" style="--rc:' + _MU_RC[_muRank(rank)] + '">' + esc(_wgInitial(alias)) + '</span>'; }
+  function _muName(alias, extra) {   // a tappable name with the owner/moderator crown (W1243)
+    return '<button type="button" class="mu-nmb" data-wg-profile="' + esc(alias) + '"><span class="nmt">' + esc(_dn(alias)) + '</span>' + _crownFor(alias) + (extra || '') + '</button>';
   }
-  function _wgFeedHtml(c) {
-    const list = Array.isArray(c.recent) ? c.recent : [];
-    if (!list.length) return '<div class="wg2-empty">No strikes yet this week. Yours could be the first.</div>';
-    return '<div class="wg2-feed">' + list.map(function (r, i) {
-      const me = _wgIsMe(r.alias);
-      return '<div class="wg2-fi' + (me ? ' wg2-fi--you' : '') + '"><span class="wg2-av wg2-av--' + (i % 4) + '">' + esc(_wgInitial(r.alias)) + '</span>' +
-        '<div class="wg2-who"><button type="button" class="wg2-nmbtn" data-wg-profile="' + esc(r.alias) + '">' + esc(_dn(r.alias)) + _crownFor(r.alias) + '</button> struck the gate</div>' +   // W1091 — no clock on the row: when a hunter opened the app is theirs
-        '<span class="wg2-amt">' + _wgFmt(r.steps) + '</span></div>';
-    }).join('') + '</div>';
-  }
-  function _wgRankRow(pos, h, max, mvp) {   // W975 — mvp: 1|2|3 wears the badge
-    return '<div class="wg2-ri' + (h.me ? ' wg2-ri--me' : '') + '"><span class="wg2-pos">' + esc(String(pos)) + '</span><span class="wg2-av wg2-av--' + (h.me ? 'me' : String(Math.abs(String(h.alias || '').length) % 4)) + '">' + esc(_wgInitial(h.alias)) + '</span>' +
-      '<div class="wg2-nm"><button type="button" class="wg2-nmbtn" data-wg-profile="' + esc(h.alias) + '">' + esc(_dn(h.alias)) + _crownFor(h.alias) + '</button>' + (mvp ? _wgmBadge(mvp, 13, ' data-wg-mvp="1"') : '') + '<small>' + (h.me ? 'YOU' : (h.rank_tier ? esc(String(h.rank_tier)) + ' RANK' : 'HUNTER')) + '</small></div>' +
-      '<span class="wg2-amt">' + _wgFmt(h.steps) + '</span><div class="wg2-bar"><i style="width:' + Math.max(2, Math.min(100, (Number(h.steps) || 0) / max * 100)).toFixed(1) + '%"></i></div></div>';
-  }
-  function _wgRankHtml(c) {
-    const top = Array.isArray(c.top) ? c.top : [];
-    if (!top.length) return '<div class="wg2-empty">No strikes yet this week.</div>';
-    const max = Math.max(1, Number(top[0].steps) || 1);
-    // W977 — a RUNNING MVP (owner call 2026-09-22): all week, gate up or down, whoever is
-    // 1st/2nd/3rd right now wears the badge, and it moves as the steps do. (The frozen
-    // podium and its bonus are still the kill's alone — see _wgmMaybe.)
-    let rows = top.map(function (h, i) { return _wgRankRow(i + 1, h, max, i < 3 ? i + 1 : 0); }).join('');
-    if (!top.some(function (h) { return h.me; }) && (Number(c.my) || 0) > 0 && c.my_rank) rows += _wgRankRow('#' + c.my_rank, { alias: _wgMyAlias() || 'You', steps: c.my, me: true }, max);
-    return '<div class="wg2-rank">' + rows + '</div>';
-  }
-  function _wgKillHtml(c) {
-    const my = Number(c.my) || 0; const floor = Number(c.floor) || 15000; const ok = my >= floor;
-    const wall = Array.isArray(c.wall) ? c.wall : []; const wc = Number(c.wall_count) || 0;
-    return '<div class="wg2-rw">' +
-      '<div class="wg2-rwi"><span class="wg2-ic wg2-ic--g">★</span><div class="wg2-t">Named on the Kill Wall<small>Strike ' + _wgFmt(floor) + '+ steps before Sunday. Your name stands beside every hunter who did.</small></div><span class="wg2-stat ' + (ok ? 'wg2-stat--ok' : 'wg2-stat--no') + '">' + (ok ? 'IN' : _wgFmt(floor - my) + ' TO GO') + '</span></div>' +
-      '<div class="wg2-rwi"><span class="wg2-ic wg2-ic--v">◆</span><div class="wg2-t">The bounty · ' + _wgFmt(c.souls || 200) + ' souls each<small>When the gate falls, every hunter on the Kill Wall collects it once. It lands on its own the next time you open the app.</small></div><span class="wg2-stat ' + (ok ? 'wg2-stat--ok' : 'wg2-stat--no') + '">' + (c.claimed ? 'PAID' : (ok ? 'IN' : 'NOT YET')) + '</span></div>' +
-      '<div class="wg2-wall"><div class="wg2-wall-k">THE KILL WALL · ' + _wgFmt(wc) + (wc === 1 ? ' HUNTER' : ' HUNTERS') + '</div>' +
-        (wall.length ? '<div class="wg2-wall-names">' + wall.map(function (w) { return '<button type="button" class="wg2-chip' + (_wgIsMe(w.alias) ? ' wg2-chip--me' : '') + '" data-wg-profile="' + esc(w.alias) + '">' + esc(_dn(w.alias)) + _crownFor(w.alias) + '</button>'; }).join('') + '</div>'
-                     : '<div class="wg2-empty">No names yet. The first hunter past ' + _wgFmt(floor) + ' carves it.</div>') +
-      '</div></div>';
-  }
-  // W985 (owner 2026-09-23) — hunters, new ones most of all, must see that the
-  // Worldgate is WEEKLY: a new boss rises every Sunday (the gate week starts
-  // Sunday 00:00 PST). Dates are the gate's own week keys, read as calendar
-  // days (UTC getters), so no device timezone can shift them.
-  function _wgNextHtml(c) {
+  function _muDay(ms) { try { return new Date(ms).toLocaleDateString('en-US', { weekday: 'short', day: 'numeric', month: 'short' }).replace(',', ''); } catch (_) { return ''; } }
+  function _muWhen(ms) { try { return new Date(ms).toLocaleString('en-US', { weekday: 'short', hour: 'numeric', minute: '2-digit' }).replace(',', ''); } catch (_) { return ''; } }
+
+  // ── Worldgate tab ──
+  function _muClock(c) {   // BossClock: the time left, or (down) the next rising
     const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(c.week || ''));
-    if (!m) return '';
+    if (!m) return null;
     const next = new Date(Date.UTC(+m[1], +m[2] - 1, +m[3] + 7));
     const label = 'Sun ' + next.getUTCDate() + ' ' + ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][next.getUTCMonth()];
     let days = null;
-    try {
-      const t = /^(\d{4})-(\d{2})-(\d{2})$/.exec(getPTDate());
-      if (t) days = Math.round((next.getTime() - Date.UTC(+t[1], +t[2] - 1, +t[3])) / 86400000);
-    } catch (_) {}
-    const when = days == null || days < 1 ? '' : (days === 1 ? ' · tomorrow' : ' · in ' + days + ' days');
-    return '<div class="wg2-next"><span class="wg2-next-k">A new Worldgate boss rises every Sunday</span>' +
-      (c.status === 'slain'
-        ? '<span class="wg2-next-v">Next: <b>' + label + '</b>' + when + '</span>'
-        : '<span class="wg2-next-v">Bring this one down before <b>' + label + '</b></span>') + '</div>';
-  }
-  function _wgSheetHtml(c) {
-    const slain = c.status === 'slain'; const pct = _wgPct(c); const name = _wgBossName(c.week);
-    const my = Number(c.my) || 0; const floor = Number(c.floor) || 15000; const left = Math.max(0, floor - my);
-    const pending = _wgPending(c);
-    const gh = (c.guild && Number(c.guild.hunters)) || 0;
-    const ringLen = 219.9; const ringOff = ringLen * (1 - Math.min(1, my / Math.max(1, floor)));
-    // W1134 (owner 2026-11-06) — steps strike only once the hunter has opened the app on days_needed days this week.
-    const need = c.days_needed | 0, had = c.my_days | 0, gated = !slain && need > 0 && had < need;
-    const youText = gated
-      ? '<b>Your steps count once you open the app on ' + need + ' days this week.</b> <span>' + had + ' of ' + need + ' so far' + ((c.waiting | 0) > 0 ? ' · ' + _wgFmt(c.waiting) + ' steps waiting' : '') + '.</span>'
-      : slain
-      ? (my >= floor ? '<b>You are on the Kill Wall.</b> <span>' + (c.claimed ? 'Your share is collected.' : 'Your share of the kill lands on its own.') + '</span>'
-                     : '<b>' + _wgFmt(my) + '</b> strikes landed. <span>The gate is down; the Kill Wall asked ' + _wgFmt(floor) + '.</span>')
-      : (left > 0 ? '<b>' + _wgFmt(my) + '</b> strikes landed. <span>Walk <b class="wg2-ink">' + _wgFmt(left) + '</b> more to be named on the Kill Wall.</span>'
-                  : '<b>Kill Wall secured.</b> <span>Keep striking — every step brings it down faster.</span>');
-    let strikeBtn = '';
-    if (!slain) {
-      if (gated) strikeBtn = '<button type="button" class="wg2-btn wg2-btn--gold wg2-btn--done" disabled>STEPS COUNT FROM DAY ' + need + '</button>';
-      else if (_wgStriking) strikeBtn = '<button type="button" class="wg2-btn wg2-btn--gold wg2-btn--done" disabled>STRIKING…</button>';
-      else if (pending > 0) strikeBtn = '<button type="button" class="wg2-btn wg2-btn--gold" data-wg-strike>⚡ STRIKE ' + _wgFmt(pending) + ' STEPS</button>';
-      else strikeBtn = '<button type="button" class="wg2-btn wg2-btn--gold wg2-btn--done" disabled>✓ EVERY STEP IS IN · HEALTH SYNCS THE REST</button>';
+    try { const t = /^(\d{4})-(\d{2})-(\d{2})$/.exec(getPTDate()); if (t) days = Math.round((next.getTime() - Date.UTC(+t[1], +t[2] - 1, +t[3])) / 86400000); } catch (_) {}
+    if (c.status === 'slain') {
+      const when = days == null || days < 1 ? '' : (days === 1 ? ' · tomorrow' : ' · in ' + days + ' days');
+      return { k: 'A new boss rises every Sunday', v: 'Next: <b>' + label + '</b>' + when };
     }
-    return '<div class="wg2-hero"><div class="wg2-mon wg2-mon--big" data-wg-mon>' + _WG_EMBLEM + '</div><h1 class="wg2-h1">' + esc(name) + '</h1>' +
-        '<div class="wg2-tag">' + (slain ? 'WORLD BOSS · DOWN' : 'WORLD BOSS · PHASE ' + _wgPhase(c) + ' OF 4') + '</div>' +
-        '<p class="wg2-lore">One monster stands before all of us. <b>Every verified step</b> any hunter walks lands as one strike on its HP. When it falls, every hunter on the Kill Wall shares the kill.</p>' + _wgNextHtml(c) + '</div>' +
-      '<div class="wg2-hpbig"><div class="wg2-hpbig-n">' + _wgFmt(c.pool) + '<small>/ ' + _wgFmt(c.hp) + '</small></div><div class="wg2-hpbig-l">STRIKES LANDED · ' + _wgFmt(c.hunters) + (Number(c.hunters) === 1 ? ' HUNTER' : ' HUNTERS') + '</div></div>' +
-      '<div class="wg2-hp wg2-hp--sheet">' + _wgBarHtml(c, true) + '<div class="wg2-nums"><span><b>' + pct.toFixed(1) + '%</b> down</span><span class="wg2-r"><b>' + _wgFmt(Math.max(0, (c.hp | 0) - (c.pool | 0))) + '</b> HP left</span></div></div>' +
-      '<div class="wg2-legend-wrap">' + _wgLegendHtml(c) + '</div>' + _wgSegInfoHtml(c) +
-      '<div class="wg2-how"><div class="wg2-st wg2-st--walk"><div class="wg2-ico">⇈</div><div class="wg2-k">WALK</div><div class="wg2-d">Steps count from your phone</div></div><span class="wg2-arr">›</span>' +
-        '<div class="wg2-st"><div class="wg2-ico">✓</div><div class="wg2-k">VERIFY</div><div class="wg2-d">Health sync confirms them</div></div><span class="wg2-arr">›</span>' +
-        '<div class="wg2-st wg2-st--strike"><div class="wg2-ico">⚡</div><div class="wg2-k">STRIKE</div><div class="wg2-d">1 step = 1 HP off the gate</div></div></div>' +
-      '<div class="wg2-you"><div class="wg2-ring"><svg width="82" height="82" viewBox="0 0 82 82"><circle cx="41" cy="41" r="35" stroke="rgba(255,255,255,0.07)" stroke-width="6" fill="none"/><circle cx="41" cy="41" r="35" stroke="#f5b842" stroke-width="6" fill="none" stroke-linecap="round" stroke-dasharray="' + ringLen + '" stroke-dashoffset="' + ringOff.toFixed(1) + '"/></svg><div class="wg2-rv"><b>' + _wgFmt(my) + '</b><small>YOUR STRIKES</small></div></div>' +
-        '<div><div class="wg2-k wg2-k--gold">YOUR PART OF THE KILL</div><div class="wg2-v">' + youText + '</div>' +
-          // W1003 — W983 freezes every hunter's damage at the kill; say so, or a hunter who kept
-          // walking reads the stopped number as a cap (Anthony, 2026-09-26).
-          (slain ? '<div class="wg2-frozen">❄ Step count frozen at the kill</div>' : '') + strikeBtn + '</div></div>' +
-      '<div class="wg2-tabs">' + [['feed', 'RECENT STRIKES'], ['rank', 'TOP HUNTERS'], ['kill', 'THE KILL']].map(function (t) { return '<button type="button" class="wg2-tab" data-wg-tab="' + t[0] + '" data-active="' + (t[0] === _wgTab ? 'true' : 'false') + '">' + t[1] + '</button>'; }).join('') + '</div>' +
-      '<div class="wg2-pane">' + (_wgTab === 'feed' ? _wgFeedHtml(c) : (_wgTab === 'rank' ? _wgRankHtml(c) : _wgKillHtml(c))) + '</div>' +
-      '<div class="wg2-rally">' +
-        (gh ? '<button type="button" class="wg2-btn wg2-btn--ghost' + (c.rallied ? ' wg2-btn--done' : '') + '" data-wg-rally' + (c.rallied ? ' disabled' : '') + '>' + (c.rallied ? '✓ RALLIED TODAY' : '📣 RALLY YOUR GUILD') + '</button>' : '') +
-        '<button type="button" class="wg2-btn wg2-btn--ghost" data-wg-share>⇪ SHARE PROGRESS</button>' +
-      '</div>';
+    const k = days == null ? 'A new boss rises every Sunday' : (days <= 1 ? 'Last day' : days + ' days left');
+    return { k: k, v: 'A new boss rises <b>' + label + '</b>' };
   }
-  function _wgSheetPaint() {
+  function _muPhaseBar(c) {
+    const hp = Math.max(1, Number(c.hp) || 1), pct = _wgPct(c), phase = c.status === 'slain' ? 5 : _wgPhase(c);
+    const my = Math.max(0, Number(c.my) || 0), guild = Math.max(0, (c.guild && Number(c.guild.steps)) || 0);
+    const others = Math.max(0, (Number(c.pool) || 0) - my - guild);
+    const gh = (c.guild && Number(c.guild.hunters)) || 0;
+    return '<section class="mu-hp mu-e" style="--d:300ms"><div class="mu-phl">' + [2, 3, 4].map(function (ph) {
+        return '<span class="' + (phase > ph ? 'past' : phase === ph ? 'now' : '') + '" style="left:' + ((ph - 1) * 25) + '%">PH ' + ph + '</span>';
+      }).join('') + '</div>' +
+      '<div class="mu-hpt" data-wg-track><div class="mu-hpf" style="--w:' + pct.toFixed(2) + '%"><i class="o" style="flex-grow:' + others + '"></i><i class="g" style="flex-grow:' + guild + '"></i>' + (my > 0 ? '<i class="y" style="flex-grow:' + Math.max(my, hp * 0.004) + '"></i>' : '') + '</div>' +
+        [25, 50, 75].map(function (p) { return '<i class="mu-tick" style="left:' + p + '%"></i>'; }).join('') + '<div class="wg2-flash" data-wg-flash></div></div>' +
+      '<div class="mu-hpn"><span><b>' + pct.toFixed(1) + '%</b> down</span><span class="r"><b>' + _wgFmt(Math.max(0, hp - (Number(c.pool) || 0))) + '</b> HP left</span></div>' +
+      '<div class="mu-leg"><span class="o"><i></i>All hunters</span>' + (gh ? '<span class="g"><i></i>Your guild</span>' : '') + '<span class="y"><i></i>You</span></div></section>';
+  }
+  function _muShareHtml(c) {   // KillShare: the true rules (the 15,000-step Kill Wall, the two days), and STRIKE
+    const slain = c.status === 'slain', my = Number(c.my) || 0, floor = Number(c.floor) || 15000, left = Math.max(0, floor - my);
+    const need = c.days_needed | 0, had = c.my_days | 0, gated = !slain && need > 0 && had < need;
+    const sv = gated
+      ? '<b>Your steps count once you open the app on ' + need + ' days this week.</b> ' + had + ' of ' + need + ' so far' + ((c.waiting | 0) > 0 ? ' · ' + _wgFmt(c.waiting) + ' steps waiting' : '') + '.'
+      : slain
+      ? (my >= floor ? '<b>You are on the Kill Wall.</b> ' + (c.claimed ? 'Your share is collected.' : 'Your share lands on its own.')
+                     : '<b>' + _wgFmt(my) + '</b> strikes landed. The gate is down; the Kill Wall asked ' + _wgFmt(floor) + '.')
+      : (left > 0 ? '<b>' + _wgFmt(my) + '</b> strikes landed. Walk <b>' + _wgFmt(left) + '</b> more to be named on the Kill Wall.'
+                  : '<b>Kill Wall secured.</b> Keep striking: every step brings it down faster.');
+    const sf = slain ? _MU_IC.snow + 'Step count frozen at the kill'
+      : (c.my_rank ? '#' + c.my_rank + ' of ' + _wgFmt(c.hunters) + ' · the top 3 are MVPs' : 'The top 3 are MVPs');
+    let btn = '';
+    if (!slain) {
+      const pending = _wgPending(c);
+      if (gated) btn = '<button type="button" class="mu-btn mu-btn--gold" disabled>Steps count from day ' + need + '</button>';
+      else if (_wgStriking) btn = '<button type="button" class="mu-btn mu-btn--gold" disabled>Striking…</button>';
+      else if (pending > 0) btn = '<button type="button" class="mu-btn mu-btn--gold" data-wg-strike>' + _MU_IC.bolt + 'Strike ' + _wgFmt(pending) + ' steps</button>';
+    }
+    return '<section class="mu-share' + (slain ? ' is-down' : '') + ' mu-e" style="--d:460ms"><div class="mu-ring"><svg viewBox="0 0 80 80" aria-hidden="true"><circle class="t" cx="40" cy="40" r="34"/><circle class="a" cx="40" cy="40" r="34"/></svg>' +
+      '<div class="mu-rv"><b data-mu-count="' + my + '" data-cd="520">' + _wgFmt(my) + '</b><small>Strikes</small></div></div>' +
+      '<div><p class="mu-sk">Your part of the kill</p><p class="mu-sv">' + sv + '</p><p class="mu-sf">' + sf + '</p></div>' +
+      (btn ? '<div class="mu-share-btn">' + btn + '</div>' : '') + '</section>';
+  }
+  function _muListsHtml(c) {
+    const slain = c.status === 'slain', tab = _wgTab === 'rank' || _wgTab === 'kill' ? _wgTab : 'feed';
+    const recent = Array.isArray(c.recent) ? c.recent : [], top = Array.isArray(c.top) ? c.top : [];
+    const feed = recent.length ? recent.map(function (r) {
+        return '<div class="mu-row' + (_wgIsMe(r.alias) ? ' is-you' : '') + '">' + _muAv(r.alias, r.rank_tier) + '<span class="w">' + _muName(r.alias) + ' struck the gate</span><span class="a">+' + _wgFmt(r.steps) + '</span></div>';
+      }).join('') : '<p class="mu-empty">No strikes yet this week. Yours could be the first.</p>';
+    const max = Math.max(1, top.length ? Number(top[0].steps) || 1 : 1);
+    const hrow = function (pos, h, mvp) {   // W977 — the running top three wear MVP / 2ND / 3RD all week
+      const me = !!h.me || _wgIsMe(h.alias);
+      return '<div class="mu-hrow' + (typeof pos === 'number' && pos <= 3 ? ' p' + pos : '') + (me ? ' is-you' : '') + '"><span class="pos">' + esc(String(pos)) + '</span>' + _muAv(h.alias, h.rank_tier) +
+        '<span class="nm"><span class="nmr">' + _muName(h.alias) + (mvp ? _wgmBadge(mvp, 13, ' data-wg-mvp="1"') : '') + '</span><small>' + (me ? 'You' : (h.rank_tier ? 'Rank ' + esc(String(h.rank_tier)) : 'Hunter')) + '</small></span>' +
+        '<span class="a">' + _wgFmt(h.steps) + '</span><span class="bar"><i style="width:' + Math.max(2, Math.min(100, (Number(h.steps) || 0) / max * 100)).toFixed(1) + '%"></i></span></div>';
+    };
+    let rank = top.length ? top.map(function (h, i) { return hrow(i + 1, h, i < 3 ? i + 1 : 0); }).join('') : '<p class="mu-empty">No strikes yet this week.</p>';
+    if (top.length && !top.some(function (h) { return h.me; }) && (Number(c.my) || 0) > 0 && c.my_rank) rank += hrow('#' + c.my_rank, { alias: _wgMyAlias() || 'You', steps: c.my, me: true }, 0);
+    const floor = Number(c.floor) || 15000, wall = Array.isArray(c.wall) ? c.wall : [], wc = Number(c.wall_count) || 0;
+    const wallHtml = '<div class="mu-kb"><p class="mu-kl">Kill Wall<b>' + _wgFmt(wc) + (wc === 1 ? ' hunter' : ' hunters') + '</b></p>' +
+      (wall.length ? '<div class="mu-wall">' + wall.map(function (w) { return '<button type="button" class="mu-wn' + (_wgIsMe(w.alias) ? ' is-you' : '') + '" data-wg-profile="' + esc(w.alias) + '">' + esc(_dn(w.alias)) + _crownFor(w.alias) + '</button>'; }).join('') + '</div>'
+                   : '<p>No names yet. The first hunter past ' + _wgFmt(floor) + ' steps carves it.</p>') + '</div>';
+    const k = c.kill;
+    const kill = slain && k
+      ? '<div class="mu-kill"><div class="mu-kb"><p class="mu-kl">Down<b>' + esc(_muDay(Number(k.slain_at) || 0) + ' · ' + (function () { try { return new Date(Number(k.slain_at)).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }); } catch (_) { return ''; } })()) + '</b></p></div>' +
+        '<div class="mu-kb"><p class="mu-kl">MVPs<span>Most steps at the kill</span></p>' + (Array.isArray(k.mvps) ? k.mvps : []).slice(0, 3).map(function (m, i) {
+          return '<div class="mu-mvp">' + _wgmBadge(i + 1, 13, ' data-wg-mvp="1"') + '<span class="nmr">' + _muName(m.alias) + '</span><span class="a">' + _wgFmt(m.steps) + '</span></div>';
+        }).join('') + '</div>' + wallHtml + '</div>'
+      : '<div class="mu-kill"><div class="mu-kb"><p class="mu-kl">The Kill Wall</p><p>Strike ' + _wgFmt(floor) + '+ steps before Sunday and your name stands on it.</p></div>' +
+        '<div class="mu-kb"><p class="mu-kl">The bounty<b>' + _wgFmt(c.souls || 200) + ' souls each</b></p><p>Every hunter on the Kill Wall collects it when the gate falls.</p></div>' +
+        '<div class="mu-kb"><p class="mu-kl">MVPs</p><p>The three with the most steps when it falls.</p></div>' + wallHtml + '</div>';
+    return '<div class="mu-lists mu-e" style="--d:560ms"><div class="mu-lt" role="tablist">' + [['feed', 'Recent strikes'], ['rank', 'Top hunters'], ['kill', 'The kill']].map(function (t) {
+        return '<button type="button" role="tab" data-wg-tab="' + t[0] + '" class="' + (t[0] === tab ? 'on' : '') + '" aria-selected="' + (t[0] === tab) + '">' + t[1] + '</button>';
+      }).join('') + '</div><div class="mu-lp on" data-k="' + tab + '">' + (tab === 'feed' ? feed : tab === 'rank' ? '<div class="mu-rank">' + rank + '</div>' : kill) + '</div></div>';
+  }
+  function _muWgHtml(c) {
+    const slain = c.status === 'slain', clock = _muClock(c), gh = (c.guild && Number(c.guild.hunters)) || 0;
+    return '<section class="mu-foe mu-e" style="--d:120ms"><div class="mu-emb' + (slain ? ' is-down' : '') + '" data-wg-mon>' + (slain ? _MU_EYE_DOWN : _MU_EYE_ALIVE) + '</div>' +
+        '<div class="mu-ft"><h2>' + esc(_wgBossName(c.week)) + '</h2><p class="mu-fs">World boss · <b>' + (slain ? 'Down' : 'Phase ' + _wgPhase(c) + ' of 4') + '</b></p></div></section>' +
+      '<p class="mu-rule mu-e" style="--d:160ms">Every <b>verified step</b> any hunter walks is one strike on its HP. When it falls, every hunter on the Kill Wall shares the kill.' +
+        '<button class="mu-info" type="button" data-mu-info aria-label="How a step becomes a strike" aria-expanded="' + (_muInfo ? 'true' : 'false') + '">' + _MU_IC.info + '</button></p>' +
+      '<div class="mu-how' + (_muInfo ? ' on' : '') + '"><div><div class="mu-howi"><span><b style="color:var(--mu-steps)">' + _MU_IC.feet + 'Walk</b>Steps count from your phone</span><em>›</em><span><b style="color:var(--mu-violet2)">' + _MU_IC.shield + 'Verify</b>Health sync confirms them</span><em>›</em><span><b style="color:var(--mu-red)">' + _MU_IC.bolt + 'Strike</b>1 step = 1 HP off the gate</span></div></div></div>' +
+      (clock ? '<div class="mu-clock mu-e" style="--d:200ms">' + _MU_IC.clock + '<div><b>' + esc(clock.k) + '</b><span>' + clock.v + '</span></div></div>' : '') +
+      '<section class="mu-total mu-e" style="--d:260ms"><div class="mu-big"><b data-mu-count="' + (Number(c.pool) || 0) + '" data-cd="260">' + _wgFmt(c.pool) + '</b><small>/ ' + _wgFmt(c.hp) + '</small></div><p class="mu-lab">Strikes landed · ' + _wgFmt(c.hunters) + (Number(c.hunters) === 1 ? ' hunter' : ' hunters') + '</p></section>' +
+      _muPhaseBar(c) + _muShareHtml(c) + _muListsHtml(c) +
+      '<div class="mu-acts">' + (gh ? '<button type="button" class="mu-btn mu-btn--ghost" data-wg-rally' + (c.rallied ? ' disabled' : '') + '>' + (c.rallied ? 'Rallied today' : 'Rally your guild') + '</button>' : '') +
+        '<button type="button" class="mu-btn mu-btn--ghost" data-wg-share>Share progress</button></div>';
+  }
+
+  // ── Raids tab ──
+  function _muTeams(feed) {
+    const gS = Number(feed.goal_steps) || 200000, gF = Number(feed.goal_flights) || 200, win = (Number(feed.window_hours) || 80) * 3600000, now = Date.now();
+    return (Array.isArray(feed.raids) ? feed.raids : []).map(function (r) {
+      const m = Array.isArray(r.members) ? r.members : [];
+      let li = -1, best = 0;
+      m.forEach(function (x, i) { if ((Number(x.steps) || 0) > best) { best = Number(x.steps) || 0; li = i; } });
+      const s = m.reduce(function (a, x) { return a + (Number(x.steps) || 0); }, 0) + (Number(r.banked_steps) || 0);
+      const f = m.reduce(function (a, x) { return a + (Number(x.flights) || 0); }, 0) + (Number(r.banked_flights) || 0);
+      const st = Date.parse(r.starts_at || ''), en = Date.parse(r.ends_at || '');
+      const dur = Number.isFinite(st) && Number.isFinite(en) && en > st ? en - st : win;
+      const lead = m[li < 0 ? 0 : li] || {};
+      return {
+        r: r, m: m, s: s, f: f, li: li, gS: gS, gF: gF,
+        p: Number.isFinite(st) ? Math.max(0, Math.min(1, (now - st) / dur)) : 0,
+        prog: (Math.min(1, s / gS) + Math.min(1, f / gF)) / 2,
+        hIn: Number.isFinite(st) ? Math.max(0, Math.round((now - st) / 3600000)) : 0, hAll: Math.round(dur / 3600000),
+        left: Number.isFinite(en) ? Math.max(0, Math.round((en - now) / 3600000)) : 0, ends: en, mine: !!r.mine, lead: lead.alias || 'Hunter',
+        name: r.mine ? 'Your team' : _dn(lead.alias || 'Hunter') + "'s team",
+      };
+    }).sort(function (a, b) { return b.prog - a.prog; }).map(function (t, i) { t.pos = i + 1; return t; });
+  }
+  function _muPace(k, v, goal, p, d, mini) {
+    const f = Math.min(1, v / Math.max(1, goal)), st = v >= goal ? 'done' : f >= p ? 'on' : 'behind';
+    const bar = '<i class="mu-pf"></i>' + (st === 'behind' ? '<i class="mu-pd"></i>' : '') + '<i class="mu-pm"></i>';
+    if (mini) return '<span class="mu-mi ' + k + '">' + (k === 'steps' ? _MU_IC.feet : _MU_IC.stairs) + '</span><div class="mu-mini ' + k + ' is-' + st + '" style="--f:' + (f * 100).toFixed(2) + '%;--d:' + d + 'ms">' + bar + '</div><span class="mu-mv">' + _wgFmt(v) + '</span>';
+    return '<div class="mu-pace ' + k + ' is-' + st + '" style="--f:' + (f * 100).toFixed(2) + '%;--d:' + d + 'ms"><div class="mu-pl"><span class="mu-pk">' + (k === 'steps' ? _MU_IC.feet + 'Steps' : _MU_IC.stairs + 'Flights') + '</span>' +
+      '<span class="mu-tag">' + (st === 'done' ? _MU_IC.check + 'Done' : st === 'on' ? 'On pace' : 'Behind') + '</span><span class="mu-pv"><b data-mu-count="' + v + '" data-cd="' + d + '">' + _wgFmt(v) + '</b> / ' + _wgFmt(goal) + '</span></div>' +
+      '<div class="mu-pt">' + bar + '</div></div>';
+  }
+  function _muMember(x, mvp, d, i) {
+    const tag = mvp ? '<span class="mu-mt mvp">' + _MU_IC.crown + 'MVP so far</span>' : x.away ? '<span class="mu-mt away">' + _MU_IC.glass + 'Away</span>' : x.sub ? '<span class="mu-mt sub">' + _MU_IC.swap + 'Stand-in</span>' : '';
+    const s = Number(x.steps) || 0;
+    return '<div class="mu-mem' + (i == null ? ' mu-e' : '') + (x.me ? ' is-you' : '') + (s ? '' : ' is-zero') + '" style="' + (i == null ? '--d:' + d + 'ms' : '--i:' + i) + '">' + _muAv(x.alias, x.rank, x.sub ? 'is-sub' : '') +
+      '<span class="mu-mn"><b>' + _muName(x.alias) + '</b>' + tag + '</span><span class="mu-ms">' + _wgFmt(s) + '</span><span class="mu-mf">' + _wgFmt(x.flights) + '</span></div>';
+  }
+  const _MU_MHEAD = '<div class="mu-mh"><span>Hunters</span><span class="s">Steps</span><span class="f">Flights</span></div>';
+  function _muLeft(t, e) { const b = Number(t.r.banked_steps) || 0; return b ? '<p class="mu-left' + (e ? ' mu-e' : '') + '" style="--d:700ms">' + _MU_IC.swap + '<span>From hunters who left: <b>' + _wgFmt(b) + '</b> steps</span></p>' : ''; }
+  function _muYourTeam(t, n) {
+    return '<section class="mu-team mu-e" style="--d:200ms"><div class="mu-th"><div><p class="mu-tk">Your team</p><p class="mu-tr">' + _muOrd(t.pos) + ' of ' + n + (n === 1 ? ' team' : ' teams') + '</p></div>' +
+      '<div class="mu-tl"><b>' + t.left + 'h left</b><span>Ends ' + esc(_muWhen(t.ends)) + '</span></div></div>' +
+      '<div class="mu-bars" style="--p:' + (t.p * 100).toFixed(2) + '%">' + _muPace('steps', t.s, t.gS, t.p, 300) + _muPace('flights', t.f, t.gF, t.p, 360) + '<span class="mu-pcap">Pace · ' + t.hIn + ' of ' + t.hAll + 'h</span></div>' +
+      _MU_MHEAD + '<div class="mu-ml">' + t.m.map(function (x, i) { return _muMember(x, i === t.li, 420 + i * 40); }).join('') + '</div>' + _muLeft(t, 1) + '</section>';
+  }
+  function _muMark(x, mvp) {
+    return '<i class="mu-mk' + ((Number(x.steps) || 0) ? '' : ' is-zero') + (mvp ? ' is-mvp' : '') + (x.sub ? ' is-sub' : '') + (x.away ? ' is-away' : '') + '" style="--rc:' + _MU_RC[_muRank(x.rank)] + '">' + esc(_wgInitial(x.alias)) + '</i>';
+  }
+  function _muCard(t, d) {
+    const open = _muOpenTeam === t.r.id;
+    return '<article class="mu-tc mu-e' + (open ? ' is-open' : '') + (t.pos === 1 ? ' p1' : '') + '" style="--d:' + d + 'ms" data-mu-team="' + esc(t.r.id) + '" role="button" tabindex="0" aria-expanded="' + open + '" aria-label="' + esc(t.name + ', ' + _muOrd(t.pos)) + '">' +
+      '<div class="mu-tch"><span class="mu-tpos">' + t.pos + '</span><span class="mu-tn">' + (t.mine ? 'Your team' : '<span class="mu-tnt">' + esc(_dn(t.lead)) + '</span>' + _crownFor(t.lead) + "<span class=\"mu-tns\">'s team</span>") + '</span><span class="mu-ttl">' + t.left + 'h left</span></div>' +
+      '<div class="mu-tb" style="--p:' + (t.p * 100).toFixed(2) + '%">' + _muPace('steps', t.s, t.gS, t.p, d + 80, 1) + _muPace('flights', t.f, t.gF, t.p, d + 120, 1) + '</div>' +
+      '<div class="mu-tf"><span class="mu-marks">' + t.m.map(function (x, i) { return _muMark(x, i === t.li); }).join('') + '</span><span class="mu-tmore">Members' + _MU_IC.chev + '</span></div>' +
+      '<div class="mu-tbody"><div>' + _MU_MHEAD + '<div class="mu-ml">' + t.m.map(function (x, i) { return _muMember(x, i === t.li, 0, i); }).join('') + '</div>' + _muLeft(t) + '</div></div></article>';
+  }
+  function _muDraw(dr) {
+    const need = (dr && dr.need) || 5, opens = Math.min(need, (dr && dr.opens) || 0), days = (dr && Array.isArray(dr.days)) ? dr.days : [];
+    const now = new Date(), lab = days.map(function (_, i) { const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - (days.length - 1 - i)); return 'SMTWTFS'.charAt(d.getDay()); });
+    return '<section class="mu-draw mu-e" style="--d:200ms"><p class="mu-dk">The next draw</p><div class="mu-dr"><p class="mu-dn"><b>' + opens + '</b><small>of ' + need + ' opens</small></p>' +
+      '<div class="mu-days">' + days.map(function (on, i) { return '<i class="' + (on ? 'on' : '') + (i === days.length - 1 ? ' today' : '') + '"></i>'; }).join('') + lab.map(function (c) { return '<s>' + c + '</s>'; }).join('') + '</div></div>' +
+      '<p class="mu-dc">' + (opens >= need ? 'You are in the next draw. Keep opening the app to stay in it.' : 'Open the app ' + need + ' times in 7 days to be drawn for the next raid.') + '</p></section>';
+  }
+  function _muRaidsHtml(feed) {
+    const live = feed ? _muTeams(feed) : [], n = live.length, mine = live.find(function (t) { return t.mine; });
+    const goal = feed ? feed : { goal_steps: 200000, goal_flights: 200, window_hours: 80 };
+    let h = '<section class="mu-foe mu-e" style="--d:120ms"><img class="mu-por" src="' + esc(getBossArtPath('the_grinning_god')) + '" alt="The Grinning God" data-mu-court onerror="this.style.visibility=\'hidden\'">' +
+      '<div class="mu-ft"><h2>The Grinning God</h2><p class="mu-fs"><span class="mu-chip">S-rank</span>Raid boss</p><p class="mu-live">' +
+        (n ? '<i></i><span><b>' + n + '</b> ' + (n === 1 ? 'raid' : 'raids') + ' under way · <b>' + live.reduce(function (a, t) { return a + t.m.length; }, 0) + '</b> hunters</span>' : (feed ? 'No raids under way' : '')) + '</p></div></section>' +
+      '<p class="mu-rule is-mono mu-e" style="--d:160ms">6 hunters · <b class="s">' + _wgFmt(goal.goal_steps) + ' steps</b> + <b class="f">' + _wgFmt(goal.goal_flights) + ' flights</b> · ' + (goal.window_hours | 0) + 'h</p>';
+    if (!feed) return h + '<p class="mu-empty mu-e" style="--d:200ms">' + (_muRaidsErr ? 'The raids could not load. Close and open again to retry.' : 'Loading the raids…') + '</p>';
+    const sec = function (txt, d) { return '<p class="mu-sec mu-e" style="--d:' + (d || 640) + 'ms">' + txt + '</p>'; };
+    if (mine) {
+      h += _muYourTeam(mine, n);
+      const others = live.filter(function (t) { return !t.mine; });
+      if (others.length) h += sec('Other teams · ranked by progress') + '<div class="mu-tcs">' + others.map(function (t, i) { return _muCard(t, 700 + i * 60); }).join('') + '</div>';
+    } else if (n) {
+      h += _muDraw(feed.draw) + sec('Raids under way · ranked by progress') + '<div class="mu-tcs">' + live.map(function (t, i) { return _muCard(t, 700 + i * 60); }).join('') + '</div>';
+    } else {
+      h += '<section class="mu-quiet mu-e" style="--d:200ms"><div class="mu-six">' + '<i></i>'.repeat(6) + '</div><p>The next raid forms when six active hunters are free.</p></section>';
+    }
+    const fin = Array.isArray(feed.finished) ? feed.finished : [];
+    if (fin.length) {
+      const fd = n ? 1000 : 440;
+      h += sec('Recently finished', fd) + '<div class="mu-fins mu-e" style="--d:' + fd + 'ms">' + fin.map(function (f) {
+        return '<div class="mu-fin' + (f.won ? ' is-won' : '') + '"><p class="mu-fst">' + (f.won ? _MU_IC.check + 'Won' : 'Time ran out') + '</p><p class="mu-fv">' + (f.won ? (f.hours | 0) + 'h' : (f.pct | 0) + '%') + '</p>' +
+          '<p class="mu-fd">' + (f.won ? (f.mvp ? 'MVP <span class="mu-fdn">' + esc(_dn(f.mvp)) + '</span>' + _crownFor(f.mvp) : 'Won') : 'of the goal') + '</p><p class="mu-fdt">' + esc(_muDay(Date.parse(f.at || ''))) + '</p></div>';
+      }).join('') + '</div>';
+    }
+    return h;
+  }
+
+  // ── the sheet ──
+  function _muTabsHtml() {
+    const c = _wgCache(), slain = !!c && c.status === 'slain';
+    const n = _muRaids ? _muTeams(_muRaids).length : null;
+    return '<div class="mu-tabs" role="tablist"><span class="mu-thumb"></span>' +
+      '<button class="mu-tab" type="button" role="tab" data-mu-go="wg" aria-selected="' + (_muTab === 'wg') + '"><span>Worldgate</span>' + (c ? (slain ? '<em class="dn">Down</em>' : '<em class="hp">' + Math.round(_wgPct(c)) + '%</em>') : '') + '</button>' +
+      '<button class="mu-tab" type="button" role="tab" data-mu-go="raids" aria-selected="' + (_muTab === 'raids') + '"><span>Raids</span>' + (n == null ? '' : n ? '<em class="lv"><i></i>' + n + ' live</em>' : '<em class="off">0 live</em>') + '</button></div>';
+  }
+  function _muCounts(root) {
+    if (_muRm() || !root) return;
+    root.querySelectorAll('[data-mu-count]').forEach(function (el) {
+      const v = Number(el.getAttribute('data-mu-count')) || 0, dur = v > 1e5 ? 900 : 600, t0 = performance.now() + (Number(el.getAttribute('data-cd')) || 300);
+      el.textContent = '0';
+      const tick = function (t) { const k = Math.min(1, Math.max(0, (t - t0) / dur)); el.textContent = _wgFmt(v * (1 - Math.pow(1 - k, 3))); if (k < 1) requestAnimationFrame(tick); };
+      requestAnimationFrame(tick);
+    });
+  }
+  function _muPaintPane(tab) {   // a pane's entry plays on its first paint of the session; every later paint holds still
     const el = _wgSheet; if (!el) return;
-    const body = el.querySelector('[data-wg-body]'); if (!body) return;
-    const c = _wgCache(); if (!c) return;
-    const st = body.scrollTop;
-    body.innerHTML = _wgSheetHtml(c);
-    body.scrollTop = st;
+    const pane = el.querySelector('[data-mu-pane="' + tab + '"]'); if (!pane) return;
+    let html = '';
+    if (tab === 'wg') { const c = _wgCache(); if (!c) return; html = _muWgHtml(c); } else html = _muRaidsHtml(_muRaids);
+    const first = !_muSeen[tab] && _muTab === tab;
+    pane.classList.toggle('mu-enter', first);
+    pane.classList.toggle('mu-held', !first);
+    pane.innerHTML = html;
+    if (first) { _muSeen[tab] = 1; _muCounts(pane); }
+  }
+  function _muPaintTabs() { const el = _wgSheet; if (!el) return; const t = el.querySelector('[data-mu-tabs]'); if (t) t.innerHTML = _muTabsHtml(); }
+  function _wgSheetPaint() {   // the Worldgate cache changed (sync, strike): repaint the Worldgate tab and the tab labels
+    const el = _wgSheet; if (!el) return;
+    const scr = el.querySelector('[data-mu-scr]'), st = scr ? scr.scrollTop : 0;
+    _muPaintTabs();
+    if (_muSeen.wg || _muTab === 'wg') _muPaintPane('wg');
+    if (scr && _muTab === 'wg') scr.scrollTop = st;
     try { _wgmGlint(); } catch (_) {}   // W975 — badges glint once per fallen gate
   }
-  function openWorldgateSheet(seg) {
-    const c = _wgCache();
-    if (!c) { _worldgateSync(true); _wgToast('The gate is still loading — try again in a moment.'); return; }
-    if (seg) _wgSeg = seg;
-    if (_wgSheet) { _wgSheetPaint(); return; }
-    const el = document.createElement('div');
-    el.className = 'wg-scope wg2-sheet-wrap';
-    el.innerHTML = '<div class="wg2-scrim" data-wg-close></div>' +
-      '<section class="wg2-sheet" role="dialog" aria-modal="true" aria-label="The Worldgate">' +
-        '<header class="wg2-sh-head"><span class="wg2-eyebrow">THE WORLDGATE · ONE MONSTER, ALL OF US</span><button type="button" class="wg2-close" data-wg-close aria-label="Close">✕</button></header>' +
-        '<div class="wg2-sh-body" data-wg-body></div>' +
-      '</section>';
-    document.body.appendChild(el); _wgSheet = el;
-    _wgSheetPaint();
-    setTimeout(function () { try { el.classList.add('open'); } catch (_) {} }, 20);
-    try { _hapticTick('LIGHT'); } catch (_) {}
-    try { if (typeof window.__funnelEmit === 'function') window.__funnelEmit('worldgate_opened', String(c.status || '')); } catch (_) {}
-    _worldgateSync(true);   // fresh numbers while it slides up
+  async function _muLoadRaids() {
+    if (_muRaidsBusy || !(window.Auth && typeof Auth.coopRaidsLive === 'function')) return;
+    _muRaidsBusy = true;
+    try {
+      const r = await Auth.coopRaidsLive();
+      if (r && r.ok) {
+        _muRaids = r; _muRaidsErr = false;
+        try { localStorage.setItem(MU_RAIDS_KEY, JSON.stringify({ at: Date.now(), data: r })); } catch (_) {}
+      } else if (!_muRaids) _muRaidsErr = true;
+    } catch (_) { if (!_muRaids) _muRaidsErr = true; }
+    finally { _muRaidsBusy = false; }
+    if (!_wgSheet) return;
+    const scr = _wgSheet.querySelector('[data-mu-scr]'), st = scr ? scr.scrollTop : 0;
+    _muPaintTabs();
+    if (_muSeen.raids || _muTab === 'raids') _muPaintPane('raids');
+    if (scr && _muTab === 'raids') scr.scrollTop = st;
   }
+  function _muGo(tab) {
+    const el = _wgSheet; if (!el || tab === _muTab || (tab !== 'wg' && tab !== 'raids')) return;
+    _muHap('LIGHT');
+    const frame = el.querySelector('.mu-frame'), scr = el.querySelector('[data-mu-scr]');
+    if (scr) _muPos[_muTab] = scr.scrollTop;
+    _muTab = tab;
+    try { localStorage.setItem(MU_TAB_KEY, tab); } catch (_) {}
+    if (frame) frame.setAttribute('data-tab', tab);
+    _muPaintTabs();
+    const pane = el.querySelector('[data-mu-pane="' + tab + '"]');
+    if (!_muSeen[tab]) _muPaintPane(tab);
+    if (pane && !_muRm()) { pane.classList.remove('in-l', 'in-r'); void pane.offsetWidth; pane.classList.add(tab === 'raids' ? 'in-r' : 'in-l'); }
+    if (scr) scr.scrollTop = _muPos[tab] || 0;
+    if (tab === 'raids') _muLoadRaids();
+  }
+  function openMuster(tab) {
+    const c = _wgCache();
+    if (!c) { _worldgateSync(true); }
+    if (tab !== 'wg' && tab !== 'raids') { try { tab = localStorage.getItem(MU_TAB_KEY) || 'wg'; } catch (_) { tab = 'wg'; } }
+    if (tab !== 'wg' && tab !== 'raids') tab = 'wg';
+    if (_wgSheet) { _muGo(tab); _wgSheetPaint(); return; }
+    if (!c && tab === 'wg') { _wgToast('The gate is still loading — try again in a moment.'); return; }
+    _muTab = tab; _muSeen = {}; _muPos = {}; _muInfo = false; _muOpenTeam = null;
+    try { localStorage.setItem(MU_TAB_KEY, tab); } catch (_) {}
+    if (!_muRaids) { try { const cached = JSON.parse(localStorage.getItem(MU_RAIDS_KEY) || 'null'); if (cached && cached.data && Date.now() - cached.at < 6 * 3600000) _muRaids = cached.data; } catch (_) {} }
+    const el = document.createElement('div');
+    el.className = 'wg-scope mu-wrap' + (_muRm() ? ' mu-rm' : '');
+    el.innerHTML = '<div class="mu-frame" data-tab="' + tab + '" role="dialog" aria-modal="true" aria-label="Team Battles">' +
+        '<div class="mu-glow wg"></div><div class="mu-glow rd"></div>' +
+        '<div class="mu-scr" data-mu-scr><header class="mu-top"><div class="mu-head"><p class="mu-eye">Team Battles · No hunter walks alone</p>' +
+          '<button class="mu-x" type="button" data-wg-close aria-label="Close"><span>' + _MU_IC.x + '</span></button></div><div data-mu-tabs></div></header>' +
+          '<div class="mu-pane" data-pane="wg" data-mu-pane="wg"></div><div class="mu-pane" data-pane="raids" data-mu-pane="raids"></div></div></div>';
+    document.body.appendChild(el); _wgSheet = el;
+    _muPaintTabs();
+    _muPaintPane(tab);
+    setTimeout(function () { try { el.classList.add('open'); } catch (_) {} }, 20);
+    _muHap('LIGHT');
+    try { if (typeof window.__funnelEmit === 'function') window.__funnelEmit(tab === 'raids' ? 'muster_raids_opened' : 'worldgate_opened', String((c && c.status) || '')); } catch (_) {}
+    if (c || tab === 'wg') _worldgateSync(true);   // fresh numbers while it slides up
+    _muLoadRaids();
+  }
+  function openWorldgateSheet(_seg) { openMuster('wg'); }   // W1255 — the old name: Home's world boss bar, deep links, QA
   function closeWorldgateSheet() {
     const el = _wgSheet; if (!el) return;
     _wgSheet = null; _wgSeg = null;
+    _muHap('LIGHT');
     try { el.classList.remove('open'); } catch (_) {}
-    setTimeout(function () { try { el.remove(); } catch (_) {} }, 260);
+    setTimeout(function () { try { el.remove(); } catch (_) {} }, 300);
   }
+  function _muAct(t) {   // the Muster's own taps (the rest ride the Worldgate's data-wg-* handlers)
+    let el;
+    if ((el = t.closest('[data-mu-go]'))) { _muGo(el.getAttribute('data-mu-go')); return true; }
+    if ((el = t.closest('[data-mu-info]'))) {
+      _muInfo = !_muInfo; _muHap('LIGHT');
+      const how = _wgSheet && _wgSheet.querySelector('.mu-how');
+      if (how) how.classList.toggle('on', _muInfo);
+      el.setAttribute('aria-expanded', _muInfo ? 'true' : 'false');
+      return true;
+    }
+    if ((el = t.closest('[data-mu-team]'))) {
+      const id = el.getAttribute('data-mu-team'), open = _muOpenTeam !== id;
+      _muOpenTeam = open ? id : null; _muHap('LIGHT');
+      (_wgSheet ? _wgSheet.querySelectorAll('.mu-tc.is-open') : []).forEach(function (x) { x.classList.remove('is-open'); x.setAttribute('aria-expanded', 'false'); });
+      if (open) { el.classList.add('is-open'); el.setAttribute('aria-expanded', 'true'); }
+      return true;
+    }
+    if ((el = t.closest('[data-mu-court]'))) {   // the portrait: a member's way to summon a raid party by hand (the old Inner Court)
+      if (_isMemberNow()) { closeWorldgateSheet(); setTimeout(function () { try { _openInnerCourt(); } catch (_) {} }, 260); }
+      return true;
+    }
+    return false;
+  }
+  try { window.__muster = { open: openMuster, raids: function () { return _muRaids; }, load: _muLoadRaids }; } catch (_) {}
 
   // ── fx: the bar flashes where the strike landed, the monster shakes at yours ──
   function _wgFlash(delta, myDelta) {
@@ -8494,6 +8689,7 @@
     document.addEventListener('click', function (e) {
       const t = e.target; if (!t || !t.closest) return;
       let el;
+      if (_wgSheet && _wgSheet.contains(t) && _muAct(t)) { e.preventDefault(); return; }   // W1255 — the Muster's tabs, (i), team cards
       if ((el = t.closest('[data-wg-close]'))) { e.preventDefault(); closeWorldgateSheet(); return; }
       if ((el = t.closest('[data-wg-mvp]'))) { e.preventDefault(); e.stopPropagation(); _wgmBadgeTip(el); return; }   // W975
       if ((el = t.closest('[data-wg-profile]'))) {
@@ -67611,7 +67807,10 @@
     if (ov) ov.classList.add('hidden');
     if (sh) sh.classList.add('hidden');
   }
-  function _openMembersRaid() {
+  // W1255 — the Co-op Raid gate opens The Muster on Raids (handoff: "Co-op Raid gate → Raids"). The Inner Court below
+  // (summon a party by hand) stays one tap away: the Grinning God portrait on the Raids tab.
+  function _openMembersRaid() { try { openMuster('raids'); } catch (_) { _openInnerCourt(); } }
+  function _openInnerCourt() {
     var ov = document.getElementById('members-hall-overlay');
     var sh = document.getElementById('members-hall-sheet');
     var list = document.getElementById('members-hall-list');
