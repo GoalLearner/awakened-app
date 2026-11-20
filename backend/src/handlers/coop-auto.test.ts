@@ -52,6 +52,9 @@ import {
   pickStandIn,
   RAID_IDLE_HOURS,
   RAID_LOCK_STEPS,
+  planRaidMoves,
+  SHORT_TEAM_ACTIVE,
+  type RaidView,
 } from './coop-auto';
 import { getAccoladeWeekStart, priorWeekStart } from '../lib/accolade-week';
 import { ptDayKey, ptMidnightIso, nextDay, prevDay } from '../lib/pact-streak';
@@ -1238,5 +1241,119 @@ describe('W1248 — raid stand-ins: a raider away 24 hours gives the seat to som
     expect(res.raids).toBe(1);
     const made = calls.find((c) => c.sql.includes('INSERT OR IGNORE INTO coop_boss_instances') && c.args[1] === 'the_grinning_god')!;
     expect(made.args[14]).toBe('h2|h3|h4|h5|h6|h7');
+  });
+});
+
+// W1251 — owner 2026-11-20: "You can also send players from other teams to teams that need players for example
+// zynfandel and zeruthless can be put on my team"
+describe('W1251 — raid moves: a short team\'s active walkers go, together, to the raid closest to winning with room', () => {
+  const H = 3_600_000;
+  const now = () => Date.now();
+  const none = () => false;
+  const v = (id: string, over: Partial<RaidView>): RaidView => ({
+    id, startsMs: now() - 40 * H, progress: 0.1, canGive: true, members: [], active: [], open: [], ...over,
+  });
+  // the live picture of 2026-11-20: yours 4 active (2 away seats), Zynfandel's 2 active, Burak's 3 active (3 away seats)
+  const yours = v('yours', { progress: 0.14, members: ['ri', 'ni', 'sh', 'da', 'ju', 'ez'], active: ['ri', 'ni', 'sh', 'da'], open: ['ju', 'ez'] });
+  const zyn = v('zyn', { progress: 0.03, members: ['rz', 'zy', 'ze', 'ki', 'hx', 'av'], active: ['zy', 'ze'], open: ['rz', 'ki', 'hx', 'av'] });
+  const burak = v('burak', { progress: 0.06, members: ['pr', 'bu', 're', 'me', 'se', 'ka'], active: ['bu', 're', 'me'], open: ['pr', 'se', 'ka'] });
+  const angelo = v('angelo', { progress: 0.32, members: ['te', 'an', 'ad', 'ga', 'po', 'rn'], active: ['an', 'ad', 'te', 'ga'], open: ['rn'] });
+
+  it('the owner\'s example: Zynfandel and ZeRuthless take the two away seats on the owner\'s team', () => {
+    expect(SHORT_TEAM_ACTIVE).toBe(2);
+    expect(planRaidMoves([yours, zyn, burak, angelo], none)).toEqual([
+      { from: 'zyn', to: 'yours', moves: [['zy', 'ju'], ['ze', 'ez']] },   // Angelo's has one open seat; Burak's is further behind
+    ]);
+  });
+
+  it('a team with 3 active never gives; a raid under a day old never gives; nobody moves to a team no bigger than theirs', () => {
+    expect(planRaidMoves([yours, burak], none)).toEqual([]);
+    expect(planRaidMoves([yours, { ...zyn, canGive: false }], none)).toEqual([]);
+    const two = v('two', { progress: 0.5, members: ['a', 'b', 'c', 'd', 'e', 'f'], active: ['a', 'b'], open: ['c', 'd', 'e', 'f'] });
+    expect(planRaidMoves([two, zyn], none).filter((p) => p.to === 'two')).toEqual([]);
+  });
+
+  it('the group moves whole or not at all, never to a raid that started later, never next to someone they blocked', () => {
+    expect(planRaidMoves([zyn, angelo], none)).toEqual([]);   // one open seat for two walkers
+    expect(planRaidMoves([zyn, { ...yours, startsMs: now() - 10 * H }], none)).toEqual([]);
+    const blk = (x: string, y: string) => (x === 'ni' && y === 'ze') || (x === 'ze' && y === 'ni');
+    expect(planRaidMoves([zyn, yours, burak], blk)).toEqual([{ from: 'zyn', to: 'burak', moves: [['zy', 'pr'], ['ze', 'se']] }]);
+  });
+
+  it('fewest active gives first, and a team that just took walkers in does not give them away again', () => {
+    const solo = v('solo', { progress: 0.01, members: ['s1', 'x1', 'x2', 'x3', 'x4', 'x5'], active: ['s1'], open: ['x1', 'x2', 'x3', 'x4', 'x5'] });
+    // 1 active goes first, to the raid closest to winning; then Zynfandel's two no longer fit anywhere whole: they wait
+    expect(planRaidMoves([zyn, solo, yours], none)).toEqual([{ from: 'solo', to: 'yours', moves: [['s1', 'ju']] }]);
+    // with only Zynfandel's to take them, the solo walker goes there, and Zynfandel's (now 3 active) stays put
+    expect(planRaidMoves([zyn, solo], none)).toEqual([{ from: 'solo', to: 'zyn', moves: [['s1', 'rz']] }]);
+  });
+
+  it('the sweep moves them: seats handed over in one guarded batch, steps carried, the movers told', async () => {
+    const start = new Date(now() - 40 * H).toISOString();
+    const end = new Date(now() + 38 * H).toISOString();
+    const row = (id: string, challenger: string, over: Record<string, unknown> = {}) => ({
+      id, boss_id: 'the_grinning_god', boss_rank: 'S', status: 'active', auto: 1, challenger_user_id: challenger,
+      partner_user_id: null, partner2_user_id: null, starts_at: start, ends_at: end, goal_steps: 200000, goal_flights: 200,
+      reward_souls: 800, banked_steps: 0, banked_flights: 0, ...over,
+    });
+    const seat = (instance_id: string, ids: string[]) => ids.map((user_id) => ({ instance_id, user_id, joined_at: start }));
+    const away = now() - 40 * H;
+    const f: SweepFixture = {
+      raidRows: [row('Y', 'ri', { partner_user_id: 'ni', partner2_user_id: 'sh' }), row('Z', 'rz', { partner_user_id: 'zy', partner2_user_id: 'ze' })],
+      participants: [...seat('Y', ['ni', 'sh', 'da', 'ju', 'ez']), ...seat('Z', ['zy', 'ze', 'ki', 'hx', 'av'])],
+      lastSeen: { ri: now() - H, ni: now() - H, sh: now() - H, da: now() - H, zy: now() - H, ze: now() - H, ju: away, ez: away, rz: away, ki: away, hx: away, av: away },
+      weekOpens: {},
+      raidLive: ['ri', 'ni', 'sh', 'da', 'ju', 'ez', 'rz', 'zy', 'ze', 'ki', 'hx', 'av'],
+      progress: [
+        { bid: 'Y', user_id: 'ri', event_type: 'steps_total', s: 10394 },
+        { bid: 'Z', user_id: 'zy', event_type: 'steps_total', s: 3924 },
+        { bid: 'Z', user_id: 'zy', event_type: 'flights_total', s: 5 },
+        { bid: 'Z', user_id: 'ze', event_type: 'steps_total', s: 1669 },
+      ],
+    };
+    const calls: Call[] = [];
+    const res = await sweepCoopAutoHunts(makeEnv(sweepDb(f, calls)), ctx);
+    expect(res.swaps).toBe(0);   // nobody free
+    expect(res.moves).toBe(2);
+    const seated = calls.filter((c) => c.sql.includes('INSERT OR IGNORE INTO coop_boss_participants'));
+    expect(seated.map((c) => [c.args[0], c.args[1], c.args[2]])).toEqual([['Y', 'ju', 'zy'], ['Y', 'ez', 'ze']]);
+    const left = calls.filter((c) => c.sql.includes('DELETE FROM coop_boss_participants') && c.args[0] === 'Z');
+    expect(left.map((c) => c.args[1])).toEqual(['zy', 'ze']);
+    const legacy = calls.filter((c) => c.sql.includes('THEN challenger_user_id ELSE partner_user_id'));
+    expect(legacy.map((c) => c.args.slice(0, 2))).toEqual([['Z', 'zy'], ['Z', 'ze']]);
+    const carried = calls.filter((c) => c.sql.includes('INSERT OR IGNORE INTO verified_events'));
+    expect(carried.map((c) => [c.args[1], c.args[2], c.args[3], c.args[5], c.args[9]])).toEqual([
+      ['zy', 'Y', 'steps_total', 3924, 'raid_move:Y:steps'],
+      ['zy', 'Y', 'flights_total', 5, 'raid_move:Y:flights'],
+      ['ze', 'Y', 'steps_total', 1669, 'raid_move:Y:steps'],
+    ]);
+    expect(calls.filter((c) => c.sql.includes('INTO coop_raid_swaps')).map((c) => c.args.slice(0, 3))).toEqual([['Y', 'ju', 'zy'], ['Y', 'ez', 'ze']]);
+    const push = mockNotify.mock.calls.find((c) => c[1] === 'zy')!;
+    expect(push[2]).toMatchObject({ title: 'New Raid Team', type: 'coop_joined' });
+    expect(String((push[2] as { body: string }).body)).toBe('The Grinning God: you joined a team that needed walkers. 38 hours left for 200,000 steps and 200 flights, and your steps came with you.');
+  });
+
+  it('a departing challenger hands the seat to a member who stays', async () => {
+    const start = new Date(now() - 40 * H).toISOString();
+    const end = new Date(now() + 38 * H).toISOString();
+    const row = (id: string, challenger: string) => ({
+      id, boss_id: 'the_grinning_god', boss_rank: 'S', status: 'active', auto: 1, challenger_user_id: challenger,
+      partner_user_id: null, partner2_user_id: null, starts_at: start, ends_at: end, goal_steps: 200000, goal_flights: 200,
+      reward_souls: 800, banked_steps: 0, banked_flights: 0,
+    });
+    const seat = (instance_id: string, ids: string[]) => ids.map((user_id) => ({ instance_id, user_id, joined_at: start }));
+    const away = now() - 40 * H;
+    const f: SweepFixture = {
+      raidRows: [row('Y', 'ri'), row('Z', 'zy')],
+      participants: [...seat('Y', ['ni', 'sh', 'da', 'ju', 'ez']), ...seat('Z', ['rz', 'ze', 'ki', 'hx', 'av'])],
+      lastSeen: { ri: now() - H, ni: now() - H, sh: now() - H, da: now() - H, zy: now() - H, ze: now() - H, ju: away, ez: away, rz: away, ki: away, hx: away, av: away },
+      weekOpens: {},
+      raidLive: ['ri', 'ni', 'sh', 'da', 'ju', 'ez', 'rz', 'zy', 'ze', 'ki', 'hx', 'av'],
+      progress: [{ bid: 'Z', user_id: 'zy', event_type: 'steps_total', s: 3924 }],
+    };
+    const calls: Call[] = [];
+    expect((await sweepCoopAutoHunts(makeEnv(sweepDb(f, calls)), ctx)).moves).toBe(2);
+    const handOver = calls.find((c) => c.sql.includes('SET challenger_user_id = ?3,') && c.args[0] === 'Z')!;
+    expect(handOver.args.slice(0, 3)).toEqual(['Z', 'zy', 'rz']);   // the first member who stays (not ZeRuthless, who moves too)
   });
 });

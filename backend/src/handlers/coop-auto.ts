@@ -864,8 +864,8 @@ export async function createAutoTrio(env: Env, trio: readonly string[], dayKey: 
 /** Cron, every 2 minutes: today's hunt for every walking friend pair that has none yet, then
  *  (W1164) today's hunt for every matched pair of active hunters who have no friends, then
  *  (W1208) today's automatic trios. */
-export async function sweepCoopAutoHunts(env: Env, _ctx?: ExecutionContext): Promise<{ created: number; pairs: number; skipped: number; matched: number; trios: number; raids: number; swaps: number }> {
-  const out = { created: 0, pairs: 0, skipped: 0, matched: 0, trios: 0, raids: 0, swaps: 0 };
+export async function sweepCoopAutoHunts(env: Env, _ctx?: ExecutionContext): Promise<{ created: number; pairs: number; skipped: number; matched: number; trios: number; raids: number; swaps: number; moves: number }> {
+  const out = { created: 0, pairs: 0, skipped: 0, matched: 0, trios: 0, raids: 0, swaps: 0, moves: 0 };
   try {
     const nowMs = Date.now();
     const today = ptDayKey(nowMs);
@@ -951,6 +951,12 @@ export async function sweepCoopAutoHunts(env: Env, _ctx?: ExecutionContext): Pro
       out.swaps = await sweepRaidStandIns(env, nowMs, today, shared, lastSeen, _ctx);
     } catch (err) {
       console.error('[coop-auto] raid stand-in sweep failed', err);
+    }
+    // ── W1251 — short teams' active walkers move to the raid closest to winning that has room for them ──
+    try {
+      out.moves = await sweepRaidMoves(env, nowMs, shared, lastSeen, _ctx);
+    } catch (err) {
+      console.error('[coop-auto] raid move sweep failed', err);
     }
 
     // ── W1211 — the automatic raid ──
@@ -1450,6 +1456,257 @@ async function sweepRaidStandIns(
     }
   }
   return swaps;
+}
+
+/** W1251 — RAID MOVES (owner 2026-11-20: "You can also send players from other teams to teams that need players for
+ *  example zynfandel and zeruthless can be put on my team"). After the stand-ins, when nobody free is left: a raid at
+ *  least a day old with SHORT_TEAM_ACTIVE or fewer members who really opened the app in the last 24 hours sends
+ *  those active members, together, into the open seats (away 24h AND under 1,000 raid steps, the stand-in rule) of
+ *  the raid closest to winning that can take all of them, has more active members than theirs, started no later
+ *  than theirs (so every step they walked still counts there) and holds nobody they blocked. Their raid steps come
+ *  with them at once (copied onto the new raid; their phone keeps it current), the away hunters on those seats leave
+ *  as in a stand-in swap, and the team they left keeps going with whoever stays. */
+export const SHORT_TEAM_ACTIVE = 2;
+export const MOVE_MIN_AGE_HOURS = 24;
+
+/** W1251 — one live raid as the move planner sees it. `active`: members in the app in the last 24 hours, most raid
+ *  steps first; `open`: seats a stand-in may take; `progress`: the lower of steps and flights against the goal. */
+export interface RaidView {
+  id: string;
+  startsMs: number;
+  progress: number;
+  canGive: boolean;
+  members: string[];
+  active: string[];
+  open: string[];
+}
+
+/** W1251 — pure: the moves, one group per short raid (fewest active first): every active member of it goes, together,
+ *  to the best raid that can take them all. */
+export function planRaidMoves(
+  views: readonly RaidView[],
+  isBlocked: (a: string, b: string) => boolean,
+): { from: string; to: string; moves: [string, string][] }[] {
+  const live = new Map(views.map((v) => [v.id, { ...v, members: [...v.members], active: [...v.active], open: [...v.open] }]));
+  const plans: { from: string; to: string; moves: [string, string][] }[] = [];
+  const givers = Array.from(live.values())
+    .filter((v) => v.canGive && v.active.length > 0 && v.active.length <= SHORT_TEAM_ACTIVE)
+    .sort((a, b) => a.active.length - b.active.length || a.progress - b.progress || (a.id < b.id ? -1 : 1));
+  for (const g of givers) {
+    const from = live.get(g.id)!;
+    const movers = [...from.active];
+    if (!movers.length || movers.length > SHORT_TEAM_ACTIVE) continue;   // took players in on an earlier move: it stays
+    const to = Array.from(live.values())
+      .filter((r) => r.id !== from.id && r.active.length > movers.length && r.open.length >= movers.length &&
+        r.startsMs <= from.startsMs &&
+        !movers.some((m) => r.members.some((x) => !r.open.includes(x) && (isBlocked(x, m) || isBlocked(m, x)))))
+      .sort((a, b) => b.progress - a.progress || b.active.length - a.active.length || (a.id < b.id ? -1 : 1))[0];
+    if (!to) continue;
+    const moves = movers.map((m, i) => [m, to.open[i]] as [string, string]);
+    plans.push({ from: from.id, to: to.id, moves });
+    const out = new Set(moves.map(([, x]) => x));
+    to.members = to.members.filter((x) => !out.has(x)).concat(movers);
+    to.open = to.open.filter((x) => !out.has(x));
+    to.active = to.active.concat(movers);
+    from.members = from.members.filter((x) => !movers.includes(x));
+    from.active = [];
+  }
+  return plans;
+}
+
+/** W1251 — one move, one guarded batch: `m` leaves raid `from` and takes `x`'s seat in raid `to`. What `x` walked is
+ *  banked on `to` (as a stand-in swap banks it); `m`'s raid steps and flights are copied onto `to` when `carry`; on
+ *  `from`, a departing challenger hands that seat to `heir` (a member who stays). Every statement re-checks that both
+ *  raids are live and the seats are as planned, so a raid that just settled writes nothing. True when `m` moved. */
+export async function moveRaider(
+  env: Env,
+  from: CoopBossRow,
+  to: CoopBossRow,
+  m: string,
+  x: string,
+  heir: string | null,
+  bankX: { steps: number; flights: number },
+  carry: { steps: number; flights: number } | null,
+  nowMs: number,
+): Promise<boolean> {
+  const at = new Date(nowMs).toISOString();
+  const bs = Math.max(0, Math.round(Number(bankX.steps) || 0));
+  const bf = Math.max(0, Math.round(Number(bankX.flights) || 0));
+  const inFrom = `(EXISTS (SELECT 1 FROM coop_boss_instances WHERE id = ?7 AND status = 'active' AND challenger_user_id = ?3)
+       OR (EXISTS (SELECT 1 FROM coop_boss_participants WHERE instance_id = ?7 AND user_id = ?3)
+           AND EXISTS (SELECT 1 FROM coop_boss_instances WHERE id = ?7 AND status = 'active')))`;
+  const inTo = (n: number, uid: number) => `(EXISTS (SELECT 1 FROM coop_boss_instances WHERE id = ?${n} AND challenger_user_id = ?${uid})
+       OR EXISTS (SELECT 1 FROM coop_boss_participants WHERE instance_id = ?${n} AND user_id = ?${uid}))`;
+  const stmts: D1PreparedStatement[] = [];
+  // 1 · the seat in `to`: x out (banked), m in — only while m is still in `from`
+  if (to.challenger_user_id === x) {
+    stmts.push(env.DB.prepare(
+      `UPDATE coop_boss_instances
+          SET challenger_user_id = ?3, banked_steps = banked_steps + ?4, banked_flights = banked_flights + ?5, updated_at = ?6
+        WHERE id = ?1 AND status = 'active' AND challenger_user_id = ?2 AND ${inFrom}`,
+    ).bind(to.id, x, m, bs, bf, at, from.id));
+  } else {
+    stmts.push(env.DB.prepare(
+      `UPDATE coop_boss_instances
+          SET banked_steps = banked_steps + ?4, banked_flights = banked_flights + ?5,
+              partner_user_id = CASE WHEN partner_user_id = ?2 THEN ?3 ELSE partner_user_id END,
+              partner2_user_id = CASE WHEN partner2_user_id = ?2 THEN ?3 ELSE partner2_user_id END,
+              updated_at = ?6
+        WHERE id = ?1 AND status = 'active'
+          AND EXISTS (SELECT 1 FROM coop_boss_participants WHERE instance_id = ?1 AND user_id = ?2) AND ${inFrom}`,
+    ).bind(to.id, x, m, bs, bf, at, from.id));
+    stmts.push(env.DB.prepare(
+      `INSERT OR IGNORE INTO coop_boss_participants (instance_id, user_id, joined_at)
+         SELECT ?1, ?3, ?6
+          WHERE EXISTS (SELECT 1 FROM coop_boss_participants WHERE instance_id = ?1 AND user_id = ?2)
+            AND EXISTS (SELECT 1 FROM coop_boss_instances WHERE id = ?1 AND status = 'active')
+            AND (?4 + ?5) >= 0 AND ${inFrom}`,
+    ).bind(to.id, x, m, bs, bf, at, from.id));
+    stmts.push(env.DB.prepare(
+      `DELETE FROM coop_boss_participants
+        WHERE instance_id = ?1 AND user_id = ?2
+          AND EXISTS (SELECT 1 FROM coop_boss_participants WHERE instance_id = ?1 AND user_id = ?3)`,
+    ).bind(to.id, x, m));
+  }
+  // 2 · m leaves `from` — only once m holds the seat in `to`
+  if (from.challenger_user_id === m) {
+    if (!heir) return false;
+    stmts.push(env.DB.prepare(
+      `UPDATE coop_boss_instances
+          SET challenger_user_id = ?3,
+              partner_user_id = CASE WHEN partner_user_id IN (?2, ?3) THEN ?3 ELSE partner_user_id END,
+              partner2_user_id = CASE WHEN partner2_user_id IN (?2, ?3) THEN NULL ELSE partner2_user_id END,
+              updated_at = ?4
+        WHERE id = ?1 AND challenger_user_id = ?2
+          AND EXISTS (SELECT 1 FROM coop_boss_participants WHERE instance_id = ?1 AND user_id = ?3) AND ${inTo(5, 2)}`,
+    ).bind(from.id, m, heir, at, to.id));
+    stmts.push(env.DB.prepare(
+      `DELETE FROM coop_boss_participants
+        WHERE instance_id = ?1 AND user_id = ?2
+          AND EXISTS (SELECT 1 FROM coop_boss_instances WHERE id = ?1 AND challenger_user_id = ?2)`,
+    ).bind(from.id, heir));
+  } else {
+    stmts.push(env.DB.prepare(
+      `UPDATE coop_boss_instances
+          SET partner_user_id = CASE WHEN partner_user_id = ?2 THEN challenger_user_id ELSE partner_user_id END,
+              partner2_user_id = CASE WHEN partner2_user_id = ?2 THEN NULL ELSE partner2_user_id END,
+              updated_at = ?3
+        WHERE id = ?1 AND (partner_user_id = ?2 OR partner2_user_id = ?2) AND ${inTo(4, 2)}`,
+    ).bind(from.id, m, at, to.id));
+    stmts.push(env.DB.prepare(
+      `DELETE FROM coop_boss_participants
+        WHERE instance_id = ?1 AND user_id = ?2 AND ${inTo(3, 2)}`,
+    ).bind(from.id, m, to.id));
+  }
+  // 3 · m's raid steps and flights come along (a lower bound: their phone posts the live number next open)
+  if (carry) {
+    for (const [type, metric, value] of [['steps_total', 'steps', carry.steps], ['flights_total', 'flights', carry.flights]] as const) {
+      const v = Math.max(0, Math.round(Number(value) || 0));
+      if (!v) continue;
+      stmts.push(env.DB.prepare(
+        `INSERT OR IGNORE INTO verified_events
+           (id, user_id, boss_instance_id, event_type, metric, value, source, occurred_at, window_start, window_end, client_event_id, client_created_at)
+         SELECT ?1, ?2, ?3, ?4, ?5, ?6, 'raid_move', ?7, ?8, ?9, ?10, ?7
+          WHERE ${inTo(3, 2)}`,
+      ).bind(crypto.randomUUID(), m, to.id, type, metric, v, at, to.starts_at ?? null, to.ends_at ?? null,
+        'raid_move:' + to.id + ':' + metric));
+    }
+  }
+  // 4 · the log: x left `to` for m
+  stmts.push(env.DB.prepare(
+    `INSERT OR IGNORE INTO coop_raid_swaps (instance_id, out_user_id, in_user_id, out_steps, out_flights, swapped_at)
+       SELECT ?1, ?2, ?3, ?4, ?5, ?6 WHERE ${inTo(1, 3)}`,
+  ).bind(to.id, x, m, bs, bf, at));
+  const res = await env.DB.batch(stmts);
+  return Number(res[0]?.meta?.changes ?? 0) > 0;
+}
+
+async function sweepRaidMoves(
+  env: Env,
+  nowMs: number,
+  shared: () => Promise<Shared>,
+  lastSeen: () => Promise<Map<string, number>>,
+  ctx: ExecutionContext | undefined,
+): Promise<number> {
+  const cfg = COOP_BOSS_CFG[AUTO_RAID_BOSS];
+  if (!cfg) return 0;
+  const rows = (await env.DB.prepare(
+    `SELECT * FROM coop_boss_instances
+      WHERE status = 'active' AND auto = 1 AND boss_id = ?1 AND ends_at > ?2
+      ORDER BY ends_at ASC LIMIT 50`,
+  ).bind(AUTO_RAID_BOSS, new Date(nowMs).toISOString()).all<CoopBossRow>()).results ?? [];
+  if (rows.length < 2) return 0;
+  const ids = rows.map((r) => r.id);
+  const [parts, prog, seen] = await Promise.all([loadParticipants(env, ids), getCoopProgressForInstances(env, ids), lastSeen()]);
+  const byId = new Map<string, CoopBossRow>();
+  const views: RaidView[] = [];
+  for (const r of rows) {
+    r.participants = parts.get(r.id) ?? [];
+    byId.set(r.id, r);
+    const p = prog.get(r.id) ?? emptyProgress();
+    const startsMs = Date.parse(r.starts_at || '');
+    const members = participantIds(r);
+    const joined = new Map<string, number>([[r.challenger_user_id, startsMs]]);
+    for (const pt of r.participants) joined.set(pt.user_id, Date.parse(pt.joined_at || r.starts_at || ''));
+    const steps = (u: string) => p.steps.get(u) || 0;
+    const idle = new Set(idleRaiders(members.map((u) => ({ uid: u, joinedMs: joined.get(u) ?? startsMs })), seen, nowMs));
+    const sumS = members.reduce((s, u) => s + steps(u), 0) + (Number(r.banked_steps) || 0);
+    const sumF = members.reduce((s, u) => s + (p.flights.get(u) || 0), 0) + (Number(r.banked_flights) || 0);
+    const progress = Math.min(r.goal_steps ? sumS / r.goal_steps : 1, r.goal_flights ? sumF / r.goal_flights : 1);
+    views.push({
+      id: r.id,
+      startsMs,
+      progress,
+      canGive: Number.isFinite(startsMs) && nowMs - startsMs >= MOVE_MIN_AGE_HOURS * 3_600_000,
+      members,
+      active: members.filter((u) => seenWithin(seen, u, nowMs)).sort((a, b) => steps(b) - steps(a)),
+      open: members.filter((u) => idle.has(u) && steps(u) < RAID_LOCK_STEPS),
+    });
+  }
+  const [optouts, blocks] = await shared();
+  const isBlocked = (a: string, b: string) =>
+    blocks.has(pairKey(a, b)) || optouts.has(a + '>' + b) || optouts.has(b + '>' + a);
+  const plans = planRaidMoves(views, isBlocked);
+  if (!plans.length) return 0;
+  const goal = thousands(cfg.goalSteps) + ' steps' + (cfg.goalFlights ? ' and ' + thousands(cfg.goalFlights) + ' flights' : '');
+  let moved = 0;
+  for (const plan of plans) {
+    const from = byId.get(plan.from)!;
+    const to = byId.get(plan.to)!;
+    const pf = prog.get(from.id) ?? emptyProgress();
+    const pt = prog.get(to.id) ?? emptyProgress();
+    const carryOk = Date.parse(to.starts_at || '') <= Date.parse(from.starts_at || '');
+    const movers = plan.moves.map(([m]) => m);
+    for (const [m, x] of plan.moves) {
+      if (moved >= MAX_SWAPS_PER_RUN) return moved;
+      const heir = from.challenger_user_id === m
+        ? ((from.participants ?? []).map((q) => q.user_id).find((u) => u !== m && !movers.includes(u)) ?? null)
+        : null;
+      const ok = await moveRaider(env, from, to, m, x, heir,
+        { steps: pt.steps.get(x) || 0, flights: pt.flights.get(x) || 0 },
+        carryOk ? { steps: pf.steps.get(m) || 0, flights: pf.flights.get(m) || 0 } : null, nowMs);
+      if (!ok) continue;
+      moved++;
+      // keep both rows true to the database for the next mover
+      if (to.challenger_user_id === x) to.challenger_user_id = m;
+      else to.participants = (to.participants ?? []).filter((q) => q.user_id !== x).concat([{ user_id: m, joined_at: new Date(nowMs).toISOString() }]);
+      if (from.challenger_user_id === m && heir) {
+        from.challenger_user_id = heir;
+        from.participants = (from.participants ?? []).filter((q) => q.user_id !== heir && q.user_id !== m);
+      } else {
+        from.participants = (from.participants ?? []).filter((q) => q.user_id !== m);
+      }
+      if (!ctx) continue;
+      const hoursLeft = Math.max(1, Math.round((Date.parse(to.ends_at || '') - nowMs) / 3_600_000));
+      ctx.waitUntil(notifyUser(env, m, {
+        title: 'New Raid Team',
+        body: `${COOP_BOSS_NAMES[AUTO_RAID_BOSS] ?? 'The raid'}: you joined a team that needed walkers. ${hoursLeft} hours left for ${goal}, and your steps came with you.`,
+        type: 'coop_joined',
+        data: { bossId: AUTO_RAID_BOSS },
+      }));
+    }
+  }
+  return moved;
 }
 
 /** Cron, every 2 minutes: settle every active hunt whose goal is met or whose window has
