@@ -1755,7 +1755,7 @@ test.describe('R · Compound reward caption on the Habits tab (W514/W515)', () =
 // W799 — manual entries are DROPPED, not preferred: hand-typed Health-app
 // samples (bundle exactly com.apple.Health) and Shortcuts writes
 // (com.apple.shortcuts) never count; a manual-only sample set totals 0.
-test.describe('S · HealthKit source dedup (W681/W799/W1245)', () => {
+test.describe('S · HealthKit source dedup (W681/W799/W1245/W1247)', () => {
   test('one legitimate source per day across source mixes', async ({ page }) => {
     await page.goto('/');
     await expect(page.locator('#tab-profile')).toBeVisible({ timeout: 15_000 });
@@ -1774,11 +1774,17 @@ test.describe('S · HealthKit source dedup (W681/W799/W1245)', () => {
         phoneBeatsSmallerRing: f([iphone(9000), oura(4000)]),
         fitbitBeatsPhone: f([iphone(4000), fitbit(9000)]),
         unknownAppNeverBeatsPhone: f([iphone(6000), faker(20000)]),
-        unknownOnlyFallsBack: f([faker(3000), { value: 5000, sourceBundleId: 'com.example.other', source: 'Other' }]),
+        // W1247 — an unknown app never counts, even alone (iPhone Fitness Tracking switched off).
+        unknownOnlyIsZero: f([faker(3000), { value: 5000, sourceBundleId: 'com.example.other', source: 'Other' }]),
+        loneFakerIsZero: f([faker(20000)]),
+        nameSpoofIgnored: f([iphone(3000), { value: 20000, sourceBundleId: 'com.example.sync', source: 'Garmin Sync' }]),
+        bundleWordWearable: f([iphone(1000), { value: 1500, sourceBundleId: 'fi.polar.polarflow', source: 'Polar Flow' }]),
+        lookalikeBundleIgnored: f([iphone(1000), { value: 9000, sourceBundleId: 'com.garminfit.booster', source: 'Booster' }]),
+        typedKcalNeverCounts: f([manual(900), faker(1000), iphone(220)]),
         perDayWinnersSum: f([on(fitbit(9000), 17), on(iphone(4000), 17), on(iphone(5000), 18), on(fitbit(300), 18)]),
         ringOnlyFallback: f([oura(4000), oura(2450)]),
         singleSourceSums: f([iphone(100), iphone(200)]),
-        untaggedRawSum: f([{ value: 100 }, { value: 50 }]),
+        untaggedIsZero: f([{ value: 100 }, { value: 50 }]),
         // W799 — the typed-in cheat: manual entries vanish from every mix.
         manualEntryDropped: f([manual(5000), oura(9000)]),
         manualOnlyIsZero: f([manual(5000)]),
@@ -1790,11 +1796,16 @@ test.describe('S · HealthKit source dedup (W681/W799/W1245)', () => {
     expect(results.phoneBeatsSmallerRing).toBe(9000);
     expect(results.fitbitBeatsPhone).toBe(9000);
     expect(results.unknownAppNeverBeatsPhone).toBe(6000);
-    expect(results.unknownOnlyFallsBack).toBe(5000);
+    expect(results.unknownOnlyIsZero).toBe(0);
+    expect(results.loneFakerIsZero).toBe(0);
+    expect(results.nameSpoofIgnored).toBe(3000);
+    expect(results.bundleWordWearable).toBe(1500);
+    expect(results.lookalikeBundleIgnored).toBe(1000);
+    expect(results.typedKcalNeverCounts).toBe(220);
     expect(results.perDayWinnersSum).toBe(14000);
     expect(results.ringOnlyFallback).toBe(6450);
     expect(results.singleSourceSums).toBe(300);
-    expect(results.untaggedRawSum).toBe(150);
+    expect(results.untaggedIsZero).toBe(0);
     expect(results.manualEntryDropped).toBe(9000);
     expect(results.manualOnlyIsZero).toBe(0);
     expect(results.shortcutsDropped).toBe(1200);

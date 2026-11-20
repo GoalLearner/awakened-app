@@ -462,59 +462,47 @@ enum ReadyHuntMath {
         return lower.contains("iphone") || lower.contains("apple watch") || lower.contains("applewatch")
     }
 
-    /// W1245 — a known wearable's app (Fitbit / Google Health, Oura, Garmin, Whoop, ...).
-    static let wearableWords: [String] = ["oura", "fitbit", "google", "garmin", "whoop", "withings", "polar", "suunto",
-                                          "coros", "zepp", "huami", "amazfit", "samsung", "galaxy", "xiaomi", "mifit",
-                                          "mi fitness", "huawei", "ultrahuman", "ringconn", "wahoo", "pixel"]
+    /// W1245/W1247 — a known wearable's app, judged by its BUNDLE word by word (com.garmin.connect.mobile,
+    /// fi.polar.polarflow, com.ouraring.oura); an app's display name proves nothing.
+    static let wearableWords: [String] = ["fitbit", "google", "oura", "ouraring", "garmin", "whoop", "withings", "polar",
+                                          "suunto", "coros", "zepp", "huami", "amazfit", "xiaomi", "mifit", "huawei",
+                                          "ultrahuman", "ringconn", "wahoo", "wahoofitness", "samsung"]
 
-    static func looksWearable(_ text: String) -> Bool {
-        let lower: String = text.lowercased()
-        for word in wearableWords {
-            if lower.contains(word) { return true }
+    static func isWearableBundle(_ bundle: String) -> Bool {
+        let separators: CharacterSet = CharacterSet(charactersIn: ".-_")
+        let parts: [String] = bundle.lowercased().components(separatedBy: separators)
+        for part in parts {
+            if wearableWords.contains(part) { return true }
         }
         return false
     }
 
-    /// W1245 — the iPhone, an Apple Watch, or a known wearable's app.
+    /// W1245/W1247 — the iPhone, an Apple Watch, or a known wearable's app. Nothing else counts.
     static func isLegit(_ bundle: String, _ name: String) -> Bool {
-        if bundle.isEmpty { return looksApple(name) || looksWearable(name) }
+        if bundle.isEmpty { return false }
         if bundle.lowercased().hasPrefix("com.apple.health.") { return true }
-        return looksWearable(bundle + " " + name)
+        return isWearableBundle(bundle)
     }
 
-    /// app.js `_totalFromHealthSamples` for today (W1245): one source → its total; several → the
-    /// legitimate source with the most (phone, watch, ring, band; never added together), or the
-    /// largest of all when no legitimate source wrote any.
+    /// app.js `_totalFromHealthSamples` for today (W1245/W1247): the legitimate source with the most
+    /// (phone, watch, ring, band; never added together). An unknown app never counts, even alone.
     static func total(_ samples: [HKSample]) -> Double {
-        var raw: Double = 0
         var bySource: [String: Double] = [:]
-        var apple: [String: Bool] = [:]
         for sample in samples {
             guard let quantity = sample as? HKQuantitySample else { continue }
             let source = quantity.sourceRevision.source
             let bundle: String = source.bundleIdentifier
             if isManual(bundle) { continue }
+            if !isLegit(bundle, source.name) { continue }
             let value: Double = quantity.quantity.doubleValue(for: HKUnit.count())
             if !(value > 0) { continue }
-            raw += value
-            let key: String = bundle.isEmpty ? source.name : bundle
-            if key.isEmpty { continue }
-            if bySource[key] == nil {
-                bySource[key] = 0
-                apple[key] = isLegit(bundle, source.name)
-            }
-            let soFar: Double = bySource[key] ?? 0
-            bySource[key] = soFar + value
+            let soFar: Double = bySource[bundle] ?? 0
+            bySource[bundle] = soFar + value
         }
-        if bySource.count <= 1 { return raw.rounded() }
-        var maxApple: Double = 0
-        var maxAll: Double = 0
-        for (key, sum) in bySource {
-            if sum > maxAll { maxAll = sum }
-            let isApple: Bool = apple[key] ?? false
-            if isApple && sum > maxApple { maxApple = sum }
+        var best: Double = 0
+        for (_, sum) in bySource {
+            if sum > best { best = sum }
         }
-        let best: Double = maxApple > 0 ? maxApple : maxAll
         return best.rounded()
     }
 
