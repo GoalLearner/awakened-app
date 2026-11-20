@@ -1211,8 +1211,8 @@ async function sweepAutoRaids(
 /** W1248 — RAID STAND-INS (owner 2026-11-20: "If a player on a raid is currently inactive for 24 hours straight,
  *  replace them with a person that is waiting to be on a raid or that is active and qualifies to be raiding").
  *  W1249: only while under RAID_LOCK_STEPS raid steps; 1,000+ locks the seat in for the rest of the raid.
- *  Every pass, before new raids form: a member of a live automatic raid who has not been in the app (an app open
- *  or a cloud save) for RAID_IDLE_HOURS, counted from the later of their last visit and the moment they took the
+ *  Every pass, before new raids form: a member of a live automatic raid who has not REALLY opened the app (W1250: a
+ *  background wake is not an open) for RAID_IDLE_HOURS, counted from the later of their last open and the moment they took the
  *  seat (so someone just drawn always gets a full day), gives the seat to a stand-in: a hunter waiting in the
  *  raid finder first, else a random hunter who qualifies for a raid today (5+ opens in the last 7 days, in the
  *  app in the last 24 hours, in no live raid, on a current build, automatic hunts on, nobody on the team blocked
@@ -1259,18 +1259,29 @@ export function pickStandIn(
   return left[Math.min(left.length - 1, Math.floor(rnd() * left.length))] ?? null;
 }
 
-/** W1248 — when each hunter was last in the app: their latest app ping or cloud save in the last 14 days (ms). */
+/** W1248 → W1250 — when each hunter last REALLY opened the app, over the last 14 Pacific days (ms). Owner 2026-11-20:
+ *  "I am pretty sure it just is a background thing but they don't actually open the app": an Apple Health background
+ *  wake pings the server too (open:false), which moved app_opens.opened_at, and cloud saves can follow such a wake,
+ *  so neither counts. Only real opens do (app_open_counts, opens > 0): last_open_at (migration 0078), or, for an open
+ *  counted before that column existed, the end of that Pacific day (the latest it could have been, never early). */
 async function lastSeenByUser(env: Env, nowMs: number): Promise<Map<string, number>> {
-  const sinceMs = nowMs - 14 * 86_400_000;
-  const sinceDay = new Date(sinceMs).toISOString().slice(0, 10);
+  let since = ptDayKey(nowMs) || '';
+  for (let i = 1; i < 14; i++) since = prevDay(since) || since;
   const rows = (await env.DB.prepare(
-    `SELECT user_id, MAX(t) AS last_seen FROM (
-       SELECT user_id, opened_at * 1000 AS t FROM app_opens INDEXED BY idx_app_opens_date WHERE date_utc >= ?1
-       UNION ALL
-       SELECT user_id, server_updated_at AS t FROM user_state_snapshots WHERE server_updated_at >= ?2
-     ) GROUP BY user_id`,
-  ).bind(sinceDay, sinceMs).all<{ user_id: string; last_seen: number }>()).results ?? [];
-  return new Map(rows.filter((r) => r.user_id).map((r) => [r.user_id, Number(r.last_seen) || 0]));
+    `SELECT user_id, day_pt, last_open_at AS last_seen FROM app_open_counts WHERE day_pt >= ?1 AND opens > 0`,
+  ).bind(since).all<{ user_id: string; day_pt?: string; last_seen: number | null }>()).results ?? [];
+  const out = new Map<string, number>();
+  for (const r of rows) {
+    if (!r.user_id) continue;
+    let t = Number(r.last_seen) || 0;
+    if (!t && r.day_pt) {
+      const next = nextDay(r.day_pt);
+      const end = next ? Date.parse(ptMidnightIso(next) || '') : NaN;
+      if (Number.isFinite(end)) t = end - 1;
+    }
+    if (t > (out.get(r.user_id) ?? 0)) out.set(r.user_id, t);
+  }
+  return out;
 }
 
 /** W1248 — one swap, guarded statement by statement: `out` leaves this live raid and `inn` takes the seat. What

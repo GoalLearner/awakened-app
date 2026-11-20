@@ -112,10 +112,13 @@ export async function handleAppOpenPost(
   const dayPt = ptDayKey(nowMs);
   if (opened > 0 && dayPt) {
     try {
+      // W1250 — last_open_at: when this hunter last REALLY opened the app (a background wake never reaches here),
+      // read by the raid stand-in rule (migration 0078).
       await env.DB.prepare(
-        `INSERT INTO app_open_counts (user_id, day_pt, opens) VALUES (?, ?, ?)
-         ON CONFLICT(user_id, day_pt) DO UPDATE SET opens = app_open_counts.opens + excluded.opens`,
-      ).bind(session.userId, dayPt, opened).run();
+        `INSERT INTO app_open_counts (user_id, day_pt, opens, last_open_at) VALUES (?, ?, ?, ?)
+         ON CONFLICT(user_id, day_pt) DO UPDATE SET opens = app_open_counts.opens + excluded.opens,
+           last_open_at = excluded.last_open_at`,
+      ).bind(session.userId, dayPt, opened, nowMs).run();
     } catch { /* a counter must never fail the ping */ }
     // W1199 — a second day in the app can make the week official: announce what it earned
     await postOfficialFame(env, session.userId, nowMs);

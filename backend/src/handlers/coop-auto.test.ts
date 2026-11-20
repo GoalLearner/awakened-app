@@ -1199,6 +1199,32 @@ describe('W1248 — raid stand-ins: a raider away 24 hours gives the seat to som
     expect(batchSql(b, 'SET banked_steps = banked_steps + ?4')[0].args.slice(0, 4)).toEqual(['R1', 'p5', 'x1', 999]);
   });
 
+  it('W1250 — seen = REAL opens only: the query reads app_open_counts, and an open counted before 0078 lasts to the end of its Pacific day', async () => {
+    const f = base();
+    const calls: Call[] = [];
+    await sweepCoopAutoHunts(makeEnv(sweepDb(f, calls)), ctx);
+    const q = calls.find((c) => c.sql.includes('AS last_seen'))!;
+    expect(q.sql).toContain('FROM app_open_counts');
+    expect(q.sql).toContain('opens > 0');
+    expect(q.sql).not.toContain('app_opens ');
+    expect(q.sql).not.toContain('user_state_snapshots');
+    // p5's only open was yesterday (Pacific), time unknown → seen until yesterday's end: not 24h away yet at noon today
+    const g = base();
+    g.lastSeen = undefined;
+    const rows = [...team.filter((u) => u !== 'p5').map((u) => ({ user_id: u, day_pt: today, last_seen: now() - H })),
+      { user_id: 'p5', day_pt: prevDay(today), last_seen: null }, { user_id: 'x1', day_pt: today, last_seen: now() - H }];
+    const db = sweepDb(g, []);
+    const orig = db.prepare.bind(db);
+    (db as unknown as { prepare: (s: string) => unknown }).prepare = (sql: string) => {
+      if (!sql.includes('AS last_seen')) return orig(sql);
+      const st = { all: async () => ({ results: rows, success: true, meta: {} }) };
+      return { ...st, bind: () => st };
+    };
+    expect((await sweepCoopAutoHunts(makeEnv(db), ctx)).swaps).toBe(0);
+    rows[rows.length - 2] = { user_id: 'p5', day_pt: prevDay(prevDay(today)), last_seen: null };   // two days ago → away
+    expect((await sweepCoopAutoHunts(makeEnv(db), ctx)).swaps).toBe(1);
+  });
+
   it('a hunter away 24 hours is never drawn into a new raid either', async () => {
     const ids = ['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'h7'];
     const f: SweepFixture = {

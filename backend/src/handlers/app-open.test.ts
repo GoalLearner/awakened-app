@@ -195,6 +195,8 @@ describe('POST /v1/users/me/app-open (W834)', () => {
       expect(c[0].binds[1]).toMatch(/^\d{4}-\d\d-\d\d$/);           // day derived on the server
       expect(c[0].binds[2]).toBe(1);
       expect(c[0].sql).toMatch(/opens = app_open_counts\.opens \+ excluded\.opens/);
+      expect(c[0].sql).toMatch(/last_open_at = excluded\.last_open_at/);   // W1250 — the real open's time
+      expect(typeof c[0].binds[3]).toBe('number');
     });
 
     it('a 3.0.22+ ping that is not an open (a funnel flush) counts nothing', async () => {
