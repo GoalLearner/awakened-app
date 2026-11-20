@@ -1408,7 +1408,7 @@ async function sweepRaidStandIns(
   };
   for (const r of rows) {
     if (!idleBy.has(r.id)) continue;
-    if (participantIds(r).filter((u) => seenWithin(seen, u, nowMs)).length <= SHORT_TEAM_ACTIVE) idleBy.delete(r.id);
+    if (participantIds(r).filter((u) => seenWithin(seen, u, nowMs)).length < STANDIN_MIN_ACTIVE) idleBy.delete(r.id);
   }
   if (!idleBy.size) return 0;
   rows.sort((a, b) => pct(b) - pct(a));
@@ -1473,19 +1473,24 @@ async function sweepRaidStandIns(
   return swaps;
 }
 
-/** W1251 — RAID MOVES (owner 2026-11-20: "You can also send players from other teams to teams that need players for
- *  example zynfandel and zeruthless can be put on my team"). After the stand-ins, when nobody free is left: a raid at
- *  least a day old with SHORT_TEAM_ACTIVE or fewer members who really opened the app in the last 24 hours sends
- *  those active members, together, into the open seats (away 24h AND under 1,000 raid steps, the stand-in rule) of
- *  the raid closest to winning that can take all of them, has more active members than theirs, started no later
- *  than theirs (so every step they walked still counts there) and holds nobody they blocked. Their raid steps come
- *  with them at once (copied onto the new raid; their phone keeps it current), the away hunters on those seats leave
- *  as in a stand-in swap, and the team they left keeps going with whoever stays. */
-export const SHORT_TEAM_ACTIVE = 2;
+/** W1251 → W1253 — RAID MOVES. Owner 2026-11-20: "You can also send players from other teams to teams that need players
+ *  for example zynfandel and zeruthless can be put on my team", then "Let's do teams of 3 can be broken up automatically
+ *  like we just did" (RenDIESEL and Burak to Angelo's team, Mercury "on the sideline waiting for a team").
+ *  After the stand-ins, every pass: a raid at least a day old, BEHIND PACE (progress under the share of its window
+ *  used), with SHORT_TEAM_ACTIVE (3) or fewer members who really opened the app in the last 24 hours is broken up.
+ *  Its active walkers, most raid steps first, each take an open seat (away 24h AND under 1,000 raid steps, the
+ *  stand-in rule) on the raid closest to winning that has more active members than theirs had, started no later
+ *  (so every step they walked still counts there) and holds nobody they blocked; their raid steps come with them.
+ *  Whoever finds no seat leaves the raid too and waits on the sideline, free for the next stand-in seat or new raid.
+ *  A raid where nobody can go anywhere stays as it is; a raid that took walkers in never gives them away. */
+export const SHORT_TEAM_ACTIVE = 3;
 export const MOVE_MIN_AGE_HOURS = 24;
+/** W1252 — a stand-in only joins a raid with at least this many members in the app in the last 24 hours. */
+export const STANDIN_MIN_ACTIVE = 3;
 
 /** W1251 — one live raid as the move planner sees it. `active`: members in the app in the last 24 hours, most raid
- *  steps first; `open`: seats a stand-in may take; `progress`: the lower of steps and flights against the goal. */
+ *  steps first; `open`: seats a stand-in may take; `progress`: the lower of steps and flights against the goal;
+ *  `canGive`: a day old and behind pace (W1253). */
 export interface RaidView {
   id: string;
   startsMs: number;
@@ -1495,38 +1500,86 @@ export interface RaidView {
   active: string[];
   open: string[];
 }
+export interface RaidMovePlan { from: string; moves: { m: string; x: string; to: string }[]; sideline: string[] }
 
-/** W1251 — pure: the moves, one group per short raid (fewest active first): every active member of it goes, together,
- *  to the best raid that can take them all. */
+/** W1253 — pure: the break-ups, fewest active first. Each walker goes to the best raid with a seat for them; the
+ *  rest are sidelined; nothing happens to a raid none of whose walkers has anywhere to go. */
 export function planRaidMoves(
   views: readonly RaidView[],
   isBlocked: (a: string, b: string) => boolean,
-): { from: string; to: string; moves: [string, string][] }[] {
+): RaidMovePlan[] {
   const live = new Map(views.map((v) => [v.id, { ...v, members: [...v.members], active: [...v.active], open: [...v.open] }]));
-  const plans: { from: string; to: string; moves: [string, string][] }[] = [];
+  const took = new Set<string>();
+  const plans: RaidMovePlan[] = [];
   const givers = Array.from(live.values())
     .filter((v) => v.canGive && v.active.length > 0 && v.active.length <= SHORT_TEAM_ACTIVE)
     .sort((a, b) => a.active.length - b.active.length || a.progress - b.progress || (a.id < b.id ? -1 : 1));
   for (const g of givers) {
+    if (took.has(g.id)) continue;   // took walkers in on an earlier break-up: it stays
     const from = live.get(g.id)!;
-    const movers = [...from.active];
-    if (!movers.length || movers.length > SHORT_TEAM_ACTIVE) continue;   // took players in on an earlier move: it stays
-    const to = Array.from(live.values())
-      .filter((r) => r.id !== from.id && r.active.length > movers.length && r.open.length >= movers.length &&
-        r.startsMs <= from.startsMs &&
-        !movers.some((m) => r.members.some((x) => !r.open.includes(x) && (isBlocked(x, m) || isBlocked(m, x)))))
-      .sort((a, b) => b.progress - a.progress || b.active.length - a.active.length || (a.id < b.id ? -1 : 1))[0];
-    if (!to) continue;
-    const moves = movers.map((m, i) => [m, to.open[i]] as [string, string]);
-    plans.push({ from: from.id, to: to.id, moves });
-    const out = new Set(moves.map(([, x]) => x));
-    to.members = to.members.filter((x) => !out.has(x)).concat(movers);
-    to.open = to.open.filter((x) => !out.has(x));
-    to.active = to.active.concat(movers);
-    from.members = from.members.filter((x) => !movers.includes(x));
+    const team = [...from.active];
+    const size = team.length;
+    const moves: { m: string; x: string; to: string }[] = [];
+    for (const m of team) {
+      const to = Array.from(live.values())
+        .filter((r) => r.id !== from.id && r.active.length > size && r.open.length > 0 && r.startsMs <= from.startsMs &&
+          !r.members.some((x) => !r.open.includes(x) && (isBlocked(x, m) || isBlocked(m, x))))
+        .sort((a, b) => b.progress - a.progress || b.active.length - a.active.length || (a.id < b.id ? -1 : 1))[0];
+      if (!to) continue;
+      const x = to.open[0];
+      moves.push({ m, x, to: to.id });
+      to.open = to.open.slice(1);
+      to.members = to.members.filter((u) => u !== x).concat([m]);
+      to.active = to.active.concat([m]);
+      took.add(to.id);
+    }
+    if (!moves.length) continue;
+    plans.push({ from: from.id, moves, sideline: team.filter((m) => !moves.some((mv) => mv.m === m)) });
+    from.members = from.members.filter((u) => !team.includes(u));
     from.active = [];
   }
   return plans;
+}
+
+/** W1253 — a sidelined walker leaves a broken-up raid (guarded; a departing challenger hands the seat to `heir`, a
+ *  member who stays). True when they left. */
+export async function sidelineRaider(env: Env, from: CoopBossRow, s: string, heir: string | null, nowMs: number): Promise<boolean> {
+  const at = new Date(nowMs).toISOString();
+  if (from.challenger_user_id === s) {
+    if (!heir) return false;
+    const res = await env.DB.batch([
+      env.DB.prepare(
+        `UPDATE coop_boss_instances
+            SET challenger_user_id = ?3,
+                partner_user_id = CASE WHEN partner_user_id IN (?2, ?3) THEN ?3 ELSE partner_user_id END,
+                partner2_user_id = CASE WHEN partner2_user_id IN (?2, ?3) THEN NULL ELSE partner2_user_id END,
+                updated_at = ?4
+          WHERE id = ?1 AND status = 'active' AND challenger_user_id = ?2
+            AND EXISTS (SELECT 1 FROM coop_boss_participants WHERE instance_id = ?1 AND user_id = ?3)`,
+      ).bind(from.id, s, heir, at),
+      env.DB.prepare(
+        `DELETE FROM coop_boss_participants
+          WHERE instance_id = ?1 AND user_id = ?2
+            AND EXISTS (SELECT 1 FROM coop_boss_instances WHERE id = ?1 AND challenger_user_id = ?2)`,
+      ).bind(from.id, heir),
+    ]);
+    return Number(res[0]?.meta?.changes ?? 0) > 0;
+  }
+  const res = await env.DB.batch([
+    env.DB.prepare(
+      `DELETE FROM coop_boss_participants
+        WHERE instance_id = ?1 AND user_id = ?2
+          AND EXISTS (SELECT 1 FROM coop_boss_instances WHERE id = ?1 AND status = 'active')`,
+    ).bind(from.id, s),
+    env.DB.prepare(
+      `UPDATE coop_boss_instances
+          SET partner_user_id = CASE WHEN partner_user_id = ?2 THEN challenger_user_id ELSE partner_user_id END,
+              partner2_user_id = CASE WHEN partner2_user_id = ?2 THEN NULL ELSE partner2_user_id END,
+              updated_at = ?3
+        WHERE id = ?1 AND (partner_user_id = ?2 OR partner2_user_id = ?2)`,
+    ).bind(from.id, s, at),
+  ]);
+  return Number(res[0]?.meta?.changes ?? 0) > 0;
 }
 
 /** W1251 — one move, one guarded batch: `m` leaves raid `from` and takes `x`'s seat in raid `to`. What `x` walked is
@@ -1672,7 +1725,9 @@ async function sweepRaidMoves(
       id: r.id,
       startsMs,
       progress,
-      canGive: Number.isFinite(startsMs) && nowMs - startsMs >= MOVE_MIN_AGE_HOURS * 3_600_000,
+      // W1253 — a day old and behind pace: progress under the share of its window already used
+      canGive: Number.isFinite(startsMs) && nowMs - startsMs >= MOVE_MIN_AGE_HOURS * 3_600_000 &&
+        progress < (nowMs - startsMs) / Math.max(1, Date.parse(r.ends_at || '') - startsMs),
       members,
       active: members.filter((u) => seenWithin(seen, u, nowMs)).sort((a, b) => steps(b) - steps(a)),
       open: members.filter((u) => idle.has(u) && steps(u) < RAID_LOCK_STEPS),
@@ -1687,35 +1742,53 @@ async function sweepRaidMoves(
   let moved = 0;
   for (const plan of plans) {
     const from = byId.get(plan.from)!;
-    const to = byId.get(plan.to)!;
     const pf = prog.get(from.id) ?? emptyProgress();
-    const pt = prog.get(to.id) ?? emptyProgress();
-    const carryOk = Date.parse(to.starts_at || '') <= Date.parse(from.starts_at || '');
-    const movers = plan.moves.map(([m]) => m);
-    for (const [m, x] of plan.moves) {
-      if (moved >= MAX_SWAPS_PER_RUN) return moved;
-      const heir = from.challenger_user_id === m
-        ? ((from.participants ?? []).map((q) => q.user_id).find((u) => u !== m && !movers.includes(u)) ?? null)
-        : null;
-      const ok = await moveRaider(env, from, to, m, x, heir,
-        { steps: pt.steps.get(x) || 0, flights: pt.flights.get(x) || 0 },
-        carryOk ? { steps: pf.steps.get(m) || 0, flights: pf.flights.get(m) || 0 } : null, nowMs);
-      if (!ok) continue;
-      moved++;
-      // keep both rows true to the database for the next mover
-      if (to.challenger_user_id === x) to.challenger_user_id = m;
-      else to.participants = (to.participants ?? []).filter((q) => q.user_id !== x).concat([{ user_id: m, joined_at: new Date(nowMs).toISOString() }]);
+    const team = new Set([...plan.moves.map((mv) => mv.m), ...plan.sideline]);
+    const heirFor = (m: string) => from.challenger_user_id === m
+      ? ((from.participants ?? []).map((q) => q.user_id).find((u) => u !== m && !team.has(u)) ?? null)
+      : null;
+    const handOver = (m: string, heir: string | null) => {   // keep `from` true to the database
       if (from.challenger_user_id === m && heir) {
         from.challenger_user_id = heir;
         from.participants = (from.participants ?? []).filter((q) => q.user_id !== heir && q.user_id !== m);
       } else {
         from.participants = (from.participants ?? []).filter((q) => q.user_id !== m);
       }
+    };
+    for (const { m, x, to: toId } of plan.moves) {
+      if (moved >= MAX_SWAPS_PER_RUN) return moved;
+      const to = byId.get(toId)!;
+      const pt = prog.get(to.id) ?? emptyProgress();
+      const carryOk = Date.parse(to.starts_at || '') <= Date.parse(from.starts_at || '');
+      const heir = heirFor(m);
+      const ok = await moveRaider(env, from, to, m, x, heir,
+        { steps: pt.steps.get(x) || 0, flights: pt.flights.get(x) || 0 },
+        carryOk ? { steps: pf.steps.get(m) || 0, flights: pf.flights.get(m) || 0 } : null, nowMs);
+      if (!ok) continue;
+      moved++;
+      if (to.challenger_user_id === x) to.challenger_user_id = m;
+      else to.participants = (to.participants ?? []).filter((q) => q.user_id !== x).concat([{ user_id: m, joined_at: new Date(nowMs).toISOString() }]);
+      handOver(m, heir);
       if (!ctx) continue;
       const hoursLeft = Math.max(1, Math.round((Date.parse(to.ends_at || '') - nowMs) / 3_600_000));
       ctx.waitUntil(notifyUser(env, m, {
         title: 'New Raid Team',
         body: `${COOP_BOSS_NAMES[AUTO_RAID_BOSS] ?? 'The raid'}: you joined a team that needed walkers. ${hoursLeft} hours left for ${goal}, and your steps came with you.`,
+        type: 'coop_joined',
+        data: { bossId: AUTO_RAID_BOSS },
+      }));
+    }
+    // W1253 — whoever found no seat waits on the sideline (only once a walker of theirs has moved)
+    if (!plan.moves.length) continue;
+    for (const s of plan.sideline) {
+      const heir = heirFor(s);
+      if (!(await sidelineRaider(env, from, s, heir, nowMs))) continue;
+      moved++;
+      handOver(s, heir);
+      if (!ctx) continue;
+      ctx.waitUntil(notifyUser(env, s, {
+        title: 'Raid Team Change',
+        body: `${COOP_BOSS_NAMES[AUTO_RAID_BOSS] ?? 'The raid'}: your team was too short to finish, so it was broken up. You're free for the next team that needs a walker, or the next raid that forms.`,
         type: 'coop_joined',
         data: { bossId: AUTO_RAID_BOSS },
       }));

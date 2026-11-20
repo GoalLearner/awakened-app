@@ -54,6 +54,7 @@ import {
   RAID_LOCK_STEPS,
   planRaidMoves,
   SHORT_TEAM_ACTIVE,
+  STANDIN_MIN_ACTIVE,
   type RaidView,
 } from './coop-auto';
 import { getAccoladeWeekStart, priorWeekStart } from '../lib/accolade-week';
@@ -1267,7 +1268,7 @@ describe('W1248 — raid stand-ins: a raider away 24 hours gives the seat to som
 
 // W1251 — owner 2026-11-20: "You can also send players from other teams to teams that need players for example
 // zynfandel and zeruthless can be put on my team"
-describe('W1251 — raid moves: a short team\'s active walkers go, together, to the raid closest to winning with room', () => {
+describe('W1251/W1253 — raid moves: a short team behind pace is broken up; its walkers join the raids closest to winning', () => {
   const H = 3_600_000;
   const now = () => Date.now();
   const none = () => false;
@@ -1280,33 +1281,33 @@ describe('W1251 — raid moves: a short team\'s active walkers go, together, to 
   const burak = v('burak', { progress: 0.06, members: ['pr', 'bu', 're', 'me', 'se', 'ka'], active: ['bu', 're', 'me'], open: ['pr', 'se', 'ka'] });
   const angelo = v('angelo', { progress: 0.32, members: ['te', 'an', 'ad', 'ga', 'po', 'rn'], active: ['an', 'ad', 'te', 'ga'], open: ['rn'] });
 
-  it('the owner\'s example: Zynfandel and ZeRuthless take the two away seats on the owner\'s team', () => {
-    expect(SHORT_TEAM_ACTIVE).toBe(2);
+  it('W1253 — the picture of 2026-11-20: walkers go one by one to the raid closest to winning with a seat; the rest wait on the sideline', () => {
+    expect(SHORT_TEAM_ACTIVE).toBe(3);
+    expect(STANDIN_MIN_ACTIVE).toBe(3);
     expect(planRaidMoves([yours, zyn, burak, angelo], none)).toEqual([
-      { from: 'zyn', to: 'yours', moves: [['zy', 'ju'], ['ze', 'ez']] },   // Angelo's has one open seat; Burak's is further behind
+      { from: 'zyn', moves: [{ m: 'zy', x: 'rn', to: 'angelo' }, { m: 'ze', x: 'ju', to: 'yours' }], sideline: [] },
+      { from: 'burak', moves: [{ m: 'bu', x: 'ez', to: 'yours' }], sideline: ['re', 'me'] },
     ]);
   });
 
-  it('a team with 3 active never gives; a raid under a day old never gives; nobody moves to a team no bigger than theirs', () => {
-    expect(planRaidMoves([yours, burak], none)).toEqual([]);
+  it('nobody moves when no raid has a seat, the raid is not ready to give (a day old and behind pace), or it has 4 active', () => {
+    expect(planRaidMoves([zyn, { ...yours, open: [] }], none)).toEqual([]);
     expect(planRaidMoves([yours, { ...zyn, canGive: false }], none)).toEqual([]);
-    const two = v('two', { progress: 0.5, members: ['a', 'b', 'c', 'd', 'e', 'f'], active: ['a', 'b'], open: ['c', 'd', 'e', 'f'] });
-    expect(planRaidMoves([two, zyn], none).filter((p) => p.to === 'two')).toEqual([]);
+    const four = v('four', { progress: 0.01, members: ['a', 'b', 'c', 'd', 'e', 'f'], active: ['a', 'b', 'c', 'd'], open: ['e', 'f'] });
+    expect(planRaidMoves([four, { ...angelo, open: ['rn', 'po'] }], none)).toEqual([]);
   });
 
-  it('the group moves whole or not at all, never to a raid that started later, never next to someone they blocked', () => {
-    expect(planRaidMoves([zyn, angelo], none)).toEqual([]);   // one open seat for two walkers
+  it('a walker goes only to a raid with more active than theirs had, started no later, with nobody they blocked', () => {
+    const two = v('two', { progress: 0.5, members: ['a', 'b', 'c', 'd', 'e', 'f'], active: ['a', 'b'], open: ['c', 'd', 'e', 'f'] });
+    expect(planRaidMoves([two, zyn], none).filter((p) => p.moves.some((mv) => mv.to === 'two'))).toEqual([]);
     expect(planRaidMoves([zyn, { ...yours, startsMs: now() - 10 * H }], none)).toEqual([]);
     const blk = (x: string, y: string) => (x === 'ni' && y === 'ze') || (x === 'ze' && y === 'ni');
-    expect(planRaidMoves([zyn, yours, burak], blk)).toEqual([{ from: 'zyn', to: 'burak', moves: [['zy', 'pr'], ['ze', 'se']] }]);
+    expect(planRaidMoves([zyn, yours], blk)).toEqual([{ from: 'zyn', moves: [{ m: 'zy', x: 'ju', to: 'yours' }], sideline: ['ze'] }]);
   });
 
-  it('fewest active gives first, and a team that just took walkers in does not give them away again', () => {
+  it('fewest active breaks up first, and a raid that just took a walker in does not give again', () => {
     const solo = v('solo', { progress: 0.01, members: ['s1', 'x1', 'x2', 'x3', 'x4', 'x5'], active: ['s1'], open: ['x1', 'x2', 'x3', 'x4', 'x5'] });
-    // 1 active goes first, to the raid closest to winning; then Zynfandel's two no longer fit anywhere whole: they wait
-    expect(planRaidMoves([zyn, solo, yours], none)).toEqual([{ from: 'solo', to: 'yours', moves: [['s1', 'ju']] }]);
-    // with only Zynfandel's to take them, the solo walker goes there, and Zynfandel's (now 3 active) stays put
-    expect(planRaidMoves([zyn, solo], none)).toEqual([{ from: 'solo', to: 'zyn', moves: [['s1', 'rz']] }]);
+    expect(planRaidMoves([zyn, solo], none)).toEqual([{ from: 'solo', moves: [{ m: 's1', x: 'rz', to: 'zyn' }], sideline: [] }]);
   });
 
   it('the sweep moves them: seats handed over in one guarded batch, steps carried, the movers told', async () => {
@@ -1376,5 +1377,42 @@ describe('W1251 — raid moves: a short team\'s active walkers go, together, to 
     expect((await sweepCoopAutoHunts(makeEnv(sweepDb(f, calls)), ctx)).moves).toBe(2);
     const handOver = calls.find((c) => c.sql.includes('SET challenger_user_id = ?3,') && c.args[0] === 'Z')!;
     expect(handOver.args.slice(0, 3)).toEqual(['Z', 'zy', 'rz']);   // the first member who stays (not ZeRuthless, who moves too)
+  });
+
+  it('W1253 — the sweep sidelines who finds no seat (they leave and are told), and a team on pace is left alone', async () => {
+    const start = new Date(now() - 40 * H).toISOString();
+    const end = new Date(now() + 38 * H).toISOString();
+    const row = (id: string, challenger: string) => ({
+      id, boss_id: 'the_grinning_god', boss_rank: 'S', status: 'active', auto: 1, challenger_user_id: challenger,
+      partner_user_id: null, partner2_user_id: null, starts_at: start, ends_at: end, goal_steps: 200000, goal_flights: 200,
+      reward_souls: 800, banked_steps: 0, banked_flights: 0,
+    });
+    const seat = (instance_id: string, ids: string[]) => ids.map((user_id) => ({ instance_id, user_id, joined_at: start }));
+    const away = now() - 40 * H;
+    const base3 = (bSteps: number, bFlights: number): SweepFixture => ({
+      raidRows: [row('Y', 'ri'), row('B', 'pr')],
+      participants: [...seat('Y', ['ni', 'sh', 'da', 'ju', 'xx']), ...seat('B', ['bu', 're', 'me', 'se', 'ka'])],
+      lastSeen: { ri: now() - H, ni: now() - H, sh: now() - H, da: now() - H, xx: now() - H, bu: now() - H, re: now() - H, me: now() - H,
+        ju: away, pr: away, se: away, ka: away },
+      weekOpens: {},
+      raidLive: ['ri', 'ni', 'sh', 'da', 'ju', 'xx', 'pr', 'bu', 're', 'me', 'se', 'ka'],
+      progress: [
+        { bid: 'B', user_id: 'bu', event_type: 'steps_total', s: bSteps },
+        { bid: 'B', user_id: 'bu', event_type: 'flights_total', s: bFlights },
+        { bid: 'B', user_id: 're', event_type: 'steps_total', s: 7651 },
+        { bid: 'B', user_id: 'me', event_type: 'steps_total', s: 6325 },
+      ],
+    });
+    const calls: Call[] = [];
+    const res = await sweepCoopAutoHunts(makeEnv(sweepDb(base3(16468, 4), calls)), ctx);
+    expect(res.moves).toBe(3);   // Burak into Y's one open seat; RenDIESEL and Mercury to the sideline
+    expect(calls.filter((c) => c.sql.includes('INSERT OR IGNORE INTO coop_boss_participants')).map((c) => c.args.slice(0, 3))).toEqual([['Y', 'ju', 'bu']]);
+    const out = calls.filter((c) => c.sql.includes('DELETE FROM coop_boss_participants') && c.args[0] === 'B').map((c) => c.args[1]);
+    expect(out).toEqual(['bu', 're', 'me']);
+    const told = mockNotify.mock.calls.filter((c) => (c[2] as { title: string }).title === 'Raid Team Change').map((c) => c[1]);
+    expect(told).toEqual(['re', 'me']);
+    // on pace (200k-step team at 60% of the goal at 51% of the window): nothing moves
+    const onPace: Call[] = [];
+    expect((await sweepCoopAutoHunts(makeEnv(sweepDb(base3(120000, 130), onPace)), ctx)).moves).toBe(0);
   });
 });
