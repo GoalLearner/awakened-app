@@ -51,6 +51,7 @@ import {
   idleRaiders,
   pickStandIn,
   RAID_IDLE_HOURS,
+  RAID_LOCK_STEPS,
 } from './coop-auto';
 import { getAccoladeWeekStart, priorWeekStart } from '../lib/accolade-week';
 import { ptDayKey, ptMidnightIso, nextDay, prevDay } from '../lib/pact-streak';
@@ -1108,7 +1109,7 @@ describe('W1248 — raid stand-ins: a raider away 24 hours gives the seat to som
     builds: { x1: NEW, x2: NEW, x3: NEW, x4: NEW, q1: NEW },
     raidLive: [...team, 'x2'],   // x2 already in another live raid
     progress: [
-      { bid: 'R1', user_id: 'p5', event_type: 'steps_total', s: 1234 },
+      { bid: 'R1', user_id: 'p5', event_type: 'steps_total', s: 640 },
       { bid: 'R1', user_id: 'p5', event_type: 'flights_total', s: 7 },
       { bid: 'R1', user_id: 'p1', event_type: 'steps_total', s: 9000 },
     ],
@@ -1144,10 +1145,10 @@ describe('W1248 — raid stand-ins: a raider away 24 hours gives the seat to som
     expect(res.swaps).toBe(1);
     const up = batchSql(calls, 'SET banked_steps = banked_steps + ?4');
     expect(up.length).toBe(1);
-    expect(up[0].args.slice(0, 5)).toEqual(['R1', 'p5', 'x1', 1234, 7]);   // x2 is busy, x3 has 4 opens, x4 is away too
+    expect(up[0].args.slice(0, 5)).toEqual(['R1', 'p5', 'x1', 640, 7]);   // x2 is busy, x3 has 4 opens, x4 is away too
     expect(batchSql(calls, 'INSERT OR IGNORE INTO coop_boss_participants')[0].args.slice(0, 3)).toEqual(['R1', 'p5', 'x1']);
     expect(batchSql(calls, 'DELETE FROM coop_boss_participants')[0].args).toEqual(['R1', 'p5', 'x1']);
-    expect(batchSql(calls, 'INTO coop_raid_swaps')[0].args.slice(0, 5)).toEqual(['R1', 'p5', 'x1', 1234, 7]);
+    expect(batchSql(calls, 'INTO coop_raid_swaps')[0].args.slice(0, 5)).toEqual(['R1', 'p5', 'x1', 640, 7]);
     expect(batchSql(calls, 'DELETE FROM raid_queue WHERE user_id = ?1')[0].args).toEqual(['x1', 'the_grinning_god']);
     const push = mockNotify.mock.calls.find((c) => c[1] === 'x1')!;
     expect(push[2]).toMatchObject({ title: 'Raid Party Found', type: 'coop_joined' });
@@ -1182,6 +1183,20 @@ describe('W1248 — raid stand-ins: a raider away 24 hours gives the seat to som
     const c: Call[] = [];
     expect((await sweepCoopAutoHunts(makeEnv(sweepDb(noOne, c)), ctx)).swaps).toBe(0);
     expect(batchSql(c, 'SET banked_steps').length).toBe(0);
+  });
+
+  it('W1249 — locked in: a raider away 30h with 1,000+ raid steps keeps the seat; 999 does not', async () => {
+    expect(RAID_LOCK_STEPS).toBe(1000);
+    const locked = base();
+    locked.progress = [{ bid: 'R1', user_id: 'p5', event_type: 'steps_total', s: 1000 }];
+    const a: Call[] = [];
+    expect((await sweepCoopAutoHunts(makeEnv(sweepDb(locked, a)), ctx)).swaps).toBe(0);
+    expect(batchSql(a, 'SET banked_steps').length).toBe(0);
+    const open = base();
+    open.progress = [{ bid: 'R1', user_id: 'p5', event_type: 'steps_total', s: 999 }];
+    const b: Call[] = [];
+    expect((await sweepCoopAutoHunts(makeEnv(sweepDb(open, b)), ctx)).swaps).toBe(1);
+    expect(batchSql(b, 'SET banked_steps = banked_steps + ?4')[0].args.slice(0, 4)).toEqual(['R1', 'p5', 'x1', 999]);
   });
 
   it('a hunter away 24 hours is never drawn into a new raid either', async () => {

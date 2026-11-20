@@ -1210,6 +1210,7 @@ async function sweepAutoRaids(
 
 /** W1248 — RAID STAND-INS (owner 2026-11-20: "If a player on a raid is currently inactive for 24 hours straight,
  *  replace them with a person that is waiting to be on a raid or that is active and qualifies to be raiding").
+ *  W1249: only while under RAID_LOCK_STEPS raid steps; 1,000+ locks the seat in for the rest of the raid.
  *  Every pass, before new raids form: a member of a live automatic raid who has not been in the app (an app open
  *  or a cloud save) for RAID_IDLE_HOURS, counted from the later of their last visit and the moment they took the
  *  seat (so someone just drawn always gets a full day), gives the seat to a stand-in: a hunter waiting in the
@@ -1220,6 +1221,10 @@ async function sweepAutoRaids(
  *  everyone else's (the client reads the hunt window), and gets the "Raid Party Found" push. */
 export const RAID_IDLE_HOURS = 24;
 export const MAX_SWAPS_PER_RUN = 12;
+/** W1249 — owner 2026-11-20: "if they've already registered steps into the raid...they get locked in...only steps
+ *  less than 1000 ... get replaced" (chose: away 24h AND under 1,000). A raider whose raid steps reached this is
+ *  locked in for the rest of the raid, however long they are away. */
+export const RAID_LOCK_STEPS = 1000;
 const RAID_IDLE_MS = RAID_IDLE_HOURS * 3_600_000;
 
 /** W1248 — true when this hunter was in the app within the last RAID_IDLE_HOURS. */
@@ -1366,6 +1371,15 @@ async function sweepRaidStandIns(
     if (idle.length) idleBy.set(r.id, idle);
   }
   if (!idleBy.size) return 0;
+  // W1249 — locked in: 1,000+ raid steps keeps the seat, however long the hunter is away.
+  const prog = await getCoopProgressForInstances(env, Array.from(idleBy.keys()));
+  for (const [iid, idle] of Array.from(idleBy.entries())) {
+    const p = prog.get(iid) ?? emptyProgress();
+    const open = idle.filter((uid) => (p.steps.get(uid) || 0) < RAID_LOCK_STEPS);
+    if (open.length) idleBy.set(iid, open);
+    else idleBy.delete(iid);
+  }
+  if (!idleBy.size) return 0;
 
   const [optouts, blocks, builds] = await shared();
   const busy = await huntersInLiveRaid(env, AUTO_RAID_BOSS);
@@ -1392,7 +1406,6 @@ async function sweepRaidStandIns(
 
   const isBlocked = (a: string, b: string) =>
     blocks.has(pairKey(a, b)) || optouts.has(a + '>' + b) || optouts.has(b + '>' + a);
-  const prog = await getCoopProgressForInstances(env, Array.from(idleBy.keys()));
   const goal = thousands(cfg.goalSteps) + ' steps' + (cfg.goalFlights ? ' and ' + thousands(cfg.goalFlights) + ' flights' : '');
   let swaps = 0;
   for (const r of rows) {
