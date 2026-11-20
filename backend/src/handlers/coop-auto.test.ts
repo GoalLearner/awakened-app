@@ -48,6 +48,9 @@ import {
   pickAutoTrios,
   stillNeeded,
   pairFlightsOf,
+  idleRaiders,
+  pickStandIn,
+  RAID_IDLE_HOURS,
 } from './coop-auto';
 import { getAccoladeWeekStart, priorWeekStart } from '../lib/accolade-week';
 import { ptDayKey, ptMidnightIso, nextDay, prevDay } from '../lib/pact-streak';
@@ -296,6 +299,9 @@ interface SweepFixture {
   weekOpens?: Record<string, number>;   // W1239 — each hunter's app opens since Sunday (the raid's "active" bar)
   savedWins?: { user_id: string; created_at: number }[];   // W1216 — new hunters' wins from the save / funnel
   opened?: string[];   // W1217-W1219 — in the app today or yesterday (default: every hunter in kills / savedWins / friends)
+  lastSeen?: Record<string, number>;   // W1248 — each hunter's last app ping / save, ms (default: every weekOpens hunter, now)
+  raidRows?: Record<string, unknown>[];   // W1248 — the live automatic raids the stand-in pass reads
+  queue?: string[];   // W1248 — the raid finder, oldest first
 }
 interface Call { sql: string; args: unknown[] }
 
@@ -303,6 +309,12 @@ function sweepDb(f: SweepFixture, calls: Call[]) {
   const thisWeek = getAccoladeWeekStart(Date.now());
   const lastWeek = priorWeekStart(thisWeek);
   const results = (sql: string, args: unknown[]): unknown[] => {
+    if (sql.includes('AS last_seen')) {   // W1248 — lastSeenByUser
+      const m = f.lastSeen ?? Object.fromEntries(Object.keys(f.weekOpens ?? {}).map((u) => [u, Date.now()]));
+      return Object.entries(m).map(([user_id, last_seen]) => ({ user_id, last_seen }));
+    }
+    if (sql.includes('AND auto = 1 AND boss_id')) return f.raidRows ?? [];   // W1248 — live automatic raids
+    if (sql.includes('FROM raid_queue')) return (f.queue ?? []).map((user_id) => ({ user_id }));   // W1248
     if (sql.includes('FROM friends')) return f.friends ?? [];
     if (sql.includes('partner2_user_id IS NOT NULL AND hunt_day')) return f.trioRows ?? [];   // W1208
     if (sql.includes('AS uid')) return (f.raidLive ?? []).map((uid) => ({ uid }));   // W1211 — huntersInLiveRaid
@@ -1072,5 +1084,118 @@ describe('sweepCoopAutoHunts — matched partners (W1164)', () => {
     let want = today; for (let i = 0; i < MATCH_KEEP_DAYS; i++) want = prevDay(want);
     expect(q.args[0]).toBe(want);
     expect(MATCH_KEEP_DAYS).toBe(14);
+  });
+});
+
+// W1248 — owner 2026-11-20: "If a player on a raid is currently inactive for 24 hours straight, replace them with a
+// person that is waiting to be on a raid or that is active and qualifies to be raiding."
+describe('W1248 — raid stand-ins: a raider away 24 hours gives the seat to someone free', () => {
+  const H = 3_600_000;
+  const now = () => Date.now();
+  const raidRow = (over: Record<string, unknown> = {}) => ({
+    id: 'R1', boss_id: 'the_grinning_god', boss_rank: 'S', status: 'active', auto: 1,
+    challenger_user_id: 'c1', partner_user_id: 'p1', partner2_user_id: 'p2',
+    starts_at: new Date(now() - 40 * H).toISOString(), ends_at: new Date(now() + 40 * H).toISOString(),
+    goal_steps: 200000, goal_flights: 200, reward_souls: 800, ...over,
+  });
+  const seats = (joinedAt: string) => ['p1', 'p2', 'p3', 'p4', 'p5'].map((user_id) => ({ instance_id: 'R1', user_id, joined_at: joinedAt }));
+  const team = ['c1', 'p1', 'p2', 'p3', 'p4', 'p5'];
+  const base = (): SweepFixture => ({
+    raidRows: [raidRow()],
+    participants: seats(new Date(now() - 40 * H).toISOString()),
+    lastSeen: { ...Object.fromEntries(team.map((u) => [u, now() - H])), p5: now() - 30 * H, x1: now() - 2 * H, x2: now() - 2 * H, x3: now() - 2 * H, x4: now() - 30 * H },
+    weekOpens: { c1: 9, p1: 9, p2: 9, p3: 9, p4: 9, p5: 9, x1: 6, x2: 6, x3: 4, x4: 7 },
+    builds: { x1: NEW, x2: NEW, x3: NEW, x4: NEW, q1: NEW },
+    raidLive: [...team, 'x2'],   // x2 already in another live raid
+    progress: [
+      { bid: 'R1', user_id: 'p5', event_type: 'steps_total', s: 1234 },
+      { bid: 'R1', user_id: 'p5', event_type: 'flights_total', s: 7 },
+      { bid: 'R1', user_id: 'p1', event_type: 'steps_total', s: 9000 },
+    ],
+  });
+  const batchSql = (calls: Call[], frag: string) => calls.filter((c) => c.sql.includes(frag));
+
+  it('idleRaiders: away 24h counts from the later of the last visit and the seat (a fresh draw gets a full day)', () => {
+    const t0 = now();
+    const seen = new Map([['a', t0 - 25 * H], ['b', t0 - 2 * H], ['d', t0 - 24 * H + 60_000]]);
+    expect(RAID_IDLE_HOURS).toBe(24);
+    expect(idleRaiders([
+      { uid: 'a', joinedMs: t0 - 40 * H },   // away 25h → out
+      { uid: 'b', joinedMs: t0 - 40 * H },   // seen 2h ago → stays
+      { uid: 'c', joinedMs: t0 - 3 * H },    // never seen, but drawn 3h ago → stays
+      { uid: 'd', joinedMs: t0 - 40 * H },   // 23h59m → stays
+      { uid: 'e', joinedMs: t0 - 30 * H },   // never seen, drawn 30h ago → out
+    ], seen, t0)).toEqual(['a', 'e']);
+  });
+
+  it('pickStandIn: the raid finder first, then the pool at random; never a teammate or someone a teammate blocked', () => {
+    const none = () => false;
+    expect(pickStandIn(['q1'], ['x1'], ['c1'], none)).toBe('q1');
+    expect(pickStandIn([], ['x1', 'x2', 'x3'], ['c1'], none, () => 0.99)).toBe('x3');
+    expect(pickStandIn([], ['x1', 'x2'], ['x1'], none, () => 0)).toBe('x2');
+    const blk = (a: string, b: string) => a === 'c1' && b === 'q1';
+    expect(pickStandIn(['q1'], ['x1'], ['c1'], blk, () => 0)).toBe('x1');
+    expect(pickStandIn([], [], ['c1'], none)).toBeNull();
+  });
+
+  it('a member away 30h is swapped for an active free hunter: their steps banked, the seat handed over, the stand-in told', async () => {
+    const calls: Call[] = [];
+    const res = await sweepCoopAutoHunts(makeEnv(sweepDb(base(), calls)), ctx);
+    expect(res.swaps).toBe(1);
+    const up = batchSql(calls, 'SET banked_steps = banked_steps + ?4');
+    expect(up.length).toBe(1);
+    expect(up[0].args.slice(0, 5)).toEqual(['R1', 'p5', 'x1', 1234, 7]);   // x2 is busy, x3 has 4 opens, x4 is away too
+    expect(batchSql(calls, 'INSERT OR IGNORE INTO coop_boss_participants')[0].args.slice(0, 3)).toEqual(['R1', 'p5', 'x1']);
+    expect(batchSql(calls, 'DELETE FROM coop_boss_participants')[0].args).toEqual(['R1', 'p5', 'x1']);
+    expect(batchSql(calls, 'INTO coop_raid_swaps')[0].args.slice(0, 5)).toEqual(['R1', 'p5', 'x1', 1234, 7]);
+    expect(batchSql(calls, 'DELETE FROM raid_queue WHERE user_id = ?1')[0].args).toEqual(['x1', 'the_grinning_god']);
+    const push = mockNotify.mock.calls.find((c) => c[1] === 'x1')!;
+    expect(push[2]).toMatchObject({ title: 'Raid Party Found', type: 'coop_joined' });
+    expect(String((push[2] as { body: string }).body)).toBe('The Grinning God: a raid under way needs you. 40 hours left for 200,000 steps and 200 flights, and your steps since it began count.');
+  });
+
+  it('the raid finder comes first; an away challenger hands over the challenger seat', async () => {
+    const f = base();
+    f.queue = ['q1'];
+    f.lastSeen = { ...f.lastSeen, q1: now() - H, c1: now() - 26 * H, p5: now() - H };
+    const calls: Call[] = [];
+    const res = await sweepCoopAutoHunts(makeEnv(sweepDb(f, calls)), ctx);
+    expect(res.swaps).toBe(1);
+    const up = batchSql(calls, 'SET challenger_user_id = ?3');
+    expect(up[0].args.slice(0, 5)).toEqual(['R1', 'c1', 'q1', 0, 0]);
+    expect(batchSql(calls, 'INSERT OR IGNORE INTO coop_boss_participants').length).toBe(0);
+  });
+
+  it('nobody is swapped when everyone was in the app within 24h, when a seat was taken under a day ago, or when nobody is free', async () => {
+    const fresh = base();
+    fresh.lastSeen = { ...fresh.lastSeen, p5: now() - 23 * H };
+    const a: Call[] = [];
+    expect((await sweepCoopAutoHunts(makeEnv(sweepDb(fresh, a)), ctx)).swaps).toBe(0);
+    const newSeat = base();
+    newSeat.participants = seats(new Date(now() - 3 * H).toISOString());
+    newSeat.raidRows = [raidRow({ starts_at: new Date(now() - 3 * H).toISOString() })];
+    newSeat.lastSeen = { ...newSeat.lastSeen, c1: 0, p5: 0 };
+    const b: Call[] = [];
+    expect((await sweepCoopAutoHunts(makeEnv(sweepDb(newSeat, b)), ctx)).swaps).toBe(0);
+    const noOne = base();
+    noOne.raidLive = [...team, 'x1', 'x2'];
+    const c: Call[] = [];
+    expect((await sweepCoopAutoHunts(makeEnv(sweepDb(noOne, c)), ctx)).swaps).toBe(0);
+    expect(batchSql(c, 'SET banked_steps').length).toBe(0);
+  });
+
+  it('a hunter away 24 hours is never drawn into a new raid either', async () => {
+    const ids = ['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'h7'];
+    const f: SweepFixture = {
+      weekOpens: Object.fromEntries(ids.map((id) => [id, 8])),
+      builds: Object.fromEntries(ids.map((id) => [id, NEW])),
+      opened: ids,
+      lastSeen: { ...Object.fromEntries(ids.map((id) => [id, now() - H])), h1: now() - 25 * H },
+    };
+    const calls: Call[] = [];
+    const res = await sweepCoopAutoHunts(makeEnv(sweepDb(f, calls)), ctx);
+    expect(res.raids).toBe(1);
+    const made = calls.find((c) => c.sql.includes('INSERT OR IGNORE INTO coop_boss_instances') && c.args[1] === 'the_grinning_god')!;
+    expect(made.args[14]).toBe('h2|h3|h4|h5|h6|h7');
   });
 });

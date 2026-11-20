@@ -864,8 +864,8 @@ export async function createAutoTrio(env: Env, trio: readonly string[], dayKey: 
 /** Cron, every 2 minutes: today's hunt for every walking friend pair that has none yet, then
  *  (W1164) today's hunt for every matched pair of active hunters who have no friends, then
  *  (W1208) today's automatic trios. */
-export async function sweepCoopAutoHunts(env: Env, _ctx?: ExecutionContext): Promise<{ created: number; pairs: number; skipped: number; matched: number; trios: number; raids: number }> {
-  const out = { created: 0, pairs: 0, skipped: 0, matched: 0, trios: 0, raids: 0 };
+export async function sweepCoopAutoHunts(env: Env, _ctx?: ExecutionContext): Promise<{ created: number; pairs: number; skipped: number; matched: number; trios: number; raids: number; swaps: number }> {
+  const out = { created: 0, pairs: 0, skipped: 0, matched: 0, trios: 0, raids: 0, swaps: 0 };
   try {
     const nowMs = Date.now();
     const today = ptDayKey(nowMs);
@@ -942,9 +942,20 @@ export async function sweepCoopAutoHunts(env: Env, _ctx?: ExecutionContext): Pro
       console.error('[coop-auto] trio sweep failed', err);
     }
 
+    // W1248 — when each hunter was last in the app, read once per pass and only when a raid pass needs it.
+    let seenP: Promise<Map<string, number>> | null = null;
+    const lastSeen = () => (seenP ??= lastSeenByUser(env, nowMs));
+
+    // ── W1248 — stand-ins for raiders away 24 hours, BEFORE new raids form, so a free hunter fills a seat first ──
+    try {
+      out.swaps = await sweepRaidStandIns(env, nowMs, today, shared, lastSeen, _ctx);
+    } catch (err) {
+      console.error('[coop-auto] raid stand-in sweep failed', err);
+    }
+
     // ── W1211 — the automatic raid ──
     try {
-      out.raids = await sweepAutoRaids(env, nowMs, today, activeWindowStart(today), shared, _ctx, out.created + out.matched + out.trios, inApp);   // W1240
+      out.raids = await sweepAutoRaids(env, nowMs, today, activeWindowStart(today), shared, _ctx, out.created + out.matched + out.trios, inApp, lastSeen);   // W1240
     } catch (err) {
       console.error('[coop-auto] raid sweep failed', err);
     }
@@ -1147,6 +1158,7 @@ async function sweepAutoRaids(
   ctx: ExecutionContext | undefined,
   madeSoFar: number,
   inApp: () => Promise<Set<string>>,
+  lastSeen: () => Promise<Map<string, number>> = async () => new Map(),
   rnd: () => number = Math.random,
 ): Promise<number> {
   const cfg = COOP_BOSS_CFG[AUTO_RAID_BOSS];
@@ -1160,10 +1172,12 @@ async function sweepAutoRaids(
   const [optouts, blocks, builds] = await shared();
   const busy = await huntersInLiveRaid(env, AUTO_RAID_BOSS);   // one raid at a time
   const opened = await inApp();   // W1217
+  const seen = await lastSeen();   // W1248
   const pool: string[] = [];
   for (const uid of active) {
     if (busy.has(uid)) continue;
     if (!opened.has(uid)) continue;                            // W1217/W1218 — not in the app today or yesterday
+    if (!seenWithin(seen, uid, nowMs)) continue;               // W1248 — away 24 hours: a stand-in rule's mirror, never drawn
     if (buildW(builds.get(uid)) < AUTO_HUNT_MIN_W) continue;   // the automatic client is not on their phone
     if (optouts.has(uid + '>*')) continue;                     // switched automatic hunts off
     if (cfg.memberOnly && !MEMBERSHIP_OPEN) {
@@ -1192,6 +1206,226 @@ async function sweepAutoRaids(
     }
   }
   return made;
+}
+
+/** W1248 — RAID STAND-INS (owner 2026-11-20: "If a player on a raid is currently inactive for 24 hours straight,
+ *  replace them with a person that is waiting to be on a raid or that is active and qualifies to be raiding").
+ *  Every pass, before new raids form: a member of a live automatic raid who has not been in the app (an app open
+ *  or a cloud save) for RAID_IDLE_HOURS, counted from the later of their last visit and the moment they took the
+ *  seat (so someone just drawn always gets a full day), gives the seat to a stand-in: a hunter waiting in the
+ *  raid finder first, else a random hunter who qualifies for a raid today (5+ opens in the last 7 days, in the
+ *  app in the last 24 hours, in no live raid, on a current build, automatic hunts on, nobody on the team blocked
+ *  or switched off). What the departed hunter walked stays with the team (banked on the row, migration 0077);
+ *  they leave quietly and get nothing from the raid. The stand-in's phone counts from the raid's start like
+ *  everyone else's (the client reads the hunt window), and gets the "Raid Party Found" push. */
+export const RAID_IDLE_HOURS = 24;
+export const MAX_SWAPS_PER_RUN = 12;
+const RAID_IDLE_MS = RAID_IDLE_HOURS * 3_600_000;
+
+/** W1248 — true when this hunter was in the app within the last RAID_IDLE_HOURS. */
+export function seenWithin(seen: Map<string, number>, uid: string, nowMs: number): boolean {
+  return nowMs - (seen.get(uid) ?? 0) < RAID_IDLE_MS;
+}
+
+/** W1248 — pure: the members away RAID_IDLE_HOURS or more, from the later of their last visit and their seat. */
+export function idleRaiders(
+  members: readonly { uid: string; joinedMs: number }[],
+  seen: Map<string, number>,
+  nowMs: number,
+): string[] {
+  return members
+    .filter((m) => m.uid && nowMs - Math.max(seen.get(m.uid) ?? 0, Number.isFinite(m.joinedMs) ? m.joinedMs : 0) >= RAID_IDLE_MS)
+    .map((m) => m.uid);
+}
+
+/** W1248 — pure: the stand-in for one seat: the raid finder's queue in order first, then a random hunter from the
+ *  pool; never someone already on the team, and never someone blocked with (or switched off by) a teammate. */
+export function pickStandIn(
+  waiting: readonly string[],
+  pool: readonly string[],
+  team: readonly string[],
+  isBlocked: (a: string, b: string) => boolean,
+  rnd: () => number = Math.random,
+): string | null {
+  const ok = (uid: string) => !!uid && !team.includes(uid) && !team.some((t) => isBlocked(t, uid));
+  for (const uid of waiting) if (ok(uid)) return uid;
+  const left = pool.filter(ok);
+  if (!left.length) return null;
+  return left[Math.min(left.length - 1, Math.floor(rnd() * left.length))] ?? null;
+}
+
+/** W1248 — when each hunter was last in the app: their latest app ping or cloud save in the last 14 days (ms). */
+async function lastSeenByUser(env: Env, nowMs: number): Promise<Map<string, number>> {
+  const sinceMs = nowMs - 14 * 86_400_000;
+  const sinceDay = new Date(sinceMs).toISOString().slice(0, 10);
+  const rows = (await env.DB.prepare(
+    `SELECT user_id, MAX(t) AS last_seen FROM (
+       SELECT user_id, opened_at * 1000 AS t FROM app_opens INDEXED BY idx_app_opens_date WHERE date_utc >= ?1
+       UNION ALL
+       SELECT user_id, server_updated_at AS t FROM user_state_snapshots WHERE server_updated_at >= ?2
+     ) GROUP BY user_id`,
+  ).bind(sinceDay, sinceMs).all<{ user_id: string; last_seen: number }>()).results ?? [];
+  return new Map(rows.filter((r) => r.user_id).map((r) => [r.user_id, Number(r.last_seen) || 0]));
+}
+
+/** W1248 — one swap, guarded statement by statement: `out` leaves this live raid and `inn` takes the seat. What
+ *  `out` walked here is banked on the row (the team's bars never drop), the seat changes hands (the challenger
+ *  column, or a participant row with the legacy partner columns following), and the swap is logged. A raid that
+ *  just settled, or a pass racing this one, writes nothing. True when the seat changed hands. */
+export async function swapRaider(
+  env: Env,
+  row: CoopBossRow,
+  out: string,
+  inn: string,
+  banked: { steps: number; flights: number },
+  nowMs: number,
+): Promise<boolean> {
+  const at = new Date(nowMs).toISOString();
+  const steps = Math.max(0, Math.round(Number(banked.steps) || 0));
+  const flights = Math.max(0, Math.round(Number(banked.flights) || 0));
+  const log = (holds: string) => env.DB
+    .prepare(
+      `INSERT OR IGNORE INTO coop_raid_swaps (instance_id, out_user_id, in_user_id, out_steps, out_flights, swapped_at)
+         SELECT ?1, ?2, ?3, ?4, ?5, ?6 WHERE ${holds}`,
+    )
+    .bind(row.id, out, inn, steps, flights, at);
+  if (row.challenger_user_id === out) {
+    const res = await env.DB.batch([
+      env.DB
+        .prepare(
+          `UPDATE coop_boss_instances
+              SET challenger_user_id = ?3, banked_steps = banked_steps + ?4, banked_flights = banked_flights + ?5, updated_at = ?6
+            WHERE id = ?1 AND status = 'active' AND challenger_user_id = ?2`,
+        )
+        .bind(row.id, out, inn, steps, flights, at),
+      log('EXISTS (SELECT 1 FROM coop_boss_instances WHERE id = ?1 AND challenger_user_id = ?3)'),
+    ]);
+    return Number(res[0]?.meta?.changes ?? 0) > 0;
+  }
+  const res = await env.DB.batch([
+    env.DB
+      .prepare(
+        `UPDATE coop_boss_instances
+            SET banked_steps = banked_steps + ?4, banked_flights = banked_flights + ?5,
+                partner_user_id = CASE WHEN partner_user_id = ?2 THEN ?3 ELSE partner_user_id END,
+                partner2_user_id = CASE WHEN partner2_user_id = ?2 THEN ?3 ELSE partner2_user_id END,
+                updated_at = ?6
+          WHERE id = ?1 AND status = 'active'
+            AND EXISTS (SELECT 1 FROM coop_boss_participants WHERE instance_id = ?1 AND user_id = ?2)`,
+      )
+      .bind(row.id, out, inn, steps, flights, at),
+    env.DB
+      .prepare(
+        `INSERT OR IGNORE INTO coop_boss_participants (instance_id, user_id, joined_at)
+           SELECT ?1, ?3, ?4
+            WHERE EXISTS (SELECT 1 FROM coop_boss_participants WHERE instance_id = ?1 AND user_id = ?2)
+              AND EXISTS (SELECT 1 FROM coop_boss_instances WHERE id = ?1 AND status = 'active')`,
+      )
+      .bind(row.id, out, inn, at),
+    env.DB
+      .prepare(
+        `DELETE FROM coop_boss_participants
+          WHERE instance_id = ?1 AND user_id = ?2
+            AND EXISTS (SELECT 1 FROM coop_boss_participants WHERE instance_id = ?1 AND user_id = ?3)`,
+      )
+      .bind(row.id, out, inn),
+    log(`EXISTS (SELECT 1 FROM coop_boss_participants WHERE instance_id = ?1 AND user_id = ?3)
+            AND NOT EXISTS (SELECT 1 FROM coop_boss_participants WHERE instance_id = ?1 AND user_id = ?2)`),
+  ]);
+  return Number(res[0]?.meta?.changes ?? 0) > 0;
+}
+
+async function sweepRaidStandIns(
+  env: Env,
+  nowMs: number,
+  today: string,
+  shared: () => Promise<Shared>,
+  lastSeen: () => Promise<Map<string, number>>,
+  ctx: ExecutionContext | undefined,
+  rnd: () => number = Math.random,
+): Promise<number> {
+  const cfg = COOP_BOSS_CFG[AUTO_RAID_BOSS];
+  if (!cfg) return 0;
+  const rows = (await env.DB.prepare(
+    `SELECT * FROM coop_boss_instances
+      WHERE status = 'active' AND auto = 1 AND boss_id = ?1 AND ends_at > ?2
+      ORDER BY ends_at ASC LIMIT 50`,
+  ).bind(AUTO_RAID_BOSS, new Date(nowMs).toISOString()).all<CoopBossRow>()).results ?? [];
+  if (!rows.length) return 0;
+  const parts = await loadParticipants(env, rows.map((r) => r.id));
+  const seen = await lastSeen();
+  const idleBy = new Map<string, string[]>();
+  for (const r of rows) {
+    r.participants = parts.get(r.id) ?? [];
+    const startMs = Date.parse(r.starts_at || '');
+    const members = [
+      { uid: r.challenger_user_id, joinedMs: startMs },
+      ...r.participants.map((p) => ({ uid: p.user_id, joinedMs: Date.parse(p.joined_at || r.starts_at || '') })),
+    ];
+    const idle = idleRaiders(members, seen, nowMs);
+    if (idle.length) idleBy.set(r.id, idle);
+  }
+  if (!idleBy.size) return 0;
+
+  const [optouts, blocks, builds] = await shared();
+  const busy = await huntersInLiveRaid(env, AUTO_RAID_BOSS);
+  const opens = await opensSince(env, activeWindowStart(today));
+  const qualifies = async (uid: string): Promise<boolean> => {
+    if (!uid || busy.has(uid) || !seenWithin(seen, uid, nowMs)) return false;
+    if (buildW(builds.get(uid)) < AUTO_HUNT_MIN_W) return false;   // the automatic client is not on their phone
+    if (optouts.has(uid + '>*')) return false;                     // switched automatic hunts off
+    if (cfg.memberOnly && !MEMBERSHIP_OPEN) {
+      try { if (!(await readEntitlements(env, uid)).member) return false; } catch { return false; }
+    }
+    return true;
+  };
+  const queued = (await env.DB.prepare('SELECT user_id FROM raid_queue WHERE boss_id = ?1 ORDER BY created_at ASC')
+    .bind(AUTO_RAID_BOSS)
+    .all<{ user_id: string }>()).results ?? [];
+  const waiting: string[] = [];
+  for (const q of queued) if (!waiting.includes(q.user_id) && (await qualifies(q.user_id))) waiting.push(q.user_id);
+  const pool: string[] = [];
+  for (const [uid, n] of Array.from(opens.entries()).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))) {
+    if (n >= AUTO_RAID_MIN_OPENS && !waiting.includes(uid) && (await qualifies(uid))) pool.push(uid);
+  }
+  if (!waiting.length && !pool.length) return 0;
+
+  const isBlocked = (a: string, b: string) =>
+    blocks.has(pairKey(a, b)) || optouts.has(a + '>' + b) || optouts.has(b + '>' + a);
+  const prog = await getCoopProgressForInstances(env, Array.from(idleBy.keys()));
+  const goal = thousands(cfg.goalSteps) + ' steps' + (cfg.goalFlights ? ' and ' + thousands(cfg.goalFlights) + ' flights' : '');
+  let swaps = 0;
+  for (const r of rows) {
+    const idle = idleBy.get(r.id);
+    if (!idle) continue;
+    let team = participantIds(r);
+    for (const out of idle) {
+      if (swaps >= MAX_SWAPS_PER_RUN) return swaps;
+      const inn = pickStandIn(waiting, pool, team.filter((u) => u !== out), isBlocked, rnd);
+      if (!inn) break;   // nobody free for this team: the seat stays as it is until someone is
+      const p = prog.get(r.id) ?? emptyProgress();
+      const banked = { steps: p.steps.get(out) || 0, flights: p.flights.get(out) || 0 };
+      if (!(await swapRaider(env, r, out, inn, banked, nowMs))) continue;
+      swaps++;
+      busy.add(inn);
+      for (const list of [waiting, pool]) { const i = list.indexOf(inn); if (i >= 0) list.splice(i, 1); }
+      team = team.map((u) => (u === out ? inn : u));
+      if (r.challenger_user_id === out) r.challenger_user_id = inn;
+      else r.participants = (r.participants ?? []).map((pt) => (pt.user_id === out ? { user_id: inn, joined_at: new Date(nowMs).toISOString() } : pt));
+      try {
+        await env.DB.prepare('DELETE FROM raid_queue WHERE user_id = ?1 AND boss_id = ?2').bind(inn, AUTO_RAID_BOSS).run();
+      } catch { /* a stale finder row is harmless: they are busy now */ }
+      if (!ctx) continue;
+      const hoursLeft = Math.max(1, Math.round((Date.parse(r.ends_at || '') - nowMs) / 3_600_000));
+      ctx.waitUntil(notifyUser(env, inn, {
+        title: 'Raid Party Found',
+        body: `${COOP_BOSS_NAMES[AUTO_RAID_BOSS] ?? 'The raid'}: a raid under way needs you. ${hoursLeft} hours left for ${goal}, and your steps since it began count.`,
+        type: 'coop_joined',
+        data: { bossId: AUTO_RAID_BOSS },
+      }));
+    }
+  }
+  return swaps;
 }
 
 /** Cron, every 2 minutes: settle every active hunt whose goal is met or whose window has

@@ -201,6 +201,9 @@ export interface CoopBossRow {
   resolved_at: string | null;
   created_at: string;
   updated_at: string;
+  // W1248 — a raider swapped out for a stand-in leaves what they walked here with the team (migration 0077).
+  banked_steps?: number | null;
+  banked_flights?: number | null;
   // W692 — N-hunter model: every hunter EXCEPT the challenger, from
   // coop_boss_participants. Attached by loadInstance / the list query. The legacy
   // partner* columns above are retained for one release (old-client serialize).
@@ -358,11 +361,14 @@ export async function getCoopProgressForInstances(env: Env, ids: string[]): Prom
   return out;
 }
 
+// W1248 — what raiders swapped out for stand-ins had walked: kept in the team's totals, so a bar never drops.
+function bankedSteps(row: CoopBossRow): number { return Math.max(0, Number(row.banked_steps) || 0); }
+function bankedFlights(row: CoopBossRow): number { return Math.max(0, Number(row.banked_flights) || 0); }
 function combinedSteps(row: CoopBossRow, p: CoopProgress): number {
-  return participantIds(row).reduce((sum, uid) => sum + (p.steps.get(uid) || 0), 0);
+  return participantIds(row).reduce((sum, uid) => sum + (p.steps.get(uid) || 0), 0) + bankedSteps(row);
 }
 function combinedFlights(row: CoopBossRow, p: CoopProgress): number {
-  return participantIds(row).reduce((sum, uid) => sum + (p.flights.get(uid) || 0), 0);
+  return participantIds(row).reduce((sum, uid) => sum + (p.flights.get(uid) || 0), 0) + bankedFlights(row);
 }
 // W686 — combined minutes asleep across the party.
 function combinedSleep(row: CoopBossRow, p: CoopProgress): number {
@@ -497,7 +503,9 @@ function serializeCoop(
         joined: answered,
       };
     }),
-    combined_steps: participantIds(row).reduce((s, uid) => s + cPrimary(uid), 0),
+    combined_steps: participantIds(row).reduce((s, uid) => s + cPrimary(uid), 0) + (metric === 'flights' ? bankedFlights(row) : bankedSteps(row)),
+    // W1248 — what hunters swapped out for stand-ins left with the team (already inside the combined totals).
+    ...(bankedSteps(row) || bankedFlights(row) ? { banked_steps: bankedSteps(row), banked_flights: bankedFlights(row) } : {}),
     // W447 — dual-metric bosses also surface the SECOND (flights) stream + goal so the
     // client can render two progress bars; omitted for single-metric bosses.
     ...(isBoth ? { goal_flights: row.goal_flights ?? 0, combined_flights: combinedFlights(row, p) } : {}),
