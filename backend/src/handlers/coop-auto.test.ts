@@ -58,6 +58,7 @@ import {
   handleRaidsLive,
   MUSTER_AWAY_HOURS,
   shouldDisbandRaid,
+  RAID_MIN_TEAM,
   type RaidView,
 } from './coop-auto';
 import { getAccoladeWeekStart, priorWeekStart } from '../lib/accolade-week';
@@ -1479,7 +1480,13 @@ describe('W1260 — a team left short of six with nobody walking closes', () => 
     expect(shouldDisbandRaid(2, 0)).toBe(true);    // PR44 + KaylaBrotzman, both away
     expect(shouldDisbandRaid(5, 0)).toBe(true);
     expect(shouldDisbandRaid(6, 0)).toBe(false);   // a full six waits for stand-ins
-    expect(shouldDisbandRaid(3, 1)).toBe(false);   // someone is still walking it
+    expect(shouldDisbandRaid(4, 1)).toBe(false);   // 4 with someone walking keeps going
+    expect(shouldDisbandRaid(5, 2)).toBe(false);
+    // W1261 — "Raids should have a minimum of 4": under 4 closes even with walkers on it
+    expect(RAID_MIN_TEAM).toBe(4);
+    expect(shouldDisbandRaid(3, 1)).toBe(true);
+    expect(shouldDisbandRaid(3, 3)).toBe(true);
+    expect(shouldDisbandRaid(1, 1)).toBe(true);
     expect(shouldDisbandRaid(0, 0)).toBe(false);
   });
 });

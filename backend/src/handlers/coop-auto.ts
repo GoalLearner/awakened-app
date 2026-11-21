@@ -1810,9 +1810,15 @@ async function sweepRaidMoves(
  *  automatic raid with fewer than AUTO_RAID_PARTY members, none of them in the app in the last 24 hours (counted from
  *  the later of their last real open and their seat, as the stand-in rule does), closes quietly: status 'cancelled',
  *  result 'disbanded'; no loss, no reward, not in Recently Finished. Its hunters are free again, and once they are back
- *  in the app they are drawn into the next full team of six. A full team of six is never closed here. Pure. */
+ *  in the app they are drawn into the next full team of six. A full team of six is never closed here.
+ *  W1261 — owner 2026-11-20: "Raids should have a minimum of 4" (chose: close any team under 4, even with walkers on it).
+ *  A live team with fewer than RAID_MIN_TEAM members closes too; its walkers are free at once for a stand-in seat on
+ *  another team or the next raid that forms. Teams of 4 or 5 with someone walking keep going. Pure. */
+export const RAID_MIN_TEAM = 4;
 export function shouldDisbandRaid(memberCount: number, activeCount: number): boolean {
-  return memberCount > 0 && memberCount < AUTO_RAID_PARTY && activeCount === 0;
+  if (memberCount <= 0) return false;
+  if (memberCount < RAID_MIN_TEAM) return true;
+  return memberCount < AUTO_RAID_PARTY && activeCount === 0;
 }
 
 async function sweepRaidDisbands(
@@ -1849,7 +1855,9 @@ async function sweepRaidDisbands(
     for (const uid of members) {
       ctx.waitUntil(notifyUser(env, uid, {
         title: 'Raid Team Change',
-        body: `${COOP_BOSS_NAMES[AUTO_RAID_BOSS] ?? 'The raid'}: your team ran out of walkers, so it was closed. Open the app and you'll be drawn into the next full team of six.`,
+        body: members.length < RAID_MIN_TEAM
+          ? `${COOP_BOSS_NAMES[AUTO_RAID_BOSS] ?? 'The raid'}: your team dropped below four hunters, so it was closed. You're free for the next team that needs a walker, or the next raid that forms.`
+          : `${COOP_BOSS_NAMES[AUTO_RAID_BOSS] ?? 'The raid'}: your team ran out of walkers, so it was closed. Open the app and you'll be drawn into the next full team of six.`,
         type: 'coop_joined',
         data: { bossId: AUTO_RAID_BOSS },
       }));
