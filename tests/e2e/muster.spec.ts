@@ -43,13 +43,13 @@ async function boot(page: Page) {
 }
 
 const H = 3_600_000;
-function feed(kind: 'in' | 'out' | 'none') {
+function feed(kind: 'in' | 'out' | 'none', waiting = false) {
   const now = Date.now(), starts = new Date(now - 41 * H).toISOString(), ends = new Date(now + 39 * H).toISOString();
   const m = (alias: string, rank: string, steps: number, flights: number, x: Record<string, unknown> = {}) => ({ alias, rank, steps, flights, ...x });
   const raids = kind === 'none' ? [] : [
-    { id: 'kestrel', mine: false, starts_at: starts, ends_at: ends, banked_steps: 0, banked_flights: 0,
+    { id: 'kestrel', mine: false, starts_at: starts, ends_at: ends, banked_steps: 0, banked_flights: 0, ...(waiting ? { waiting: true } : {}),
       members: [m('Kestrel', 'S', 46395, 26), m('Oriel', 'A', 11177, 14), m('Thane', 'B', 9189, 8), m('Vey', 'C', 0, 0), m('Lumen', 'D', 0, 0), m('Sable', 'B', 0, 0)] },
-    { id: 'mine', mine: kind === 'in', starts_at: starts, ends_at: ends, banked_steps: 4210, banked_flights: 0,
+    { id: 'mine', mine: kind === 'in', starts_at: starts, ends_at: ends, banked_steps: 4210, banked_flights: 0, ...(waiting ? { waiting: true } : {}),
       members: [m('Richie', 'B', 10281, 12, kind === 'in' ? { me: true } : {}), m('Marrow', 'A', 8171, 10), m('Pike', 'C', 5143, 6),
         m('Ashby', 'D', 0, 0, { away: true }), m('Corin', 'B', 0, 0, { sub: true }), m('Wren', 'E', 0, 0)] },
   ];
@@ -57,8 +57,8 @@ function feed(kind: 'in' | 'out' | 'none') {
     finished: [{ won: true, hours: 61, mvp: 'Kestrel', pct: 100, at: '2026-11-17T20:00:00Z' }, { won: false, hours: null, mvp: null, pct: 74, at: '2026-11-15T08:00:00Z' }],
     draw: { opens: 3, need: 5, days: [true, false, true, false, false, false, true], in_raid: kind === 'in' } };
 }
-async function stubRaids(page: Page, kind: 'in' | 'out' | 'none') {
-  await page.evaluate((f) => { (window as any).Auth.coopRaidsLive = async () => f; }, feed(kind));
+async function stubRaids(page: Page, kind: 'in' | 'out' | 'none', waiting = false) {
+  await page.evaluate((f) => { (window as any).Auth.coopRaidsLive = async () => f; }, feed(kind, waiting));
 }
 
 test.describe('W1255 — Team Battles (the handoff named it The Muster)', () => {
@@ -180,5 +180,29 @@ test.describe('W1255 — Team Battles (the handoff named it The Muster)', () => 
     expect(await crowns(card.locator('.mu-tbody .mu-mem').filter({ hasText: 'oriel' }))).toBe(0);
     expect(await crowns(rd.locator('.mu-fin').first())).toBe(1);   // MVP rendiesel on a finished raid
     expect(await crowns(rd.locator('.mu-fin').nth(1))).toBe(0);
+  });
+});
+
+// W1263 — owner 2026-11-20: short teams wait for hunters instead of closing (server W1262 sends waiting: true).
+test.describe('W1263 — a team waiting for hunters', () => {
+  test('your team and another team say they are waiting; the clock is stopped', async ({ page }) => {
+    await boot(page);
+    await stubRaids(page, 'in', true);
+    await page.evaluate(() => (window as any).__muster.open('raids'));
+    const team = page.locator('[data-pane="raids"] .mu-team');
+    await expect(team).toBeVisible({ timeout: 8_000 });
+    await expect(team.locator('.mu-tl b')).toHaveText('Waiting');
+    await expect(team.locator('.mu-tl span')).toHaveText(/Clock stopped · 39h left/i);
+    await expect(team.locator('.mu-wait')).toHaveText('Your team needs more hunters. The clock starts again when they join.');
+    const card = page.locator('[data-pane="raids"] .mu-tc');
+    await expect(card.locator('.mu-ttl')).toHaveText(/Waiting for hunters/i);
+  });
+  test('a running team shows its hours, never the waiting label', async ({ page }) => {
+    await boot(page);
+    await stubRaids(page, 'in');
+    await page.evaluate(() => (window as any).__muster.open('raids'));
+    await expect(page.locator('[data-pane="raids"] .mu-team .mu-tl b')).toHaveText('39h left', { timeout: 8_000 });
+    await expect(page.locator('[data-pane="raids"] .mu-wait')).toHaveCount(0);
+    await expect(page.locator('[data-pane="raids"] .mu-ttl.is-wait')).toHaveCount(0);
   });
 });

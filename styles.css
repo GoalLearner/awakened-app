@@ -37290,6 +37290,9 @@ button.mx-sh { cursor: pointer; min-height: 40px; }
 .mu-tn{min-width:0;display:flex;align-items:baseline;font:700 14px/1.2 var(--mu-serif);color:var(--mu-ink);white-space:nowrap}
 .mu-tnt{min-width:0;overflow:hidden;text-overflow:ellipsis}.mu-tns{flex:none}
 .mu-ttl{font:800 9px/1 var(--mu-mono);letter-spacing:.12em;text-transform:uppercase;color:var(--mu-ink2);white-space:nowrap}
+/* W1263 — a team waiting for hunters */
+.mu-ttl.is-wait,.mu-tl.is-wait b{color:var(--mu-gold)}
+.mu-wait{margin:12px 0 0!important;padding:9px 12px!important;border-radius:10px;border:1px solid rgba(245,184,66,.3);background:rgba(245,184,66,.05);font:600 12px/1.4 var(--mu-sans);color:var(--mu-ink2)}
 .mu-tb{display:grid;grid-template-columns:12px minmax(0,1fr) 46px;align-items:center;gap:7px 8px;padding:11px 14px 0 42px}
 .mu-tb .mu-mini{height:6px;border-radius:3px}
 .mu-tb .mu-pf{border-radius:3px;box-shadow:none}
