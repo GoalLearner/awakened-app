@@ -37426,13 +37426,10 @@ button.mx-sh { cursor: pointer; min-height: 40px; }
 /* W1264 — the 300K seal, option B "Nebula" (owner 2026-11-21: "B is good"; round one was "worse than 200k"). It keeps
    everything the 200K seal has and adds more: taller (20px) with a crown notch, gold wings, a gold edge around the
    moving prism edge, a slow-turning galaxy inside, a crown with a ruby, shining metal letters and rising sparks. */
-.lb-rank-club300k { position: relative; display: inline-flex; align-items: center; flex: none; margin-left: 2px; padding: 0 9px; font-style: normal; line-height: 1; }
-.lb-rank-club300k > .g { position: absolute; left: 11px; right: 11px; top: 3px; bottom: 3px; border-radius: 10px; pointer-events: none;
+.lb-rank-club300k { position: relative; display: inline-flex; align-items: center; flex: none; margin-left: 2px; font-style: normal; line-height: 1; }
+.lb-rank-club300k > .g { position: absolute; left: 3px; right: 3px; top: 3px; bottom: 3px; border-radius: 10px; pointer-events: none;
   background: linear-gradient(90deg, rgba(255,120,200,.85), rgba(180,140,255,.95), rgba(94,231,245,.85), rgba(255,213,106,.9));
   filter: blur(4.5px); animation: lbClub300kBreathe 2.6s ease-in-out infinite; }
-.lb-rank-club300k > .w { position: absolute; top: 50%; margin-top: -8.5px; z-index: 1; overflow: visible; filter: drop-shadow(0 0 2px rgba(255,213,106,.9)); }
-.lb-rank-club300k > .w.l { left: 0; }
-.lb-rank-club300k > .w.r { right: 0; transform: scaleX(-1); }
 .lb-rank-club300k > b { position: relative; z-index: 2; display: block; height: 20px; padding: 1.3px;
   clip-path: polygon(0 50%, 8px 0, calc(50% - 5px) 0, 50% 3.5px, calc(50% + 5px) 0, calc(100% - 8px) 0, 100% 50%, calc(100% - 8px) 100%, 8px 100%);
   background: linear-gradient(90deg, #fff6d8, #ffd56a, #c98a17, #fff6d8, #ffd56a, #c98a17, #fff6d8); background-size: 300% 100%;

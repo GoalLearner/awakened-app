@@ -93,9 +93,9 @@ test.describe('W1257 — the 200K seal on the Steps board', () => {
     await expect(sheet.locator('.lb-rank-club300k')).toHaveCount(1);
     await expect(sheet.locator('.lb-rank-club200k')).toHaveCount(1);   // 299,999 stays 200K
     await expect(sheet.locator('.lb-rank-club100k')).toHaveCount(1);
-    await expect(leader.locator('.lb-rank-club300k .w')).toHaveCount(2);
+    await expect(leader.locator('.lb-rank-club300k .w')).toHaveCount(0);   // W1265 — no wings
     const box = await leader.locator('.lb-rank-club300k').boundingBox();
-    expect(box && box.width).toBeGreaterThan(50);
+    expect(box && box.width).toBeGreaterThan(40);
     if (SHOTS) await page.screenshot({ path: SHOTS + '/lb-300k.png' });
   });
 });
