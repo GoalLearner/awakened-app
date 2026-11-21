@@ -864,8 +864,8 @@ export async function createAutoTrio(env: Env, trio: readonly string[], dayKey: 
 /** Cron, every 2 minutes: today's hunt for every walking friend pair that has none yet, then
  *  (W1164) today's hunt for every matched pair of active hunters who have no friends, then
  *  (W1208) today's automatic trios. */
-export async function sweepCoopAutoHunts(env: Env, _ctx?: ExecutionContext): Promise<{ created: number; pairs: number; skipped: number; matched: number; trios: number; raids: number; swaps: number; moves: number }> {
-  const out = { created: 0, pairs: 0, skipped: 0, matched: 0, trios: 0, raids: 0, swaps: 0, moves: 0 };
+export async function sweepCoopAutoHunts(env: Env, _ctx?: ExecutionContext): Promise<{ created: number; pairs: number; skipped: number; matched: number; trios: number; raids: number; swaps: number; moves: number; disbands: number }> {
+  const out = { created: 0, pairs: 0, skipped: 0, matched: 0, trios: 0, raids: 0, swaps: 0, moves: 0, disbands: 0 };
   try {
     const nowMs = Date.now();
     const today = ptDayKey(nowMs);
@@ -957,6 +957,13 @@ export async function sweepCoopAutoHunts(env: Env, _ctx?: ExecutionContext): Pro
       out.moves = await sweepRaidMoves(env, nowMs, shared, lastSeen, _ctx);
     } catch (err) {
       console.error('[coop-auto] raid move sweep failed', err);
+    }
+
+    // ── W1260 — a team left short of six with nobody walking closes; its hunters wait for the next full six ──
+    try {
+      out.disbands = await sweepRaidDisbands(env, nowMs, lastSeen, _ctx);
+    } catch (err) {
+      console.error('[coop-auto] raid disband sweep failed', err);
     }
 
     // ── W1211 — the automatic raid ──
@@ -1795,6 +1802,60 @@ async function sweepRaidMoves(
     }
   }
   return moved;
+}
+
+/** W1260 — EMPTY TEAMS CLOSE (owner 2026-11-20, on PR44's team: two hunters, both away, 0 steps, 30 hours left: "If it's
+ *  both away like this .. don't start it until they have a full team of six"). A raid only forms with six (W1239), but a
+ *  break-up (W1253) moves its walkers away and leaves the away hunters behind, a team nobody is walking. A live
+ *  automatic raid with fewer than AUTO_RAID_PARTY members, none of them in the app in the last 24 hours (counted from
+ *  the later of their last real open and their seat, as the stand-in rule does), closes quietly: status 'cancelled',
+ *  result 'disbanded'; no loss, no reward, not in Recently Finished. Its hunters are free again, and once they are back
+ *  in the app they are drawn into the next full team of six. A full team of six is never closed here. Pure. */
+export function shouldDisbandRaid(memberCount: number, activeCount: number): boolean {
+  return memberCount > 0 && memberCount < AUTO_RAID_PARTY && activeCount === 0;
+}
+
+async function sweepRaidDisbands(
+  env: Env,
+  nowMs: number,
+  lastSeen: () => Promise<Map<string, number>>,
+  ctx: ExecutionContext | undefined,
+): Promise<number> {
+  const rows = (await env.DB.prepare(
+    `SELECT * FROM coop_boss_instances
+      WHERE status = 'active' AND auto = 1 AND boss_id = ?1 AND ends_at > ?2
+      ORDER BY ends_at ASC LIMIT 50`,
+  ).bind(AUTO_RAID_BOSS, new Date(nowMs).toISOString()).all<CoopBossRow>()).results ?? [];
+  if (!rows.length) return 0;
+  const [parts, seen] = await Promise.all([loadParticipants(env, rows.map((r) => r.id)), lastSeen()]);
+  let closed = 0;
+  for (const r of rows) {
+    r.participants = parts.get(r.id) ?? [];
+    const members = Array.from(new Set(participantIds(r).filter(Boolean)));
+    const startsMs = Date.parse(r.starts_at || '');
+    const joined = new Map<string, number>([[r.challenger_user_id, startsMs]]);
+    for (const pt of r.participants) joined.set(pt.user_id, Date.parse(pt.joined_at || r.starts_at || ''));
+    const idle = new Set(idleRaiders(members.map((u) => ({ uid: u, joinedMs: joined.get(u) ?? startsMs })), seen, nowMs));
+    const activeCount = members.filter((u) => !idle.has(u)).length;
+    if (!shouldDisbandRaid(members.length, activeCount)) continue;
+    const res = await env.DB.prepare(
+      `UPDATE coop_boss_instances
+          SET status = 'cancelled', result = 'disbanded', resolved_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?1 AND status = 'active' AND auto = 1`,
+    ).bind(r.id).run();
+    if (!Number(res?.meta?.changes ?? 0)) continue;
+    closed++;
+    if (!ctx) continue;
+    for (const uid of members) {
+      ctx.waitUntil(notifyUser(env, uid, {
+        title: 'Raid Team Change',
+        body: `${COOP_BOSS_NAMES[AUTO_RAID_BOSS] ?? 'The raid'}: your team ran out of walkers, so it was closed. Open the app and you'll be drawn into the next full team of six.`,
+        type: 'coop_joined',
+        data: { bossId: AUTO_RAID_BOSS },
+      }));
+    }
+  }
+  return closed;
 }
 
 /** W1254 — GET /v1/coop-boss/raids/live: The Muster's Raids tab (owner 2026-11-20: "...another tab that you can see raid

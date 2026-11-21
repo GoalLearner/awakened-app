@@ -57,6 +57,7 @@ import {
   STANDIN_MIN_ACTIVE,
   handleRaidsLive,
   MUSTER_AWAY_HOURS,
+  shouldDisbandRaid,
   type RaidView,
 } from './coop-auto';
 import { getAccoladeWeekStart, priorWeekStart } from '../lib/accolade-week';
@@ -1467,5 +1468,18 @@ describe('W1254 — GET /v1/coop-boss/raids/live', () => {
     expect(body.draw.days[6]).toBe(true);
     expect(body.draw.opens).toBe(3);
     expect(body.draw.in_raid).toBe(true);
+  });
+});
+
+// W1260 — owner 2026-11-20, on PR44's team (two hunters, both away, 0 steps): "If it's both away like this .. don't start
+// it until they have a full team of six". A team left short of six with nobody in the app for a day closes.
+describe('W1260 — a team left short of six with nobody walking closes', () => {
+  it('closes PR44\'s two away hunters; never a full six, never a short team with someone walking', () => {
+    expect(AUTO_RAID_PARTY).toBe(6);
+    expect(shouldDisbandRaid(2, 0)).toBe(true);    // PR44 + KaylaBrotzman, both away
+    expect(shouldDisbandRaid(5, 0)).toBe(true);
+    expect(shouldDisbandRaid(6, 0)).toBe(false);   // a full six waits for stand-ins
+    expect(shouldDisbandRaid(3, 1)).toBe(false);   // someone is still walking it
+    expect(shouldDisbandRaid(0, 0)).toBe(false);
   });
 });
