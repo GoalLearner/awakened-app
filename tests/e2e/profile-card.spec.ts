@@ -186,3 +186,28 @@ test.describe('W1158 — the Step Club seal and the Prestige chip are pins', () 
     await expect(body.locator('.pc-pins')).toHaveCount(0);
   });
 });
+
+// W1259 — a 200,000-step week turns the 100K Step Club pin into the 200K pin (owner 2026-11-20: "Give killua the 200K badge
+// on her profile card"): a visitor's card from the published club100k.best, the own card from the accolade cached here.
+test.describe('W1259 — the 200K pin', () => {
+  test.use({ viewport: { width: 390, height: 844 } });
+  test("a 200K week wears the 200K pin in the club pin's place, on a visitor's card and the own card", async ({ page }) => {
+    await boot(page);
+    const body = page.locator('#pc-body');
+    await render(page, false, { alias: 'Killua', rankTier: 'E', club100k: { repeatCount: 2, best: 267892 }, cardPins: null });
+    await expect(body.locator('.pc-pins .pc-pin')).toHaveText(['200K WEEK']);
+    await expect(body.locator('.pc-pin--club200k .em svg')).toHaveCount(1);
+    await expect(body.locator('.pc-pin--club100k')).toHaveCount(0);
+    if (process.env.LB_SHOTS) await page.locator('#pc-body .pc-pins').screenshot({ path: process.env.LB_SHOTS + '/pin-200k.png' });
+    // a chosen club pin upgrades too; a 199,999 week stays the 100K pin
+    await render(page, false, { alias: 'Killua', rankTier: 'E', club100k: { repeatCount: 2, best: 267892 }, cardPins: [{ id: 'club100k', v: 2 }] });
+    await expect(body.locator('.pc-pins .pc-pin')).toHaveText(['200K WEEK']);
+    await render(page, false, { alias: 'Angelo', rankTier: 'E', club100k: { repeatCount: 2, best: 199999 }, cardPins: null });
+    await expect(body.locator('.pc-pins .pc-pin')).toHaveText(['100K CLUB ×2']);
+    // the own card
+    await page.evaluate(() => { localStorage.removeItem('hb_card_pins'); localStorage.setItem('hb_accolades_cache', JSON.stringify({ accolades: [{ type: 'step_100k_club', repeat_count: 2, best_value: 250000 }], fetched_at: Date.now() })); });
+    await render(page, true);
+    await expect(body.locator('.pc-pins--own .pc-pin')).toHaveText(['200K WEEK']);
+    if (process.env.LB_SHOTS) await page.screenshot({ path: process.env.LB_SHOTS + '/card-200k.png' });
+  });
+});

@@ -37404,3 +37404,18 @@ button.mx-sh { cursor: pointer; min-height: 40px; }
 @media (prefers-reduced-motion: reduce) {
   .lb-rank-club200k > b, .lb-rank-club200k > b > span::after { animation: none; }
 }
+
+/* W1259 — the 200K pin: the card's twin of the board's 200K seal. A prism rim turning around an obsidian pill
+   (gold, white, violet, cyan), a hex emblem with a gold star, and a light sweep. */
+.pc-pin--club200k { --c: #ffe9b0; --rim: transparent; --bgp: radial-gradient(120% 160% at 50% 0%, #2e1d55, #120a24 70%);
+  box-shadow: 0 0 14px -4px rgba(180,140,255,.85), 0 0 18px -8px rgba(245,184,66,.7); text-shadow: 0 0 5px rgba(245,184,66,.7); }
+.pc-pin--club200k::before { content: ''; position: absolute; inset: -150%; z-index: -2;
+  background: conic-gradient(from 0deg, #f5b842, #fff4d6, #b48cff, #5ee7f5, #f5b842, #fff4d6, #b48cff, #5ee7f5, #f5b842);
+  animation: wxPinSpin 6s linear infinite; }
+.pc-pin--club200k::after { content: ''; position: absolute; inset: 1.4px; border-radius: inherit; background: var(--bgp); z-index: -1; }
+.pc-pin--club200k .sw { position: absolute; top: 0; bottom: 0; left: 0; width: 30%; z-index: 1; pointer-events: none;
+  background: linear-gradient(105deg, transparent, rgba(255,255,255,.45), transparent); animation: wxPinSweep 3.6s ease-in-out infinite; }
+.pc-pin--club200k .st { transform-origin: center; transform-box: fill-box; animation: wxPinTwinkle 2.6s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .pc-pin--club200k::before, .pc-pin--club200k .sw, .pc-pin--club200k .st { animation: none; }
+}
