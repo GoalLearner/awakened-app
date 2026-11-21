@@ -37422,3 +37422,74 @@ button.mx-sh { cursor: pointer; min-height: 40px; }
 @media (prefers-reduced-motion: reduce) {
   .pc-pin--club200k::before, .pc-pin--club200k .sw, .pc-pin--club200k .st { animation: none; }
 }
+
+/* W1264 — the 300K seal, option B "Nebula" (owner 2026-11-21: "B is good"; round one was "worse than 200k"). It keeps
+   everything the 200K seal has and adds more: taller (20px) with a crown notch, gold wings, a gold edge around the
+   moving prism edge, a slow-turning galaxy inside, a crown with a ruby, shining metal letters and rising sparks. */
+.lb-rank-club300k { position: relative; display: inline-flex; align-items: center; flex: none; margin-left: 2px; padding: 0 9px; font-style: normal; line-height: 1; }
+.lb-rank-club300k > .g { position: absolute; left: 11px; right: 11px; top: 3px; bottom: 3px; border-radius: 10px; pointer-events: none;
+  background: linear-gradient(90deg, rgba(255,120,200,.85), rgba(180,140,255,.95), rgba(94,231,245,.85), rgba(255,213,106,.9));
+  filter: blur(4.5px); animation: lbClub300kBreathe 2.6s ease-in-out infinite; }
+.lb-rank-club300k > .w { position: absolute; top: 50%; margin-top: -8.5px; z-index: 1; overflow: visible; filter: drop-shadow(0 0 2px rgba(255,213,106,.9)); }
+.lb-rank-club300k > .w.l { left: 0; }
+.lb-rank-club300k > .w.r { right: 0; transform: scaleX(-1); }
+.lb-rank-club300k > b { position: relative; z-index: 2; display: block; height: 20px; padding: 1.3px;
+  clip-path: polygon(0 50%, 8px 0, calc(50% - 5px) 0, 50% 3.5px, calc(50% + 5px) 0, calc(100% - 8px) 0, 100% 50%, calc(100% - 8px) 100%, 8px 100%);
+  background: linear-gradient(90deg, #fff6d8, #ffd56a, #c98a17, #fff6d8, #ffd56a, #c98a17, #fff6d8); background-size: 300% 100%;
+  animation: lbClub200kEdge 3s linear infinite; }
+.lb-rank-club300k > b > i { display: block; height: 100%; padding: 1px; font-style: normal;
+  clip-path: polygon(0 50%, 7px 0, calc(50% - 4.4px) 0, 50% 3.1px, calc(50% + 4.4px) 0, calc(100% - 7px) 0, 100% 50%, calc(100% - 7px) 100%, 7px 100%);
+  background: linear-gradient(90deg, #f5b842, #fff4d6, #b48cff, #5ee7f5, #f5b842, #fff4d6, #b48cff); background-size: 300% 100%;
+  animation: lbClub200kEdge 2.4s linear infinite reverse; }
+.lb-rank-club300k > b > i > span { position: relative; overflow: hidden; isolation: isolate; display: flex; align-items: center; gap: 3px; height: 100%; padding: 1.5px 10px 0 9px;
+  clip-path: polygon(0 50%, 6.2px 0, calc(50% - 3.9px) 0, 50% 2.7px, calc(50% + 3.9px) 0, calc(100% - 6.2px) 0, 100% 50%, calc(100% - 6.2px) 100%, 6.2px 100%);
+  background: #07040f; font-family: "JetBrains Mono", monospace; font-size: 8.5px; font-weight: 800; letter-spacing: 0.3px; }
+.lb-rank-club300k > b > i > span::before { content: ''; position: absolute; inset: -60%; z-index: -1; opacity: .95;
+  background: conic-gradient(from 0deg, #3b0f5e, #0f2a5e, #0e4a5a, #5a2a0e, #5e0f45, #3b0f5e); animation: wxPinSpin 7s linear infinite; }
+.lb-rank-club300k > b > i > span::after { content: ''; position: absolute; top: 0; bottom: 0; left: -40%; width: 30%; z-index: 2;
+  background: linear-gradient(100deg, transparent, rgba(255,255,255,.6), transparent); transform: skewX(-20deg); animation: lbClub200kSweep 3.2s ease-in-out infinite; }
+/* the board line clips (overflow:hidden for long titles): give the seal room so its glow is not cut into a box */
+.lb-rank-class:has(> .lb-rank-club300k) { padding: 5px 6px 5px 2px; margin-top: -5px; margin-bottom: -5px; }
+#lb-rank-sheet .lb-rank-leader .lb-rank-class:has(> .lb-rank-club300k) { margin-top: 1px; }
+.lb-rank-club300k .cr { flex: none; position: relative; z-index: 1; filter: drop-shadow(0 0 2px #ffd56a); }
+.lb-rank-club300k em { position: relative; z-index: 1; font-style: normal; text-shadow: none;
+  background: linear-gradient(90deg, #fff3c4, #ffffff, #ffd56a, #fff3c4, #ffffff); background-size: 200% 100%;
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  animation: lbClub300kShine 2.4s linear infinite; filter: drop-shadow(0 0 2.5px rgba(255,213,106,.95)); }
+.lb-rank-club300k > .e { position: absolute; bottom: 4px; z-index: 3; width: 2px; height: 2px; border-radius: 50%; pointer-events: none;
+  background: #ffe9a8; box-shadow: 0 0 3px #ffd56a; opacity: 0; animation: lbClub300kRise 2.2s ease-out infinite; }
+@keyframes lbClub300kBreathe { 0%, 100% { opacity: .6; transform: scale(1); } 50% { opacity: 1; transform: scale(1.12); } }
+@keyframes lbClub300kShine { from { background-position: 0% 50%; } to { background-position: 200% 50%; } }
+@keyframes lbClub300kRise { 0% { transform: translateY(0); opacity: 0; } 15% { opacity: 1; } 100% { transform: translateY(-14px); opacity: 0; } }
+
+/* the 300K pin: the card's twin of the seal */
+.pc-pin3w { position: relative; display: inline-flex; align-items: center; padding: 0 16px; }
+.pc-pin3w > .g { position: absolute; left: 10px; right: 10px; top: -3px; bottom: -3px; border-radius: 999px; pointer-events: none;
+  background: linear-gradient(90deg, rgba(255,120,200,.85), rgba(180,140,255,.95), rgba(94,231,245,.85));
+  filter: blur(9px); animation: lbClub300kBreathe 2.6s ease-in-out infinite; }
+.pc-pin3w > .w { position: absolute; top: 50%; margin-top: -14px; overflow: visible; filter: drop-shadow(0 0 3px rgba(255,213,106,.9)); }
+.pc-pin3w > .w.l { left: 0; }
+.pc-pin3w > .w.r { right: 0; transform: scaleX(-1); }
+.pc-pin3w > .rim { position: relative; z-index: 2; display: inline-flex; height: 32px; padding: 2px; border-radius: 999px;
+  background: linear-gradient(90deg, #fff6d8, #ffd56a, #c98a17, #fff6d8, #ffd56a, #c98a17, #fff6d8); background-size: 300% 100%;
+  animation: lbClub200kEdge 3s linear infinite; }
+.pc-pin--club300k { --c: #fff3c4; --rim: transparent; height: 28px; padding: 0 13px 0 8px; font-size: 9.5px;
+  --bgp: conic-gradient(from 90deg, #3b0f5e, #0f2a5e, #0e4a5a, #5a2a0e, #5e0f45, #3b0f5e); }
+.pc-pin--club300k::before { content: ''; position: absolute; inset: -150%; z-index: -2;
+  background: conic-gradient(from 0deg, #f5b842, #fff4d6, #b48cff, #5ee7f5, #f5b842, #fff4d6, #b48cff, #5ee7f5, #f5b842);
+  animation: wxPinSpin 4s linear infinite; }
+.pc-pin--club300k::after { content: ''; position: absolute; inset: 1.4px; border-radius: inherit; background: var(--bgp); z-index: -1; }
+.pc-pin--club300k .sw { position: absolute; top: 0; bottom: 0; left: 0; width: 30%; z-index: 1; pointer-events: none;
+  background: linear-gradient(105deg, transparent, rgba(255,255,255,.5), transparent); animation: wxPinSweep 3.6s ease-in-out infinite; }
+.pc-pin--club300k .st { transform-origin: center; transform-box: fill-box; animation: wxPinTwinkle 2.6s ease-in-out infinite; }
+.pc-pin--club300k .lbl { background: linear-gradient(90deg, #fff3c4, #ffffff, #ffd56a, #fff3c4, #ffffff); background-size: 200% 100%;
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  animation: lbClub300kShine 2.4s linear infinite; filter: drop-shadow(0 0 3px rgba(255,213,106,.9)); }
+.pc-pin3w > .e { position: absolute; bottom: 4px; z-index: 3; width: 2.5px; height: 2.5px; border-radius: 50%; pointer-events: none;
+  background: #ffe9a8; box-shadow: 0 0 4px #ffd56a; opacity: 0; animation: lbClub300kRise 2.4s ease-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .lb-rank-club300k > .g, .lb-rank-club300k > b, .lb-rank-club300k > b > i, .lb-rank-club300k > b > i > span::before,
+  .lb-rank-club300k > b > i > span::after, .lb-rank-club300k em, .lb-rank-club300k > .e,
+  .pc-pin3w > .g, .pc-pin3w > .rim, .pc-pin--club300k::before, .pc-pin--club300k .sw, .pc-pin--club300k .st,
+  .pc-pin--club300k .lbl, .pc-pin3w > .e { animation: none; }
+}

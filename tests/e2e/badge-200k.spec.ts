@@ -61,4 +61,41 @@ test.describe('W1257 — the 200K seal on the Steps board', () => {
     expect(box && box.height).toBeLessThanOrEqual(17);
     if (SHOTS) await page.screenshot({ path: SHOTS + '/lb-200k.png' });
   });
+
+  // W1264 — owner 2026-11-21 picked option B "Nebula": a 300,000-step week wears the 300K seal in place of the 200K seal.
+  test('a 300,000-step week wears the 300K seal; 200K and 100K keep theirs', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await boot(page);
+    await page.evaluate(() => {
+      const A = (window as any).Auth;
+      A.fetchLeaderboardTop = async () => ({ ok: true, final: false, week: null,
+        top: [
+          { rank: 1, alias: 'Alpha', current_value: 306326 },
+          { rank: 2, alias: 'Beta', current_value: 215091 },
+          { rank: 3, alias: 'Gamma', current_value: 129973 },
+          { rank: 4, alias: 'Delta', current_value: 88039 },
+        ], me: null });
+      A.fetchLastWeekSteps = async () => ({ ok: true, champion: null, me: null, records: [] });
+      A.fetchStep100kClub = async () => ({ ok: true, members: [
+        { alias: 'Alpha', best_value: 306326 },
+        { alias: 'Beta', best_value: 299999 },
+        { alias: 'Gamma', best_value: 133979 },
+      ], me: null });
+      A.fetchLeaderboardArchive = async (week: string) => ({ ok: true, week, records: [], me: null, weeksAvailable: [week] });
+      (window as any).openLeaderboardRanking('step_total');
+    });
+    const sheet = page.locator('#lb-rank-sheet');
+    await expect(sheet).toBeVisible();
+    const leader = sheet.locator('.lb-rank-leader');
+    await expect(leader.locator('.lb-rank-club300k')).toHaveText('300K');
+    await expect(leader.locator('.lb-rank-club200k')).toHaveCount(0);
+    await expect(leader.locator('.lb-rank-club100k')).toHaveCount(0);
+    await expect(sheet.locator('.lb-rank-club300k')).toHaveCount(1);
+    await expect(sheet.locator('.lb-rank-club200k')).toHaveCount(1);   // 299,999 stays 200K
+    await expect(sheet.locator('.lb-rank-club100k')).toHaveCount(1);
+    await expect(leader.locator('.lb-rank-club300k .w')).toHaveCount(2);
+    const box = await leader.locator('.lb-rank-club300k').boundingBox();
+    expect(box && box.width).toBeGreaterThan(50);
+    if (SHOTS) await page.screenshot({ path: SHOTS + '/lb-300k.png' });
+  });
 });

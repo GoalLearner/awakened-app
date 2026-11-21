@@ -210,4 +210,20 @@ test.describe('W1259 — the 200K pin', () => {
     await expect(body.locator('.pc-pins--own .pc-pin')).toHaveText(['200K WEEK']);
     if (process.env.LB_SHOTS) await page.screenshot({ path: process.env.LB_SHOTS + '/card-200k.png' });
   });
+
+  // W1264 — a 300,000-step week: the 300K "Nebula" pin.
+  test('a 300K week wears the 300K pin on a visitor\'s card and the own card; 299,999 stays 200K', async ({ page }) => {
+    await boot(page);
+    const body = page.locator('#pc-body');
+    await render(page, false, { alias: 'Killua', rankTier: 'E', club100k: { repeatCount: 3, best: 306326 }, cardPins: null });
+    await expect(body.locator('.pc-pins .pc-pin')).toHaveText(['300K WEEK']);
+    await expect(body.locator('.pc-pin3w .w')).toHaveCount(2);
+    await expect(body.locator('.pc-pin--club200k')).toHaveCount(0);
+    if (process.env.LB_SHOTS) await page.screenshot({ path: process.env.LB_SHOTS + '/card-300k.png' });
+    await render(page, false, { alias: 'Ricin', rankTier: 'E', club100k: { repeatCount: 1, best: 299999 }, cardPins: null });
+    await expect(body.locator('.pc-pins .pc-pin')).toHaveText(['200K WEEK']);
+    await page.evaluate(() => { localStorage.removeItem('hb_card_pins'); localStorage.setItem('hb_accolades_cache', JSON.stringify({ accolades: [{ type: 'step_100k_club', repeat_count: 3, best_value: 306326 }], fetched_at: Date.now() })); });
+    await render(page, true);
+    await expect(body.locator('.pc-pins--own .pc-pin')).toHaveText(['300K WEEK']);
+  });
 });
