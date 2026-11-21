@@ -37463,13 +37463,10 @@ button.mx-sh { cursor: pointer; min-height: 40px; }
 @keyframes lbClub300kRise { 0% { transform: translateY(0); opacity: 0; } 15% { opacity: 1; } 100% { transform: translateY(-14px); opacity: 0; } }
 
 /* the 300K pin: the card's twin of the seal */
-.pc-pin3w { position: relative; display: inline-flex; align-items: center; padding: 0 16px; }
-.pc-pin3w > .g { position: absolute; left: 10px; right: 10px; top: -3px; bottom: -3px; border-radius: 999px; pointer-events: none;
+.pc-pin3w { position: relative; display: inline-flex; align-items: center; }   /* W1265 — no wings */
+.pc-pin3w > .g { position: absolute; left: 2px; right: 2px; top: -3px; bottom: -3px; border-radius: 999px; pointer-events: none;
   background: linear-gradient(90deg, rgba(255,120,200,.85), rgba(180,140,255,.95), rgba(94,231,245,.85));
   filter: blur(9px); animation: lbClub300kBreathe 2.6s ease-in-out infinite; }
-.pc-pin3w > .w { position: absolute; top: 50%; margin-top: -14px; overflow: visible; filter: drop-shadow(0 0 3px rgba(255,213,106,.9)); }
-.pc-pin3w > .w.l { left: 0; }
-.pc-pin3w > .w.r { right: 0; transform: scaleX(-1); }
 .pc-pin3w > .rim { position: relative; z-index: 2; display: inline-flex; height: 32px; padding: 2px; border-radius: 999px;
   background: linear-gradient(90deg, #fff6d8, #ffd56a, #c98a17, #fff6d8, #ffd56a, #c98a17, #fff6d8); background-size: 300% 100%;
   animation: lbClub200kEdge 3s linear infinite; }

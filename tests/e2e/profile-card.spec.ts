@@ -217,7 +217,7 @@ test.describe('W1259 — the 200K pin', () => {
     const body = page.locator('#pc-body');
     await render(page, false, { alias: 'Killua', rankTier: 'E', club100k: { repeatCount: 3, best: 306326 }, cardPins: null });
     await expect(body.locator('.pc-pins .pc-pin')).toHaveText(['300K WEEK']);
-    await expect(body.locator('.pc-pin3w .w')).toHaveCount(2);
+    await expect(body.locator('.pc-pin3w .w')).toHaveCount(0);   // W1265 — no wings on the pin
     await expect(body.locator('.pc-pin--club200k')).toHaveCount(0);
     if (process.env.LB_SHOTS) await page.screenshot({ path: process.env.LB_SHOTS + '/card-300k.png' });
     await render(page, false, { alias: 'Ricin', rankTier: 'E', club100k: { repeatCount: 1, best: 299999 }, cardPins: null });
