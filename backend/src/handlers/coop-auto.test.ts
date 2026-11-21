@@ -57,7 +57,8 @@ import {
   STANDIN_MIN_ACTIVE,
   handleRaidsLive,
   MUSTER_AWAY_HOURS,
-  shouldDisbandRaid,
+  raidNeedsHunters,
+  waitingEndsAt,
   RAID_MIN_TEAM,
   type RaidView,
 } from './coop-auto';
@@ -1474,19 +1475,27 @@ describe('W1254 — GET /v1/coop-boss/raids/live', () => {
 
 // W1260 — owner 2026-11-20, on PR44's team (two hunters, both away, 0 steps): "If it's both away like this .. don't start
 // it until they have a full team of six". A team left short of six with nobody in the app for a day closes.
-describe('W1260 — a team left short of six with nobody walking closes', () => {
-  it('closes PR44\'s two away hunters; never a full six, never a short team with someone walking', () => {
+describe('W1260 → W1262 — a short team waits for hunters (clock stopped) instead of running empty', () => {
+  it('PR44\'s two away hunters wait; never a full six; four or more with a walker run', () => {
     expect(AUTO_RAID_PARTY).toBe(6);
-    expect(shouldDisbandRaid(2, 0)).toBe(true);    // PR44 + KaylaBrotzman, both away
-    expect(shouldDisbandRaid(5, 0)).toBe(true);
-    expect(shouldDisbandRaid(6, 0)).toBe(false);   // a full six waits for stand-ins
-    expect(shouldDisbandRaid(4, 1)).toBe(false);   // 4 with someone walking keeps going
-    expect(shouldDisbandRaid(5, 2)).toBe(false);
-    // W1261 — "Raids should have a minimum of 4": under 4 closes even with walkers on it
+    expect(raidNeedsHunters(2, 0)).toBe(true);    // PR44 + KaylaBrotzman, both away
+    expect(raidNeedsHunters(5, 0)).toBe(true);
+    expect(raidNeedsHunters(6, 0)).toBe(false);   // a full six waits for stand-ins
+    expect(raidNeedsHunters(4, 1)).toBe(false);   // 4 with someone walking keeps going
+    expect(raidNeedsHunters(5, 2)).toBe(false);
+    // W1261 — "Raids should have a minimum of 4": under 4 waits even with walkers on it
     expect(RAID_MIN_TEAM).toBe(4);
-    expect(shouldDisbandRaid(3, 1)).toBe(true);
-    expect(shouldDisbandRaid(3, 3)).toBe(true);
-    expect(shouldDisbandRaid(1, 1)).toBe(true);
-    expect(shouldDisbandRaid(0, 0)).toBe(false);
+    expect(raidNeedsHunters(3, 1)).toBe(true);
+    expect(raidNeedsHunters(3, 3)).toBe(true);
+    expect(raidNeedsHunters(1, 1)).toBe(true);
+    expect(raidNeedsHunters(0, 0)).toBe(false);
+  });
+});
+
+describe('W1262 — the waiting clock', () => {
+  it('holds ends_at at now + the time left, never less than a minute', () => {
+    const now = Date.parse('2026-11-21T02:00:00.000Z');
+    expect(waitingEndsAt(now, 30 * 3_600_000)).toBe('2026-11-22T08:00:00.000Z');
+    expect(waitingEndsAt(now, 0)).toBe('2026-11-21T02:01:00.000Z');
   });
 });

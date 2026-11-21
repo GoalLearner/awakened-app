@@ -204,6 +204,8 @@ export interface CoopBossRow {
   // W1248 — a raider swapped out for a stand-in leaves what they walked here with the team (migration 0077).
   banked_steps?: number | null;
   banked_flights?: number | null;
+  /** W1262 — set while an automatic raid waits for hunters (its time left, ms); NULL when the clock runs. */
+  paused_remaining_ms?: number | null;
   // W692 — N-hunter model: every hunter EXCEPT the challenger, from
   // coop_boss_participants. Attached by loadInstance / the list query. The legacy
   // partner* columns above are retained for one release (old-client serialize).
@@ -1324,6 +1326,7 @@ export async function sweepCrunchTimeReminders(env: Env, ctx?: ExecutionContext)
   const due = await env.DB.prepare(
     `SELECT * FROM coop_boss_instances
       WHERE status = 'active'
+        AND paused_remaining_ms IS NULL
         AND crunch_reminded_at IS NULL
         AND ends_at > ?1
         AND ends_at <= ?2
@@ -1672,7 +1675,7 @@ export async function resolveCoopInstance(
   // final night's (window-clamped) minutes arrive only after wake + HealthKit
   // sync. A WIN still lands the moment the goal is met; only expiry waits.
   const expiryGraceMs = bossMetric(row.boss_id) === 'steps_sleep' ? SLEEP_SUBMIT_GRACE_MS : 0;
-  const expired = Number.isFinite(endsMs) && Date.now() >= endsMs + expiryGraceMs;
+  const expired = row.paused_remaining_ms == null && Number.isFinite(endsMs) && Date.now() >= endsMs + expiryGraceMs;   // W1262 — a waiting raid's clock is stopped
   // W1094 — the sweep now reaches hunts nobody's phone ever resolved, some weeks old. Their
   // verdicts still land (awards included), but a push about a hunt that closed more than a day
   // ago would read as noise, so a stale settle is quiet.

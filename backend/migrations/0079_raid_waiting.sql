@@ -1,0 +1,11 @@
+-- 0079 — W1262: a raid team that is short of hunters WAITS instead of closing.
+-- [owner 2026-11-20, after W1260/W1261 closed short teams: "Maybe not close them but don't start them until more
+-- players join their team"]
+--
+-- paused_remaining_ms (ms) is set while an automatic raid waits for hunters: the time it had left when it paused.
+-- Every sweep pass keeps ends_at at now + paused_remaining_ms, so the clock does not run while it waits; when
+-- enough hunters join, the column goes back to NULL and the countdown resumes from where it stopped.
+--
+-- Apply: wrangler d1 migrations apply awakened-db --remote   (run from backend/), BEFORE the deploy.
+-- Reverse: harmless to leave; NULL everywhere means no raid is waiting.
+ALTER TABLE coop_boss_instances ADD COLUMN paused_remaining_ms INTEGER;

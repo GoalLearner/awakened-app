@@ -864,8 +864,8 @@ export async function createAutoTrio(env: Env, trio: readonly string[], dayKey: 
 /** Cron, every 2 minutes: today's hunt for every walking friend pair that has none yet, then
  *  (W1164) today's hunt for every matched pair of active hunters who have no friends, then
  *  (W1208) today's automatic trios. */
-export async function sweepCoopAutoHunts(env: Env, _ctx?: ExecutionContext): Promise<{ created: number; pairs: number; skipped: number; matched: number; trios: number; raids: number; swaps: number; moves: number; disbands: number }> {
-  const out = { created: 0, pairs: 0, skipped: 0, matched: 0, trios: 0, raids: 0, swaps: 0, moves: 0, disbands: 0 };
+export async function sweepCoopAutoHunts(env: Env, _ctx?: ExecutionContext): Promise<{ created: number; pairs: number; skipped: number; matched: number; trios: number; raids: number; swaps: number; moves: number; waiting: number }> {
+  const out = { created: 0, pairs: 0, skipped: 0, matched: 0, trios: 0, raids: 0, swaps: 0, moves: 0, waiting: 0 };
   try {
     const nowMs = Date.now();
     const today = ptDayKey(nowMs);
@@ -959,11 +959,11 @@ export async function sweepCoopAutoHunts(env: Env, _ctx?: ExecutionContext): Pro
       console.error('[coop-auto] raid move sweep failed', err);
     }
 
-    // ── W1260 — a team left short of six with nobody walking closes; its hunters wait for the next full six ──
+    // ── W1262 — a short team waits with its clock stopped and fills its seats; it runs again at four with a walker ──
     try {
-      out.disbands = await sweepRaidDisbands(env, nowMs, lastSeen, _ctx);
+      out.waiting = await sweepRaidWaiting(env, nowMs, today, shared, lastSeen, _ctx);
     } catch (err) {
-      console.error('[coop-auto] raid disband sweep failed', err);
+      console.error('[coop-auto] raid waiting sweep failed', err);
     }
 
     // ── W1211 — the automatic raid ──
@@ -1377,7 +1377,7 @@ async function sweepRaidStandIns(
   if (!cfg) return 0;
   const rows = (await env.DB.prepare(
     `SELECT * FROM coop_boss_instances
-      WHERE status = 'active' AND auto = 1 AND boss_id = ?1 AND ends_at > ?2
+      WHERE status = 'active' AND auto = 1 AND boss_id = ?1 AND ends_at > ?2 AND paused_remaining_ms IS NULL
       ORDER BY ends_at ASC LIMIT 50`,
   ).bind(AUTO_RAID_BOSS, new Date(nowMs).toISOString()).all<CoopBossRow>()).results ?? [];
   if (!rows.length) return 0;
@@ -1707,7 +1707,7 @@ async function sweepRaidMoves(
   if (!cfg) return 0;
   const rows = (await env.DB.prepare(
     `SELECT * FROM coop_boss_instances
-      WHERE status = 'active' AND auto = 1 AND boss_id = ?1 AND ends_at > ?2
+      WHERE status = 'active' AND auto = 1 AND boss_id = ?1 AND ends_at > ?2 AND paused_remaining_ms IS NULL
       ORDER BY ends_at ASC LIMIT 50`,
   ).bind(AUTO_RAID_BOSS, new Date(nowMs).toISOString()).all<CoopBossRow>()).results ?? [];
   if (rows.length < 2) return 0;
@@ -1804,29 +1804,37 @@ async function sweepRaidMoves(
   return moved;
 }
 
-/** W1260 — EMPTY TEAMS CLOSE (owner 2026-11-20, on PR44's team: two hunters, both away, 0 steps, 30 hours left: "If it's
- *  both away like this .. don't start it until they have a full team of six"). A raid only forms with six (W1239), but a
- *  break-up (W1253) moves its walkers away and leaves the away hunters behind, a team nobody is walking. A live
- *  automatic raid with fewer than AUTO_RAID_PARTY members, none of them in the app in the last 24 hours (counted from
- *  the later of their last real open and their seat, as the stand-in rule does), closes quietly: status 'cancelled',
- *  result 'disbanded'; no loss, no reward, not in Recently Finished. Its hunters are free again, and once they are back
- *  in the app they are drawn into the next full team of six. A full team of six is never closed here.
- *  W1261 — owner 2026-11-20: "Raids should have a minimum of 4" (chose: close any team under 4, even with walkers on it).
- *  A live team with fewer than RAID_MIN_TEAM members closes too; its walkers are free at once for a stand-in seat on
- *  another team or the next raid that forms. Teams of 4 or 5 with someone walking keep going. Pure. */
+/** W1260 → W1262 — SHORT TEAMS WAIT. Owner 2026-11-20, on PR44's team (two hunters, both away, 0 steps): "If it's both
+ *  away like this .. don't start it until they have a full team of six"; then "Raids should have a minimum of 4"; then,
+ *  after W1260/W1261 closed such teams: "Maybe not close them but don't start them until more players join their team".
+ *  A raid forms with six (W1239), but a break-up (W1253) moves its walkers away and leaves the rest behind. A live
+ *  automatic raid that NEEDS HUNTERS (fewer than RAID_MIN_TEAM members, or fewer than six with nobody in the app in the
+ *  last 24 hours) waits: its clock stops (paused_remaining_ms holds the time it had left; every pass keeps ends_at at
+ *  now + that), and its empty seats fill, up to six, from the raid finder first, then hunters who qualify for a raid today
+ *  (the stand-in pool). Once it no longer needs hunters (four or more with someone walking), the clock runs again from
+ *  where it stopped. Nothing is lost; steps walked meanwhile still count. Pure. */
 export const RAID_MIN_TEAM = 4;
-export function shouldDisbandRaid(memberCount: number, activeCount: number): boolean {
+export function raidNeedsHunters(memberCount: number, activeCount: number): boolean {
   if (memberCount <= 0) return false;
   if (memberCount < RAID_MIN_TEAM) return true;
   return memberCount < AUTO_RAID_PARTY && activeCount === 0;
 }
+/** W1262 — pure: the frozen clock's end while a raid waits. */
+export function waitingEndsAt(nowMs: number, remainingMs: number): string {
+  return new Date(nowMs + Math.max(60_000, Math.round(Number(remainingMs) || 0))).toISOString();
+}
 
-async function sweepRaidDisbands(
+async function sweepRaidWaiting(
   env: Env,
   nowMs: number,
+  today: string,
+  shared: () => Promise<Shared>,
   lastSeen: () => Promise<Map<string, number>>,
   ctx: ExecutionContext | undefined,
+  rnd: () => number = Math.random,
 ): Promise<number> {
+  const cfg = COOP_BOSS_CFG[AUTO_RAID_BOSS];
+  if (!cfg) return 0;
   const rows = (await env.DB.prepare(
     `SELECT * FROM coop_boss_instances
       WHERE status = 'active' AND auto = 1 AND boss_id = ?1 AND ends_at > ?2
@@ -1834,36 +1842,116 @@ async function sweepRaidDisbands(
   ).bind(AUTO_RAID_BOSS, new Date(nowMs).toISOString()).all<CoopBossRow>()).results ?? [];
   if (!rows.length) return 0;
   const [parts, seen] = await Promise.all([loadParticipants(env, rows.map((r) => r.id)), lastSeen()]);
-  let closed = 0;
-  for (const r of rows) {
-    r.participants = parts.get(r.id) ?? [];
+  const nowIso = new Date(nowMs).toISOString();
+  const name = COOP_BOSS_NAMES[AUTO_RAID_BOSS] ?? 'The raid';
+  const goal = thousands(cfg.goalSteps) + ' steps' + (cfg.goalFlights ? ' and ' + thousands(cfg.goalFlights) + ' flights' : '');
+  const look = (r: CoopBossRow) => {
     const members = Array.from(new Set(participantIds(r).filter(Boolean)));
     const startsMs = Date.parse(r.starts_at || '');
     const joined = new Map<string, number>([[r.challenger_user_id, startsMs]]);
-    for (const pt of r.participants) joined.set(pt.user_id, Date.parse(pt.joined_at || r.starts_at || ''));
+    for (const pt of r.participants ?? []) joined.set(pt.user_id, Date.parse(pt.joined_at || r.starts_at || ''));
     const idle = new Set(idleRaiders(members.map((u) => ({ uid: u, joinedMs: joined.get(u) ?? startsMs })), seen, nowMs));
-    const activeCount = members.filter((u) => !idle.has(u)).length;
-    if (!shouldDisbandRaid(members.length, activeCount)) continue;
+    return { members, active: members.filter((u) => !idle.has(u)).length };
+  };
+  // the fill pool, built only when a waiting team has an empty seat
+  let poolP: Promise<{ waiting: string[]; pool: string[]; isBlocked: (a: string, b: string) => boolean }> | null = null;
+  const fillPool = () => (poolP ??= (async () => {
+    const [optouts, blocks, builds] = await shared();
+    const busy = await huntersInLiveRaid(env, AUTO_RAID_BOSS);
+    const opens = await opensSince(env, activeWindowStart(today));
+    const qualifies = async (uid: string): Promise<boolean> => {
+      if (!uid || busy.has(uid) || !seenWithin(seen, uid, nowMs)) return false;
+      if (buildW(builds.get(uid)) < AUTO_HUNT_MIN_W) return false;
+      if (optouts.has(uid + '>*')) return false;
+      if (cfg.memberOnly && !MEMBERSHIP_OPEN) {
+        try { if (!(await readEntitlements(env, uid)).member) return false; } catch { return false; }
+      }
+      return true;
+    };
+    const queued = (await env.DB.prepare('SELECT user_id FROM raid_queue WHERE boss_id = ?1 ORDER BY created_at ASC')
+      .bind(AUTO_RAID_BOSS).all<{ user_id: string }>()).results ?? [];
+    const waiting: string[] = [];
+    for (const q of queued) if (!waiting.includes(q.user_id) && (await qualifies(q.user_id))) waiting.push(q.user_id);
+    const pool: string[] = [];
+    for (const [uid, n] of Array.from(opens.entries()).sort(([x], [y]) => (x < y ? -1 : x > y ? 1 : 0))) {
+      if (n >= AUTO_RAID_MIN_OPENS && !waiting.includes(uid) && (await qualifies(uid))) pool.push(uid);
+    }
+    const isBlocked = (a: string, b: string) =>
+      blocks.has(pairKey(a, b)) || optouts.has(a + '>' + b) || optouts.has(b + '>' + a);
+    return { waiting, pool, isBlocked };
+  })());
+
+  let changed = 0;
+  for (const r of rows) {
+    r.participants = parts.get(r.id) ?? [];
+    const paused = r.paused_remaining_ms != null;
+    let { members, active } = look(r);
+    if (!paused && !raidNeedsHunters(members.length, active)) continue;
+    let remaining = paused ? Number(r.paused_remaining_ms) || 0 : Math.max(0, Date.parse(r.ends_at || '') - nowMs);
+    if (!paused) {
+      // the clock stops: the time left is kept, ends_at stays that far ahead while the team waits
+      const res = await env.DB.prepare(
+        `UPDATE coop_boss_instances SET paused_remaining_ms = ?2, ends_at = ?3, updated_at = ?4
+          WHERE id = ?1 AND status = 'active' AND paused_remaining_ms IS NULL`,
+      ).bind(r.id, remaining, waitingEndsAt(nowMs, remaining), nowIso).run();
+      if (!Number(res?.meta?.changes ?? 0)) continue;
+      changed++;
+    }
+    // fill the empty seats, up to six
+    const joinedNow: string[] = [];
+    if (members.length < AUTO_RAID_PARTY) {
+      const fp = await fillPool();
+      while (members.length < AUTO_RAID_PARTY) {
+        const inn = pickStandIn(fp.waiting, fp.pool, members, fp.isBlocked, rnd);
+        if (!inn) break;
+        for (const list of [fp.waiting, fp.pool]) { const i = list.indexOf(inn); if (i >= 0) list.splice(i, 1); }
+        const res = await env.DB.prepare(
+          `INSERT OR IGNORE INTO coop_boss_participants (instance_id, user_id, joined_at)
+             SELECT ?1, ?2, ?3 WHERE EXISTS (SELECT 1 FROM coop_boss_instances WHERE id = ?1 AND status = 'active')`,
+        ).bind(r.id, inn, nowIso).run();
+        if (!Number(res?.meta?.changes ?? 0)) continue;
+        try { await env.DB.prepare('DELETE FROM raid_queue WHERE user_id = ?1 AND boss_id = ?2').bind(inn, AUTO_RAID_BOSS).run(); } catch { /* harmless */ }
+        r.participants = (r.participants ?? []).concat([{ user_id: inn, joined_at: nowIso }]);
+        members = members.concat([inn]);
+        active++;   // drawn from hunters in the app in the last 24 hours
+        joinedNow.push(inn);
+        changed++;
+      }
+    }
+    const hoursLeft = Math.max(1, Math.round(remaining / 3_600_000));
+    if (raidNeedsHunters(members.length, active)) {
+      // still waiting: hold the clock where it stopped
+      await env.DB.prepare(
+        `UPDATE coop_boss_instances SET ends_at = ?2, updated_at = ?3 WHERE id = ?1 AND status = 'active' AND paused_remaining_ms IS NOT NULL`,
+      ).bind(r.id, waitingEndsAt(nowMs, remaining), nowIso).run();
+      if (ctx) for (const uid of joinedNow) {
+        ctx.waitUntil(notifyUser(env, uid, {
+          title: 'Raid Party Found',
+          body: `${name}: you joined a team waiting for hunters. Its clock starts again once there are four of you walking, with ${hoursLeft} hours for ${goal}.`,
+          type: 'coop_joined',
+          data: { bossId: AUTO_RAID_BOSS },
+        }));
+      }
+      continue;
+    }
+    // enough hunters: the clock runs again from where it stopped
     const res = await env.DB.prepare(
-      `UPDATE coop_boss_instances
-          SET status = 'cancelled', result = 'disbanded', resolved_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
-        WHERE id = ?1 AND status = 'active' AND auto = 1`,
-    ).bind(r.id).run();
+      `UPDATE coop_boss_instances SET ends_at = ?2, paused_remaining_ms = NULL, updated_at = ?3
+        WHERE id = ?1 AND status = 'active' AND paused_remaining_ms IS NOT NULL`,
+    ).bind(r.id, waitingEndsAt(nowMs, remaining), nowIso).run();
     if (!Number(res?.meta?.changes ?? 0)) continue;
-    closed++;
+    changed++;
     if (!ctx) continue;
     for (const uid of members) {
       ctx.waitUntil(notifyUser(env, uid, {
-        title: 'Raid Team Change',
-        body: members.length < RAID_MIN_TEAM
-          ? `${COOP_BOSS_NAMES[AUTO_RAID_BOSS] ?? 'The raid'}: your team dropped below four hunters, so it was closed. You're free for the next team that needs a walker, or the next raid that forms.`
-          : `${COOP_BOSS_NAMES[AUTO_RAID_BOSS] ?? 'The raid'}: your team ran out of walkers, so it was closed. Open the app and you'll be drawn into the next full team of six.`,
+        title: joinedNow.includes(uid) ? 'Raid Party Found' : 'Raid Team Change',
+        body: `${name}: your team has ${members.length} hunters now, so the clock is running again. ${hoursLeft} hours left for ${goal}.`,
         type: 'coop_joined',
         data: { bossId: AUTO_RAID_BOSS },
       }));
     }
   }
-  return closed;
+  return changed;
 }
 
 /** W1254 — GET /v1/coop-boss/raids/live: The Muster's Raids tab (owner 2026-11-20: "...another tab that you can see raid
@@ -1927,6 +2015,7 @@ export async function handleRaidsLive(_request: Request, env: Env, session: Sess
     return {
       id: r.id,
       mine: ids6.includes(session.userId),
+      ...(r.paused_remaining_ms != null ? { waiting: true } : {}),   // W1262 — waiting for hunters, clock stopped
       starts_at: r.starts_at,
       ends_at: r.ends_at,
       banked_steps: Math.max(0, Number(r.banked_steps) || 0),
