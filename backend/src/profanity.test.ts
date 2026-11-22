@@ -195,3 +195,13 @@ describe('W1275 — usernames: disguised obscenities are refused, real words are
     expect(isProfane('Japan_N1gga')).toBe(true);
   });
 });
+
+// W1276 — owner 2026-11-22: "block gay and jew because people can do hate crimes to these people".
+describe('W1276 — gay and jew are refused in usernames; names that merely contain them are not', () => {
+  it('refuses them anywhere in the name, disguised too', () => {
+    for (const a of ['Gay', 'Jew', 'GayKiller', 'JewHater', 'G4y', 'J3w', 'Gaaay', 'gay_boy', 'TheJews', 'Gays']) expect(isProfane(a), a).toBe(true);
+  });
+  it('lets Gayle, Gaynor, Jewel, Jewell and Andrew through', () => {
+    for (const a of ['Gayle', 'Gaynor', 'Jewel', 'Jewell', 'JewelryQueen', 'Andrew', 'Matthew', 'Magyar']) expect(isProfane(a), a).toBe(false);
+  });
+});

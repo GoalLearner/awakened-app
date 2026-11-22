@@ -193,6 +193,9 @@ const ALIAS_EXTRA: ReadonlyArray<string> = [
   'testicle', 'scrotum', 'bollock', 'blowjob', 'handjob', 'rimjob', 'cumshot', 'cumslut', 'hentai', 'bukkake',
   'sloot', 'ahole', 'asswipe', 'asshat', 'dumbass', 'jackass', 'fatass',
   'killyourself', 'killurself', 'kilyourself', 'swastika', 'siegheil', 'whitepower', 'gasthejews', 'heilhitler',
+  // W1276 — owner 2026-11-22: "block gay and jew because people can do hate crimes to these people". Anywhere in the
+  // name (so "GayKiller" / "JewHater" / "G4y" go too); the names that merely contain them are in ALIAS_BENIGN.
+  'gay', 'jew',
 ];
 const ALIAS_SHORT: ReadonlySet<string> = new Set([
   'ass', 'asses', 'arse', 'cum', 'cums', 'fag', 'fags', 'hoe', 'hoes', 'tit', 'tits', 'titty', 'titties', 'boob', 'boobs',
@@ -206,6 +209,7 @@ const ALIAS_BENIGN: ReadonlyArray<string> = [
   'auspicious', 'conspicuous', 'despicable', 'grape', 'drape', 'scrape', 'trapeze', 'therapist', 'torpedo', 'ashton', 'ashtray',
   'nazir', 'nazim', 'nutcracker', 'firecracker', 'analyst', 'analysis', 'canal', 'banal', 'document', 'cucumber',
   'penistone', 'shitake', 'shiitake', 'cockney', 'scrapes', 'grapes', 'drapes',
+  'gayle', 'gaynor', 'jewel', 'jewell', 'jewelry', 'jewellery', 'jeweler', 'jeweller',   // W1276 — names that contain gay / jew
 ];
 const ALIAS_SKIP_COLLAPSED: ReadonlySet<string> = new Set(['con', 'pis', 'bob', 'nig', 'fuk']);
 const ALIAS_LONG: ReadonlyArray<string> = Array.from(new Set([...PROFANITY_WORDS, ...ALIAS_EXTRA]));
