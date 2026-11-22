@@ -807,6 +807,8 @@ export function makePickContext(env: Env, today: string): PickContext {
   // W1268 — every hunter's Auto Hunts settings (one small table), read once per sweep.
   let prefsP: Promise<Map<string, AutoPrefs>> | null = null;
   const allPrefs = () => (prefsP ??= readAllAutoPrefs(env));
+  let sleepP: Promise<Set<string>> | null = null;   // W1281
+  const sleepers = () => (sleepP ??= sleepersSince(env, Date.now()));
   let liveP: Promise<Map<string, Set<string>[]>> | null = null;
   let liveMap: Map<string, Set<string>[]> | null = null;
   const markLive = (m: Map<string, Set<string>[]>, ids: readonly string[], bossId: string) => {
@@ -881,7 +883,7 @@ export function makePickContext(env: Env, today: string): PickContext {
   })());
   return {
     async prefsFor(ids) {
-      const [hist, tod, owned, live, prefsAll, kills] = await Promise.all([history(), todays(), ownedAutoDrops(env, ids), lives(), allPrefs(), coopKillsOf(env, ids)]);
+      const [hist, tod, owned, live, prefsAll, kills, sleep] = await Promise.all([history(), todays(), ownedAutoDrops(env, ids), lives(), allPrefs(), coopKillsOf(env, ids), sleepers()]);
       const mine = hist.get([...ids].sort().join('|')) ?? new Map<string, string>();
       return {
         useful: (bossId) => stillNeeded(owned, ids, bossId),
@@ -897,6 +899,8 @@ export function makePickContext(env: Env, today: string): PickContext {
         wants: ids
           .map((u) => { const p = prefsAll.get(u); return { uid: u, bosses: p && p.mode === 'targets' ? p.targets.map((t) => t.b) : [] }; })
           .map((w) => ({ uid: w.uid, bosses: w.bosses.filter((b) => !(live.get(b) ?? []).some((on) => ids.some((x) => on.has(x)))) }))
+          // W1281 — a sleep boss only for a group that all tracked sleep in the last 7 nights
+          .map((w) => ({ uid: w.uid, bosses: w.bosses.filter((b) => !needsSleep(b) || ids.every((x) => sleep.has(x))) }))
           .filter((w) => w.bosses.length),
         day: today,
       };
@@ -912,6 +916,29 @@ export function makePickContext(env: Env, today: string): PickContext {
 export function pairFlightsOf(flights: Map<string, number>, a: string, b: string): number | null {
   const fa = flights.get(a), fb = flights.get(b);
   return fa === undefined || fb === undefined ? null : fa + fb;
+}
+
+/** W1281 — the hunters whose phone saw sleep on at least one of its last 7 nights (app_opens.sleep_nights, newest row of
+ *  the last 7 days). A sleep co-op boss needs both hunters in here. A failed read (before migration 0081) is nobody. */
+export async function sleepersSince(env: Env, nowMs: number): Promise<Set<string>> {
+  const out = new Set<string>();
+  try {
+    const since = Math.floor(nowMs / 1000) - 7 * 86_400;
+    const sinceDay = new Date(nowMs - 8 * 86_400_000).toISOString().slice(0, 10);
+    const rows = await env.DB.prepare(
+      `SELECT user_id, sleep_nights, MAX(opened_at) AS last FROM app_opens INDEXED BY idx_app_opens_date
+        WHERE date_utc >= ?2 AND opened_at >= ?1 AND sleep_nights IS NOT NULL
+        GROUP BY user_id`,
+    ).bind(since, sinceDay).all<{ user_id: string; sleep_nights: number | null }>();
+    for (const r of rows.results ?? []) if (r.user_id && Number(r.sleep_nights) >= 1) out.add(r.user_id);
+  } catch (err) {
+    console.error('[coop-auto] sleepers read failed', err);
+  }
+  return out;
+}
+/** W1281 — a sleep co-op boss (steps + sleep) asks every hunter for a sleep device. */
+export function needsSleep(bossId: string): boolean {
+  return COOP_BOSS_CFG[bossId]?.metric === 'steps_sleep';
 }
 
 /** W1212 — how far back the automatic passes look for a hunter's build. Every pass also needs steps
@@ -2484,9 +2511,9 @@ async function autoPrefsPayload(env: Env, uid: string, echo = false): Promise<Re
   const thisWeek = getAccoladeWeekStart(nowMs);
   const lastWeek = priorWeekStart(thisWeek);
   const elapsed = elapsedDaysPt(thisWeek, today);
-  const [optouts, blocks, builds, ranks, stepsNow, stepsLast, flights, opened, aliases, all] = await Promise.all([
+  const [optouts, blocks, builds, ranks, stepsNow, stepsLast, flights, sleepers, opened, aliases, all] = await Promise.all([
     optOutSet(env), blockSet(env), latestBuildByUser(env, nowMs), rankByUser(env),
-    stepsByUser(env, thisWeek), stepsByUser(env, lastWeek), flightsAvgByUser(env, nowMs),
+    stepsByUser(env, thisWeek), stepsByUser(env, lastWeek), flightsAvgByUser(env, nowMs), sleepersSince(env, nowMs),
     today ? openedRecently(env, today) : Promise.resolve(new Set<string>()),
     getAliasMap(env, friends), readAllAutoPrefs(env),
   ]);
@@ -2513,6 +2540,7 @@ async function autoPrefsPayload(env: Env, uid: string, echo = false): Promise<Re
   for (const b of [...AUTO_BOSSES, ...AUTO_MULTI_BOSSES]) {   // W1278 — the multi-day duos too
     eligible[b] = partners.filter((p) => {
       if (!can(p)) return false;
+      if (needsSleep(b) && !(sleepers.has(uid) && sleepers.has(p.id))) return false;   // W1281 — both track sleep
       const pf = pairFlightsOf(flights, uid, p.id);
       return !!runDuo(b, Math.min(rk(uid), rk(p.id)), AUTO_FIT * ((pm ?? 0) + (pattern(p.id) ?? 0)), pf === null ? null : AUTO_FIT * pf);
     }).map((p) => p.id);
@@ -2526,6 +2554,7 @@ async function autoPrefsPayload(env: Env, uid: string, echo = false): Promise<Re
     ok: true, mode: shownMode(mine, echo), targets: mine.targets, match: mine.match, raid: mine.raid,
     friends_total: allFriends.length,   // W1271 — friends, active or not (the list shows the active ones)
     rank: ranks.get(uid) ?? 'E', walking: pm !== null, day: tomorrow, max: AUTO_TARGET_MAX,
+    sleeps: sleepers.has(uid),   // W1281 — this hunter's phone saw sleep in the last 7 nights
     partners, eligible,
   };
 }

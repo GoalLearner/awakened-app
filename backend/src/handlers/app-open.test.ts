@@ -4,7 +4,7 @@
  * other handler tests), extended with a batch() capture.
  */
 import { describe, expect, it } from 'vitest';
-import { handleAppOpenPost, readFlightsAvg, _sample } from './app-open';
+import { handleAppOpenPost, readFlightsAvg, _sample, readSleepNights } from './app-open';
 import type { Env } from '../env';
 import type { SessionPayload } from '../session-jwt';
 
@@ -244,5 +244,15 @@ describe('POST /v1/users/me/app-open (W834)', () => {
     expect(json.events_accepted).toBe(0);
     expect(calls.length).toBe(0);
     expect(batches.length).toBe(0);
+  });
+});
+
+// W1281 — the phone's nights with sleep over the last 7
+describe('W1281 — readSleepNights', () => {
+  it('takes an integer 0-7, drops anything else', () => {
+    expect(readSleepNights(0)).toBe(0);
+    expect(readSleepNights(7)).toBe(7);
+    expect(readSleepNights(3)).toBe(3);
+    for (const v of [8, -1, 2.5, '3', null, undefined, NaN]) expect(readSleepNights(v)).toBeNull();
   });
 });

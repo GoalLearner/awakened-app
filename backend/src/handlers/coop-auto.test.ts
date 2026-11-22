@@ -343,6 +343,7 @@ interface SweepFixture {
   swapRows?: { instance_id: string; in_user_id: string }[];   // W1254 — stand-ins
   beaten?: Record<string, string[]>;   // W1268 — automatic bosses each hunter has beaten (default: every hunter, every boss)
   autoPrefs?: { user_id: string; mode: string; targets_json: string; match_on: number; raid_on: number }[];   // W1268
+  sleepers?: string[];   // W1281 — hunters whose phone saw sleep in the last 7 nights
   myOpens?: { day_pt: string; opens: number }[];   // W1254 — the viewer's draw
 }
 interface Call { sql: string; args: unknown[] }
@@ -356,6 +357,7 @@ function sweepDb(f: SweepFixture, calls: Call[]) {
       const every = [...AUTO_BOSSES, ...AUTO_TRIO_BOSSES];
       return ids.flatMap((u) => (f.beaten ? f.beaten[u] ?? [] : every).map((boss_id) => ({ boss_id, a: u, b: null, c: null })));
     }
+    if (sql.includes('sleep_nights IS NOT NULL')) return (f.sleepers ?? []).map((user_id) => ({ user_id, sleep_nights: 3 }));   // W1281
     if (sql.includes('FROM coop_auto_prefs')) {   // W1268 — readAllAutoPrefs / optOutSet
       const rows = f.autoPrefs ?? [];
       return sql.includes('match_on = 0 OR raid_on = 0') ? rows.filter((r) => !r.match_on || !r.raid_on) : rows;
@@ -1716,6 +1718,7 @@ describe('W1278 — the multi-day duos are targets', () => {
       stepsThisWeek: { u1: 70000, u3: 70000 },
       stepsLastWeek: { u1: 140000, u3: 140000 },
       autoPrefs: [{ user_id: 'u1', mode: 'targets', targets_json: '[{"b":"the_sleepless_crown","d":"any"}]', match_on: 1, raid_on: 1 }],
+      sleepers: ['u1', 'u3'],   // W1281 — both track sleep
     };
     await sweepCoopAutoHunts(makeEnv(sweepDb(fx, calls)), ctx);
     const ins = calls.find((c) => c.sql.includes('INSERT OR IGNORE INTO coop_boss_instances') && c.args[1] === 'the_sleepless_crown')!;
@@ -1767,5 +1770,28 @@ describe('W1280 — a target the ranks allow is always an attempt', () => {
     expect(king.goalFlights).toBe(2340);                               // the sleep, as printed
     expect(runDuo('the_sleepless_crown', 4, 99999, null)).toBeNull();  // an A-rank pair: rank still rules
     expect(runTrio('the_trinity_colossus', 4, 3000)!.goalSteps).toBe(13500);   // a trio too: 75% of 18,000
+  });
+});
+
+// W1281 — owner 2026-11-22: "If people haven't tracked sleep in the past 7 days ... disqualify these types of co-op bosses".
+describe('W1281 — a sleep co-op boss needs both hunters to have tracked sleep this week', () => {
+  const fx = (sleepers: string[]): SweepFixture => ({
+    friends: [{ a: 'u1', b: 'u3' }],
+    builds: { u1: NEW, u3: NEW },
+    ranks: { u1: 'S', u3: 'S' },
+    stepsThisWeek: { u1: 70000, u3: 70000 },
+    stepsLastWeek: { u1: 140000, u3: 140000 },
+    autoPrefs: [{ user_id: 'u1', mode: 'targets', targets_json: '[{"b":"the_sleepless_crown","d":"any"}]', match_on: 1, raid_on: 1 }],
+    sleepers,
+  });
+  it('the Myrmidon King is made only when both have a night of sleep; otherwise the pair goes to Auto', async () => {
+    for (const [sl, made] of [[['u1', 'u3'], true], [['u1'], false], [[], false]] as [string[], boolean][]) {
+      const calls: Call[] = [];
+      await sweepCoopAutoHunts(makeEnv(sweepDb(fx(sl), calls)), ctx);
+      const ins = calls.filter((c) => c.sql.includes('INSERT OR IGNORE INTO coop_boss_instances') && String(c.args[12]).split('|').length === 2);
+      expect(ins.length, sl.join(',')).toBe(1);
+      expect(ins[0].args[1] === 'the_sleepless_crown', sl.join(',')).toBe(made);
+      if (!made) expect(ins[0].args[14]).toBeNull();   // Auto, no target tag
+    }
   });
 });

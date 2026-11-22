@@ -29,6 +29,10 @@
  * pick (coop-auto.ts); never shown or sent back. Anything that is not a number from 0 to 200 is
  * dropped. See migration 0075.
  *
+ * W1281 — `sleep_nights7` (integer 0-7, 3.0.29-w1281+): how many of the last 7 nights Apple Health has sleep for, kept
+ * on the day row like flights_avg (latest non-null wins), so a sleep co-op boss is only made for two hunters who both track
+ * sleep. Anything else is dropped. See migration 0081.
+ *
  * Auth: required. user_id is ALWAYS the verified session `sub`; clients cannot
  * specify or override it (date_utc is derived server-side from the Worker clock,
  * not from the request body, so the table can't be back/forward-dated by a client).
@@ -89,20 +93,22 @@ export async function handleAppOpenPost(
   }
   const build = clamp(body?.build, 40);
   const flightsAvg = readFlightsAvg(body?.flights_avg);
+  const sleepNights = readSleepNights(body?.sleep_nights7);   // W1281
 
   const nowMs = Date.now();
   const nowSec = Math.floor(nowMs / 1000);
   const dateUtc = new Date(nowSec * 1000).toISOString().slice(0, 10); // 'YYYY-MM-DD' (UTC)
 
   await env.DB.prepare(
-    `INSERT INTO app_opens (user_id, opened_at, date_utc, build, flights_avg)
-       VALUES (?, ?, ?, ?, ?)
+    `INSERT INTO app_opens (user_id, opened_at, date_utc, build, flights_avg, sleep_nights)
+       VALUES (?, ?, ?, ?, ?, ?)
      ON CONFLICT(user_id, date_utc) DO UPDATE SET
-       opened_at   = excluded.opened_at,
-       build       = COALESCE(excluded.build, app_opens.build),
-       flights_avg = COALESCE(excluded.flights_avg, app_opens.flights_avg)`,
+       opened_at    = excluded.opened_at,
+       build        = COALESCE(excluded.build, app_opens.build),
+       flights_avg  = COALESCE(excluded.flights_avg, app_opens.flights_avg),
+       sleep_nights = COALESCE(excluded.sleep_nights, app_opens.sleep_nights)`,
   )
-    .bind(session.userId, nowSec, dateUtc, build, flightsAvg)
+    .bind(session.userId, nowSec, dateUtc, build, flightsAvg, sleepNights)
     .run();
 
   // ── W1127 — count every open (migration 0071) ──
@@ -187,4 +193,10 @@ export async function handleAppOpenPost(
   }
 
   return jsonOk({ ok: true, date_utc: dateUtc, events_accepted: accepted });
+}
+
+/** W1281 — the phone's nights with sleep over the last 7 (an integer 0-7), or null. */
+export function readSleepNights(v: unknown): number | null {
+  const n = typeof v === 'number' ? v : NaN;
+  return Number.isInteger(n) && n >= 0 && n <= 7 ? n : null;
 }
