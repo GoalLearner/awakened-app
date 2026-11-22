@@ -60,6 +60,7 @@ import {
   raidNeedsHunters,
   makePickContext,
   recentlyOpened,
+  shownMode,
   targetChoice,
   runDuo,
   normalizeTargets,
@@ -1654,5 +1655,16 @@ describe('W1271 — the Partners list shows friends who opened the app this week
     expect(await recentlyOpened(broken, ['f1', 'f2'], '2026-11-15')).toEqual(['f1', 'f2']);
     spy.mockRestore();
     expect(await recentlyOpened(env, [], '2026-11-15')).toEqual([]);
+  });
+});
+
+// W1272 — owner 2026-11-21: "Make auto the default option".
+describe('W1272 — the manager opens on Auto unless a target is set', () => {
+  it('Targets with none opens on Auto; a save echoes the stored mode', () => {
+    const base = { match: true, raid: true };
+    expect(shownMode({ ...base, mode: 'targets', targets: [] })).toBe('auto');
+    expect(shownMode({ ...base, mode: 'targets', targets: [{ b: 'the_twin_maw', d: 'any' }] })).toBe('targets');
+    expect(shownMode({ ...base, mode: 'auto', targets: [{ b: 'the_twin_maw', d: 'any' }] })).toBe('auto');
+    expect(shownMode({ ...base, mode: 'targets', targets: [] }, true)).toBe('targets');   // the tap that starts picking holds
   });
 });

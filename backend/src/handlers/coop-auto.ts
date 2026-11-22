@@ -2419,7 +2419,14 @@ export async function recentlyOpened(env: Env, ids: readonly string[], since: st
   }
 }
 
-async function autoPrefsPayload(env: Env, uid: string): Promise<Record<string, unknown>> {
+/** W1272 — owner 2026-11-21: "Make auto the default option". What the manager opens on: Targets only while at least
+ *  one target is set; Targets with none (switched on, then nothing picked or all removed) opens on Auto, which is
+ *  what the cron does with it anyway. A save echoes the stored mode, so tapping Targets to start picking holds. Pure. */
+export function shownMode(p: AutoPrefs, echo = false): 'auto' | 'targets' {
+  return p.mode === 'targets' && (echo || p.targets.length > 0) ? 'targets' : 'auto';
+}
+
+async function autoPrefsPayload(env: Env, uid: string, echo = false): Promise<Record<string, unknown>> {
   const nowMs = Date.now();
   const today = ptDayKey(nowMs) || '';
   const tomorrow = today ? nextDay(today) : '';
@@ -2478,7 +2485,7 @@ async function autoPrefsPayload(env: Env, uid: string): Promise<Record<string, u
     eligible[b] = l.length >= 2 ? l : [];
   }
   return {
-    ok: true, mode: mine.mode, targets: mine.targets, match: mine.match, raid: mine.raid,
+    ok: true, mode: shownMode(mine, echo), targets: mine.targets, match: mine.match, raid: mine.raid,
     friends_total: allFriends.length,   // W1271 — friends, active or not (the list shows the active ones)
     rank: ranks.get(uid) ?? 'E', walking: pm !== null, day: tomorrow, max: AUTO_TARGET_MAX,
     partners, eligible,
@@ -2506,5 +2513,5 @@ export async function handleCoopAutoPrefs(request: Request, env: Env, session: S
          match_on = excluded.match_on, raid_on = excluded.raid_on, updated_at = excluded.updated_at`,
     ).bind(session.userId, next.mode, JSON.stringify(next.targets), next.match ? 1 : 0, next.raid ? 1 : 0, Date.now()).run();
   }
-  return jsonOk(await autoPrefsPayload(env, session.userId));
+  return jsonOk(await autoPrefsPayload(env, session.userId, method === 'PUT'));
 }
