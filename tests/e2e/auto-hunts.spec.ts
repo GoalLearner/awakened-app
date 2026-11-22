@@ -141,7 +141,8 @@ test.describe('W1269 — Auto Hunts', () => {
     await expect(maw).toContainText('Eligible with: all 3 partners');
     await maw.locator('.hd').click();
     await expect(maw).toHaveAttribute('data-open', '1');
-    await maw.locator('.ah-dr', { hasText: 'Twin-Fang Cleaver' }).locator('[data-ah-act^="chase:"]').click();
+    await expect(maw.locator('.ah-dr .ah-ch')).toHaveCount(0);   // W1277 — no per-drop Chase; one button chases the boss
+    await maw.locator('.ah-any').click();
     await expect(m.locator('.ah-scr:not(.out) .ah-top h1')).toHaveText(/Auto Hunts/i, { timeout: 4000 });   // the picker pops
     await expect(m.locator('.ah-scr:not(.out) .ah-tc')).toHaveCount(3);
     await expect(m.locator('.ah-scr:not(.out) .ah-add')).toHaveCount(0);
@@ -199,6 +200,7 @@ test.describe('W1269 — Auto Hunts', () => {
     await sentinel.locator('.hd').click();
     await expect(sentinel).toHaveAttribute('data-open', '1');
     expect(await sentinel.locator('.ah-dr').count()).toBeGreaterThan(5);
-    await expect(sentinel.locator('.ah-ch').first()).toHaveText(/Chase/i);
+    await expect(sentinel.locator('.ah-ch')).toHaveCount(0);   // W1277 — a checklist, one button
+    await expect(sentinel.locator('.ah-any')).toHaveText(/Chase any drop I.m missing/i);
   });
 });
