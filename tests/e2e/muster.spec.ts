@@ -206,3 +206,63 @@ test.describe('W1263 — a team waiting for hunters', () => {
     await expect(page.locator('[data-pane="raids"] .mu-ttl.is-wait')).toHaveCount(0);
   });
 });
+
+// W1282 — owner 2026-11-22: "I want to create a grinning god raid hall of fame here just like this instead of how it look currently."
+test.describe('W1282 — the Grinning God Hall of Fame', () => {
+  const six = (lead: string, x: Record<string, unknown> = {}) => [
+    { alias: lead, rank: 'S', mvp: true, ...x }, { alias: 'Oriel', rank: 'A' }, { alias: 'Thane', rank: 'B' },
+    { alias: 'Vey', rank: 'C' }, { alias: 'Lumen', rank: 'D' }, { alias: 'Sable', rank: 'E' }];
+  const hall = [
+    { ms: 58 * H + 42 * 60_000, at: '2026-11-13T12:00:00Z', members: six('Kestrel') },
+    { ms: 63 * H + 5 * 60_000, at: '2026-11-08T12:00:00Z', members: six('RenDIESEL') },
+    { ms: 67 * H + 30 * 60_000, at: '2026-10-30T12:00:00Z', members: [{ alias: 'Richie', rank: 'B', me: true }, ...six('Marrow').slice(0, 5)] },
+    { ms: 71 * H, at: '2026-10-21T12:00:00Z', members: six('Pike') },
+    { ms: 76 * H + 9 * 60_000, at: '2026-10-11T12:00:00Z', members: six('Ashby') },
+  ];
+  test('five clears ranked by time; a row opens into its six with the MVP marked; one open at a time', async ({ page }) => {
+    await boot(page);
+    const f = { ...feed('in'), hall };
+    await page.evaluate((x) => { (window as any).Auth.coopRaidsLive = async () => x; }, f);
+    await page.evaluate(() => (window as any).__muster.open('raids'));
+    const rd = page.locator('[data-pane="raids"]');
+    const rows = rd.locator('.mu-hof .mu-hr');
+    await expect(rows).toHaveCount(5, { timeout: 8_000 });
+    await expect(rd.locator('.mu-sec').filter({ hasText: /Hall of Fame/i })).toHaveCount(1);
+    await expect(rd.locator('.mu-sec').filter({ hasText: /Recently finished/i })).toHaveCount(0);
+    await expect(rd.locator('.mu-fin')).toHaveCount(0);
+    await expect(rows.first().locator('.mu-hp')).toHaveText('1');
+    await expect(rows.first().locator('.mu-hp')).toHaveClass(/r1/);
+    await expect(rows.first().locator('.mu-ht')).toHaveText('58h42m');
+    await expect(rows.first()).toHaveClass(/p1/);
+    await expect(rows.nth(1).locator('.mu-ht')).toHaveText('63h05m');
+    await expect(rows.nth(3).locator('.mu-ht')).toHaveText('71h00m');
+    await expect(rows.first().locator('.mu-hd')).toHaveText(/13 Nov/);
+    await rows.first().click();
+    await expect(rows.first()).toHaveClass(/is-open/);
+    await expect(rows.first().locator('.mu-hn')).toHaveCount(6);
+    await expect(rows.first().locator('.mu-hmvp')).toHaveCount(1);
+    await expect(rows.first().locator('.mu-hn').filter({ has: page.locator('.mu-hmvp') })).toContainText(/kestrel/i);
+    await expect(rows.first().locator('.mu-hmvp')).toHaveText('MVP');
+    await rows.nth(1).click();   // RenDIESEL's six: the moderator wears the crown
+    await expect(rows.nth(1)).toHaveClass(/is-open/);
+    await expect(rows.first()).not.toHaveClass(/is-open/);
+    expect(await rows.nth(1).locator('.mu-hn').filter({ hasText: /rendiesel/i }).locator('.name-crown').count()).toBe(1);
+    expect(await rows.nth(1).locator('.mu-hn').filter({ hasText: /oriel/i }).locator('.name-crown').count()).toBe(0);
+    await rows.nth(2).click();
+    await expect(rows.nth(2).locator('.mu-hn.is-me')).toContainText(/richie/i);
+    await rows.nth(2).click();
+    await expect(rows.nth(2)).not.toHaveClass(/is-open/);
+    const text = await rd.innerText();
+    expect(text).not.toMatch(/\bfell(ed)?\b/i);
+  });
+  test('no win yet: the hall says so', async ({ page }) => {
+    await boot(page);
+    const f = { ...feed('out'), hall: [] };
+    await page.evaluate((x) => { (window as any).Auth.coopRaidsLive = async () => x; }, f);
+    await page.evaluate(() => (window as any).__muster.open('raids'));
+    const rd = page.locator('[data-pane="raids"]');
+    await expect(rd.locator('.mu-hof-empty')).toHaveText('No team has beaten The Grinning God yet. The first team to win is written here.', { timeout: 8_000 });
+    await expect(rd.locator('.mu-hr')).toHaveCount(0);
+    await expect(rd.locator('.mu-fin')).toHaveCount(0);
+  });
+});

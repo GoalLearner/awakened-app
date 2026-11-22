@@ -340,6 +340,7 @@ interface SweepFixture {
   raidRows?: Record<string, unknown>[];   // W1248 — the live automatic raids the stand-in pass reads
   queue?: string[];   // W1248 — the raid finder, oldest first
   doneRows?: Record<string, unknown>[];   // W1254 — finished raids for The Muster
+  hallRows?: Record<string, unknown>[];   // W1282 — the Hall of Fame (the five fastest wins)
   swapRows?: { instance_id: string; in_user_id: string }[];   // W1254 — stand-ins
   beaten?: Record<string, string[]>;   // W1268 — automatic bosses each hunter has beaten (default: every hunter, every boss)
   autoPrefs?: { user_id: string; mode: string; targets_json: string; match_on: number; raid_on: number }[];   // W1268
@@ -352,6 +353,7 @@ function sweepDb(f: SweepFixture, calls: Call[]) {
   const thisWeek = getAccoladeWeekStart(Date.now());
   const lastWeek = priorWeekStart(thisWeek);
   const results = (sql: string, args: unknown[]): unknown[] => {
+    if (sql.includes("result = 'success' AND resolved_at IS NOT NULL AND starts_at IS NOT NULL")) return f.hallRows ?? [];   // W1282
     if (sql.includes("result = 'success' AND boss_id IN")) {   // W1268 — coopKillsOf
       const ids = args.slice(0, args.length / 3).map(String);
       const every = [...AUTO_BOSSES, ...AUTO_TRIO_BOSSES];
@@ -1793,5 +1795,38 @@ describe('W1281 — a sleep co-op boss needs both hunters to have tracked sleep 
       expect(ins[0].args[1] === 'the_sleepless_crown', sl.join(',')).toBe(made);
       if (!made) expect(ins[0].args[14]).toBeNull();   // Auto, no target tag
     }
+  });
+});
+
+// W1282 — owner 2026-11-22: "I want to create a grinning god raid hall of fame here just like this instead of how it look currently."
+describe('W1282 — the raids feed carries the Hall of Fame', () => {
+  const H = 3_600_000;
+  const env = (f: SweepFixture) => ({ DB: sweepDb(f, []), RL_FRIENDS_READ: { limit: async () => ({ success: true }) } } as unknown as Env);
+  const get = async (f: SweepFixture) => (await (await handleRaidsLive(new Request('https://x/v1/coop-boss/raids/live'), env(f), { userId: 'u1' } as SessionPayload)).json()) as any;
+  it('each clear: its time start to win, the day, the six by name and rank, the most steps marked MVP, the viewer marked', async () => {
+    const won = { id: 'D1', boss_id: 'the_grinning_god', status: 'completed', result: 'success', challenger_user_id: 'u4', partner_user_id: 'u1',
+      starts_at: '2026-11-10T00:00:00.000Z', ends_at: '2026-11-13T08:00:00.000Z', resolved_at: '2026-11-12 10:42:00', goal_steps: 200000, goal_flights: 200 };
+    const f: SweepFixture = {
+      hallRows: [won], doneRows: [won],
+      participants: [{ instance_id: 'D1', user_id: 'u1', joined_at: won.starts_at }, { instance_id: 'D1', user_id: 'u2', joined_at: won.starts_at }],
+      progress: [{ bid: 'D1', user_id: 'u4', event_type: 'steps_total', s: 60000 }, { bid: 'D1', user_id: 'u2', event_type: 'steps_total', s: 90000 },
+        { bid: 'D1', user_id: 'u1', event_type: 'steps_total', s: 50000 }],
+      ranks: { u1: 'B', u2: 'S+' },
+      myOpens: [],
+    };
+    const body = await get(f);
+    expect(body.hall).toEqual([{
+      ms: 58 * H + 42 * 60_000,
+      at: '2026-11-12T10:42:00Z',
+      members: [
+        { alias: 'gali', rank: 'E' },
+        { alias: 'richie', rank: 'B', me: true },
+        { alias: 'anthony', rank: 'S', mvp: true },
+      ],
+    }]);
+    expect(body.finished.length).toBe(1);   // the old list stays in the feed for older builds
+  });
+  it('no win yet: an empty hall', async () => {
+    expect((await get({ myOpens: [] })).hall).toEqual([]);
   });
 });

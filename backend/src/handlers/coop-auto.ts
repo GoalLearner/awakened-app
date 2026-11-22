@@ -2218,7 +2218,16 @@ export async function handleRaidsLive(_request: Request, env: Env, session: Sess
       WHERE boss_id = ?1 AND status IN ('completed', 'expired') AND resolved_at IS NOT NULL
       ORDER BY resolved_at DESC LIMIT 4`,
   ).bind(AUTO_RAID_BOSS).all<CoopBossRow>()).results ?? [];
-  const rows = [...live, ...done];
+  // W1282 — owner 2026-11-22: "a grinning god raid hall of fame ... instead of how it look currently". The five fastest
+  // wins, start to win, under today's goal (an older, smaller goal would not be a fair time), each with its six.
+  const hallRows = (await env.DB.prepare(
+    `SELECT * FROM coop_boss_instances
+      WHERE boss_id = ?1 AND status = 'completed' AND result = 'success' AND resolved_at IS NOT NULL AND starts_at IS NOT NULL
+        AND goal_steps >= ?2 AND COALESCE(goal_flights, 0) >= ?3
+      ORDER BY (julianday(resolved_at) - julianday(starts_at)) ASC LIMIT 5`,
+  ).bind(AUTO_RAID_BOSS, cfg.goalSteps, cfg.goalFlights ?? 0).all<CoopBossRow>()).results ?? [];
+  const seenIds = new Set<string>();
+  const rows = [...live, ...done, ...hallRows].filter((r) => (seenIds.has(r.id) ? false : (seenIds.add(r.id), true)));
   const ids = rows.map((r) => r.id);
   const parts = new Map<string, { user_id: string; joined_at: string | null }[]>();
   const prog = new Map<string, CoopProgress>();
@@ -2284,6 +2293,24 @@ export async function handleRaidsLive(_request: Request, env: Env, session: Sess
     const hours = won ? Math.max(1, Math.round((Date.parse(at) - Date.parse(r.starts_at || '')) / 3_600_000)) : null;
     return { won, hours, mvp, pct: won ? 100 : pct, at };
   });
+  const hall = hallRows.map((r) => {
+    r.participants = parts.get(r.id) ?? r.participants ?? [];
+    const p = prog.get(r.id) ?? emptyProgress();
+    const ids6 = participantIds(r);
+    let mvp = '', best = -1;
+    for (const u of ids6) { const v = p.steps.get(u) || 0; if (v > best) { best = v; mvp = u; } }
+    const at = isoOf(r.resolved_at);
+    return {
+      ms: Math.max(0, Date.parse(at) - Date.parse(r.starts_at || '')),
+      at,
+      members: ids6.map((u) => ({
+        alias: aliases.get(u) ?? 'Hunter',
+        rank: String(ranks.get(u) || 'E').charAt(0).toUpperCase(),
+        ...(u === mvp ? { mvp: true } : {}),
+        ...(u === session.userId ? { me: true } : {}),
+      })),
+    };
+  });
   // the viewer's draw: real opens over the last 7 Pacific days, oldest first
   const since = activeWindowStart(today);
   const mine = (await env.DB.prepare('SELECT day_pt, opens FROM app_open_counts WHERE user_id = ?1 AND day_pt >= ?2 AND opens > 0')
@@ -2301,6 +2328,7 @@ export async function handleRaidsLive(_request: Request, env: Env, session: Sess
     window_hours: cfg.windowHours,
     raids,
     finished,
+    hall,   // W1282
     draw: { opens, need: AUTO_RAID_MIN_OPENS, days, in_raid: raids.some((r) => r.mine) },
   });
 }
