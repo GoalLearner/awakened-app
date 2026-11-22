@@ -64,6 +64,7 @@ import {
   shownMode,
   targetChoice,
   runDuo,
+  runTrio,
   normalizeTargets,
   dayIndex,
   waitingEndsAt,
@@ -1609,10 +1610,10 @@ describe('W1268 — Auto Hunts: targets, first kills, the switches', () => {
   it('runDuo: rank, printed fit, the W1215 stretch, the sized Twin Maw, flights', () => {
     expect(runDuo('the_coursing_dread', 2, 8000, null)!.goalSteps).toBe(8000);
     expect(runDuo('the_coursing_dread', 2, 6100, null)!.goalSteps).toBe(6100);    // stretched (>= 75%)
-    expect(runDuo('the_coursing_dread', 2, 5000, null)).toBeNull();
+    expect(runDuo('the_coursing_dread', 2, 5000, null)!.goalSteps).toBe(6000);   // W1280 — an attempt, never under 75%
     expect(runDuo('the_coursing_dread', 1, 9000, null)).toBeNull();               // D-rank pair, C boss
     expect(runDuo('the_twin_maw', 0, 1200, null)!.goalSteps).toBe(2000);           // sized, floor
-    expect(runDuo('the_hollow_monarch', 3, 9000, null)).toBeNull();               // a flights boss needs flights
+    expect(runDuo('the_hollow_monarch', 3, 9000, null)).toEqual({ bossId: 'the_hollow_monarch', goalSteps: 12 });   // W1280 — flights as printed
     expect(runDuo('the_hollow_monarch', 3, 9000, 20)).not.toBeNull();
     expect(runDuo('the_threefold_court', 6, 99999, 99)).toBeNull();               // a trio boss is not a duo
   });
@@ -1695,11 +1696,11 @@ describe('W1278 — the multi-day duos are targets', () => {
     // the Unresting March: D, 12,000 steps over 2 days — a pair fitting 6,000 a day runs it as printed
     expect(runDuo('the_unresting_march', 1, 6000, null)).toEqual({ bossId: 'the_unresting_march', goalSteps: 12000 });
     expect(runDuo('the_unresting_march', 1, 4600, null)!.goalSteps).toBe(9200);   // stretched (>= 75%)
-    expect(runDuo('the_unresting_march', 1, 4000, null)).toBeNull();
+    expect(runDuo('the_unresting_march', 1, 4000, null)!.goalSteps).toBe(9000);   // W1280 — 75% of 12,000, an attempt
     expect(runDuo('the_unresting_march', 0, 9000, null)).toBeNull();                // an E-rank pair, a D boss
     // the Cloven Titan: A, 24,000 steps + 16 flights over 2 days
     expect(runDuo('the_cloven_titan', 4, 12000, 8)).toEqual({ bossId: 'the_cloven_titan', goalSteps: 24000, goalFlights: 16 });
-    expect(runDuo('the_cloven_titan', 4, 12000, null)).toBeNull();                   // flights unknown
+    expect(runDuo('the_cloven_titan', 4, 12000, null)).toEqual({ bossId: 'the_cloven_titan', goalSteps: 24000, goalFlights: 16 });   // W1280 — flights as printed
     // the Myrmidon King: S, 42,000 steps over 3 days + the printed sleep
     expect(runDuo('the_sleepless_crown', 5, 14000, null)).toEqual({ bossId: 'the_sleepless_crown', goalSteps: 42000, goalFlights: 2340 });
     // Auto: a big S pair is never given a multi-day boss
@@ -1750,5 +1751,21 @@ describe('W1279 — a target makes one hunt at a time; the other partners go to 
     expect(maws.length).toBe(1);                                   // one hunt for the one target
     const other = duos.find((c) => c !== maws[0])!;
     expect(other.args[14]).toBeNull();                             // the other partner: Auto, no tag
+  });
+});
+
+// W1280 — owner 2026-11-22: "Allow to at least attempt".
+describe('W1280 — a target the ranks allow is always an attempt', () => {
+  it('the owner and Galilea (~11,000 a day together, last week) get the Cloven Titan; the goal never drops under 75%', () => {
+    const fit = 0.8 * (4518 + 6520);                                   // AUTO_FIT × last week's daily walking, both
+    const p = runDuo('the_cloven_titan', 4, fit, 0.8 * (6 + 6.4))!;
+    expect(p.bossId).toBe('the_cloven_titan');
+    expect(p.goalSteps).toBe(18000);                                   // 75% of 24,000 (their walking × 2 days is 17,700)
+    expect(p.goalFlights).toBe(16);
+    const king = runDuo('the_sleepless_crown', 6, 0.8 * (4518 + 5003), null)!;
+    expect(king.goalSteps).toBe(31500);                                // 75% of 42,000
+    expect(king.goalFlights).toBe(2340);                               // the sleep, as printed
+    expect(runDuo('the_sleepless_crown', 4, 99999, null)).toBeNull();  // an A-rank pair: rank still rules
+    expect(runTrio('the_trinity_colossus', 4, 3000)!.goalSteps).toBe(13500);   // a trio too: 75% of 18,000
   });
 });

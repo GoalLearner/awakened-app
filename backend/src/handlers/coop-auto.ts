@@ -355,45 +355,35 @@ export function stretchPick(list: readonly string[], fits: readonly AutoPick[], 
   return null;
 }
 
-/** W1268 — whether a pair (lowest rank `r`, AUTO_FIT × its walking `fit`, AUTO_FIT × its flights `fl` or null)
- *  can run this one-day duo boss, and at what goal: as printed when it fits; a steps boss lowered to the
- *  walking down to STRETCH_MIN_SHARE of its goal (as W1215 does); The Twin Maw sized to the walking (it is
- *  every pair's fallback). Null when not. The Auto Hunts manager's "Eligible with" uses the same rule. Pure. */
+/** W1268 — the goal a pair (lowest rank `r`, AUTO_FIT × its walking `fit`, AUTO_FIT × its flights `fl` or null) is given
+ *  for a TARGET boss; the Auto Hunts manager's "Eligible with" uses the same rule.
+ *  W1280 — owner 2026-11-22, on "No current partner can run this yet" for a pair a little short of the Cloven Titan:
+ *  "Allow to at least attempt". A target the ranks allow is always made. Steps: as printed when the pair's walking covers
+ *  them over the window (2 or 3 days for a multi-day duo, W1278), else lowered toward their walking but never under
+ *  STRETCH_MIN_SHARE of the printed goal, so it stays a real attempt (it can be lost). Flights and sleep: as printed.
+ *  The Twin Maw stays sized to the walking (every pair's fallback). Null only for a rank, party or window mismatch. Pure. */
 export function runDuo(bossId: string, r: number, fit: number, fl: number | null): AutoPick | null {
+  void fl;   // W1280 — flights are asked as printed now; the parameter stays for the callers
   const multi = AUTO_MULTI_BOSSES.includes(bossId);   // W1278
   if (!AUTO_BOSSES.includes(bossId) && !multi) return null;
   const cfg = COOP_BOSS_CFG[bossId];
   if (!cfg || (RANK_ORDER[cfg.rank] ?? 0) > r || (cfg.partySize ?? 2) !== 2) return null;
-  if (multi) {
-    // W1278 — the pair's walking over the whole window (2 or 3 days), the steps sized as a one-day boss's are; flights
-    // over the window too; sleep (the Myrmidon King) is asked as printed, so both need sleep in Apple Health.
-    const days = Math.max(1, Math.round(cfg.windowHours / 24));
-    const fitW = fit * days, flW = fl === null ? null : fl * days;
-    const g = Math.round(fitW / 100) * 100;
-    const steps = cfg.goalSteps <= fitW ? cfg.goalSteps : g >= STRETCH_MIN_SHARE * cfg.goalSteps ? g : 0;
-    if (!steps) return null;
-    if (cfg.metric === 'steps') return { bossId, goalSteps: steps };
-    if (cfg.metric === 'both') return flW !== null && (cfg.goalFlights ?? 0) <= flW ? { bossId, goalSteps: steps, goalFlights: cfg.goalFlights ?? 0 } : null;
-    if (cfg.metric === 'steps_sleep') return { bossId, goalSteps: steps, goalFlights: cfg.goalFlights ?? 0 };
-    return null;
-  }
-  if (cfg.windowHours !== 24) return null;
+  if (!multi && cfg.windowHours !== 24) return null;
+  const days = multi ? Math.max(1, Math.round(cfg.windowHours / 24)) : 1;
+  const fitW = fit * days;
+  const walked = Math.round(fitW / 100) * 100;
+  const attempt = (goal: number) => (goal <= fitW ? goal : Math.max(Math.round((STRETCH_MIN_SHARE * goal) / 100) * 100, walked));
   if (cfg.metric === 'steps') {
-    if (cfg.goalSteps <= fit) return { bossId, goalSteps: cfg.goalSteps };
-    const g = Math.round(fit / 100) * 100;
-    if (bossId === AUTO_SIZED_BOSS) return { bossId, goalSteps: Math.max(AUTO_MIN_GOAL, g) };
-    return g >= STRETCH_MIN_SHARE * cfg.goalSteps ? { bossId, goalSteps: g } : null;
+    if (bossId === AUTO_SIZED_BOSS && cfg.goalSteps > fitW) return { bossId, goalSteps: Math.max(AUTO_MIN_GOAL, walked) };
+    return { bossId, goalSteps: attempt(cfg.goalSteps) };
   }
-  if (fl === null) return null;
-  if (cfg.metric === 'flights') return cfg.goalSteps <= fl ? { bossId, goalSteps: cfg.goalSteps } : null;
-  if (cfg.metric === 'both') {
-    const gf = cfg.goalFlights ?? 0;
-    return cfg.goalSteps <= fit && gf <= fl ? { bossId, goalSteps: cfg.goalSteps, goalFlights: gf } : null;
-  }
+  if (cfg.metric === 'flights') return { bossId, goalSteps: cfg.goalSteps };
+  if (cfg.metric === 'both' || cfg.metric === 'steps_sleep') return { bossId, goalSteps: attempt(cfg.goalSteps), goalFlights: cfg.goalFlights ?? 0 };
   return null;
 }
 
-/** W1268 — the same for a one-day steps trio (the sized one is The Crossroads Hound). Pure. */
+/** W1268 — the same for a one-day steps trio (the sized one is The Crossroads Hound). W1280: always an attempt, never under
+ *  STRETCH_MIN_SHARE of the printed goal. Pure. */
 export function runTrio(bossId: string, r: number, fit: number): AutoPick | null {
   if (!AUTO_TRIO_BOSSES.includes(bossId)) return null;
   const cfg = COOP_BOSS_CFG[bossId];
@@ -401,7 +391,7 @@ export function runTrio(bossId: string, r: number, fit: number): AutoPick | null
   if (cfg.goalSteps <= fit) return { bossId, goalSteps: cfg.goalSteps };
   const g = Math.round(fit / 100) * 100;
   if (bossId === AUTO_TRIO_SIZED_BOSS) return { bossId, goalSteps: Math.max(AUTO_TRIO_MIN_GOAL, g) };
-  return g >= STRETCH_MIN_SHARE * cfg.goalSteps ? { bossId, goalSteps: g } : null;
+  return { bossId, goalSteps: Math.max(Math.round((STRETCH_MIN_SHARE * cfg.goalSteps) / 100) * 100, g) };
 }
 
 /** W1268 — a Pacific day as a day number, for whose turn it is. */
