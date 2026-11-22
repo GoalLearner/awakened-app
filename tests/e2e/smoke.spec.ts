@@ -2399,7 +2399,7 @@ test.describe('Z · Worldgate placement (W933 → W934)', () => {
     await freshApp(page);
     const pulse = page.locator('#wg-pulse');
     await expect(pulse).toBeVisible();
-    await expect(pulse.locator('.wg-pulse-name')).not.toBeEmpty();
+    await expect(pulse.locator('.wg-pulse-name')).toHaveText('Team Battles');   // W1273 — the bar opens Team Battles
     await expect(pulse.locator('.wg-pulse-pct')).toHaveText('30.7%');
     await expect(pulse.locator('.wg-pulse-you')).toHaveCount(1);
     // W934 — no card anywhere; the pulse rides every tab and opens the sheet.
