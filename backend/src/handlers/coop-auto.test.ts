@@ -59,6 +59,7 @@ import {
   MUSTER_AWAY_HOURS,
   raidNeedsHunters,
   makePickContext,
+  AUTO_MULTI_BOSSES,
   recentlyOpened,
   shownMode,
   targetChoice,
@@ -239,7 +240,7 @@ describe('pickAutoBoss — the best one-day duo both ranks allow whose printed g
   it('W1209: the drops match the client catalog (app.js) for every automatic boss', () => {
     const HERE = dirname(fileURLToPath(import.meta.url));
     const app = readFileSync(join(HERE, '..', '..', '..', 'app.js'), 'utf8');
-    const all = [...AUTO_BOSSES, ...AUTO_TRIO_BOSSES];
+    const all = [...AUTO_BOSSES, ...AUTO_TRIO_BOSSES, ...AUTO_MULTI_BOSSES];   // W1278
     const re = /\n {4}([a-z0-9_]+): \{\r?\n {6}id: '([a-z0-9_]+)',[\s\S]*?source_boss: '([a-z0-9_]+)',\r?\n {6}rarity: '([a-z_]+)'/g;
     const drops: Record<string, string[]> = {};
     let m: RegExpExecArray | null;
@@ -1684,5 +1685,48 @@ describe('W1272 — the manager opens on Auto unless a target is set', () => {
     expect(shownMode({ ...base, mode: 'targets', targets: [{ b: 'the_twin_maw', d: 'any' }] })).toBe('targets');
     expect(shownMode({ ...base, mode: 'auto', targets: [{ b: 'the_twin_maw', d: 'any' }] })).toBe('auto');
     expect(shownMode({ ...base, mode: 'targets', targets: [] }, true)).toBe('targets');   // the tap that starts picking holds
+  });
+});
+
+// W1278 — owner 2026-11-22: "Aren't there more duo bosses though?" … "I don't mind multiple days to appear in here too as well."
+describe('W1278 — the multi-day duos are targets', () => {
+  it('runDuo sizes them over their window; Auto never picks them', () => {
+    expect(AUTO_MULTI_BOSSES).toEqual(['the_cloven_titan', 'the_sleepless_crown', 'the_unresting_march']);
+    // the Unresting March: D, 12,000 steps over 2 days — a pair fitting 6,000 a day runs it as printed
+    expect(runDuo('the_unresting_march', 1, 6000, null)).toEqual({ bossId: 'the_unresting_march', goalSteps: 12000 });
+    expect(runDuo('the_unresting_march', 1, 4600, null)!.goalSteps).toBe(9200);   // stretched (>= 75%)
+    expect(runDuo('the_unresting_march', 1, 4000, null)).toBeNull();
+    expect(runDuo('the_unresting_march', 0, 9000, null)).toBeNull();                // an E-rank pair, a D boss
+    // the Cloven Titan: A, 24,000 steps + 16 flights over 2 days
+    expect(runDuo('the_cloven_titan', 4, 12000, 8)).toEqual({ bossId: 'the_cloven_titan', goalSteps: 24000, goalFlights: 16 });
+    expect(runDuo('the_cloven_titan', 4, 12000, null)).toBeNull();                   // flights unknown
+    // the Myrmidon King: S, 42,000 steps over 3 days + the printed sleep
+    expect(runDuo('the_sleepless_crown', 5, 14000, null)).toEqual({ bossId: 'the_sleepless_crown', goalSteps: 42000, goalFlights: 2340 });
+    // Auto: a big S pair is never given a multi-day boss
+    const p = pickAutoBoss('S', 'S', 99999, 99);
+    expect(AUTO_MULTI_BOSSES).not.toContain(p.bossId);
+  });
+  it('a target picks one; the row runs the boss\'s whole window and carries the sleep goal', async () => {
+    const calls: Call[] = [];
+    const fx: SweepFixture = {
+      friends: [{ a: 'u1', b: 'u3' }],
+      builds: { u1: NEW, u3: NEW },
+      ranks: { u1: 'S', u3: 'S' },
+      stepsThisWeek: { u1: 70000, u3: 70000 },
+      stepsLastWeek: { u1: 140000, u3: 140000 },
+      autoPrefs: [{ user_id: 'u1', mode: 'targets', targets_json: '[{"b":"the_sleepless_crown","d":"any"}]', match_on: 1, raid_on: 1 }],
+    };
+    await sweepCoopAutoHunts(makeEnv(sweepDb(fx, calls)), ctx);
+    const ins = calls.find((c) => c.sql.includes('INSERT OR IGNORE INTO coop_boss_instances') && c.args[1] === 'the_sleepless_crown')!;
+    expect(ins).toBeTruthy();
+    expect(ins.args[7]).toBe(2340);                                  // goal_flights = the sleep minutes
+    const start = Date.parse(String(ins.args[9])), end = Date.parse(String(ins.args[10]));
+    expect(Math.round((end - start) / 3_600_000)).toBe(72);          // three Pacific days
+    expect(ins.args[14]).toBe('u1');
+  });
+  it('targets accept them', () => {
+    expect(normalizeTargets([{ b: 'the_cloven_titan' }, { b: 'the_unresting_march', d: 'milestone_cowl' }])).toEqual([
+      { b: 'the_cloven_titan', d: 'any' }, { b: 'the_unresting_march', d: 'milestone_cowl' },
+    ]);
   });
 });

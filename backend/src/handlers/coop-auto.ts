@@ -143,6 +143,10 @@ import {
 export const AUTO_HUNT_MIN_W = 1097;
 /** One-day duo bosses, best first (W1195: the flights bosses join; sleep duos still wait). */
 export const AUTO_BOSSES: readonly string[] = ['the_sundered_choir', 'the_hollow_monarch', 'the_gaunt_wardens', 'the_coursing_dread', 'the_twin_maw'];
+/** W1278 — owner 2026-11-22: "Aren't there more duo bosses though?" … "I don't mind multiple days to appear in here too as
+ *  well." The multi-day duos are TARGETS only: never an Auto pick (Auto stays one day), made only when a member of the
+ *  pair chases one, and then for the boss's whole window (2 or 3 days) with its goal sized to the pair's walking over it. */
+export const AUTO_MULTI_BOSSES: readonly string[] = ['the_cloven_titan', 'the_sleepless_crown', 'the_unresting_march'];
 /** W1209 — every drop of each automatic boss (rare + ultra rare; co-op pools have no commons), from
  *  the client catalog: the items whose source_boss is the boss, or the boss's own pool (W1104). A
  *  test reads app.js so the two cannot drift. */
@@ -151,6 +155,16 @@ export const AUTO_BOSS_DROPS: Readonly<Record<string, readonly string[]>> = {
   the_hollow_monarch: ['the_hollow_crown', 'the_monarchs_writ', 'crownpiercer'],
   the_gaunt_wardens: ['the_wardens_vigil', 'the_stairwalkers_treads', 'the_famished_circlet', 'the_gaunt_mantle'],
   the_coursing_dread: ['the_long_pursuit', 'houndsfang_recurve', 'coursing_houndcall'],
+  // W1278 — the multi-day duos (targets only)
+  the_cloven_titan: [
+    'striders_of_the_tideless_road', 'mantle_of_the_long_vigil', 'amulet_of_the_endless_stair', 'skyward_vigil_ring',
+    'duskforge_greatblade', 'aetherspire_staff', 'wraithwind_bow', 'forgewarden_gauntlets',
+    'band_of_the_roadkeeper', 'restplate_of_the_wanderer', 'nightcrown_of_the_climb', 'ascent_worn_cloak',
+    'anvilrest_cuirass', 'charm_of_the_emberkeeper',
+  ],
+  the_sleepless_crown: ['watchkeepers_carapace', 'grips_of_the_third_night', 'striders_of_the_waking_march', 'circlet_of_lucid_sleep',
+    'shroud_of_the_dreaming_court', 'pendant_of_the_seventh_hour'],
+  the_unresting_march: ['roadwardens_harness', 'milestone_cowl', 'longroad_grips'],
   // W1274 — owner 2026-11-22: the Twin Maw also drops every common relic (client poolAllCommons; 36 on 2026-11-22)
   the_twin_maw: ['bothsight_longbow', 'twin_fang_cleaver', 'twofold_gaze',
     'dream_woven_hood', 'vow_ring', 'pack_leaders_greaves', 'tossing_bedroll', 'drowsy_signet', 'sobriety_token',
@@ -346,9 +360,24 @@ export function stretchPick(list: readonly string[], fits: readonly AutoPick[], 
  *  walking down to STRETCH_MIN_SHARE of its goal (as W1215 does); The Twin Maw sized to the walking (it is
  *  every pair's fallback). Null when not. The Auto Hunts manager's "Eligible with" uses the same rule. Pure. */
 export function runDuo(bossId: string, r: number, fit: number, fl: number | null): AutoPick | null {
-  if (!AUTO_BOSSES.includes(bossId)) return null;
+  const multi = AUTO_MULTI_BOSSES.includes(bossId);   // W1278
+  if (!AUTO_BOSSES.includes(bossId) && !multi) return null;
   const cfg = COOP_BOSS_CFG[bossId];
-  if (!cfg || (RANK_ORDER[cfg.rank] ?? 0) > r || cfg.windowHours !== 24 || (cfg.partySize ?? 2) !== 2) return null;
+  if (!cfg || (RANK_ORDER[cfg.rank] ?? 0) > r || (cfg.partySize ?? 2) !== 2) return null;
+  if (multi) {
+    // W1278 — the pair's walking over the whole window (2 or 3 days), the steps sized as a one-day boss's are; flights
+    // over the window too; sleep (the Myrmidon King) is asked as printed, so both need sleep in Apple Health.
+    const days = Math.max(1, Math.round(cfg.windowHours / 24));
+    const fitW = fit * days, flW = fl === null ? null : fl * days;
+    const g = Math.round(fitW / 100) * 100;
+    const steps = cfg.goalSteps <= fitW ? cfg.goalSteps : g >= STRETCH_MIN_SHARE * cfg.goalSteps ? g : 0;
+    if (!steps) return null;
+    if (cfg.metric === 'steps') return { bossId, goalSteps: steps };
+    if (cfg.metric === 'both') return flW !== null && (cfg.goalFlights ?? 0) <= flW ? { bossId, goalSteps: steps, goalFlights: cfg.goalFlights ?? 0 } : null;
+    if (cfg.metric === 'steps_sleep') return { bossId, goalSteps: steps, goalFlights: cfg.goalFlights ?? 0 };
+    return null;
+  }
+  if (cfg.windowHours !== 24) return null;
   if (cfg.metric === 'steps') {
     if (cfg.goalSteps <= fit) return { bossId, goalSteps: cfg.goalSteps };
     const g = Math.round(fit / 100) * 100;
@@ -970,7 +999,10 @@ export async function createAutoHunt(
   const [challenger, partner] = a < b ? [a, b] : [b, a];
   const id = crypto.randomUUID();
   const startsAt = ptMidnightIso(dayKey);
-  const endsAt = ptMidnightIso(nextDay(dayKey));
+  // W1278 — a multi-day duo runs its whole window (2 or 3 Pacific days); every other automatic hunt is one day
+  let endDay = nextDay(dayKey);
+  for (let i = 1; i < Math.max(1, Math.round((cfg.windowHours || 24) / 24)); i++) endDay = nextDay(endDay);
+  const endsAt = ptMidnightIso(endDay);
   if (!startsAt || !endsAt) return false;
   const res = await env.DB.batch([
     env.DB
@@ -982,7 +1014,7 @@ export async function createAutoHunt(
          VALUES (?, ?, ?, ?, ?, NULL, ?, NULL, ?, ?, ?, 'active', ?, ?, 1, ?, ?, ?, ?)`,
       )
       .bind(id, pick.bossId, cfg.rank, challenger, partner, startsAt, pick.goalSteps,
-        cfg.metric === 'both' ? (pick.goalFlights ?? cfg.goalFlights ?? null) : null,   // W1195 — a steps + flights boss carries both goals
+        cfg.metric === 'both' || cfg.metric === 'steps_sleep' ? (pick.goalFlights ?? cfg.goalFlights ?? null) : null,   // W1195 — a steps + flights boss carries both goals; W1278 — the sleep goal too
         cfg.rewardSouls, startsAt, endsAt, dayKey, pairKey(a, b), matched ? 1 : 0,
         pick.reason?.length ? pick.reason.join(',') : null),   // W1268
     env.DB
@@ -2346,7 +2378,7 @@ export function normalizeTargets(raw: unknown): AutoTarget[] {
     if (!x || typeof x !== 'object') continue;
     const b = String((x as { b?: unknown }).b ?? '');
     let d = String((x as { d?: unknown }).d ?? 'any');
-    if (!(AUTO_BOSSES.includes(b) || AUTO_TRIO_BOSSES.includes(b)) || seen.has(b)) continue;
+    if (!(AUTO_BOSSES.includes(b) || AUTO_TRIO_BOSSES.includes(b) || AUTO_MULTI_BOSSES.includes(b)) || seen.has(b)) continue;   // W1278
     if (d !== 'any' && !(AUTO_BOSS_DROPS[b] ?? []).includes(d)) d = 'any';
     seen.add(b);
     out.push({ b, d });
@@ -2479,7 +2511,7 @@ async function autoPrefsPayload(env: Env, uid: string, echo = false): Promise<Re
   }).sort((x, y) => x.alias.localeCompare(y.alias));
   const can = (p: { on: boolean; walking: boolean; their_off: boolean }) => p.on && p.walking && !p.their_off && pm !== null;
   const eligible: Record<string, string[]> = {};
-  for (const b of AUTO_BOSSES) {
+  for (const b of [...AUTO_BOSSES, ...AUTO_MULTI_BOSSES]) {   // W1278 — the multi-day duos too
     eligible[b] = partners.filter((p) => {
       if (!can(p)) return false;
       const pf = pairFlightsOf(flights, uid, p.id);

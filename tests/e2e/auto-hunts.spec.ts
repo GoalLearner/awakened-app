@@ -204,3 +204,20 @@ test.describe('W1269 — Auto Hunts', () => {
     await expect(sentinel.locator('.ah-any')).toHaveText(/Chase any drop I.m missing/i);
   });
 });
+
+// W1278 — owner 2026-11-22: "Aren't there more duo bosses though?" … "I don't mind multiple days to appear in here too as well."
+test.describe('W1278 — the multi-day duos in the picker', () => {
+  test('the Cloven Titan, the Myrmidon King and the Unresting March are listed, with their days', async ({ page }) => {
+    await boot(page, { ...PREFS, eligible: { ...PREFS.eligible, the_cloven_titan: ['u-oriel', 'u-thane'], the_sleepless_crown: [], the_unresting_march: ['u-oriel', 'u-thane', 'u-vey'] } });
+    await page.evaluate(async () => { const ah = (window as any).__autoHunts; await ah.load(); ah.open([{ name: 'manager' }, { name: 'picker' }]); });
+    const cur = page.locator('#ah-overlay .ah-scr:not(.out)');
+    const titan = cur.locator('.ah-pk', { hasText: 'The Cloven Titan' });
+    await expect(titan.locator('.mt')).toContainText(/2 days/i);
+    await expect(titan).toContainText(/Eligible with: oriel, thane/i);
+    await expect(cur.locator('.ah-pk', { hasText: 'The Myrmidon King' }).locator('.mt')).toContainText(/Sleep · 3 days/i);
+    await expect(cur.locator('.ah-pk.lock', { hasText: 'The Myrmidon King' })).toContainText('No current partner can run this yet');
+    await titan.locator('.hd').click();
+    await titan.locator('.ah-any').click();
+    await expect.poll(() => page.evaluate(() => ((window as any).__ahPuts.slice(-1)[0] || { targets: [] }).targets.map((t: { b: string }) => t.b).join(','))).toContain('the_cloven_titan');
+  });
+});
