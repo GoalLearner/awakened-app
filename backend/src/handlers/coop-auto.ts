@@ -2401,6 +2401,24 @@ export async function coopKillsOf(env: Env, userIds: readonly string[]): Promise
 /** What the manager draws: my settings, my friends (switch, walking, rank, their targets, whose turn tomorrow
  *  is), and which friends can run each automatic boss with me tomorrow (rank + walking, the cron's own rule).
  *  The phone builds the Tomorrow preview from this, with the same order as targetChoice. */
+/** W1271 — which of these hunters had a real app open on or after `since` (a Pacific day); a failed read keeps all. */
+export async function recentlyOpened(env: Env, ids: readonly string[], since: string): Promise<string[]> {
+  if (!ids.length || !since) return [...ids];
+  try {
+    const seen = new Set<string>();
+    for (const slice of chunks([...ids])) {
+      const rows = (await env.DB.prepare(
+        `SELECT DISTINCT user_id FROM app_open_counts WHERE day_pt >= ? AND opens > 0 AND user_id IN (${slice.map(() => '?').join(', ')})`,
+      ).bind(since, ...slice).all<{ user_id: string }>()).results ?? [];
+      for (const r of rows) if (r.user_id) seen.add(r.user_id);
+    }
+    return ids.filter((u) => seen.has(u));
+  } catch (err) {
+    console.error('[coop-auto] recent opens read failed', err);
+    return [...ids];
+  }
+}
+
 async function autoPrefsPayload(env: Env, uid: string): Promise<Record<string, unknown>> {
   const nowMs = Date.now();
   const today = ptDayKey(nowMs) || '';
@@ -2412,7 +2430,12 @@ async function autoPrefsPayload(env: Env, uid: string): Promise<Record<string, u
     `SELECT CASE WHEN requester_user_id = ?1 THEN recipient_user_id ELSE requester_user_id END AS f
        FROM friends WHERE status = 'accepted' AND (requester_user_id = ?1 OR recipient_user_id = ?1)`,
   ).bind(uid).all<{ f: string }>()).results ?? [];
-  const friends = Array.from(new Set(fr.map((r) => r.f).filter((f) => f && f !== uid)));
+  const allFriends = Array.from(new Set(fr.map((r) => r.f).filter((f) => f && f !== uid)));
+  // W1271 — owner 2026-11-21, on a Partners list full of "Not walking this week": "If they haven't logged in the app a
+  // while, don't put them on this list because there's not really point if they're not active to send them automated
+  // hunts". A friend shows only with a real app open (app_open_counts, not a background wake) in the last
+  // ACTIVE_OPEN_DAYS Pacific days, the raid draw's window; the cron already needs one today or yesterday to make a hunt.
+  const friends = await recentlyOpened(env, allFriends, today ? activeWindowStart(today) : '');
   const thisWeek = getAccoladeWeekStart(nowMs);
   const lastWeek = priorWeekStart(thisWeek);
   const elapsed = elapsedDaysPt(thisWeek, today);
@@ -2456,6 +2479,7 @@ async function autoPrefsPayload(env: Env, uid: string): Promise<Record<string, u
   }
   return {
     ok: true, mode: mine.mode, targets: mine.targets, match: mine.match, raid: mine.raid,
+    friends_total: allFriends.length,   // W1271 — friends, active or not (the list shows the active ones)
     rank: ranks.get(uid) ?? 'E', walking: pm !== null, day: tomorrow, max: AUTO_TARGET_MAX,
     partners, eligible,
   };

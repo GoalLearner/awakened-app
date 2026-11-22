@@ -59,6 +59,7 @@ import {
   MUSTER_AWAY_HOURS,
   raidNeedsHunters,
   makePickContext,
+  recentlyOpened,
   targetChoice,
   runDuo,
   normalizeTargets,
@@ -1636,5 +1637,22 @@ describe('W1268 — Auto Hunts: targets, first kills, the switches', () => {
     const b = await sweepCoopAutoHunts(makeEnv(sweepDb({ ...fx, autoPrefs: [{ user_id: 'u1', mode: 'auto', targets_json: '[]', match_on: 1, raid_on: 0 }] }, off)), ctx);
     expect(a.raids).toBe(1);
     expect(b.raids).toBe(0);   // five left, a raid needs six
+  });
+});
+
+// W1271 — owner 2026-11-21: "If they haven't logged in the app a while, don't put them on this list". The Auto Hunts
+// Partners list keeps only friends with a real app open in the raid draw's 7-day window.
+describe('W1271 — the Partners list shows friends who opened the app this week', () => {
+  it('keeps the friends with a real open since the window start; a failed read keeps everyone', async () => {
+    const calls: { sql: string; args: unknown[] }[] = [];
+    const env = { DB: { prepare: (sql: string) => ({ bind: (...args: unknown[]) => { calls.push({ sql, args }); return { all: async () => ({ results: [{ user_id: 'f1' }, { user_id: 'f3' }] }) }; } }) } } as unknown as Env;
+    expect(await recentlyOpened(env, ['f1', 'f2', 'f3'], '2026-11-15')).toEqual(['f1', 'f3']);
+    expect(calls[0].sql).toContain('FROM app_open_counts WHERE day_pt >= ? AND opens > 0');
+    expect(calls[0].args[0]).toBe('2026-11-15');
+    const broken = { DB: { prepare: () => { throw new Error('boom'); } } } as unknown as Env;
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    expect(await recentlyOpened(broken, ['f1', 'f2'], '2026-11-15')).toEqual(['f1', 'f2']);
+    spy.mockRestore();
+    expect(await recentlyOpened(env, [], '2026-11-15')).toEqual([]);
   });
 });
