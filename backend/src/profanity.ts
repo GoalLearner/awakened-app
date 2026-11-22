@@ -174,6 +174,86 @@ const NORMALIZED_WORDS: ReadonlyArray<string> = PROFANITY_WORDS
   .map(normalizeFull)
   .filter((w, i, arr) => w.length >= 3 && arr.indexOf(w) === i); // ≥3 chars + dedupe
 
+// ── W1275 — owner 2026-11-22: "Make sure there's no foul language usernames and none disguised with numbers or etc". A probe
+// of the v1 filter let through "Nigga", "N1gga", "S1ut", "Fuk", "Phuck", "Fvck", "Sh1iit", "Tw4t", "N199er", "Wanker",
+// "PornKing", "BigAss", "xXCumXx", "KYS", "Heil" — and refused "Dickens", "Hancock", "Cocktail", "Japan", "Nigeria",
+// "Connor" (coon → con). The alias check (isProfane) now also:
+//   1. folds digits both ways the trolls use them: 1 → i AND 1 → l, 9 / 6 → g (the old fold had 1 → i only);
+//   2. collapses repeats AFTER the fold ("Sh1iit" → shit);
+//   3. carries ALIAS_EXTRA, the obscenities and spellings the board's prose list leaves out (the board is unchanged);
+//   4. checks SHORT words (ass, cum, fag, tits …) as whole pieces of the name only — split at spaces, _ and -, at a
+//      lower→Upper turn ("BigAss") and at letters↔digits — so "Classic", "Assassin" and "Document" stay fine;
+//   5. strips BENIGN words (real names, places, words that merely contain a stem: Hancock, Japan, Therapist …) before
+//      the substring checks, so "Hancock" passes but "HancockFuck" does not;
+//   6. drops the collapsed forms that are ordinary syllables (coon → "con", piss → "pis", boob → "bob").
+const ALIAS_EXTRA: ReadonlyArray<string> = [
+  'nigga', 'nigg', 'nigr', 'niga', 'nibba', 'negroid',
+  'fuk', 'fuq', 'fvck', 'phuck', 'phuk', 'fukk', 'muthafuck', 'mothafuck',
+  'shyt', 'biatch', 'biotch', 'kunt', 'twat', 'wank', 'jizz', 'porn', 'penis', 'vagina', 'skank', 'hooker',
+  'testicle', 'scrotum', 'bollock', 'blowjob', 'handjob', 'rimjob', 'cumshot', 'cumslut', 'hentai', 'bukkake',
+  'sloot', 'ahole', 'asswipe', 'asshat', 'dumbass', 'jackass', 'fatass',
+  'killyourself', 'killurself', 'kilyourself', 'swastika', 'siegheil', 'whitepower', 'gasthejews', 'heilhitler',
+];
+const ALIAS_SHORT: ReadonlySet<string> = new Set([
+  'ass', 'asses', 'arse', 'cum', 'cums', 'fag', 'fags', 'hoe', 'hoes', 'tit', 'tits', 'titty', 'titties', 'boob', 'boobs',
+  'sex', 'anal', 'kys', 'thot', 'heil', 'nude', 'nudes', 'horny', 'milf', 'dilf', 'lesbo', 'homo',
+  'nig', 'nigs', 'fck', 'fk', 'fuc', 'shat', 'cok', 'dik', 'puss', 'smut', 'tranny', 'chink',
+]);
+const ALIAS_BENIGN: ReadonlyArray<string> = [
+  'japan', 'japanese', 'pakistan', 'pakistani', 'nigeria', 'nigerian', 'scunthorpe', 'sussex', 'essex', 'middlesex',
+  'dickens', 'dickson', 'dickinson', 'benedick', 'dickie', 'hancock', 'peacock', 'cocktail', 'cockpit', 'cockatoo', 'cockatiel',
+  'babcock', 'hitchcock', 'woodcock', 'shuttlecock', 'cockburn', 'raccoon', 'cocoon', 'tycoon', 'spice', 'spicy', 'hospice',
+  'auspicious', 'conspicuous', 'despicable', 'grape', 'drape', 'scrape', 'trapeze', 'therapist', 'torpedo', 'ashton', 'ashtray',
+  'nazir', 'nazim', 'nutcracker', 'firecracker', 'analyst', 'analysis', 'canal', 'banal', 'document', 'cucumber',
+  'penistone', 'shitake', 'shiitake', 'cockney', 'scrapes', 'grapes', 'drapes',
+];
+const ALIAS_SKIP_COLLAPSED: ReadonlySet<string> = new Set(['con', 'pis', 'bob', 'nig', 'fuk']);
+const ALIAS_LONG: ReadonlyArray<string> = Array.from(new Set([...PROFANITY_WORDS, ...ALIAS_EXTRA]));
+const ALIAS_LONG_COLLAPSED: ReadonlyArray<string> = Array.from(new Set(ALIAS_LONG.map(normalizeFull)))
+  .filter((w) => w.length >= 3 && !ALIAS_SKIP_COLLAPSED.has(w));
+function foldDigits(input: string, one: 'i' | 'l'): string {
+  const map: Record<string, string> = { '0': 'o', '1': one, '3': 'e', '4': 'a', '5': 's', '6': 'g', '7': 't', '8': 'b', '9': 'g', '@': 'a', '$': 's', '!': one };
+  return input.toLowerCase().replace(/./g, (c) => map[c] ?? c).replace(/[^a-z]/g, '');
+}
+function stripBenign(s: string): string {
+  let out = s;
+  for (const w of ALIAS_BENIGN) if (out.includes(w)) out = out.split(w).join('');
+  return out;
+}
+function aliasPieces(alias: string): string[] {
+  return String(alias || '')
+    .replace(/([a-z])([A-Z])/g, '$1 $2')
+    .replace(/([A-Z])([A-Z][a-z])/g, '$1 $2')
+    .replace(/([A-Za-z])([0-9])/g, '$1 $2')
+    .replace(/([0-9])([A-Za-z])/g, '$1 $2')
+    .split(/[^A-Za-z0-9]+/)
+    .filter(Boolean);
+}
+/** W1275 — the stricter alias pass (see above). */
+function isProfaneAliasV2(alias: string): boolean {
+  const forms = new Set<string>();
+  for (const s of [lowerStripped(alias), foldDigits(alias, 'i'), foldDigits(alias, 'l')]) {
+    if (!s) continue;
+    forms.add(stripBenign(s));
+    forms.add(stripBenign(s.replace(/(.)\1+/g, '$1')));
+  }
+  for (const s of forms) {
+    if (!s) continue;
+    for (const w of ALIAS_LONG) if (w.length >= 3 && s.includes(w)) return true;
+    for (const w of ALIAS_LONG_COLLAPSED) if (s.includes(w)) return true;
+  }
+  const pieces = aliasPieces(alias);
+  const whole = String(alias || '').replace(/[^A-Za-z0-9]/g, '');
+  for (const p of whole ? [...pieces, whole] : pieces) {
+    for (const s of [p.toLowerCase(), foldDigits(p, 'i'), foldDigits(p, 'l')]) {
+      if (!s) continue;
+      // as written, every repeat collapsed ("Cuuum"), or long runs cut to two ("Asss" → ass)
+      if (ALIAS_SHORT.has(s) || ALIAS_SHORT.has(s.replace(/(.)\1+/g, '$1')) || ALIAS_SHORT.has(s.replace(/(.)\1{2,}/g, '$1$1'))) return true;
+    }
+  }
+  return false;
+}
+
 /**
  * Returns true if the alias contains any profane word, checking both
  * raw-stripped and fully-normalized forms.
@@ -181,7 +261,14 @@ const NORMALIZED_WORDS: ReadonlyArray<string> = PROFANITY_WORDS
 export function isProfane(alias: string): boolean {
   const stripped = lowerStripped(alias);
   if (stripped.length === 0) return false;
+  return isProfaneAliasV2(alias);   // W1275 — replaces the v1 passes below (kept for the record)
 
+}
+
+/** The v1 alias passes (before W1275), kept for comparison tests. */
+export function isProfaneV1(alias: string): boolean {
+  const stripped = lowerStripped(alias);
+  if (stripped.length === 0) return false;
   // Raw mode: catches abbreviations + literal-character profanity.
   for (const word of PROFANITY_WORDS) {
     if (stripped.includes(word)) return true;
@@ -294,6 +381,8 @@ export function isProfaneWord(token: string): boolean {
 
 /** Exported for tests. */
 export const _internals = {
+  aliasPieces,
+  foldDigits,
   lowerStripped,
   normalizeFull,
   deLeet,

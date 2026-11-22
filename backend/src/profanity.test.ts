@@ -97,7 +97,10 @@ describe('isProfane', () => {
       // because the wordlist includes "cunt". This is acknowledged
       // tradeoff: aggressive filtering > Scunthorpe support.
       // Documenting here to keep the assumption visible.
-      expect(isProfane('Scunthorpe')).toBe(true);
+      // W1275 — no longer: the alias check strips a short list of benign words (Scunthorpe, Hancock, Japan …)
+      // before matching, so the town passes while "Scunthorpe" + a slur still does not.
+      expect(isProfane('Scunthorpe')).toBe(false);
+      expect(isProfane('ScunthorpeCunt')).toBe(true);
     });
   });
 
@@ -162,5 +165,33 @@ describe('isProfane', () => {
       // Adolf/Stalin/Isis must stay OUT of the profanity path so real people aren't accused.
       ['Adolf', 'Stalin', 'Isis'].forEach((c) => expect(isProfane(c)).toBe(false));
     });
+  });
+});
+
+// W1275 — owner 2026-11-22: "Make sure there's no foul language usernames and none disguised with numbers or etc".
+describe('W1275 — usernames: disguised obscenities are refused, real words are not', () => {
+  it('refuses the spellings the v1 filter let through', () => {
+    for (const a of ['Nigga', 'N1gga', 'nigguh', 'N199er', 'Nibba', 'S1ut', '5lut', 'Sl00t', 'Fuk', 'FuqYou', 'Phuck', 'Fvck',
+      'Sh1iit', 'Fuuu_ck', 'Tw4t', 'Wanker', 'Jizz', 'PornKing', 'Kunt', 'B1atch', 'Penis', 'Vagina', 'Pu55y', 'C0ck', 'D1ck',
+      'Wh0re', 'R4pe', 'N4zi', 'Ahole', 'SiegHeil', 'KillYourself']) {
+      expect(isProfane(a), a).toBe(true);
+    }
+  });
+  it('checks short words as whole pieces of the name: BigAss, xXCumXx, KYS, Heil, Asss, Cuuum, F4g, h0e, Kys2', () => {
+    for (const a of ['BigAss', 'xXCumXx', 'KYS', 'Heil', 'Fag', 'Asss', 'Cuuum', 'F4g', 'h0e', 'Kys2', 'BoobLover', 'Titties', 'Ass_Man', 'my-tits']) {
+      expect(isProfane(a), a).toBe(true);
+    }
+    expect(_internals.aliasPieces('xXCumXx99')).toEqual(['x', 'X', 'Cum', 'Xx', '99']);
+  });
+  it('lets real names, places and words through (v1 refused Dickens, Hancock, Cocktail, Japan, Nigeria and Connor)', () => {
+    for (const a of ['Assassin', 'Assassin99', 'Classic', 'Bass', 'Glass', 'Japan', 'Dickens', 'Scunthorpe', 'Cocktail', 'Hancock',
+      'Peacock', 'Nigeria', 'Sussex', 'Cucumber', 'Document', 'Connor', 'Torpedo', 'Therapist', 'Grape', 'Spicy', 'Pakistani',
+      'Raccoon', 'Ashton', 'Nazir', 'Bob', 'Shitake', 'Killua', 'Galilea', 'Techniz', 'RenDIESEL', 'Ricin', 'Trinhity']) {
+      expect(isProfane(a), a).toBe(false);
+    }
+  });
+  it('a benign word does not shield a slur next to it', () => {
+    expect(isProfane('HancockFuck')).toBe(true);
+    expect(isProfane('Japan_N1gga')).toBe(true);
   });
 });
