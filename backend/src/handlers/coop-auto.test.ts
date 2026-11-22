@@ -250,6 +250,24 @@ describe('pickAutoBoss — the best one-day duo both ranks allow whose printed g
       const pool = /pool: \{\s*ultra_rare: \[([^\]]*)\],\s*rare: +\[([^\]]*)\]/.exec(m[0]);
       if (pool && all.includes(m[2])) drops[m[2]] = [...pool[1].split(','), ...pool[2].split(',')].map((x) => x.trim().replace(/'/g, '')).filter(Boolean);
     }
+    // W1274 — poolAllCommons (the Twin Maw): every common relic in the catalog too
+    // each card's own block (its key, then id: the same key, up to its closing brace), rarity common
+    const cre = /\n {4}([a-z0-9_]+): \{\r?\n {6}id: +'\1',[\s\S]*?\r?\n {4}\},/g;
+    const commons: string[] = [];
+    let cm: RegExpExecArray | null;
+    while ((cm = cre.exec(app))) if (/\n {6}rarity: +'common'/.test(cm[0])) { if (!commons.includes(cm[1])) commons.push(cm[1]); }   // a card can appear twice in app.js
+    expect(commons.length).toBeGreaterThan(10);
+    const nl = app.includes('\r\n') ? '\r\n' : '\n';
+    for (const id of all) {
+      let at = app.indexOf(nl + '    ' + id + ': {');
+      let flagged = false;
+      while (at !== -1) {
+        const end = app.indexOf(nl + '    },', at);
+        if (app.slice(at, end === -1 ? undefined : end).includes('poolAllCommons: true')) flagged = true;
+        at = app.indexOf(nl + '    ' + id + ': {', at + 1);
+      }
+      if (flagged) drops[id] = [...(drops[id] ?? []), ...commons];
+    }
     for (const bossId of all) {
       expect(drops[bossId] ?? [], bossId).not.toEqual([]);
       expect([...(AUTO_BOSS_DROPS[bossId] ?? [])].sort(), bossId).toEqual([...(drops[bossId] ?? [])].sort());

@@ -151,7 +151,14 @@ export const AUTO_BOSS_DROPS: Readonly<Record<string, readonly string[]>> = {
   the_hollow_monarch: ['the_hollow_crown', 'the_monarchs_writ', 'crownpiercer'],
   the_gaunt_wardens: ['the_wardens_vigil', 'the_stairwalkers_treads', 'the_famished_circlet', 'the_gaunt_mantle'],
   the_coursing_dread: ['the_long_pursuit', 'houndsfang_recurve', 'coursing_houndcall'],
-  the_twin_maw: ['bothsight_longbow', 'twin_fang_cleaver', 'twofold_gaze'],
+  // W1274 — owner 2026-11-22: the Twin Maw also drops every common relic (client poolAllCommons; 36 on 2026-11-22)
+  the_twin_maw: ['bothsight_longbow', 'twin_fang_cleaver', 'twofold_gaze',
+    'dream_woven_hood', 'vow_ring', 'pack_leaders_greaves', 'tossing_bedroll', 'drowsy_signet', 'sobriety_token',
+    'steady_steps', 'pups_hood', 'trackers_wrap', 'iron_grip_wraps', 'warden_chain_belt', 'rusted_training_blade',
+    'striders_laces', 'glassstep_band', 'shardwalker_wrap', 'quiet_thread', 'moonlit_lens', 'hushed_night_cloak',
+    'summit_treads', 'stairbound_greaves', 'upper_gate_band', 'roadworn_mantle', 'phantom_mile_wraps', 'wayfarers_signet',
+    'embergrip_gauntlets', 'furnacewalk_legplates', 'cinderplate_harness', 'forge_blackened_handwraps', 'ember_anvil_circlet', 'coalstep_band',
+    'candlekeepers_charm', 'nightwatchers_gloves', 'mantle_of_kept_hours', 'emberstep_boots', 'waiting_flame_signet', 'pilgrims_coal_wraps'],
   // the trios: the Court has its own relics; the other three pool their rank's spoils (W1104)
   the_trinity_colossus: [
     'striders_of_the_tideless_road', 'mantle_of_the_long_vigil', 'amulet_of_the_endless_stair', 'skyward_vigil_ring',

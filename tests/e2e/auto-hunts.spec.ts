@@ -179,4 +179,26 @@ test.describe('W1269 — Auto Hunts', () => {
     await expect(page.locator('[data-ah-coop="the_coursing_dread"] .ah-chasing')).toContainText(/Chasing/i);
     await expect.poll(() => page.evaluate(() => ((window as any).__ahPuts.slice(-1)[0] || {}).mode)).toBe('targets');
   });
+
+  // W1274 — owner 2026-11-22: "add all the common drops to the twin maw ... trio bosses...tap for drops for them as well ...
+  // I wish I had the options of the ones that I haven't completed yet."
+  test('the Twin Maw drops every common; trio bosses open their drops; bosses still to complete come first', async ({ page }) => {
+    await boot(page);
+    const facts = await page.evaluate(() => {
+      const src = (window as any).__relicSources('vow_ring') as string[];
+      return { src };
+    });
+    expect(facts.src).toContain('The Twin Maw');
+    await page.evaluate(async () => { const ah = (window as any).__autoHunts; await ah.load(); ah.open([{ name: 'manager' }, { name: 'picker', open: 'the_twin_maw' }]); });
+    const cur = page.locator('#ah-overlay .ah-scr:not(.out)');
+    const maw = cur.locator('.ah-pk', { hasText: 'The Twin Maw' });
+    await expect(maw).toHaveAttribute('data-open', '1');
+    await expect(maw.locator('.ry.common').first()).toHaveText(/Common/i);
+    expect(await maw.locator('.ah-dr').count()).toBeGreaterThan(30);   // 3 weapons + every common
+    const sentinel = cur.locator('.ah-pk', { hasText: 'The Triune Sentinel' });
+    await sentinel.locator('.hd').click();
+    await expect(sentinel).toHaveAttribute('data-open', '1');
+    expect(await sentinel.locator('.ah-dr').count()).toBeGreaterThan(5);
+    await expect(sentinel.locator('.ah-ch').first()).toHaveText(/Chase/i);
+  });
 });
