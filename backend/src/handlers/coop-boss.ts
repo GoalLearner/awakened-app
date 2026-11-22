@@ -863,13 +863,20 @@ async function createCoopHunt(
               OR EXISTS (SELECT 1 FROM coop_boss_participants p2
                           WHERE p2.instance_id = i.id AND p2.user_id IN (${allyInList(P)})) )`;
 
+  // W1267 — owner 2026-11-21: "You already have this hunt with Ricin". The refusal names the friend.
+  const dupDeny = async (): Promise<Response> => {
+    let who = '';
+    if (allies.length === 1) { try { who = (await getAliasMap(env, allies)).get(allies[0]) ?? ''; } catch { /* generic below */ } }
+    return jsonError(409, 'ALREADY_ACTIVE', who ? `You already have this hunt with ${who}.` : 'You already have this hunt with one of those hunters.');
+  };
+
   {
     const fp: unknown[] = [];
     const existing = await env.DB.prepare(`${dupSelect((v) => (fp.push(v), '?'))} LIMIT 1`)
       .bind(...fp)
       .first();
     if (existing) {
-      return { deny: jsonError(409, 'ALREADY_ACTIVE', 'A co-op hunt for this boss already exists with that hunter.') };
+      return { deny: await dupDeny() };
     }
   }
 
@@ -931,8 +938,8 @@ async function createCoopHunt(
     // W955 — with the cap gone the dup guard is the ONLY arm of the insert's
     // WHERE, so a lost race is a duplicate by construction. The re-read stays
     // so the refusal names the real reason rather than guessing.
-    if (dup) return { deny: jsonError(409, 'ALREADY_ACTIVE', 'A co-op hunt for this boss already exists with that hunter.') };
-    return { deny: jsonError(409, 'ALREADY_ACTIVE', 'A co-op hunt for this boss already exists with that hunter.') };
+    if (dup) return { deny: await dupDeny() };
+    return { deny: await dupDeny() };
   }
 
   const row = await loadInstance(env, id);
@@ -1143,6 +1150,32 @@ export async function handleCoopBossJoin(
 
   // W955 — answering a summons is never refused for volume. Saying yes to a
   // friend was the single most punished action in the old cap.
+
+  // W1267 — but it IS refused when it would make a second live hunt of this boss with the same hunter
+  // (owner 2026-11-21: one live hunt per pair per boss). Ricin's Twin Maw invite to Anthony waited from
+  // 11/20 7:30 AM PST until 11/21 11:16 AM, by when the midnight pass had made their automatic Twin Maw.
+  // The invite stays: it can be answered once the other hunt ends, or declined.
+  {
+    const others = Array.from(new Set(participantIds(row).filter((u) => !!u && u !== session.userId)));
+    if (others.length) {
+      const inList = others.map(() => '?').join(',');
+      const me = session.userId;
+      const twin = await env.DB.prepare(
+        `SELECT 1 AS dup FROM coop_boss_instances i /* W1267 join dup */
+          WHERE i.boss_id = ? AND i.id <> ? AND i.status IN ('pending','active')
+            AND ( i.challenger_user_id = ? OR i.partner_user_id = ? OR i.partner2_user_id = ?
+                  OR EXISTS (SELECT 1 FROM coop_boss_participants p WHERE p.instance_id = i.id AND p.user_id = ?) )
+            AND ( i.challenger_user_id IN (${inList}) OR i.partner_user_id IN (${inList}) OR i.partner2_user_id IN (${inList})
+                  OR EXISTS (SELECT 1 FROM coop_boss_participants p2 WHERE p2.instance_id = i.id AND p2.user_id IN (${inList})) )
+          LIMIT 1`,
+      ).bind(row.boss_id, row.id, me, me, me, me, ...others, ...others, ...others, ...others).first();
+      if (twin) {
+        let who = '';
+        if (others.length === 1) { try { who = (await getAliasMap(env, others)).get(others[0]) ?? ''; } catch { /* generic below */ } }
+        return jsonError(409, 'ALREADY_ACTIVE', who ? `You already have this hunt with ${who}.` : 'You already have this hunt with one of these hunters.');
+      }
+    }
+  }
 
   const cfg = COOP_BOSS_CFG[row.boss_id];
   const windowHours = cfg ? cfg.windowHours : 24;

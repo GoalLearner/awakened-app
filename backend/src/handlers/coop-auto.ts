@@ -265,6 +265,12 @@ export interface PickPrefs {
   today?: (bossId: string) => number;
   /** the group's last automatic hunt day on this boss, 'YYYY-MM-DD' ('' = never) */
   last?: (bossId: string) => string;
+  /** W1267 — one live (pending or active) hunt on this boss, hand-made or automatic, already holds the whole
+   *  group (a duo: the pair; a trio: all three). Owner 2026-11-21, on two identical Twin Maw hunts with Ricin: one live hunt per pair per
+   *  boss. Ricin's hand-made invite was answered at 11:34 PM PST and the midnight pass made the same boss
+   *  for the same pair 26 minutes later; the pick now passes over it, and a pair whose only option is
+   *  live gets no automatic hunt that day (the caller checks). */
+  live?: (bossId: string) => boolean;
 }
 
 /** W1209 — which of the bosses that fit (best first) to hunt: one someone in the group still needs a
@@ -307,6 +313,7 @@ export function stretchPick(list: readonly string[], fits: readonly AutoPick[], 
     if (goal >= cfg.goalSteps) continue;   // would fit as printed (it would be in `fits`)
     if (goal < STRETCH_MIN_SHARE * cfg.goalSteps) return null;   // out of reach, and every boss above more so
     if (!prefs.useful(bossId)) continue;
+    if (prefs.live?.(bossId)) continue;   // W1267
     return { bossId, goalSteps: goal };
   }
   return null;
@@ -334,9 +341,10 @@ export function pickAutoBoss(rankA: string, rankB: string, pairPattern: number, 
       if (fl !== null && cfg.goalSteps <= fit && gf <= fl) fits.push({ bossId, goalSteps: cfg.goalSteps, goalFlights: gf });
     }
   }
-  const stretched = stretchPick(AUTO_BOSSES, fits, r, fit, prefs, 2);   // W1215
+  const free = prefs.live ? fits.filter((p) => !prefs.live!(p.bossId)) : fits;   // W1267
+  const stretched = stretchPick(AUTO_BOSSES, free, r, fit, prefs, 2);   // W1215
   if (stretched) return stretched;
-  const chosen = choosePick(fits, prefs);
+  const chosen = choosePick(free, prefs);
   if (chosen) return chosen;
   const sized = Math.max(AUTO_MIN_GOAL, Math.round(fit / 100) * 100);
   return { bossId: AUTO_SIZED_BOSS, goalSteps: sized };
@@ -357,9 +365,10 @@ export function pickAutoTrioBoss(ranks: string[], trioPattern: number, prefs: Pi
     open = true;
     if (cfg.goalSteps <= fit) fits.push({ bossId, goalSteps: cfg.goalSteps });
   }
-  const stretched = stretchPick(AUTO_TRIO_BOSSES, fits, r, fit, prefs, 3);   // W1215
+  const free = prefs.live ? fits.filter((p) => !prefs.live!(p.bossId)) : fits;   // W1267
+  const stretched = stretchPick(AUTO_TRIO_BOSSES, free, r, fit, prefs, 3);   // W1215
   if (stretched) return stretched;
-  const chosen = choosePick(fits, prefs);
+  const chosen = choosePick(free, prefs);
   if (chosen) return chosen;
   if (!open) return null;
   return { bossId: AUTO_TRIO_SIZED_BOSS, goalSteps: Math.max(AUTO_TRIO_MIN_GOAL, Math.round(fit / 100) * 100) };
@@ -668,6 +677,38 @@ export function makePickContext(env: Env, today: string): PickContext {
   let histP: Promise<Map<string, Map<string, string>>> | null = null;
   let todayP: Promise<Map<string, Map<string, number>>> | null = null;
   let todayMap: Map<string, Map<string, number>> | null = null;
+  // W1267 — every live hunt as (boss → the hunters on it); a group "already has" a boss when one live hunt on
+  // it holds the whole group: a duo = the pair, a trio = all three (a trio sharing two hunters with another trio
+  // on the same boss is a different hunt, and W1210 still gives up to three trios a day).
+  let liveP: Promise<Map<string, Set<string>[]>> | null = null;
+  let liveMap: Map<string, Set<string>[]> | null = null;
+  const markLive = (m: Map<string, Set<string>[]>, ids: readonly string[], bossId: string) => {
+    if (!m.has(bossId)) m.set(bossId, []);
+    m.get(bossId)!.push(new Set(ids.filter(Boolean)));
+  };
+  const lives = () => (liveP ??= (async () => {
+    const out = new Map<string, Set<string>[]>();
+    try {
+      const rows = (await env.DB.prepare(
+        `SELECT i.id AS id, i.boss_id AS boss_id, i.challenger_user_id AS a, i.partner_user_id AS b,
+                i.partner2_user_id AS c, p.user_id AS d
+           FROM coop_boss_instances i LEFT JOIN coop_boss_participants p ON p.instance_id = i.id
+          WHERE i.status IN ('pending', 'active')`,
+      ).all<{ id: string; boss_id: string; a: string | null; b: string | null; c: string | null; d: string | null }>()).results ?? [];
+      const hunts = new Map<string, { boss: string; ids: Set<string> }>();
+      for (const r of rows) {
+        if (!r.id || !r.boss_id) continue;
+        if (!hunts.has(r.id)) hunts.set(r.id, { boss: r.boss_id, ids: new Set() });
+        const h = hunts.get(r.id)!;
+        for (const u of [r.a, r.b, r.c, r.d]) if (u) h.ids.add(u);
+      }
+      for (const h of hunts.values()) markLive(out, [...h.ids], h.boss);
+    } catch (err) {
+      console.error('[coop-auto] live hunts read failed', err);
+    }
+    liveMap = out;
+    return out;
+  })());
   const bump = (m: Map<string, Map<string, number>>, uid: string, bossId: string) => {
     if (!m.has(uid)) m.set(uid, new Map());
     const per = m.get(uid)!;
@@ -709,16 +750,18 @@ export function makePickContext(env: Env, today: string): PickContext {
   })());
   return {
     async prefsFor(ids) {
-      const [hist, tod, owned] = await Promise.all([history(), todays(), ownedAutoDrops(env, ids)]);
+      const [hist, tod, owned, live] = await Promise.all([history(), todays(), ownedAutoDrops(env, ids), lives()]);
       const mine = hist.get([...ids].sort().join('|')) ?? new Map<string, string>();
       return {
         useful: (bossId) => stillNeeded(owned, ids, bossId),
         today: (bossId) => ids.reduce((n, u) => n + (tod.get(u)?.get(bossId) ?? 0), 0),
         last: (bossId) => mine.get(bossId) ?? '',
+        live: (bossId) => (live.get(bossId) ?? []).some((on) => ids.every((u) => on.has(u))),   // W1267
       };
     },
     add(ids, bossId) {
       if (todayMap) for (const uid of ids) bump(todayMap, uid, bossId);
+      if (liveMap) markLive(liveMap, ids, bossId);   // W1267 — a hunt this sweep made is live too
     },
   };
 }
@@ -923,6 +966,7 @@ export async function sweepCoopAutoHunts(env: Env, _ctx?: ExecutionContext): Pro
           if (pa === null || pb === null) { out.skipped++; continue; }
           const prefs = await picks.prefsFor([a, b]);   // W1209
           const pick = pickAutoBoss(ranks.get(a) ?? 'E', ranks.get(b) ?? 'E', pa + pb, pairFlightsOf(flights, a, b), prefs);
+          if (prefs.live?.(pick.bossId)) { out.skipped++; continue; }   // W1267 — the pair already has this hunt live
           if (await createAutoHunt(env, a, b, today, pick)) { out.created++; picks.add([a, b], pick.bossId); }
         }
       }
@@ -1063,6 +1107,7 @@ async function sweepMatchedPairs(
     if (doneToday.has(pairKey(a, b))) continue;   // today's row already stands
     const prefs = await picks.prefsFor([a, b]);   // W1209
     const pick = pickAutoBoss(ranks.get(a) ?? 'E', ranks.get(b) ?? 'E', (byId.get(a)?.pattern ?? 0) + (byId.get(b)?.pattern ?? 0), pairFlightsOf(flights, a, b), prefs);
+    if (prefs.live?.(pick.bossId)) continue;   // W1267
     if (await createAutoHunt(env, a, b, today, pick, true)) { made++; picks.add([a, b], pick.bossId); }
   }
   return made;
@@ -1151,7 +1196,7 @@ async function sweepAutoTrios(
     if (madeSoFar + made >= MAX_CREATE_PER_RUN) break;
     const prefs = await picks.prefsFor(trio);   // W1209
     const pick = pickAutoTrioBoss(trio.map((u) => ranks.get(u) ?? 'E'), trio.reduce((s, u) => s + (pattern(u) ?? 0), 0), prefs);
-    if (!pick) continue;
+    if (!pick || prefs.live?.(pick.bossId)) continue;   // W1267
     if (await createAutoTrio(env, trio, today, pick)) { made++; picks.add(trio, pick.bossId); }
   }
   return made;

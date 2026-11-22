@@ -58,6 +58,7 @@ import {
   handleRaidsLive,
   MUSTER_AWAY_HOURS,
   raidNeedsHunters,
+  makePickContext,
   waitingEndsAt,
   RAID_MIN_TEAM,
   type RaidView,
@@ -1497,5 +1498,46 @@ describe('W1262 — the waiting clock', () => {
     const now = Date.parse('2026-11-21T02:00:00.000Z');
     expect(waitingEndsAt(now, 30 * 3_600_000)).toBe('2026-11-22T08:00:00.000Z');
     expect(waitingEndsAt(now, 0)).toBe('2026-11-21T02:01:00.000Z');
+  });
+});
+
+// W1267 — owner 2026-11-21, on two identical Twin Maw hunts with Ricin: one live hunt per pair per boss. The
+// midnight pass passes over a boss the group already shares a live hunt on (hand-made or automatic).
+describe('W1267 — the automatic pick never doubles a live hunt', () => {
+  it('a pair moves to another boss that fits when its usual pick is live', () => {
+    const p0 = pickAutoBoss('S', 'S', 40000, null);
+    const p1 = pickAutoBoss('S', 'S', 40000, null, { live: (b) => b === p0.bossId });
+    expect(p1.bossId).not.toBe(p0.bossId);
+    // both steps bosses live: the sized Twin Maw comes back, itself live, and the sweep makes nothing for the pair
+    const live2 = (b: string) => b === p0.bossId || b === p1.bossId;
+    const p2 = pickAutoBoss('S', 'S', 40000, null, { live: live2 });
+    expect(p2.bossId).toBe('the_twin_maw');
+    expect(live2(p2.bossId)).toBe(true);
+  });
+  it('a trio moves too', () => {
+    const t0 = pickAutoTrioBoss(['S', 'S', 'S'], 90000);
+    expect(t0).not.toBeNull();
+    const t1 = pickAutoTrioBoss(['S', 'S', 'S'], 90000, { live: (b) => b === t0!.bossId });
+    expect(t1 && t1.bossId).not.toBe(t0!.bossId);
+  });
+  it('the live map: a live hunt holding the whole group, and hunts the sweep makes count at once', async () => {
+    const rows = [
+      { id: 'i1', boss_id: 'the_twin_maw', a: 'u1', b: 'u2', c: null, d: 'u2' },          // Ricin's hand-made Twin Maw
+      { id: 'i2', boss_id: 'the_threefold_court', a: 'u4', b: 'u5', c: 'u6', d: 'u5' },
+      { id: 'i2', boss_id: 'the_threefold_court', a: 'u4', b: 'u5', c: 'u6', d: 'u6' },
+    ];
+    const env = { DB: { prepare: (sql: string) => ({
+      all: async () => ({ results: sql.includes('LEFT JOIN coop_boss_participants') ? rows : [] }),
+      bind: () => ({ all: async () => ({ results: [] }), first: async () => null }),
+    }) } } as unknown as Env;
+    const ctx = makePickContext(env, '2026-11-21');
+    const pair = await ctx.prefsFor(['u1', 'u2']);
+    expect(pair.live!('the_twin_maw')).toBe(true);
+    expect(pair.live!('the_coursing_dread')).toBe(false);
+    expect((await ctx.prefsFor(['u1', 'u3'])).live!('the_twin_maw')).toBe(false);
+    expect((await ctx.prefsFor(['u4', 'u5', 'u6'])).live!('the_threefold_court')).toBe(true);
+    expect((await ctx.prefsFor(['u4', 'u6', 'u9'])).live!('the_threefold_court')).toBe(false);   // W1210: two shared hunters is a different trio
+    ctx.add(['u1', 'u3'], 'the_gaunt_wardens');
+    expect((await ctx.prefsFor(['u3', 'u1'])).live!('the_gaunt_wardens')).toBe(true);
   });
 });

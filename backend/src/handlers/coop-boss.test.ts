@@ -66,7 +66,7 @@ const TRIO_PENDING_ROW = {
 
 /** Substring-routed D1 mock. `sqlLog` captures every prepared statement so
  *  tests can assert on the cap query's semantics, not just its result. */
-function makeDb(opts: { running?: number; premiumExpiresAt?: number; instance?: Record<string, unknown> | null; rankTier?: string; emoteSentAt?: number; inRaid?: string[] }, sqlLog?: string[]) {
+function makeDb(opts: { running?: number; premiumExpiresAt?: number; instance?: Record<string, unknown> | null; rankTier?: string; emoteSentAt?: number; inRaid?: string[]; joinDup?: boolean }, sqlLog?: string[]) {
   // W692 — the instance the read-path (loadInstance / loadParticipants) resolves to.
   const inst = () => (opts.instance === undefined ? PENDING_ROW : opts.instance) as Record<string, unknown> | null;
   return {
@@ -108,6 +108,7 @@ function makeDb(opts: { running?: number; premiumExpiresAt?: number; instance?: 
             return { results: [], success: true, meta: {} };
           },
           first: async () => {
+            if (sql.includes('W1267 join dup')) return opts.joinDup ? { dup: 1 } : null;
             if (sql.includes('FROM premium_subscriptions')) {
               return opts.premiumExpiresAt != null ? { expires_at_ms: opts.premiumExpiresAt } : null;
             }
@@ -236,6 +237,13 @@ describe('W674 — atomic guarded create insert', () => {
     const body = (await res.json()) as { error: string };
     expect(res.status).toBe(409);
     expect(body.error).toBe('ALREADY_ACTIVE');
+  });
+
+  it('W1267 — the refusal names the friend: "You already have this hunt with partner."', async () => {
+    const res = await handleCoopBossCreate(createReq(), makeEnv(racedDb(true)), session('u1'));
+    const body = (await res.json()) as { error: string; detail: string };
+    expect(res.status).toBe(409);
+    expect(body.detail).toBe('You already have this hunt with partner.');
   });
 
   it('W955 — a lost race with no visible duplicate still reads as ALREADY_ACTIVE, never a cap', async () => {
@@ -1015,5 +1023,25 @@ describe('W1211 — one raid at a time', () => {
     const res = await handleCoopBossCreate(createReq(), makeEnv(makeDb({}, log)), session('u1'));
     expect(res.status).toBe(200);
     expect(log.some((s) => s.includes('AS uid'))).toBe(false);
+  });
+});
+
+// W1267 — owner 2026-11-21, on two identical Twin Maw hunts with Ricin: one live hunt per pair per boss.
+describe('W1267 — answering a summons never makes a second live hunt of the same boss with the same hunter', () => {
+  it('409 ALREADY_ACTIVE, naming the summoner, when the pair already has this boss live', async () => {
+    const log: string[] = [];
+    const res = await handleCoopBossJoin(createReq(), makeEnv(makeDb({ joinDup: true }, log)), session('u2'), 'inst-1');
+    const body = (await res.json()) as { error: string; detail: string };
+    expect(res.status).toBe(409);
+    expect(body.error).toBe('ALREADY_ACTIVE');
+    expect(body.detail).toBe('You already have this hunt with challenger.');
+    expect(log.some((s) => s.includes('UPDATE coop_boss_participants SET joined_at'))).toBe(false);   // nothing stamped
+    const q = log.find((s) => s.includes('W1267 join dup')) ?? '';
+    expect(q).toContain("i.status IN ('pending','active')");
+    expect(q).toContain('i.id <> ?');
+  });
+  it('no live twin: the answer goes through as before', async () => {
+    const res = await handleCoopBossJoin(createReq(), makeEnv(makeDb({ joinDup: false })), session('u2'), 'inst-1');
+    expect(res.status).toBe(200);
   });
 });
