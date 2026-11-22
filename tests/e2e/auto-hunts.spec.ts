@@ -221,3 +221,16 @@ test.describe('W1278 — the multi-day duos in the picker', () => {
     await expect.poll(() => page.evaluate(() => ((window as any).__ahPuts.slice(-1)[0] || { targets: [] }).targets.map((t: { b: string }) => t.b).join(','))).toContain('the_cloven_titan');
   });
 });
+
+// W1279 — owner 2026-11-22: "I would want the rest of the hunts to be on auto so it just doesn't send a bunch of twin maw out".
+test.describe('W1279 — one hunt per target in the Tomorrow preview', () => {
+  test('one target, three partners who can all run it: one "Your target", the rest Auto', async ({ page }) => {
+    await boot(page, { ...PREFS, targets: [{ b: 'the_twin_maw', d: 'any' }],
+      partners: PREFS.partners.map((p) => ({ ...p, targets: [] })) });
+    await page.evaluate(async () => { const ah = (window as any).__autoHunts; await ah.load(); ah.open(); });
+    const pv = page.locator('#ah-overlay .ah-scr:not(.out) [data-ah-r="preview"] .ah-pv');
+    await expect(pv).toHaveCount(4);                     // three partners + the raid draw
+    await expect(pv.filter({ hasText: 'Your target' })).toHaveCount(1);
+    await expect(pv.filter({ hasText: 'chosen at midnight' })).toHaveCount(2);
+  });
+});

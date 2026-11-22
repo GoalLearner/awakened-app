@@ -828,10 +828,14 @@ export function makePickContext(env: Env, today: string): PickContext {
     try {
       const rows = (await env.DB.prepare(
         `SELECT i.id AS id, i.boss_id AS boss_id, i.challenger_user_id AS a, i.partner_user_id AS b,
-                i.partner2_user_id AS c, p.user_id AS d
+                i.partner2_user_id AS c, p.user_id AS d, i.ends_at AS e
            FROM coop_boss_instances i LEFT JOIN coop_boss_participants p ON p.instance_id = i.id
           WHERE i.status IN ('pending', 'active')`,
-      ).all<{ id: string; boss_id: string; a: string | null; b: string | null; c: string | null; d: string | null }>()).results ?? [];
+      ).all<{ id: string; boss_id: string; a: string | null; b: string | null; c: string | null; d: string | null; e?: string | null }>()).results ?? [];
+      // W1279 — a hunt whose window has closed (yesterday's, waiting for the settle pass) is not live: at midnight it
+      // would otherwise hold back the new day's target
+      const nowIso = new Date().toISOString();
+      rows.splice(0, rows.length, ...rows.filter((r) => !r.e || String(r.e) > nowIso));
       const hunts = new Map<string, { boss: string; ids: Set<string> }>();
       for (const r of rows) {
         if (!r.id || !r.boss_id) continue;
@@ -896,8 +900,13 @@ export function makePickContext(env: Env, today: string): PickContext {
         live: (bossId) => (live.get(bossId) ?? []).some((on) => ids.every((u) => on.has(u))),   // W1267
         // W1268 — a first kill to discover; a failed read discovers nothing (the W1209 order stands)
         fresh: (bossId) => !!kills && ids.some((u) => !kills.get(u)?.has(bossId)),
+        // W1279 — owner 2026-11-22, one target (the Twin Maw) put on six partners at once: "I would want the rest of the hunts to
+        // be on auto so it just doesn't send a bunch of twin maw out". A target makes ONE hunt at a time: a boss someone in the
+        // group is already hunting (a live hunt, made earlier in this sweep or by hand) is not a target for this group, so the
+        // rest of the day's hunts go to the other targets, then Auto.
         wants: ids
           .map((u) => { const p = prefsAll.get(u); return { uid: u, bosses: p && p.mode === 'targets' ? p.targets.map((t) => t.b) : [] }; })
+          .map((w) => ({ uid: w.uid, bosses: w.bosses.filter((b) => !(live.get(b) ?? []).some((on) => ids.some((x) => on.has(x)))) }))
           .filter((w) => w.bosses.length),
         day: today,
       };

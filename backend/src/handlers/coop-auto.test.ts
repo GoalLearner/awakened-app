@@ -1730,3 +1730,25 @@ describe('W1278 — the multi-day duos are targets', () => {
     ]);
   });
 });
+
+// W1279 — owner 2026-11-22: one target (the Twin Maw) went out to six partners; "I would want the rest of the hunts to be on auto".
+describe('W1279 — a target makes one hunt at a time; the other partners go to Auto', () => {
+  it('u1 chases the Twin Maw with two walking friends: one Twin Maw (tagged), the other pair on Auto', async () => {
+    const calls: Call[] = [];
+    const fx: SweepFixture = {
+      friends: [{ a: 'u1', b: 'u3' }, { a: 'u1', b: 'u4' }],
+      builds: { u1: NEW, u3: NEW, u4: NEW },
+      ranks: { u1: 'C', u3: 'C', u4: 'C' },
+      stepsThisWeek: { u1: 30000, u3: 40000, u4: 30000 },
+      stepsLastWeek: { u1: 70000, u3: 80000, u4: 70000 },
+      autoPrefs: [{ user_id: 'u1', mode: 'targets', targets_json: '[{"b":"the_twin_maw","d":"any"}]', match_on: 1, raid_on: 1 }],
+    };
+    await sweepCoopAutoHunts(makeEnv(sweepDb(fx, calls)), ctx);
+    const duos = calls.filter((c) => c.sql.includes('INSERT OR IGNORE INTO coop_boss_instances') && String(c.args[12]).split('|').length === 2);
+    expect(duos.length).toBe(2);
+    const maws = duos.filter((c) => c.args[1] === 'the_twin_maw' && c.args[14] === 'u1');
+    expect(maws.length).toBe(1);                                   // one hunt for the one target
+    const other = duos.find((c) => c !== maws[0])!;
+    expect(other.args[14]).toBeNull();                             // the other partner: Auto, no tag
+  });
+});
