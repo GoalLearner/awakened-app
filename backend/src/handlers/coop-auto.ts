@@ -254,7 +254,11 @@ export function pairKey(a: string, b: string): string {
   return a < b ? a + '|' + b : b + '|' + a;
 }
 
-export interface AutoPick { bossId: string; goalSteps: number; goalFlights?: number }
+export interface AutoPick {
+  bossId: string; goalSteps: number; goalFlights?: number;
+  /** W1268 — the hunters whose Auto Hunts target picked it (the card's reason tag); absent = Auto */
+  reason?: string[];
+}
 
 /** W1209 — what the pick weighs beyond fit, for one group. The defaults (every boss useful, nobody
  *  on anything today, nothing hunted before) give the best boss that fits, as before W1207. */
@@ -271,6 +275,13 @@ export interface PickPrefs {
    *  for the same pair 26 minutes later; the pick now passes over it, and a pair whose only option is
    *  live gets no automatic hunt that day (the caller checks). */
   live?: (bossId: string) => boolean;
+  /** W1268 — someone in the group has never beaten this boss: a first kill still to discover (the Bosses
+   *  Slain log shows it dimmed). Owner 2026-11-21: gear the automation to "anything not discovered yet". */
+  fresh?: (bossId: string) => boolean;
+  /** W1268 — each member's Auto Hunts targets (Targets mode), best first. Members on Auto are left out. */
+  wants?: ReadonlyArray<{ uid: string; bosses: readonly string[] }>;
+  /** W1268 — the hunt day ('YYYY-MM-DD'): whose turn it is when members chase different bosses */
+  day?: string;
 }
 
 /** W1209 — which of the bosses that fit (best first) to hunt: one someone in the group still needs a
@@ -281,8 +292,10 @@ export function choosePick<T extends { bossId: string }>(fits: T[], prefs: PickP
   const useful = prefs.useful ?? (() => true);
   const today = prefs.today ?? (() => 0);
   const last = prefs.last ?? (() => '');
+  const fresh = prefs.fresh ?? (() => false);
+  const firsts = fits.filter((p) => fresh(p.bossId));   // W1268 — a boss someone has never beaten comes first
   const need = fits.filter((p) => useful(p.bossId));
-  const pool = need.length ? need : fits;
+  const pool = firsts.length ? firsts : need.length ? need : fits;
   let best = pool[0];
   for (const p of pool.slice(1)) {
     const d = today(p.bossId) - today(best.bossId);
@@ -301,7 +314,9 @@ export const STRETCH_MIN_SHARE = 0.75;
  *  Richie + Anthony on 2026-11-15: ~9,550 a day together fits only the Twin Maw, both own all of
  *  it, so The Coursing Dread at 7,600 instead of 8,000. `list` is best first. Pure. */
 export function stretchPick(list: readonly string[], fits: readonly AutoPick[], rank: number, fit: number, prefs: PickPrefs, partySize = 2): AutoPick | null {
-  if (!prefs.useful || !fits.length || fits.some((p) => prefs.useful!(p.bossId))) return null;
+  if (!prefs.useful) return null;
+  const wanted = (b: string) => prefs.useful!(b) || !!prefs.fresh?.(b);   // W1268 — a first kill is wanted too
+  if (!fits.length || fits.some((p) => wanted(p.bossId))) return null;
   const fitIds = new Set(fits.map((p) => p.bossId));
   const goal = Math.round(fit / 100) * 100;
   for (let i = list.length - 1; i >= 0; i--) {   // weakest first, upward
@@ -312,11 +327,90 @@ export function stretchPick(list: readonly string[], fits: readonly AutoPick[], 
     if (cfg.windowHours !== 24 || (cfg.partySize ?? 2) !== partySize || cfg.metric !== 'steps') continue;
     if (goal >= cfg.goalSteps) continue;   // would fit as printed (it would be in `fits`)
     if (goal < STRETCH_MIN_SHARE * cfg.goalSteps) return null;   // out of reach, and every boss above more so
-    if (!prefs.useful(bossId)) continue;
+    if (!wanted(bossId)) continue;
     if (prefs.live?.(bossId)) continue;   // W1267
     return { bossId, goalSteps: goal };
   }
   return null;
+}
+
+/** W1268 — whether a pair (lowest rank `r`, AUTO_FIT × its walking `fit`, AUTO_FIT × its flights `fl` or null)
+ *  can run this one-day duo boss, and at what goal: as printed when it fits; a steps boss lowered to the
+ *  walking down to STRETCH_MIN_SHARE of its goal (as W1215 does); The Twin Maw sized to the walking (it is
+ *  every pair's fallback). Null when not. The Auto Hunts manager's "Eligible with" uses the same rule. Pure. */
+export function runDuo(bossId: string, r: number, fit: number, fl: number | null): AutoPick | null {
+  if (!AUTO_BOSSES.includes(bossId)) return null;
+  const cfg = COOP_BOSS_CFG[bossId];
+  if (!cfg || (RANK_ORDER[cfg.rank] ?? 0) > r || cfg.windowHours !== 24 || (cfg.partySize ?? 2) !== 2) return null;
+  if (cfg.metric === 'steps') {
+    if (cfg.goalSteps <= fit) return { bossId, goalSteps: cfg.goalSteps };
+    const g = Math.round(fit / 100) * 100;
+    if (bossId === AUTO_SIZED_BOSS) return { bossId, goalSteps: Math.max(AUTO_MIN_GOAL, g) };
+    return g >= STRETCH_MIN_SHARE * cfg.goalSteps ? { bossId, goalSteps: g } : null;
+  }
+  if (fl === null) return null;
+  if (cfg.metric === 'flights') return cfg.goalSteps <= fl ? { bossId, goalSteps: cfg.goalSteps } : null;
+  if (cfg.metric === 'both') {
+    const gf = cfg.goalFlights ?? 0;
+    return cfg.goalSteps <= fit && gf <= fl ? { bossId, goalSteps: cfg.goalSteps, goalFlights: gf } : null;
+  }
+  return null;
+}
+
+/** W1268 — the same for a one-day steps trio (the sized one is The Crossroads Hound). Pure. */
+export function runTrio(bossId: string, r: number, fit: number): AutoPick | null {
+  if (!AUTO_TRIO_BOSSES.includes(bossId)) return null;
+  const cfg = COOP_BOSS_CFG[bossId];
+  if (!cfg || (RANK_ORDER[cfg.rank] ?? 0) > r || cfg.windowHours !== 24 || cfg.partySize !== 3 || cfg.metric !== 'steps') return null;
+  if (cfg.goalSteps <= fit) return { bossId, goalSteps: cfg.goalSteps };
+  const g = Math.round(fit / 100) * 100;
+  if (bossId === AUTO_TRIO_SIZED_BOSS) return { bossId, goalSteps: Math.max(AUTO_TRIO_MIN_GOAL, g) };
+  return g >= STRETCH_MIN_SHARE * cfg.goalSteps ? { bossId, goalSteps: g } : null;
+}
+
+/** W1268 — a Pacific day as a day number, for whose turn it is. */
+export function dayIndex(day?: string | null): number {
+  const t = Date.parse(String(day || '') + 'T00:00:00Z');
+  return Number.isFinite(t) ? Math.floor(t / 86_400_000) : 0;
+}
+
+/** W1268 — the boss a group's Auto Hunts targets pick (owner 2026-11-21, the Claude Design "Auto Hunts" handoff):
+ *  1. a boss two or more members want;
+ *  2. otherwise, when members want different bosses, the member whose turn it is: members in id order, the
+ *     day number picks one, so a pair alternates day by day;
+ *  3. otherwise the one member who has a target that can run.
+ *  Each member's list is best first; a boss the group cannot run (`run` null) or already has live is passed
+ *  over; among equals the one the group is on least today, so one hunter's targets spread across partners.
+ *  reason = the members whose target it is. Null when no member has a target that can run: Auto picks. Pure. */
+export function targetChoice(wants: PickPrefs['wants'], run: (bossId: string) => AutoPick | null, prefs: PickPrefs = {}): AutoPick | null {
+  if (!wants || !wants.length) return null;
+  const live = prefs.live ?? (() => false);
+  const today = prefs.today ?? (() => 0);
+  const ok = new Map<string, AutoPick | null>();
+  const can = (b: string): AutoPick | null => {
+    if (!ok.has(b)) ok.set(b, live(b) ? null : run(b));
+    return ok.get(b) ?? null;
+  };
+  const per = wants
+    .map((w) => ({ uid: w.uid, list: w.bosses.filter((b) => !!can(b)) }))
+    .filter((w) => w.list.length)
+    .sort((x, y) => (x.uid < y.uid ? -1 : x.uid > y.uid ? 1 : 0));
+  if (!per.length) return null;
+  const least = (list: readonly string[]) => {
+    let best = list[0];
+    for (const b of list.slice(1)) if (today(b) < today(best)) best = b;
+    return best;
+  };
+  const by = new Map<string, string[]>();
+  for (const w of per) for (const b of w.list) by.set(b, [...(by.get(b) ?? []), w.uid]);
+  const shared = [...by.entries()].filter(([, u]) => u.length > 1).map(([b]) => b);
+  if (shared.length) {
+    const b = least(shared);
+    return { ...can(b)!, reason: by.get(b)! };
+  }
+  const turn = per[dayIndex(prefs.day) % per.length];
+  const b = least(turn.list);
+  return { ...can(b)!, reason: [turn.uid] };
 }
 
 /** The boss and goal for a pair: among the bosses both ranks allow whose printed goals all fit
@@ -327,6 +421,8 @@ export function pickAutoBoss(rankA: string, rankB: string, pairPattern: number, 
   const r = Math.min(RANK_ORDER[rankA] ?? 0, RANK_ORDER[rankB] ?? 0);
   const fit = AUTO_FIT * Math.max(0, Number(pairPattern) || 0);
   const fl = pairFlights == null || !Number.isFinite(Number(pairFlights)) ? null : AUTO_FIT * Math.max(0, Number(pairFlights));
+  const targeted = targetChoice(prefs.wants, (b) => runDuo(b, r, fit, fl), prefs);   // W1268 — the pair's targets first
+  if (targeted) return targeted;
   const fits: AutoPick[] = [];
   for (const bossId of AUTO_BOSSES) {
     const cfg = COOP_BOSS_CFG[bossId];
@@ -356,6 +452,8 @@ export function pickAutoBoss(rankA: string, rankB: string, pairPattern: number, 
 export function pickAutoTrioBoss(ranks: string[], trioPattern: number, prefs: PickPrefs = {}): AutoPick | null {
   const r = Math.min(...ranks.map((k) => RANK_ORDER[k] ?? 0));
   const fit = AUTO_FIT * Math.max(0, Number(trioPattern) || 0);
+  const targeted = targetChoice(prefs.wants, (b) => runTrio(b, r, fit), prefs);   // W1268 — the trio's targets first
+  if (targeted) return targeted;
   const fits: AutoPick[] = [];
   let open = false;
   for (const bossId of AUTO_TRIO_BOSSES) {
@@ -680,6 +778,9 @@ export function makePickContext(env: Env, today: string): PickContext {
   // W1267 — every live hunt as (boss → the hunters on it); a group "already has" a boss when one live hunt on
   // it holds the whole group: a duo = the pair, a trio = all three (a trio sharing two hunters with another trio
   // on the same boss is a different hunt, and W1210 still gives up to three trios a day).
+  // W1268 — every hunter's Auto Hunts settings (one small table), read once per sweep.
+  let prefsP: Promise<Map<string, AutoPrefs>> | null = null;
+  const allPrefs = () => (prefsP ??= readAllAutoPrefs(env));
   let liveP: Promise<Map<string, Set<string>[]>> | null = null;
   let liveMap: Map<string, Set<string>[]> | null = null;
   const markLive = (m: Map<string, Set<string>[]>, ids: readonly string[], bossId: string) => {
@@ -750,13 +851,19 @@ export function makePickContext(env: Env, today: string): PickContext {
   })());
   return {
     async prefsFor(ids) {
-      const [hist, tod, owned, live] = await Promise.all([history(), todays(), ownedAutoDrops(env, ids), lives()]);
+      const [hist, tod, owned, live, prefsAll, kills] = await Promise.all([history(), todays(), ownedAutoDrops(env, ids), lives(), allPrefs(), coopKillsOf(env, ids)]);
       const mine = hist.get([...ids].sort().join('|')) ?? new Map<string, string>();
       return {
         useful: (bossId) => stillNeeded(owned, ids, bossId),
         today: (bossId) => ids.reduce((n, u) => n + (tod.get(u)?.get(bossId) ?? 0), 0),
         last: (bossId) => mine.get(bossId) ?? '',
         live: (bossId) => (live.get(bossId) ?? []).some((on) => ids.every((u) => on.has(u))),   // W1267
+        // W1268 — a first kill to discover; a failed read discovers nothing (the W1209 order stands)
+        fresh: (bossId) => !!kills && ids.some((u) => !kills.get(u)?.has(bossId)),
+        wants: ids
+          .map((u) => { const p = prefsAll.get(u); return { uid: u, bosses: p && p.mode === 'targets' ? p.targets.map((t) => t.b) : [] }; })
+          .filter((w) => w.bosses.length),
+        day: today,
       };
     },
     add(ids, bossId) {
@@ -820,6 +927,16 @@ async function optOutSet(env: Env): Promise<Set<string>> {
   const out = new Set<string>();
   const rows = await env.DB.prepare('SELECT user_id, friend_user_id FROM coop_auto_optouts').all<{ user_id: string; friend_user_id: string }>();
   for (const r of rows.results ?? []) out.add(r.user_id + '>' + r.friend_user_id);
+  // W1268 — the Auto Hunts switches: "uid>#match" = never matched with a new hunter, "uid>#raid" = never drawn
+  try {
+    const p = await env.DB.prepare('SELECT user_id, match_on, raid_on FROM coop_auto_prefs WHERE match_on = 0 OR raid_on = 0')
+      .all<{ user_id: string; match_on: number; raid_on: number }>();
+    for (const r of p.results ?? []) {
+      if (!r.user_id) continue;
+      if (Number(r.match_on) === 0) out.add(r.user_id + '>#match');
+      if (Number(r.raid_on) === 0) out.add(r.user_id + '>#raid');
+    }
+  } catch (_) { /* before migration 0080: nobody has switched either off */ }
   return out;
 }
 
@@ -854,12 +971,13 @@ export async function createAutoHunt(
         `INSERT OR IGNORE INTO coop_boss_instances
            (id, boss_id, boss_rank, challenger_user_id, partner_user_id, partner2_user_id,
             partner_joined_at, partner2_joined_at, goal_steps, goal_flights, reward_souls,
-            status, starts_at, ends_at, auto, hunt_day, pair_key, matched)
-         VALUES (?, ?, ?, ?, ?, NULL, ?, NULL, ?, ?, ?, 'active', ?, ?, 1, ?, ?, ?)`,
+            status, starts_at, ends_at, auto, hunt_day, pair_key, matched, auto_reason)
+         VALUES (?, ?, ?, ?, ?, NULL, ?, NULL, ?, ?, ?, 'active', ?, ?, 1, ?, ?, ?, ?)`,
       )
       .bind(id, pick.bossId, cfg.rank, challenger, partner, startsAt, pick.goalSteps,
         cfg.metric === 'both' ? (pick.goalFlights ?? cfg.goalFlights ?? null) : null,   // W1195 — a steps + flights boss carries both goals
-        cfg.rewardSouls, startsAt, endsAt, dayKey, pairKey(a, b), matched ? 1 : 0),
+        cfg.rewardSouls, startsAt, endsAt, dayKey, pairKey(a, b), matched ? 1 : 0,
+        pick.reason?.length ? pick.reason.join(',') : null),   // W1268
     env.DB
       .prepare(
         `INSERT OR IGNORE INTO coop_boss_participants (instance_id, user_id, joined_at)
@@ -893,11 +1011,12 @@ export async function createAutoTrio(env: Env, trio: readonly string[], dayKey: 
         `INSERT OR IGNORE INTO coop_boss_instances
            (id, boss_id, boss_rank, challenger_user_id, partner_user_id, partner2_user_id,
             partner_joined_at, partner2_joined_at, goal_steps, goal_flights, reward_souls,
-            status, starts_at, ends_at, auto, hunt_day, pair_key, matched)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, 'active', ?, ?, 1, ?, ?, 0)`,
+            status, starts_at, ends_at, auto, hunt_day, pair_key, matched, auto_reason)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, 'active', ?, ?, 1, ?, ?, 0, ?)`,
       )
       .bind(id, pick.bossId, cfg.rank, challenger, partner, partner2, startsAt, startsAt, pick.goalSteps,
-        cfg.rewardSouls, startsAt, endsAt, dayKey, [challenger, partner, partner2].join('|')),
+        cfg.rewardSouls, startsAt, endsAt, dayKey, [challenger, partner, partner2].join('|'),
+        pick.reason?.length ? pick.reason.join(',') : null),   // W1268
     seat(partner),
     seat(partner2),
   ]);
@@ -1072,6 +1191,7 @@ async function sweepMatchedPairs(
     if (p === null) continue;                                       // no steps on the server: no goal to size
     if (buildW(builds.get(r.user_id)) < AUTO_HUNT_MIN_W) continue;  // the automatic client is not on their phone
     if (optouts.has(r.user_id + '>*')) continue;                    // switched automatic hunts off
+    if (optouts.has(r.user_id + '>#match')) continue;               // W1268 — "Match me with new hunters" off
     pool.push({ id: r.user_id, killDays: Number(r.kill_days) || 0, kills: Number(r.kills) || 0, pattern: p });
   }
   if (pool.length < 2) return 0;
@@ -1238,6 +1358,7 @@ async function sweepAutoRaids(
     if (!seenWithin(seen, uid, nowMs)) continue;               // W1248 — away 24 hours: a stand-in rule's mirror, never drawn
     if (buildW(builds.get(uid)) < AUTO_HUNT_MIN_W) continue;   // the automatic client is not on their phone
     if (optouts.has(uid + '>*')) continue;                     // switched automatic hunts off
+    if (optouts.has(uid + '>#raid')) continue;                 // W1268 — "Join the raid draw" off
     if (cfg.memberOnly && !MEMBERSHIP_OPEN) {
       try { if (!(await readEntitlements(env, uid)).member) continue; } catch { continue; }
     }
@@ -1472,6 +1593,7 @@ async function sweepRaidStandIns(
     if (!uid || busy.has(uid) || !seenWithin(seen, uid, nowMs)) return false;
     if (buildW(builds.get(uid)) < AUTO_HUNT_MIN_W) return false;   // the automatic client is not on their phone
     if (optouts.has(uid + '>*')) return false;                     // switched automatic hunts off
+    if (optouts.has(uid + '>#raid')) return false;                 // W1268 — "Join the raid draw" off
     if (cfg.memberOnly && !MEMBERSHIP_OPEN) {
       try { if (!(await readEntitlements(env, uid)).member) return false; } catch { return false; }
     }
@@ -1908,6 +2030,7 @@ async function sweepRaidWaiting(
       if (!uid || busy.has(uid) || !seenWithin(seen, uid, nowMs)) return false;
       if (buildW(builds.get(uid)) < AUTO_HUNT_MIN_W) return false;
       if (optouts.has(uid + '>*')) return false;
+      if (optouts.has(uid + '>#raid')) return false;   // W1268
       if (cfg.memberOnly && !MEMBERSHIP_OPEN) {
         try { if (!(await readEntitlements(env, uid)).member) return false; } catch { return false; }
       }
@@ -2192,4 +2315,172 @@ export async function handleCoopAutoOptOut(
     await env.DB.prepare('INSERT OR IGNORE INTO coop_auto_optouts (user_id, friend_user_id) VALUES (?, ?)').bind(session.userId, friend).run();
   }
   return jsonOk({ ok: true, auto_off: await listOptOuts(env, session.userId) });
+}
+
+// ── W1268 — GET / PUT /v1/coop-boss/auto/prefs: the Auto Hunts manager ──────────────────────────────────
+// Owner 2026-11-21, the Claude Design "Auto Hunts" handoff, and "DO it all ... obviously allow users to manage how
+// they please but yeah make the automation geared toward items they still want/need/achievements/backgrounds
+// anything not discovered yet". Free for every hunter. Two modes: Auto (the game picks: a first kill, then a
+// missing drop, W1268 + W1209) and Targets (up to 3 bosses, or one drop of a boss, chased first). Partners are the
+// W1094 per-friend switch (POST/DELETE /auto/optout); "Match me" and "Join the raid draw" are stored here.
+
+export const AUTO_TARGET_MAX = 3;
+export interface AutoTarget { b: string; d: string }
+export interface AutoPrefs { mode: 'auto' | 'targets'; targets: AutoTarget[]; match: boolean; raid: boolean }
+export const AUTO_PREFS_DEFAULT: AutoPrefs = { mode: 'auto', targets: [], match: true, raid: true };
+
+/** Up to AUTO_TARGET_MAX targets, one per boss, each an automatic duo or trio boss; d is one of that boss's
+ *  drops or 'any' (an unknown drop becomes 'any'). Pure. */
+export function normalizeTargets(raw: unknown): AutoTarget[] {
+  if (!Array.isArray(raw)) return [];
+  const out: AutoTarget[] = [];
+  const seen = new Set<string>();
+  for (const x of raw) {
+    if (!x || typeof x !== 'object') continue;
+    const b = String((x as { b?: unknown }).b ?? '');
+    let d = String((x as { d?: unknown }).d ?? 'any');
+    if (!(AUTO_BOSSES.includes(b) || AUTO_TRIO_BOSSES.includes(b)) || seen.has(b)) continue;
+    if (d !== 'any' && !(AUTO_BOSS_DROPS[b] ?? []).includes(d)) d = 'any';
+    seen.add(b);
+    out.push({ b, d });
+    if (out.length >= AUTO_TARGET_MAX) break;
+  }
+  return out;
+}
+
+function prefsFromRow(r: { mode?: string | null; targets_json?: string | null; match_on?: number | null; raid_on?: number | null } | null): AutoPrefs {
+  if (!r) return { ...AUTO_PREFS_DEFAULT, targets: [] };
+  let targets: AutoTarget[] = [];
+  try { targets = normalizeTargets(JSON.parse(String(r.targets_json || '[]'))); } catch (_) { targets = []; }
+  return { mode: r.mode === 'targets' ? 'targets' : 'auto', targets, match: Number(r.match_on ?? 1) !== 0, raid: Number(r.raid_on ?? 1) !== 0 };
+}
+
+/** Every stored row (no row = the defaults). A failed read (before migration 0080) is everyone on Auto. */
+export async function readAllAutoPrefs(env: Env): Promise<Map<string, AutoPrefs>> {
+  const out = new Map<string, AutoPrefs>();
+  try {
+    const rows = (await env.DB.prepare('SELECT user_id, mode, targets_json, match_on, raid_on FROM coop_auto_prefs')
+      .all<{ user_id: string; mode: string; targets_json: string; match_on: number; raid_on: number }>()).results ?? [];
+    for (const r of rows) if (r.user_id) out.set(r.user_id, prefsFromRow(r));
+  } catch (err) {
+    console.error('[coop-auto] auto prefs read failed', err);
+  }
+  return out;
+}
+
+/** W1268 — the automatic bosses each of these hunters has beaten in a co-op hunt (any won hunt, hand-made or
+ *  automatic), for "a first kill still to discover". Null when the read failed. */
+export async function coopKillsOf(env: Env, userIds: readonly string[]): Promise<Map<string, Set<string>> | null> {
+  const ids = Array.from(new Set(userIds.filter(Boolean)));
+  const out = new Map<string, Set<string>>();
+  if (!ids.length) return out;
+  const bosses = [...AUTO_BOSSES, ...AUTO_TRIO_BOSSES].map((b) => `'${b}'`).join(', ');   // this file's constants, never input
+  const q = ids.map(() => '?').join(', ');
+  try {
+    const rows = (await env.DB.prepare(
+      `SELECT DISTINCT boss_id, challenger_user_id AS a, partner_user_id AS b, partner2_user_id AS c
+         FROM coop_boss_instances
+        WHERE status = 'completed' AND result = 'success' AND boss_id IN (${bosses})
+          AND (challenger_user_id IN (${q}) OR partner_user_id IN (${q}) OR partner2_user_id IN (${q}))`,
+    ).bind(...ids, ...ids, ...ids).all<{ boss_id: string; a: string | null; b: string | null; c: string | null }>()).results ?? [];
+    const want = new Set(ids);
+    for (const r of rows) {
+      for (const u of [r.a, r.b, r.c]) {
+        if (!u || !want.has(u) || !r.boss_id) continue;
+        if (!out.has(u)) out.set(u, new Set());
+        out.get(u)!.add(r.boss_id);
+      }
+    }
+    return out;
+  } catch (err) {
+    console.error('[coop-auto] co-op kills read failed', err);
+    return null;
+  }
+}
+
+/** What the manager draws: my settings, my friends (switch, walking, rank, their targets, whose turn tomorrow
+ *  is), and which friends can run each automatic boss with me tomorrow (rank + walking, the cron's own rule).
+ *  The phone builds the Tomorrow preview from this, with the same order as targetChoice. */
+async function autoPrefsPayload(env: Env, uid: string): Promise<Record<string, unknown>> {
+  const nowMs = Date.now();
+  const today = ptDayKey(nowMs) || '';
+  const tomorrow = today ? nextDay(today) : '';
+  const mineRow = await env.DB.prepare('SELECT mode, targets_json, match_on, raid_on FROM coop_auto_prefs WHERE user_id = ?')
+    .bind(uid).first<{ mode: string; targets_json: string; match_on: number; raid_on: number }>().catch(() => null);
+  const mine = prefsFromRow(mineRow ?? null);
+  const fr = (await env.DB.prepare(
+    `SELECT CASE WHEN requester_user_id = ?1 THEN recipient_user_id ELSE requester_user_id END AS f
+       FROM friends WHERE status = 'accepted' AND (requester_user_id = ?1 OR recipient_user_id = ?1)`,
+  ).bind(uid).all<{ f: string }>()).results ?? [];
+  const friends = Array.from(new Set(fr.map((r) => r.f).filter((f) => f && f !== uid)));
+  const thisWeek = getAccoladeWeekStart(nowMs);
+  const lastWeek = priorWeekStart(thisWeek);
+  const elapsed = elapsedDaysPt(thisWeek, today);
+  const [optouts, blocks, builds, ranks, stepsNow, stepsLast, flights, opened, aliases, all] = await Promise.all([
+    optOutSet(env), blockSet(env), latestBuildByUser(env, nowMs), rankByUser(env),
+    stepsByUser(env, thisWeek), stepsByUser(env, lastWeek), flightsAvgByUser(env, nowMs),
+    today ? openedRecently(env, today) : Promise.resolve(new Set<string>()),
+    getAliasMap(env, friends), readAllAutoPrefs(env),
+  ]);
+  const pattern = (u: string) => dailyPattern(stepsLast.get(u) ?? 0, stepsNow.get(u) ?? 0, elapsed);
+  const rk = (u: string) => RANK_ORDER[ranks.get(u) ?? 'E'] ?? 0;
+  const pm = pattern(uid);
+  const tIdx = dayIndex(tomorrow);
+  const partners = friends.map((f) => {
+    const their = all.get(f);
+    const lo = uid < f ? uid : f;
+    return {
+      id: f,
+      alias: aliases.get(f) ?? 'Hunter',
+      rank: ranks.get(f) ?? 'E',
+      on: !optouts.has(uid + '>*') && !optouts.has(uid + '>' + f),
+      their_off: optouts.has(f + '>*') || optouts.has(f + '>' + uid) || blocks.has(pairKey(uid, f)),
+      walking: opened.has(f) && buildW(builds.get(f)) >= AUTO_HUNT_MIN_W && pattern(f) !== null,
+      targets: their && their.mode === 'targets' ? their.targets.map((t) => t.b) : [],
+      turn: (tIdx % 2 === 0) === (lo === uid) ? 'me' : 'them',   // targetChoice: members in id order, the day picks
+    };
+  }).sort((x, y) => x.alias.localeCompare(y.alias));
+  const can = (p: { on: boolean; walking: boolean; their_off: boolean }) => p.on && p.walking && !p.their_off && pm !== null;
+  const eligible: Record<string, string[]> = {};
+  for (const b of AUTO_BOSSES) {
+    eligible[b] = partners.filter((p) => {
+      if (!can(p)) return false;
+      const pf = pairFlightsOf(flights, uid, p.id);
+      return !!runDuo(b, Math.min(rk(uid), rk(p.id)), AUTO_FIT * ((pm ?? 0) + (pattern(p.id) ?? 0)), pf === null ? null : AUTO_FIT * pf);
+    }).map((p) => p.id);
+  }
+  for (const b of AUTO_TRIO_BOSSES) {
+    const br = RANK_ORDER[COOP_BOSS_CFG[b]?.rank ?? 'E'] ?? 0;
+    const l = rk(uid) >= br ? partners.filter((p) => can(p) && rk(p.id) >= br).map((p) => p.id) : [];
+    eligible[b] = l.length >= 2 ? l : [];
+  }
+  return {
+    ok: true, mode: mine.mode, targets: mine.targets, match: mine.match, raid: mine.raid,
+    rank: ranks.get(uid) ?? 'E', walking: pm !== null, day: tomorrow, max: AUTO_TARGET_MAX,
+    partners, eligible,
+  };
+}
+
+export async function handleCoopAutoPrefs(request: Request, env: Env, session: SessionPayload, method: string): Promise<Response> {
+  if (method === 'PUT') {
+    const rl = await env.RL_COOP_WRITE.limit({ key: session.userId });
+    if (!rl.success) return jsonError(429, 'RATE_LIMITED', 'Slow down.');
+    let body: Record<string, unknown> | null = null;
+    try { body = (await request.json()) as Record<string, unknown>; } catch (_) { body = null; }
+    if (!body || typeof body !== 'object' || Array.isArray(body)) return jsonError(400, 'INVALID_BODY', 'Request body must be a JSON object.');
+    const cur = prefsFromRow(await env.DB.prepare('SELECT mode, targets_json, match_on, raid_on FROM coop_auto_prefs WHERE user_id = ?')
+      .bind(session.userId).first<{ mode: string; targets_json: string; match_on: number; raid_on: number }>());
+    const next: AutoPrefs = {
+      mode: body.mode === 'targets' ? 'targets' : body.mode === 'auto' ? 'auto' : cur.mode,
+      targets: 'targets' in body ? normalizeTargets(body.targets) : cur.targets,
+      match: typeof body.match === 'boolean' ? body.match : cur.match,
+      raid: typeof body.raid === 'boolean' ? body.raid : cur.raid,
+    };
+    await env.DB.prepare(
+      `INSERT INTO coop_auto_prefs (user_id, mode, targets_json, match_on, raid_on, updated_at) VALUES (?, ?, ?, ?, ?, ?)
+       ON CONFLICT(user_id) DO UPDATE SET mode = excluded.mode, targets_json = excluded.targets_json,
+         match_on = excluded.match_on, raid_on = excluded.raid_on, updated_at = excluded.updated_at`,
+    ).bind(session.userId, next.mode, JSON.stringify(next.targets), next.match ? 1 : 0, next.raid ? 1 : 0, Date.now()).run();
+  }
+  return jsonOk(await autoPrefsPayload(env, session.userId));
 }

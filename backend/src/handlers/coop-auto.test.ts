@@ -59,6 +59,10 @@ import {
   MUSTER_AWAY_HOURS,
   raidNeedsHunters,
   makePickContext,
+  targetChoice,
+  runDuo,
+  normalizeTargets,
+  dayIndex,
   waitingEndsAt,
   RAID_MIN_TEAM,
   type RaidView,
@@ -315,6 +319,8 @@ interface SweepFixture {
   queue?: string[];   // W1248 — the raid finder, oldest first
   doneRows?: Record<string, unknown>[];   // W1254 — finished raids for The Muster
   swapRows?: { instance_id: string; in_user_id: string }[];   // W1254 — stand-ins
+  beaten?: Record<string, string[]>;   // W1268 — automatic bosses each hunter has beaten (default: every hunter, every boss)
+  autoPrefs?: { user_id: string; mode: string; targets_json: string; match_on: number; raid_on: number }[];   // W1268
   myOpens?: { day_pt: string; opens: number }[];   // W1254 — the viewer's draw
 }
 interface Call { sql: string; args: unknown[] }
@@ -323,6 +329,15 @@ function sweepDb(f: SweepFixture, calls: Call[]) {
   const thisWeek = getAccoladeWeekStart(Date.now());
   const lastWeek = priorWeekStart(thisWeek);
   const results = (sql: string, args: unknown[]): unknown[] => {
+    if (sql.includes("result = 'success' AND boss_id IN")) {   // W1268 — coopKillsOf
+      const ids = args.slice(0, args.length / 3).map(String);
+      const every = [...AUTO_BOSSES, ...AUTO_TRIO_BOSSES];
+      return ids.flatMap((u) => (f.beaten ? f.beaten[u] ?? [] : every).map((boss_id) => ({ boss_id, a: u, b: null, c: null })));
+    }
+    if (sql.includes('FROM coop_auto_prefs')) {   // W1268 — readAllAutoPrefs / optOutSet
+      const rows = f.autoPrefs ?? [];
+      return sql.includes('match_on = 0 OR raid_on = 0') ? rows.filter((r) => !r.match_on || !r.raid_on) : rows;
+    }
     if (sql.includes('AS last_seen')) {   // W1248 — lastSeenByUser
       const m = f.lastSeen ?? Object.fromEntries(Object.keys(f.weekOpens ?? {}).map((u) => [u, Date.now()]));
       return Object.entries(m).map(([user_id, last_seen]) => ({ user_id, last_seen }));
@@ -1539,5 +1554,87 @@ describe('W1267 — the automatic pick never doubles a live hunt', () => {
     expect((await ctx.prefsFor(['u4', 'u6', 'u9'])).live!('the_threefold_court')).toBe(false);   // W1210: two shared hunters is a different trio
     ctx.add(['u1', 'u3'], 'the_gaunt_wardens');
     expect((await ctx.prefsFor(['u3', 'u1'])).live!('the_gaunt_wardens')).toBe(true);
+  });
+});
+
+// W1268 — owner 2026-11-21: the Auto Hunts manager ("DO it all ... allow users to manage how they please but yeah make
+// the automation geared toward items they still want/need/achievements/backgrounds anything not discovered yet").
+describe('W1268 — Auto Hunts: targets, first kills, the switches', () => {
+  const base: SweepFixture = {
+    friends: [{ a: 'u1', b: 'u2' }, { a: 'u3', b: 'u1' }, { a: 'u2', b: 'u4' }],
+    builds: { u1: NEW, u2: '3.0.17-w1098', u3: NEW, u4: NEW },
+    ranks: { u1: 'C', u2: 'E', u3: 'C', u4: 'C' },
+    stepsThisWeek: { u1: 30000, u2: 15000, u3: 40000, u4: 20000 },
+    stepsLastWeek: { u1: 70000, u2: 35000, u3: 80000, u4: 50000 },
+  };
+  const run = (b: string) => (b === 'x_locked' ? null : { bossId: b, goalSteps: 1000 });
+  it('targetChoice: a boss both want first, then turns by the day, then the one who has a target; live skipped', () => {
+    const both = targetChoice([{ uid: 'a', bosses: ['b1', 'b2'] }, { uid: 'b', bosses: ['b3', 'b2'] }], run, { day: '2026-11-22' });
+    expect(both!.bossId).toBe('b2');
+    expect(both!.reason).toEqual(['a', 'b']);
+    const w = [{ uid: 'b', bosses: ['b3'] }, { uid: 'a', bosses: ['b1'] }];
+    const d0 = targetChoice(w, run, { day: '2026-11-22' })!, d1 = targetChoice(w, run, { day: '2026-11-23' })!;
+    expect(new Set([d0.reason![0], d1.reason![0]])).toEqual(new Set(['a', 'b']));   // the pair alternates
+    expect(dayIndex('2026-11-23') - dayIndex('2026-11-22')).toBe(1);
+    expect(targetChoice([{ uid: 'a', bosses: ['x_locked', 'b1'] }], run)!.bossId).toBe('b1');   // cannot run: passed over
+    expect(targetChoice([{ uid: 'a', bosses: ['b1', 'b2'] }], run, { live: (b) => b === 'b1' })!.bossId).toBe('b2');
+    expect(targetChoice([{ uid: 'a', bosses: ['x_locked'] }], run)).toBeNull();   // nothing runs: Auto
+    expect(targetChoice([], run)).toBeNull();
+  });
+  it('targetChoice spreads one hunter\'s targets across partners (least today first)', () => {
+    const p = targetChoice([{ uid: 'a', bosses: ['b1', 'b2'] }], run, { today: (b) => (b === 'b1' ? 1 : 0) })!;
+    expect(p.bossId).toBe('b2');
+  });
+  it('runDuo: rank, printed fit, the W1215 stretch, the sized Twin Maw, flights', () => {
+    expect(runDuo('the_coursing_dread', 2, 8000, null)!.goalSteps).toBe(8000);
+    expect(runDuo('the_coursing_dread', 2, 6100, null)!.goalSteps).toBe(6100);    // stretched (>= 75%)
+    expect(runDuo('the_coursing_dread', 2, 5000, null)).toBeNull();
+    expect(runDuo('the_coursing_dread', 1, 9000, null)).toBeNull();               // D-rank pair, C boss
+    expect(runDuo('the_twin_maw', 0, 1200, null)!.goalSteps).toBe(2000);           // sized, floor
+    expect(runDuo('the_hollow_monarch', 3, 9000, null)).toBeNull();               // a flights boss needs flights
+    expect(runDuo('the_hollow_monarch', 3, 9000, 20)).not.toBeNull();
+    expect(runDuo('the_threefold_court', 6, 99999, 99)).toBeNull();               // a trio boss is not a duo
+  });
+  it('choosePick: a boss someone has never beaten comes before a missing drop', () => {
+    const fits = [{ bossId: 'the_coursing_dread', goalSteps: 8000 }, { bossId: 'the_twin_maw', goalSteps: 4000 }];
+    expect(choosePick(fits, { useful: (b) => b === 'the_coursing_dread', fresh: (b) => b === 'the_twin_maw' })!.bossId).toBe('the_twin_maw');
+    expect(choosePick(fits, { useful: (b) => b === 'the_coursing_dread', fresh: () => false })!.bossId).toBe('the_coursing_dread');
+  });
+  it('normalizeTargets: 3 at most, one per boss, automatic bosses only, unknown drop = any', () => {
+    expect(normalizeTargets([
+      { b: 'the_hollow_monarch', d: 'the_hollow_crown' }, { b: 'the_hollow_monarch', d: 'any' }, { b: 'the_grinning_god' },
+      { b: 'the_gaunt_wardens', d: 'nope' }, { b: 'the_threefold_court' }, { b: 'the_twin_maw' },
+    ])).toEqual([
+      { b: 'the_hollow_monarch', d: 'the_hollow_crown' }, { b: 'the_gaunt_wardens', d: 'any' }, { b: 'the_threefold_court', d: 'any' },
+    ]);
+    expect(normalizeTargets('x')).toEqual([]);
+  });
+  it('the sweep: a target picks the boss and stamps whose it was; a first kill steers Auto', async () => {
+    const calls: Call[] = [];
+    await sweepCoopAutoHunts(makeEnv(sweepDb({ ...base, autoPrefs: [{ user_id: 'u3', mode: 'targets', targets_json: '[{"b":"the_coursing_dread","d":"any"}]', match_on: 1, raid_on: 1 }] }, calls)), ctx);
+    const byPair = new Map(calls.filter((c) => c.sql.includes('INSERT OR IGNORE INTO coop_boss_instances')).map((c) => [c.args[12], c]));
+    expect(byPair.get('u1|u3')!.args[1]).toBe('the_coursing_dread');
+    expect(byPair.get('u1|u3')!.args[14]).toBe('u3');
+    expect(byPair.get('u2|u4')!.args[14]).toBeNull();   // nobody's target: Auto, no tag
+    // Auto: the pair owns every Dread drop, but u3 has never beaten the Twin Maw → the Twin Maw (a first kill)
+    const fresh: Call[] = [];
+    const every = [...AUTO_BOSSES, ...AUTO_TRIO_BOSSES];
+    await sweepCoopAutoHunts(makeEnv(sweepDb({ ...base, owned: { u1: [], u3: [] }, beaten: { u1: every, u3: every.filter((b) => b !== 'the_twin_maw'), u2: every, u4: every } }, fresh)), ctx);
+    const fp = new Map(fresh.filter((c) => c.sql.includes('INSERT OR IGNORE INTO coop_boss_instances')).map((c) => [c.args[12], c]));
+    expect(fp.get('u1|u3')!.args[1]).toBe('the_twin_maw');
+  });
+  it('the sweep: "Join the raid draw" off keeps a hunter out of the automatic raid', async () => {
+    const kills = (n: Record<string, number>) => Object.entries(n).map(([user_id, kill_days]) => ({ user_id, kill_days, kills: kill_days * 2, created_at: 0 }));
+    const fx: SweepFixture = {
+      kills: kills({ u1: 7, u2: 6, u3: 5, u4: 4, u5: 4, u6: 5 }),
+      weekOpens: { u1: 30, u2: 12, u3: 9, u4: 5, u5: 7, u6: 20 },
+      builds: { u1: NEW, u2: NEW, u3: NEW, u4: NEW, u5: NEW, u6: NEW },
+    };
+    const on: Call[] = [];
+    const a = await sweepCoopAutoHunts(makeEnv(sweepDb(fx, on)), ctx);
+    const off: Call[] = [];
+    const b = await sweepCoopAutoHunts(makeEnv(sweepDb({ ...fx, autoPrefs: [{ user_id: 'u1', mode: 'auto', targets_json: '[]', match_on: 1, raid_on: 0 }] }, off)), ctx);
+    expect(a.raids).toBe(1);
+    expect(b.raids).toBe(0);   // five left, a raid needs six
   });
 });

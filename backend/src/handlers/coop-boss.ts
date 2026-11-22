@@ -219,6 +219,8 @@ export interface CoopBossRow {
   committed?: number | null;
   // W1164 — 1 = the cron matched two friendless hunters (no Pact Flame), 0 = friends or manual.
   matched?: number | null;
+  // W1268 — the hunters whose Auto Hunts target picked this automatic hunt (comma list); NULL = Auto.
+  auto_reason?: string | null;
 }
 
 interface CoopParticipant {
@@ -480,7 +482,8 @@ function serializeCoop(
     auto: Number(row.auto) === 1,
     ...(Number(row.auto) === 1
       ? { hunt_day: row.hunt_day ?? null, committed: row.committed != null ? Number(row.committed) === 1 : allPosted(row, p),
-          ...(Number(row.matched) === 1 ? { matched: true } : {}) }   // W1164 — a matched partner, not a friend
+          ...(Number(row.matched) === 1 ? { matched: true } : {}),   // W1164 — a matched partner, not a friend
+          ...(row.auto_reason ? { reason: String(row.auto_reason).split(',').filter(Boolean) } : {}) }   // W1268 — the card's tag
       : {}),
     // W695 — open ("Summon & Fill") hunts carry their intended size so the client can
     // render filled seats vs open seats + the leader's START NOW affordance.

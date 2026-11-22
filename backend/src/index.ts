@@ -98,7 +98,7 @@ import {
 import { handleCoopPacts } from './handlers/coop-pacts';
 import { handleStepsRank, refreshStepRankCache } from './handlers/steps-rank';
 // W1094 — automatic friend hunts: the opt-out switch + the two cron sweeps (settle, create).
-import { handleCoopAutoOptOut, handleRaidsLive, sweepCoopAutoHunts, sweepCoopResolve } from './handlers/coop-auto';
+import { handleCoopAutoOptOut, handleCoopAutoPrefs, handleRaidsLive, sweepCoopAutoHunts, sweepCoopResolve } from './handlers/coop-auto';
 // W836 (Train 3, R2) — server-side win-back push for lapsed hunters.
 import { sweepWinBackPushes } from './lib/win-back';
 // W837 (Train 3, R3) — evening warning before a live Pact Flame dies at midnight.
@@ -657,6 +657,9 @@ export default {
           } else if (path === '/v1/coop-boss/raids/live' && method === 'GET') {
             // W1254 — The Muster's Raids tab: every live raid team, names only, plus finished raids and the viewer's draw.
             response = await handleRaidsLive(request, env, session);
+          } else if (path === '/v1/coop-boss/auto/prefs' && (method === 'GET' || method === 'PUT')) {
+            // W1268 — the Auto Hunts manager: mode, targets, matching and the raid draw, with what the manager draws.
+            response = await handleCoopAutoPrefs(request, env, session, method);
           } else if (path === '/v1/coop-boss/auto/optout' && (method === 'POST' || method === 'DELETE')) {
             // W1094 — switch automatic hunts with one friend (or everything, '*') off / back on.
             response = await handleCoopAutoOptOut(request, env, session, method === 'DELETE');
