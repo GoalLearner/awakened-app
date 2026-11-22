@@ -265,17 +265,26 @@ test.describe('Automatic friend hunts (W1094)', () => {
     await boot(page, { instances: [] });
     await page.evaluate(() => (window as any).__pfDemo());
     await page.locator('#pf-overlay [data-pf-open="d4"]').click();
-    const sw = page.locator('#pf-overlay [data-pf-auto="d4"]');
-    await expect(sw).toContainText('Hunting with anthony every day', { timeout: 5_000 });
-    await expect(sw).toContainText('STOP');
+    // W1269 — the per-friend switch moved into Auto Hunts (owner 2026-11-21, the Auto Hunts handoff): not on the card
+    await expect(page.locator('#pf-overlay .pf-sheet')).toHaveClass(/open/, { timeout: 5_000 });
+    await expect(page.locator('#pf-overlay [data-pf-auto="d4"]')).toHaveCount(0);
+    await page.evaluate(() => {
+      (window as any).Auth.coopAutoPrefs = async () => ({ ok: true, mode: 'auto', targets: [], match: true, raid: true, rank: 'C', walking: true, day: '2026-11-22', max: 3,
+        partners: [{ id: 'd4', alias: 'Anthony', rank: 'C', on: true, their_off: false, walking: true, targets: [], turn: 'me' }], eligible: {} });
+      (window as any).__autoHunts.open();
+    });
+    const sw = page.locator('#ah-overlay [data-ah-act="partner:d4"]');
+    await expect(sw).toHaveAttribute('aria-checked', 'true', { timeout: 5_000 });
     await sw.click();
-    await expect(page.locator('#pf-overlay [data-pf-auto="d4"]')).toContainText('RESUME', { timeout: 5_000 });
-    await expect(page.locator('#pf-overlay [data-pf-auto="d4"]')).toContainText('Daily hunts with anthony are off');
-    expect(await page.evaluate(() => (window as any).__coopCalls.optOut)).toEqual(['d4']);
+    await expect(page.locator('#ah-overlay [data-ah-act="partner:d4"]')).toHaveAttribute('aria-checked', 'false');
+    await expect(page.locator('#ah-overlay .ah-prow[data-on="0"]')).toContainText('Off: no daily hunts together');
+    await expect.poll(() => page.evaluate(() => (window as any).__coopCalls.optOut)).toEqual(['d4']);
     // resume it
-    await page.locator('#pf-overlay [data-pf-auto="d4"]').click();
-    await expect(page.locator('#pf-overlay [data-pf-auto="d4"]')).toContainText('STOP', { timeout: 5_000 });
-    expect(await page.evaluate(() => (window as any).__coopCalls.optIn)).toEqual(['d4']);
+    await page.locator('#ah-overlay [data-ah-act="partner:d4"]').click();
+    await expect(page.locator('#ah-overlay [data-ah-act="partner:d4"]')).toHaveAttribute('aria-checked', 'true');
+    await expect.poll(() => page.evaluate(() => (window as any).__coopCalls.optIn)).toEqual(['d4']);
+    await page.evaluate(() => (window as any).__autoHunts.close());
+    await page.waitForTimeout(400);
     // everything off from the header
     await page.locator('#pf-overlay .pf-sheet .pf-sclose').click();
     await expect(page.locator('#pf-overlay .pf-sheet')).not.toHaveClass(/open/, { timeout: 5_000 });

@@ -1908,6 +1908,9 @@
   function coopPacts()         { return _authedFetch('GET',  '/v1/coop-boss/pacts'); }
   // W1094 — automatic friend hunts: switch one friend (a user id) or everything ('*') off / back on.
   function coopAutoOptOut(friendUserId) { return _authedFetch('POST',   '/v1/coop-boss/auto/optout', { friend_user_id: friendUserId }); }
+  // W1269 — Auto Hunts (server W1268): the settings and what the manager draws; PUT saves { mode, targets, match, raid }.
+  function coopAutoPrefs()          { return _authedFetch('GET', '/v1/coop-boss/auto/prefs'); }
+  function coopAutoPrefsSave(body)  { return _authedFetch('PUT', '/v1/coop-boss/auto/prefs', body || {}); }
   function coopAutoOptIn(friendUserId)  { return _authedFetch('DELETE', '/v1/coop-boss/auto/optout', { friend_user_id: friendUserId }); }   // W664 Phase 2 — canonical per-friend daily-streak pacts (server-authoritative)
   // W694 — raid-finder matchmaking (the members raid). join is idempotent + doubles as
   // the poll tick: it returns {matched, instance} once a party forms, else {queued, waiting}.
@@ -2611,6 +2614,8 @@
     coopPacts,
     coopAutoOptOut,   // W1094
     coopAutoOptIn,    // W1094
+    coopAutoPrefs,      // W1269
+    coopAutoPrefsSave,  // W1269
     raidQueueJoin,
     raidQueueLeave,
     raidQueueStatus,

@@ -160,7 +160,7 @@
   const APP_VERSION = '3.0.28';   // W1246 — 3.0.27 APPROVED by 2026-11-19 12:15 PM PST (Apple refused build 664 under 3.0.27: "train version '3.0.27' is closed"), so 3.0.28 opened carrying W1245 (steps: one device per day, the legitimate one with the most). [history] W1233 — 3.0.26 SUBMITTED for review 2026-11-17 (build 655, tag 3.0.26-w1230), so 3.0.27 opened early, as W1205 did (an approval refuses an upload under the approved number), carrying W1233 (duels: your ultimate, special attack and shadows, and the Echo's own). [history] W1220 — 3.0.25 APPROVED 2026-11-16 9:44 AM PST (submitted 2026-11-15 2:06 PM PST, build 651, tag 3.0.25-w1213), so 3.0.26 opened carrying W1220 (strangers' shadows fold into one feed row), W1221 (your pinned row under a board opens your card), W1222 (the like limit says what it is), W1225 (invites say "You both get 500 souls"), W1226 (a refused audio start is caught, not reported as an error), W1227 (six calorie bosses, E to S, dropping the sleep bosses' relics), W1228 (the S calorie boss drops a mythic at 1%), W1229 (a mythic drop is its own announcement to every hunter; the crown on the card and feed names) and W1230 (ultra-rares stay friends-only: the owner wanted only mythics). [history] W1205 — 3.0.25 opened 2026-11-14 BEFORE 3.0.24 was approved (3.0.24 = build 649, waiting for review since 2026-11-13): an upload under 3.0.24 is refused the moment Apple approves it, so build 650 goes up as 3.0.25 carrying W1202 (every boss in the Kill Log, the Raid group), W1203 (no 150k step cap) and W1204 (hunts named by partner). [history] W1169 — 3.0.23 APPROVED 2026-11-08 (submitted 2026-11-07 5:00 PM PST, LIVE 2:33 PM PST on the 8th; almost certainly build 628 = w1161: pins, the Wardrobe tap fix), so 3.0.24 opened carrying W1162-W1169 (the 3.0.23 store notes, the board update, matched hunt partners, Add as friend, late steps reach the board, The Patient Flame falls by itself, earned ultimates behind their flag). [history] W1134 — 3.0.22 APPROVED 2026-11-06 (submitted 4:53 AM PST from build 617 = w1132: the Shadowborn + the Elite Eight, the Rising redrawn, profile cards name the look, every open counted), so 3.0.23 opened carrying W1134 (the Worldgate counts a hunter's steps only after 2 days in the app that week). [history] W1127 — 3.0.21 LIVE on the App Store 2026-11-05 9:34 AM PST (built from w1126: no memberships, kill stamps without a title, the tier crests, the onboarding's "How did you find the Gate?"), so 3.0.22 opened carrying W1127 (the app-open ping says when it is a real open; the server counts every one per Pacific day). [history] W1124 — 3.0.20 LIVE on the App Store 2026-11-01 12:50 PM PST (built from w1120: final standings Sunday, shadows in the public feed, Shadow Army on Status); 3.0.21 opened carrying W1121 (its What's New, never shown: re-keyed to 3.0.21), W1122 (no memberships), W1124 (kill stamp without a title, inlined tier crests) and W1125 (the onboarding's last screen asks how the hunter found the app; W1126 keeps it in place when the keyboard opens). [history] W1114 — 3.0.19 approved 2026-10-30 (submitted 1:45 AM PST, w1113: shadows 1 in 5, armor upgrades, relic power by boss rank, relic cards three across); 3.0.20 opened with the feed's boss rank chips, no What's New entry yet. W1107 — 3.0.18 approved and LIVE 2026-10-28 8:02 AM PST (submitted 2026-10-27 7:41 PM PST, build 602 = w1106: the four steps trios, the Rising's nine looks, the earned line in the Wardrobe, the richer-backup offer); 3.0.19 opened at approval. [history] W1103 — 3.0.17 approved 2026-10-27 (build 600, submitted 2026-10-26 6:21 PM PST: the automatic friend hunts, the earned looks, the two-tab Wardrobe); 3.0.18 opened at approval, carrying W1102 (the app offers back a richer cloud backup). [history] W1097 — 3.0.16 approved + live 2026-10-26 (build 599, the iOS 27 fix); 3.0.17 opened at approval. Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.16 = the post-3.0.15 train, opened 2026-10-23 (W1085): 3.0.15 was submitted 2026-10-22 2:55 PM PST from build 595 (w1083: the tally, the preview row, the security pass) and approved the same day, so the train closed under it. It carries W1084 (the tally leads the 3.0.15 What's New) forward. [history] 3.0.15 = the post-3.0.14 train, opened 2026-10-22 (W1080): 3.0.14 was approved and LIVE 2026-10-21 5:08 PM PST from build 591 (w1074) — the first 592 upload was refused ("train closed"), the sixth time an approval closed a train under a build. It carries W1077/W1078 (sign-out ends the session, cloud save checksum + gzip, socket token out of the URL, invite links ask first) forward. [history] 3.0.14 = the post-3.0.13 train, opened 2026-10-21 (W1074): 3.0.13 was approved and went LIVE 2026-10-20 3:50 AM PST from build 587 (w1068), so it carries W1069 (the floor 100 curve), W1070-W1073 (the ten weekly step and sleep bosses and their drops) and the real-screen screenshots and header Apple asked for (App Review 2.3.3) forward. [history] 3.0.11 = the post-3.0.10 train, opened 2026-10-05: Apple's store lookup showed 3.0.10 LIVE (released 11:35 AM PST that day, built from w1024, so it carried W1023 the 9:45 PM finish-strong reminder and nothing after). It carries forward W1025 (Myrmidon King art), W1026 (one request for every co-op hunt) and W1027 (steps 'today' = the device's day), all pushed under the 3.0.10 tag after that build was cut. [history] 3.0.10 = the post-3.0.9 train, opened 2026-10-04 when the owner passed on Apple's approval of 3.0.9 (submitted 2026-10-02 12:41 PM PST, approved 2026-10-03; carried W1002–W1022: weekly to-do planner, to-dos first in the briefing, the Monday recap, times-a-week vows, the interactive Status tab, the Jump Manual program, the flights-hunt result fix). It carries W1023 (the 9:45 PM finish-strong reminder) forward. First TWO-DIGIT patch: every version compare in the app is numeric (_updVersionNewer, the What's New compare), never a string compare. [history] 3.0.9 = the post-3.0.8 train, opened 2026-09-25 the moment Apple approved 3.0.8 (submitted 4:57 PM PST, approved the same evening; carried W989–W1001: Items overhaul, Resolved + mod view counts, the sectioned Habits tab + to-dos v2, topic edit). [history] 3.0.8 = the post-3.0.7 train, opened 2026-09-24 the moment Apple approved 3.0.7 (build 543, submitted 1:15 AM PST, approved same day; the Worldgate In-App Event was approved in the same hour). Carries forward: the three description corrections (Ranked PvP / Streak Shields / five-hunter raid = Premium) go out WITH this version, since a description only changes with a new version. [history] 3.0.7 carried W968–W987 (vows yours + glory verified, morning briefing v2, hunt results, Worldgate MVPs + weekly line + strike freeze, Community Updates + briefing line, mod preview rows, awakened:// scheme). [history] 3.0.7 = the post-3.0.6 train, opened 2026-09-20 the moment Apple approved 3.0.6 (submitted 3:14 AM PST that day, approved same day) — an approval CLOSES a train, and uploading under the approved number is refused (CFBundleShortVersionString must exceed it). This has now bitten FOUR times; the bump is done at approval, not at upload. [history] 3.0.6 carried W960–W967 (Manage Vows fix, rank-bar hairline, Worldgate kill ceremony, division-up celebration, owner preview row, 3.0.6 release notes). [history] 3.0.4 = the post-3.0.3 train, opened 2026-09-11 because Apple approved 3.0.3 (live 2026-09-09) and an approval closes a train — carries W935 (weekly-board upload fix + Apple Health asked on every onboarding path). [history] 3.0.3 = the post-3.0.2 train, opened 2026-09-07 the morning after Apple approved 3.0.2 (submitted 2026-09-06 4:41 PM PT; approval closes a train — twice-bitten lesson) — carries W917-W919b (Ledger view, Streak Shields deleted, handoff 29) forward under the new number. [history] 3.0.2 = the post-release train, opened 2026-09-04 because Apple closes a train on approval (build 493 under 3.0.1 was refused: CFBundleShortVersionString must exceed the approved 3.0.1) — carries W903 (boss-sheet hotfix) + W905 (Status is the hunter profile again). 3.0.1 "MAKE IT LAND" = the repair release (W882-W890): Wave-2 progression joins cloud sync, the activation funnel is instrumented end to end, silent Wave-2 server failures leave breadcrumbs, the altar routes to a same-day first kill, the Double Dungeon stops reporting false failures and yields when the stair is unavailable, the beat What's New used to eat is chained, and every banked free engage is visible before the tap. 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.28-w1267';
+  const APP_BUILD_TAG = '3.0.28-w1269';
   // W1192 — the relic and boss paintings are WebP now (the app was 376.9 MB, 290 MB of it these PNGs). A path saved
   // before (the drop history, a friend's card, a cloud save) still says .png: the first time one fails to load it is
   // pointed at the .webp beside it, before the image's own error handler can hide it.
@@ -11181,7 +11181,7 @@
         '<div class="pf-blockh"><span class="t">The Chain</span><span class="n">Last 14 days</span></div><div class="pf-chain">' + _pfChain(d) + '</div>' +
         '<div class="pf-legend"><span class="l1"><i></i>Hunted together</span>' + (risk ? '<span class="l2"><i></i>Today — not yet</span>' : '') + '</div>' +
         '<div class="pf-mile">' + mile + '</div>' +
-        _pfAutoRowHtml(d) +   // W1094 — hunting together every day: the switch
+        // W1269 — the daily-hunts switch moved into Auto Hunts (Your Hunts → the status row → Partners)
         '<button class="pf-cta ' + (risk || d.state === 'broken' ? 'pf-warn' : 'pf-safe') + '" data-pf-hunt>' + _PF_SWORD + (risk ? 'Enter Dungeon Together' : d.state === 'broken' ? 'Relight the Flame' : d.state === 'none' ? 'Hunt Together' : 'Hunt Again') + '</button>' +   // W1094 — 'none': never hunted together
       '</div>';
   }
@@ -29473,6 +29473,7 @@
     document.getElementById('carddetail-rarity').innerHTML = _relicTierChipHtml(card, { cls: 'relic-tier--lg', long: true }) +   // W991 — "A-RANK · ULTRA-RARE"
       '<span class="carddetail-rarity-sep" aria-hidden="true">·</span><span class="carddetail-rarity-txt">' + esc(RARITY_LABELS[card.rarity] || card.rarity) + '</span>';
     document.getElementById('carddetail-flavor').textContent = card.flavor || '';
+    try { _ahMountDropCta(card); } catch (_) {}   // W1269 — "Chase this drop" for an automatic boss's drop
     // W495 — set membership tag. Shows "◈ <Set> · n / total set pieces" when the
     // relic belongs to a defined set, so players discover the set + its bonus.
     const cdSet = document.getElementById('carddetail-set');
@@ -40140,6 +40141,7 @@
       key: 'coop:' + (inst.id || inst.boss_id),
       name: them || cfg.name || inst.boss_name || 'Co-op hunt',
       nameHtml: themHtml || '',   // W1243 — the names with their crowns (the plain name stays for sorting and tests)
+      tagHtml: _ahReasonTag(inst),   // W1269 — "Your target" / "<partner> needs this drop" (W1268 instance.reason)
       rank: String(inst.boss_rank || cfg.rank || ''),
       art: getBossArtPath(inst.boss_id),
       pct: both ? Math.min(goal ? cur / goal : 1, gf ? cf / gf : 1) : (goal ? (cur / goal) : 0),
@@ -40235,6 +40237,7 @@
         '</span>' +
         '<span class="hunt-row-bar"><i style="width:' + Math.round(Math.max(2, Math.min(100, (it.pct || 0) * 100))) + '%"></i></span>' +
         '<span class="hunt-row-line">' + esc(it.line || '') + '</span>' +
+        (it.tagHtml || '') +   // W1269
       '</span>';
   }
 
@@ -40764,6 +40767,7 @@
     ov.innerHTML =
       '<div class="hunt-list-sheet" role="dialog" aria-modal="true" aria-label="Your hunts">' +
         '<div class="hunt-list-head"><span>YOUR HUNTS</span><button type="button" class="hunt-list-close" aria-label="Close">✕</button></div>' +
+        _ahStatusRowHtml() +   // W1269 — Auto Hunts, way in A: the setting, and the way to the manager
         items.map(function (it, i) {
           return '<div class="hunt-row hunt-row--in-list' + (it.defeated ? ' hunt-row--won' : '') + '" role="button" tabindex="0" data-hunt-i="' + i + '">' +
             _huntRowHtml(it, 0) + '</div>';
@@ -40773,6 +40777,7 @@
         ((items.length === 1 && offer) ? _huntAddHtml(offer) : '') +
       '</div>';
     document.body.appendChild(ov);
+    try { _ahLoad(); } catch (_) {}   // W1269 — fresh settings for the status row
     const close = function () { try { ov.remove(); } catch (_) {} };
     ov.addEventListener('click', function (e) {
       const t = e.target;
@@ -40795,6 +40800,422 @@
       }
     });
   }
+
+  // ══ W1269 — AUTO HUNTS ═══════════════════════════════════════════════════════════════════════════════
+  // Owner 2026-11-21, the Claude Design "Auto Hunts" handoff (way in A, the status row only; "Make sure no emoji"),
+  // then "DO it all ... obviously allow users to manage how they please but yeah make the automation geared toward
+  // items they still want/need/achievements/backgrounds anything not discovered yet". Free for every hunter.
+  // Server: W1268 — GET/PUT /v1/coop-boss/auto/prefs. Two modes: Auto (the game picks: a first kill, then a missing
+  // drop) and Targets (up to 3 bosses or drops). Partners are the W1094 per-friend switch, moved here from the
+  // friend card. The Tomorrow preview follows the server's targetChoice order. Changes start at midnight PST.
+  const AH_KEY = 'hb_auto_prefs_v1';
+  const AH_MAX = 3;
+  const AH_DUO = ['the_hollow_monarch', 'the_gaunt_wardens', 'the_coursing_dread', 'the_twin_maw', 'the_sundered_choir'];
+  const AH_TRIO = ['the_trinity_colossus', 'the_triune_sentinel', 'the_threefold_court', 'the_crossroads_hound'];
+  // = the backend's AUTO_BOSS_DROPS for the duos (coop-auto.ts); a trio is a boss-only target (its pool is a whole rank's)
+  const AH_DROPS = {
+    the_sundered_choir: ['the_choirmasters_vestment', 'the_discordant_crown', 'the_sundered_grips', 'the_antiphon_striders'],
+    the_hollow_monarch: ['the_hollow_crown', 'the_monarchs_writ', 'crownpiercer'],
+    the_gaunt_wardens: ['the_wardens_vigil', 'the_stairwalkers_treads', 'the_famished_circlet', 'the_gaunt_mantle'],
+    the_coursing_dread: ['the_long_pursuit', 'houndsfang_recurve', 'coursing_houndcall'],
+    the_twin_maw: ['bothsight_longbow', 'twin_fang_cleaver', 'twofold_gaze'],
+  };
+  const AH_PATH = {
+    ret: '<circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.2"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/>',
+    back: '<path d="M15 5l-7 7 7 7"/>', x: '<path d="M6 6l12 12M18 6L6 18"/>', chev: '<path d="M9 5l7 7-7 7"/>',
+    down: '<path d="M6 9l6 6 6-6"/>', plus: '<path d="M12 5v14M5 12h14"/>', chk: '<path d="M5 12.5l4.5 4.5L19 7.5"/>',
+    spark: '<path d="M12 3l2.2 6.8L21 12l-6.8 2.2L12 21l-2.2-6.8L3 12l6.8-2.2z"/>', warn: '<path d="M12 4l9 16H3zM12 10v4.5M12 17.4v.1"/>',
+  };
+  function _ahIc(n, s) {
+    s = s || 14;
+    return '<svg width="' + s + '" height="' + s + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + (AH_PATH[n] || '') + '</svg>';
+  }
+  function _ahHap(k) { try { _hapticTick(k === 'medium' ? 'MEDIUM' : 'LIGHT'); } catch (_) {} }
+  const _ahRM = function () { try { return matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (_) { return false; } };
+  let _ah = null;
+  try { _ah = JSON.parse(localStorage.getItem(AH_KEY) || 'null'); } catch (_) { _ah = null; }
+  let _ahLoading = null, _ahSaveT = 0, _ahStack = [], _ahFresh = null;
+
+  function _ahIsAuto(b) { return AH_DUO.indexOf(b) !== -1 || AH_TRIO.indexOf(b) !== -1; }
+  function _ahIsTrio(b) { return AH_TRIO.indexOf(b) !== -1; }
+  function _ahBoss(b) { try { return (COOP_BOSSES && COOP_BOSSES[b]) || {}; } catch (_) { return {}; } }
+  function _ahName(b) { return _ahBoss(b).name || String(b || '').replace(/^the_/, 'The ').replace(/_/g, ' '); }
+  function _ahCard(id) { try { return (CARDS && CARDS[id]) || null; } catch (_) { return null; } }
+  function _ahOwned(id) { try { return ((((getInventory() || {}).cards || {})[id] || {}).count || 0) > 0; } catch (_) { return false; } }
+  function _ahDrops(b) { return AH_DROPS[b] || []; }
+  function _ahMissing(b) { return _ahDrops(b).filter(function (d) { return !_ahOwned(d); }); }
+  function _ahDropBoss(cardId) { for (const b of AH_DUO) if (_ahDrops(b).indexOf(cardId) !== -1) return b; return null; }
+  function _ahState() {
+    const s = _ah && typeof _ah === 'object' ? _ah : {};
+    return {
+      mode: s.mode === 'targets' ? 'targets' : 'auto',
+      targets: Array.isArray(s.targets) ? s.targets.filter(function (t) { return t && _ahIsAuto(t.b); }).slice(0, AH_MAX) : [],
+      match: s.match !== false, raid: s.raid !== false,
+      partners: Array.isArray(s.partners) ? s.partners : [], eligible: s.eligible || {}, loaded: !!s.ok,
+    };
+  }
+  function _ahPartnerOn(p) { try { return !_coopAutoOffFor(p.id); } catch (_) { return p.on !== false; } }
+  function _ahActive(p) { return _ahPartnerOn(p) && p.walking && !p.their_off; }
+  function _ahEligIds(b) {
+    const st = _ahState(), ids = st.eligible[b] || [];
+    const l = st.partners.filter(function (p) { return ids.indexOf(p.id) !== -1 && _ahActive(p); }).map(function (p) { return p.id; });
+    return _ahIsTrio(b) && l.length < 2 ? [] : l;
+  }
+  function _ahEligLabel(b) {
+    const st = _ahState(), l = _ahEligIds(b), n = st.partners.filter(_ahActive).length;
+    if (!l.length) return '';
+    if (l.length === n && n > 2) return 'all ' + n + ' partners';
+    return l.map(function (id) { const p = st.partners.find(function (x) { return x.id === id; }); return p ? _coopAlias(p.alias) : ''; }).filter(Boolean).join(', ');
+  }
+  function _ahWhat(t, plain) {
+    if (_ahIsTrio(t.b)) return 'Trio hunt · three hunters';
+    const c = t.d && t.d !== 'any' ? _ahCard(t.d) : null;
+    if (c) return plain ? 'Chasing ' + c.name : 'Chasing <b>' + esc(c.name) + '</b>';
+    const miss = _ahMissing(t.b).length;
+    return miss ? 'Any drop you’re missing · ' + miss + ' left' : 'Hunting it again · all drops owned';
+  }
+  function _ahCache() { try { localStorage.setItem(AH_KEY, JSON.stringify(_ah)); } catch (_) {} }
+
+  // ── the server ──
+  function _ahLoad() {
+    if (_ahLoading || !(window.Auth && typeof Auth.coopAutoPrefs === 'function')) return _ahLoading || Promise.resolve(null);
+    _ahLoading = Auth.coopAutoPrefs().then(function (r) {
+      _ahLoading = null;
+      if (r && r.ok) { _ah = r; _ahCache(); _ahReconcile(); _ahRefresh(); }
+      return r;
+    }).catch(function () { _ahLoading = null; return null; });
+    return _ahLoading;
+  }
+  function _ahSave(patch) {
+    const cur = _ahState();
+    _ah = Object.assign({}, _ah || {}, { mode: cur.mode, targets: cur.targets, match: cur.match, raid: cur.raid }, patch || {});
+    _ahCache();
+    _ahRefresh();
+    clearTimeout(_ahSaveT);
+    _ahSaveT = setTimeout(function () {
+      if (!(window.Auth && typeof Auth.coopAutoPrefsSave === 'function')) return;
+      const s = _ahState();
+      Auth.coopAutoPrefsSave({ mode: s.mode, targets: s.targets, match: s.match, raid: s.raid }).then(function (r) {
+        if (r && r.ok) { _ah = r; _ahCache(); _ahRefresh(); }
+      }).catch(function () {});
+    }, 350);
+  }
+  // A chased drop that is now owned: the target turns to "any drop you're missing"; nothing left to win, it goes.
+  function _ahReconcile() {
+    const st = _ahState(); let changed = false; const gone = [];
+    const next = st.targets.map(function (t) {
+      if (!t.d || t.d === 'any' || !_ahOwned(t.d)) return t;
+      changed = true;
+      if (_ahMissing(t.b).length) return { b: t.b, d: 'any' };
+      gone.push(t.b); return null;
+    }).filter(Boolean);
+    if (!changed) return;
+    _ahSave({ targets: next });
+    if (gone.length) { try { showHabitToast('You own every drop from ' + _ahName(gone[0]) + '. It is off your targets.'); } catch (_) {} }
+  }
+
+  // ── the rules the screens show ──
+  function _ahStatus() {
+    const st = _ahState();
+    const stale = st.mode === 'targets' && st.loaded ? st.targets.filter(function (t) { return !_ahEligLabel(t.b); }) : [];
+    if (stale.length) return { k: 'warn', i: 'warn', h: 'No partner can run <b>' + esc(_ahName(stale[0].b)) + '</b> right now', x: '', cta: 'Fix' };
+    if (st.mode === 'auto') return { k: 'auto', i: 'spark', h: 'Auto hunts: <b>Surprise me</b>', x: '', cta: 'Manage' };
+    if (!st.targets.length) return { k: 'auto', i: 'ret', h: 'Targets: <b>none chosen</b>', x: '', cta: 'Add' };
+    return { k: 'tgt', i: 'ret', h: 'Chasing: <b>' + esc(_ahName(st.targets[0].b)) + '</b>', x: st.targets.length > 1 ? '<i>+' + (st.targets.length - 1) + '</i>' : '', cta: 'Change' };
+  }
+  function _ahStatusRowHtml() {
+    const s = _ahStatus();
+    return '<button type="button" class="ah-status ' + s.k + '" data-ah-act="manage">' + _ahIc(s.i, 16) +
+      '<span class="t"><span class="e">' + s.h + '</span>' + s.x + '</span><span class="cta">' + s.cta + _ahIc('chev', 11) + '</span></button>';
+  }
+  // The Tomorrow preview: the server's targetChoice order (a boss both want, then whose turn, then whoever has one).
+  function _ahPlan() {
+    const st = _ahState(), rows = [], used = {};
+    const mine = st.mode === 'targets' ? st.targets.map(function (t) { return t.b; }) : [];
+    const least = function (l) { return l.slice().sort(function (x, y) { return (used[x] || 0) - (used[y] || 0); })[0]; };
+    st.partners.filter(_ahActive).forEach(function (p) {
+      const N = _coopAlias(p.alias), can = function (b) { return !_ahIsTrio(b) && _ahEligIds(b).indexOf(p.id) !== -1; };
+      const my = mine.filter(can), th = (p.targets || []).filter(can);
+      let b = null, why = 'auto', txt = 'Auto';
+      const both = my.filter(function (x) { return th.indexOf(x) !== -1; });
+      if (both.length) { b = least(both); why = 'mine'; txt = 'Your target · ' + N + ' wants it too'; }
+      else if (my.length && th.length) {
+        if (p.turn === 'them') { b = th[0]; why = 'theirs'; txt = N + '’s turn: their target'; }
+        else { b = least(my); why = 'mine'; txt = 'Your target · your turn'; }
+      } else if (my.length) { b = least(my); why = 'mine'; txt = 'Your target'; }
+      else if (th.length) { b = th[0]; why = 'theirs'; txt = N + '’s target'; }
+      if (b) used[b] = (used[b] || 0) + 1;
+      rows.push({ k: p.id, who: N, b: b, why: why, txt: txt });
+    });
+    const tri = mine.find(function (b) { return _ahIsTrio(b) && _ahEligIds(b).length; });
+    if (tri) {
+      const e = _ahEligIds(tri).map(function (id) { const p = st.partners.find(function (x) { return x.id === id; }); return p ? _coopAlias(p.alias) : ''; });
+      rows.push({ k: 'trio', who: e[0] + ' + ' + e[1], b: tri, why: 'mine', txt: 'Your target · trio' });
+    }
+    if (st.match && !st.partners.length) rows.push({ k: 'match', who: 'Matched hunter', b: null, why: 'auto', txt: 'Auto' });
+    if (st.raid) rows.push({ k: 'raid', who: 'Raid team', b: 'the_grinning_god', why: 'raid', txt: 'Raid draw · teams of six' });
+    return rows;
+  }
+
+  // ── parts ──
+  function _ahArt(b, cls) { return '<span class="ah-art ' + (cls || '') + '" style="background-image:url(\'' + esc(getBossArtPath(b)) + '\')"></span>'; }
+  function _ahAsk(b) {
+    if (_ahIsTrio(b)) return 'Three hunters';
+    const m = _ahBoss(b).coopMetric || 'steps';
+    return m === 'both' ? '<span class="st">Steps</span> + <span class="fl">Flights</span>' : m === 'flights' ? '<span class="fl">Flights</span>' : '<span class="st">Steps</span>';
+  }
+  function _ahToggle(act, on, label) {
+    return '<button type="button" class="ah-tg" role="switch" aria-checked="' + !!on + '" aria-label="' + esc(label) + '" data-ah-act="' + act + '"><i></i></button>';
+  }
+  const _AH_COL = ['#7c5cf0', '#0f9488', '#b9660a', '#525680', '#be185d', '#2563eb', '#15803d', '#9333ea'];
+  function _ahColor(s) { let h = 0; s = String(s || ''); for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0; return _AH_COL[Math.abs(h) % _AH_COL.length]; }
+  function _ahTargetCard(t) {
+    const e = _ahEligLabel(t.b);
+    return '<div class="ah-tc' + (e ? '' : ' stale') + (_ahFresh === t.b ? ' ah-new' : '') + '">' +
+      '<button type="button" class="main" data-ah-act="edit:' + t.b + '">' + _ahArt(t.b) + '<span class="b"><span class="nm">' + esc(_ahName(t.b)) + '</span><span class="wh">' + _ahWhat(t) + '</span>' +
+      (e ? '<span class="el">Eligible with: ' + esc(e) + '</span>'
+        : '<span class="no">' + _ahIc('warn', 13) + 'No partner can run this right now</span><span class="fb">Its hunts fall back to Auto.</span>') +
+      '</span></button><button type="button" class="ah-ib rm" data-ah-act="rm:' + t.b + '" aria-label="Remove ' + esc(_ahName(t.b)) + '">' + _ahIc('x', 14) + '</button></div>';
+  }
+  function _ahTargetsBlock() {
+    const st = _ahState(), n = st.targets.length;
+    if (st.mode === 'auto') return '<div class="ah-lab"><span>Targets</span><span>Off</span></div><p class="ah-calm">' + _ahIc('spark', 16) +
+      '<span>The game picks each boss. It favours a boss your group has never beaten, then drops you still lack.' + (n ? ' Your ' + n + ' target' + (n > 1 ? 's are' : ' is') + ' kept.' : '') + '</span></p>';
+    return '<div class="ah-lab"><span>Targets</span><span class="g">' + n + ' of ' + AH_MAX + '</span></div>' + st.targets.map(_ahTargetCard).join('') +
+      (n < AH_MAX ? '<button type="button" class="ah-add" data-ah-act="add">' + _ahIc('plus', 16) + 'Add a target</button>' : '');
+  }
+  function _ahPartnerRow(p) {
+    const on = _ahPartnerOn(p), N = _coopAlias(p.alias);
+    const sub = !on ? 'Off: no daily hunts together' : p.their_off ? '<span class="amb">Off on their side</span>' : !p.walking ? '<span class="amb">Not walking this week</span>' : '';
+    return '<div class="ah-prow" data-on="' + (on ? 1 : 0) + '"><span class="av" style="background:' + _ahColor(p.alias) + '">' + esc(N.charAt(0).toUpperCase()) + '</span>' +
+      '<span class="b"><span class="l"><span class="n">' + esc(N) + '</span>' + _crownFor(p.alias) + '<em>' + esc(p.rank || 'E') + '-Rank</em></span><span class="sub">' + sub + '</span></span>' +
+      _ahToggle('partner:' + p.id, on, 'Daily hunts with ' + N) + '</div>';
+  }
+  function _ahSetRow(k, on, t, s) {
+    return '<div class="ah-prow"><span class="b"><span class="l"><span class="n">' + t + '</span></span><span class="sub">' + s + '</span></span>' + _ahToggle(k, on, t) + '</div>';
+  }
+  function _ahPreviewHtml() {
+    const r = _ahPlan();
+    if (!r.length) return '<p class="ah-none">No automatic hunts tomorrow. Summons still work.</p>';
+    return r.map(function (x) {
+      return '<div class="ah-pv ' + x.why + '">' + (x.b ? _ahArt(x.b, 'sm') : '<span class="ah-art sm auto">' + _ahIc('spark', 16) + '</span>') +
+        '<span class="b"><span class="l1"><b>' + esc(x.who) + '</b> · ' + (x.b ? esc(_ahName(x.b)) : 'chosen at midnight') + '</span><span class="l2">' + (x.why === 'mine' ? _ahIc('ret', 11) : '') + esc(x.txt) + '</span></span></div>';
+    }).join('');
+  }
+  function _ahTmrHtml() {
+    const st = _ahState(), r = _ahPlan(), m = r.filter(function (x) { return x.why === 'mine'; }).length;
+    return '<span>Tomorrow · ' + r.length + ' hunt' + (r.length === 1 ? '' : 's') + '<em>' + (st.mode === 'auto' ? 'Surprise me' : m + ' on your targets') + '</em>' + _ahIc('down', 12) + '</span>';
+  }
+  function _ahDropRows(b) {
+    const st = _ahState(), t = st.targets.find(function (x) { return x.b === b; }), miss = _ahMissing(b).length, any = t && t.d === 'any';
+    if (_ahIsTrio(b)) return '<button type="button" class="ah-any' + (t ? ' on' : '') + '" data-ah-act="' + (t ? 'unchase:' + b : 'chase:' + b + ':any') + '">' + (t ? _ahIc('chk', 14) + 'Chasing this boss' : 'Chase this boss') + '</button>';
+    const lab = miss ? ['Chase any drop I’m missing', 'Chasing any missing drop'] : ['Hunt it again', 'Hunting it again'];
+    return _ahDrops(b).map(function (d) {
+      const c = _ahCard(d) || { name: d, rarity: 'rare' }, own = _ahOwned(d), ultra = c.rarity === 'ultra_rare' || c.rarity === 'mythic';
+      return '<div class="ah-dr' + (own ? ' own' : '') + '"><span class="ck">' + (own ? _ahIc('chk', 12) : '') + '</span><span class="b"><span class="n">' + esc(c.name) + '</span>' +
+        '<span class="ry ' + (ultra ? 'ultra' : 'rare') + '">' + (ultra ? 'Ultra Rare' : 'Rare') + (own ? ' · Owned' : '') + '</span></span>' +
+        (own ? '' : (t && t.d === d ? '<button type="button" class="ah-ch on" data-ah-act="unchase:' + b + '">' + _ahIc('chk', 11) + 'Chasing</button>'
+          : '<button type="button" class="ah-ch" data-ah-act="chase:' + b + ':' + d + '">Chase</button>')) + '</div>';
+    }).join('') + '<button type="button" class="ah-any' + (any ? ' on' : '') + '" data-ah-act="' + (any ? 'unchase:' + b : 'chase:' + b + ':any') + '">' + (any ? _ahIc('chk', 14) + lab[1] : lab[0]) + '</button>';
+  }
+  function _ahPickRow(b, open) {
+    const st = _ahState(), e = _ahEligLabel(b), n = _ahDrops(b).length, own = n - _ahMissing(b).length, t = st.targets.find(function (x) { return x.b === b; });
+    const isOpen = !!e && open === b, rank = _ahBoss(b).rank || 'E';
+    const rt = (t ? '<span class="chs">' + _ahIc('ret', 12) + 'Chasing</span>' : '') + (n ? '<span class="own"><b>' + own + '/' + n + '</b>Owned</span>' : '');
+    return '<div class="ah-pk' + (e ? '' : ' lock') + '" data-open="' + (isOpen ? 1 : 0) + '"><button type="button" class="hd" data-ah-act="' + (e ? 'open' : 'locked') + ':' + b + '" aria-expanded="' + isOpen + '"' + (e ? '' : ' aria-disabled="true"') + '>' +
+      _ahArt(b) + '<span class="b"><span class="nm">' + esc(_ahName(b)) + '</span><span class="mt">' + esc(rank) + '-Rank · ' + _ahAsk(b) + (n && own === n ? ' · All drops owned' : '') + '</span>' +
+      '<span class="' + (e ? 'el' : 'no') + '">' + (e ? 'Eligible with: ' + esc(e) : 'No current partner can run this yet') + '</span></span><span class="rt">' + rt + '</span></button>' +
+      '<div class="dr"><div class="in">' + (e ? _ahDropRows(b) : '') + '</div></div></div>';
+  }
+
+  // ── screens ──
+  function _ahScreenHtml(s) {
+    const st = _ahState();
+    if (s.name === 'picker') {
+      return '<header class="ah-top"><button type="button" class="ah-ib" data-ah-act="back" aria-label="Back">' + _ahIc('back', 20) + '</button><h1>Add a target</h1><span class="ah-sp"></span><span class="ah-cnt">' + st.targets.length + ' of ' + AH_MAX + '</span></header>' +
+        '<div class="ah-body"><div class="ah-lab" style="margin-top:4px"><span>Duo bosses</span><span>Tap for drops</span></div>' + AH_DUO.map(function (b) { return _ahPickRow(b, s.open); }).join('') +
+        '<div class="ah-lab"><span>Trio bosses</span><span>Three hunters</span></div>' + AH_TRIO.map(function (b) { return _ahPickRow(b, s.open); }).join('') + '</div>';
+    }
+    return '<header class="ah-top"><button type="button" class="ah-ib" data-ah-act="back" aria-label="Back">' + _ahIc('back', 20) + '</button><h1>Auto Hunts</h1></header><div class="ah-body">' +
+      '<p class="ah-lede">Steer the hunts made for you each day. Summons you send stay as they are.</p>' +
+      '<div class="ah-mode" role="tablist" data-m="' + st.mode + '"><i class="th"></i><button type="button" role="tab" data-ah-act="mode:auto" aria-selected="' + (st.mode === 'auto') + '"><b>Auto</b><span>Surprise me</span></button>' +
+        '<button type="button" role="tab" data-ah-act="mode:targets" aria-selected="' + (st.mode === 'targets') + '"><b>Targets</b><span>Up to ' + AH_MAX + '</span></button></div>' +
+      '<div class="ah-tgs">' + _ahTargetsBlock() + '</div>' +
+      '<div class="ah-lab"><span>Partners</span><span>Daily hunts with</span></div>' +
+      (st.partners.length ? '<div class="ah-group">' + st.partners.map(_ahPartnerRow).join('') + '</div>' : '<p class="ah-calm">' + _ahIc('spark', 16) + '<span>' + (st.loaded ? 'Add a friend and you hunt together every day.' : 'Loading your partners…') + '</span></p>') +
+      '<div class="ah-lab"><span>More hunters</span></div><div class="ah-group">' +
+        _ahSetRow('match', st.match, 'Match me with new hunters', 'When a seat is free, pair me with an active hunter') +
+        _ahSetRow('raid', st.raid, 'Join the raid draw', 'The Grinning God · teams of six') + '</div>' +
+      '<div class="ah-lab" data-ah-anchor="tmr"><span>Tomorrow’s hunts</span><span>Preview</span></div><div class="ah-group" data-ah-r="preview">' + _ahPreviewHtml() + '</div>' +
+      '<p class="ah-foot">Changes start at midnight PST.</p></div>' +
+      '<button type="button" class="ah-tmr" data-ah-act="tmr">' + _ahTmrHtml() + '</button>';
+  }
+  function _ahRoot() { return document.getElementById('ah-overlay'); }
+  function _ahPaint(dir) {
+    const root = _ahRoot(); if (!root) return;
+    const s = _ahStack[_ahStack.length - 1]; if (!s) return;
+    const old = root.querySelector('.ah-scr:not(.out)');
+    const n = document.createElement('div');
+    n.className = 'ah-scr';
+    n.innerHTML = _ahScreenHtml(s);
+    root.insertBefore(n, root.querySelector('.ah-ovh'));
+    n.scrollTop = s.y || 0;
+    if (s.name === 'manager') {
+      const chk = function () { const a = n.querySelector('[data-ah-anchor="tmr"]'), b = n.querySelector('.ah-tmr'); if (a && b) b.classList.toggle('hide', a.offsetTop < n.scrollTop + n.clientHeight - 64); };
+      n.addEventListener('scroll', chk, { passive: true }); setTimeout(chk, 0);
+    }
+    if (old) {
+      if (dir && !_ahRM()) {
+        n.classList.add(dir > 0 ? 'inR' : 'inL'); old.classList.add('out', dir > 0 ? 'outL' : 'outR');
+        setTimeout(function () { try { old.remove(); } catch (_) {} }, 350);
+        setTimeout(function () { n.classList.remove('inR', 'inL'); }, 900);
+      } else { old.remove(); if (dir) n.classList.add('fade'); }
+    } else if (dir) n.classList.add(_ahRM() ? 'fade' : 'inR');
+    _ahFresh = null;
+  }
+  // Repaint the top screen in place (scroll kept); the hunt list's status row and an open co-op sheet follow.
+  function _ahRefresh() {
+    const root = _ahRoot();
+    if (root) {
+      const s = _ahStack[_ahStack.length - 1], cur = root.querySelector('.ah-scr:not(.out)');
+      if (s && cur) { const y = cur.scrollTop; cur.innerHTML = _ahScreenHtml(s); cur.scrollTop = y; cur.dispatchEvent(new Event('scroll')); }
+      _ahSheetPaint();
+    }
+    try { const row = document.querySelector('.hunt-list-sheet .ah-status'); if (row) row.outerHTML = _ahStatusRowHtml(); } catch (_) {}
+    try { const box = document.getElementById('carddetail-ah'); if (box && box.dataset.card) _ahMountDropCta(_ahCard(box.dataset.card)); } catch (_) {}
+    try { if (_coopSheet && _coopSheet.cfg && _ahIsAuto(_coopSheet.cfg.id) && document.querySelector('[data-ah-coop]')) renderCoopSheet(); } catch (_) {}
+  }
+  function _ahOpen(stack) {
+    let root = _ahRoot();
+    if (!root) {
+      root = document.createElement('div');
+      root.id = 'ah-overlay'; root.className = 'ahm';
+      root.setAttribute('role', 'dialog'); root.setAttribute('aria-modal', 'true'); root.setAttribute('aria-label', 'Auto Hunts');
+      root.innerHTML = '<div class="ah-ovh"></div>';
+      document.body.appendChild(root);
+    }
+    _ahStack = stack || [{ name: 'manager' }];
+    _ahPaint(1);
+    _ahLoad();
+  }
+  function _ahClose() {
+    const root = _ahRoot(); if (!root) return;
+    const cur = root.querySelector('.ah-scr:not(.out)');
+    if (cur && !_ahRM()) { cur.classList.add('outR'); setTimeout(function () { try { root.remove(); } catch (_) {} }, 340); } else root.remove();
+    _ahStack = [];
+    try { const row = document.querySelector('.hunt-list-sheet .ah-status'); if (row) row.outerHTML = _ahStatusRowHtml(); } catch (_) {}
+  }
+  function _ahPush(s) { const root = _ahRoot(), cur = root && root.querySelector('.ah-scr:not(.out)'); if (cur && _ahStack.length) _ahStack[_ahStack.length - 1].y = cur.scrollTop; _ahStack.push(s); _ahPaint(1); }
+  function _ahPop() { if (_ahStack.length < 2) { _ahClose(); return; } _ahStack.pop(); _ahPaint(-1); }
+
+  // ── the swap sheet (also over a boss or drop page) ──
+  let _ahSwap = null;
+  function _ahSheetPaint() {
+    let ov = document.getElementById('ah-sheet-ov');
+    if (!_ahSwap) { if (ov) ov.remove(); return; }
+    const st = _ahState(), fresh = !ov;
+    if (!ov) { ov = document.createElement('div'); ov.id = 'ah-sheet-ov'; ov.className = 'ahm ah-sheetov'; document.body.appendChild(ov); }
+    ov.innerHTML = '<div class="ah-dim" data-ah-act="sheetclose"></div><div class="ah-sheet" role="dialog" aria-modal="true"><h3>Three targets set</h3><p>Choose one to give up for <b>' + esc(_ahName(_ahSwap.b)) + '</b>.</p>' +
+      st.targets.map(function (t) { return '<button type="button" class="ah-sw" data-ah-act="swap:' + t.b + '">' + _ahArt(t.b, 'sm') + '<span class="b"><span class="nm">' + esc(_ahName(t.b)) + '</span><span class="wh">' + esc(_ahWhat(t, 1)) + '</span></span><span class="go">Swap</span></button>'; }).join('') +
+      '<button type="button" class="ah-btn2" data-ah-act="sheetclose">Keep my targets</button></div>';
+    if (fresh && !_ahRM()) ov.classList.add('enter');
+  }
+
+  // ── actions ──
+  function _ahChase(b, d) {
+    const st = _ahState(), t = st.targets.find(function (x) { return x.b === b; });
+    let targets = st.targets.slice();
+    if (t) targets = targets.map(function (x) { return x.b === b ? { b: b, d: d } : x; });
+    else if (targets.length >= AH_MAX) { _ahSwap = { b: b, d: d }; _ahHap('light'); _ahSheetPaint(); return; }
+    else targets.push({ b: b, d: d });
+    _ahFresh = b; _ahHap('medium');
+    _ahSave({ mode: 'targets', targets: targets });
+    if (_ahStack.length && _ahStack[_ahStack.length - 1].name === 'picker' && !t) setTimeout(function () { if (_ahStack.length && _ahStack[_ahStack.length - 1].name === 'picker') _ahPop(); }, _ahRM() ? 200 : 460);
+  }
+  const _AH_ACT = {
+    manage: function () { _ahHap('light'); _ahOpen([{ name: 'manager' }]); },
+    back: function () { _ahHap('light'); _ahPop(); },
+    mode: function (m) { if (_ahState().mode === m) return; _ahHap('light'); _ahSave({ mode: m }); },
+    add: function () { _ahHap('light'); _ahPush({ name: 'picker' }); },
+    edit: function (b) { _ahHap('light'); _ahPush({ name: 'picker', open: b }); },
+    rm: function (b, _, el) {
+      _ahHap('light');
+      const card = el && el.closest('.ah-tc'); if (card && !_ahRM()) card.classList.add('ah-leave');
+      setTimeout(function () { _ahSave({ targets: _ahState().targets.filter(function (x) { return x.b !== b; }) }); }, _ahRM() ? 0 : 210);
+    },
+    partner: function (id) {
+      _ahHap('light');
+      const off = !_coopAutoOffFor(id);
+      try { if (off) _coopAutoOff = _coopAutoOff.concat([String(id)]); else _coopAutoOff = _coopAutoOff.filter(function (x) { return x !== String(id) && x !== '*'; }); } catch (_) {}
+      _ahRefresh();
+      _coopAutoToggle(String(id), off).then(function () { _ahLoad(); });
+    },
+    match: function () { _ahHap('light'); _ahSave({ match: !_ahState().match }); },
+    raid: function () { _ahHap('light'); _ahSave({ raid: !_ahState().raid }); },
+    open: function (b) { const s = _ahStack[_ahStack.length - 1]; if (!s) return; s.open = s.open === b ? null : b; _ahHap('light'); _ahRefresh(); },
+    locked: function (b, _, el) { _ahHap('light'); const r = el && el.closest('.ah-pk'); if (r && !_ahRM()) { r.classList.remove('nudge'); void r.offsetWidth; r.classList.add('nudge'); } },
+    chase: function (b, d) { if (_ahIsAuto(b)) _ahChase(b, d || 'any'); },
+    unchase: function (b) { _ahHap('light'); _ahSave({ targets: _ahState().targets.filter(function (x) { return x.b !== b; }) }); },
+    swap: function (old) {
+      const s = _ahSwap; if (!s) return;
+      _ahSwap = null; _ahFresh = s.b; _ahHap('medium');
+      _ahSave({ mode: 'targets', targets: _ahState().targets.map(function (t) { return t.b === old ? { b: s.b, d: s.d } : t; }) });
+      if (_ahStack.length && _ahStack[_ahStack.length - 1].name === 'picker') setTimeout(function () { if (_ahStack.length && _ahStack[_ahStack.length - 1].name === 'picker') _ahPop(); }, _ahRM() ? 200 : 460);
+    },
+    sheetclose: function () { _ahSwap = null; _ahSheetPaint(); },
+    tmr: function () { _ahHap('light'); const root = _ahRoot(), cur = root && root.querySelector('.ah-scr:not(.out)'), a = cur && cur.querySelector('[data-ah-anchor="tmr"]'); if (a) cur.scrollTo({ top: a.offsetTop - 70, behavior: _ahRM() ? 'auto' : 'smooth' }); },
+  };
+  document.addEventListener('click', function (e) {
+    const el = e.target && e.target.closest && e.target.closest('[data-ah-act]');
+    if (!el || el.disabled || el.getAttribute('aria-disabled') === 'true' && !/^locked:/.test(el.dataset.ahAct)) return;
+    const parts = String(el.dataset.ahAct).split(':');
+    const fn = _AH_ACT[parts[0]]; if (!fn) return;
+    e.preventDefault(); e.stopPropagation();
+    try { fn(parts[1], parts[2], el); } catch (err) { try { console.error('[auto-hunts]', err); } catch (_) {} }
+  }, true);
+
+  // ── Chase this: the co-op boss sheet and the relic page ──
+  function _ahChaseHtml(b, d) {
+    const st = _ahState(), t = st.targets.find(function (x) { return x.b === b; }), isDrop = d && d !== 'any', lab = isDrop ? 'drop' : 'boss';
+    const on = st.mode === 'targets' && t && (!isDrop || t.d === d);
+    if (on) return '<div class="ah-chasing"><span class="s">' + _ahIc('ret', 18) + '<span><b>Chasing</b><em>' + esc(isDrop ? 'From midnight PST' : _ahWhat(t, 1).replace('Chasing ', '')) + '</em></span></span><button type="button" data-ah-act="unchase:' + b + '">Stop</button></div>';
+    if (st.loaded && !_ahEligLabel(b)) return '<button type="button" class="ah-btn1" disabled>No current partner can run this yet</button>';
+    if (!t && st.targets.length >= AH_MAX) return '<p class="ah-note3">' + AH_MAX + ' of ' + AH_MAX + ' targets set.</p><button type="button" class="ah-btn1" data-ah-act="chase:' + b + ':' + (d || 'any') + '">' + _ahIc('ret', 17) + 'Swap a target for this ' + lab + '</button>';
+    return '<button type="button" class="ah-btn1" data-ah-act="chase:' + b + ':' + (d || 'any') + '">' + _ahIc('ret', 17) + 'Chase this ' + lab + '</button>';
+  }
+  function _ahChaseBossHtml(b) {
+    if (!_ahIsAuto(b)) return '';
+    if (!_ah) _ahLoad();
+    return '<div class="ahm-inline" data-ah-coop="' + esc(b) + '">' + _ahChaseHtml(b, 'any') + '</div>';
+  }
+  function _ahMountDropCta(card) {
+    const ov = document.getElementById('carddetail-overlay'); if (!ov || !card) return;
+    const b = _ahDropBoss(card.id);
+    let box = document.getElementById('carddetail-ah');
+    if (!b) { if (box) box.remove(); return; }
+    if (!box) {
+      box = document.createElement('div'); box.id = 'carddetail-ah'; box.className = 'ahm-inline';
+      const after = document.getElementById('carddetail-flavor');
+      if (after && after.parentNode) after.parentNode.insertBefore(box, after.nextSibling); else ov.appendChild(box);
+    }
+    box.dataset.card = card.id;
+    if (!_ah) _ahLoad();
+    const e = _ahEligLabel(b);
+    box.innerHTML = _ahOwned(card.id) ? '<p class="ah-note3">Owned.</p>'
+      : '<div class="ah-from">' + _ahArt(b, 'sm') + '<span class="b"><span>Drops from <b>' + esc(_ahName(b)) + '</b> in co-op</span><span class="' + (e ? 'el' : 'no') + '">' + (e ? 'Eligible with: ' + esc(e) : (_ahState().loaded ? 'No current partner can run this yet' : '')) + '</span></span></div>' + _ahChaseHtml(b, card.id);
+  }
+  // The hunt card's reason tag (W1268 instance.reason): "Your target" or "<partner> needs this drop"; none on Auto.
+  function _ahReasonTag(inst) {
+    try {
+      const rs = Array.isArray(inst.reason) ? inst.reason.map(String) : [];
+      if (!rs.length) return '';
+      const me = String(_coopMyId() || '');
+      if (me && rs.indexOf(me) !== -1) return '<span class="ah-tag mine">' + _ahIc('ret', 10) + 'Your target</span>';
+      const o = (_coopView(inst).others || []).find(function (p) { return p && rs.indexOf(String(p.user_id)) !== -1; });
+      return '<span class="ah-tag theirs">' + esc(o && o.alias ? _coopAlias(o.alias) : 'Your partner') + ' needs this drop</span>';
+    } catch (_) { return ''; }
+  }
+  try { window.__autoHunts = { open: _ahOpen, close: _ahClose, state: _ahState, load: _ahLoad, plan: _ahPlan, status: _ahStatus, list: function () { _openHuntList(); }, setCoop: function (l) { _huntCoop.list = l; } }; } catch (_) {}
 
   function renderHabits(opts) {
     opts = opts || {};
@@ -65955,14 +66376,15 @@
     const _feeFoot = _fee > 0
       ? 'Entrance: ' + _fee + ' souls each · every hunter earns ' + cfg.coopRewardSouls + ' souls ' + _relicPromise(cfg) + '.'
       : 'Every hunter earns ' + cfg.coopRewardSouls + ' souls ' + _relicPromise(cfg) + '.';
-    const cta = _rankLocked
+    // W1269 — "Chase this boss" for an automatic boss, above the summon (the Auto Hunts handoff's ChaseButton)
+    const cta = (cfg && _ahIsAuto(cfg.id) ? _ahChaseBossHtml(cfg.id) : '') + (_rankLocked
       ? '<button class="coop-cta" disabled style="opacity:.5;cursor:not-allowed">REACH ' + esc(cfg.rank) + ' RANK TO SUMMON</button>' +
         '<p class="coop-foot">This hunt requires ' + esc(cfg.rank) + ' rank to summon. Keep climbing.</p>'
       : _brokeLocked
       ? '<button class="coop-cta" disabled style="opacity:.5;cursor:not-allowed">NEED ' + (_fee - _bal) + ' MORE SOULS</button>' +
         '<p class="coop-foot">' + _feeFoot + '</p>'
       : '<button class="coop-cta" data-coop-action="invite"' + dis + '>' + (_isRange ? 'RECRUIT YOUR PARTY' : _maxParty === 3 ? 'RECRUIT TWO HUNTERS' : 'RECRUIT A HUNTER') + '</button>' +
-        '<p class="coop-foot">' + _feeFoot + '</p>';
+        '<p class="coop-foot">' + _feeFoot + '</p>');
     // W694 — the raid finder: queue to be matched with other seeking members when you
     // can't field a full party from your own friends. Only offered when eligible to summon.
     const finderCta = (cfg.matchmaking && !_rankLocked && !_brokeLocked)
@@ -66674,7 +67096,7 @@
           return '<div class="coop-friend coop-friend--locked" aria-disabled="true">' +
             '<span class="coop-friend-name">' + esc(_coopAlias(f.alias)) + _crownFor(f.alias) + '</span>' +
             rankBadge +
-            '<span class="coop-friend-need">On a hunt with you</span>' +
+            '<span class="coop-friend-need coop-friend-need--dup">' + _ahIc('warn', 13) + 'You already have this hunt with ' + esc(_coopAlias(f.alias)) + '.</span>' +   // W1269 — the handoff's RefusalNote
           '</div>';
         }
         // W483 \u2014 an ally below the boss's rank is shown (with their rank) but NOT invitable

@@ -37487,3 +37487,175 @@ button.mx-sh { cursor: pointer; min-height: 40px; }
   .pc-pin3w > .g, .pc-pin3w > .rim, .pc-pin--club300k::before, .pc-pin--club300k .sw, .pc-pin--club300k .st,
   .pc-pin--club300k .lbl, .pc-pin3w > .e { animation: none; }
 }
+
+/* ══ W1269 — AUTO HUNTS (the Claude Design handoff "Auto Hunts", way in A). Scoped: .ahm = the manager / sheet
+   overlays and the inline Chase blocks; .ah-status and .ah-tag ride the Your Hunts sheet. Line icons only. ══ */
+.ahm,.ahm-inline,.ah-status,.ah-tag{--ah-sheet:#0f0e20;--ah-card:linear-gradient(180deg,#191838,#121128);--ah-line:rgba(239,68,68,.32);--ah-gold:#f5b842;--ah-gold2:#ffd574;--ah-violet:#a78bfa;--ah-red:#ef4444;--ah-amber:#f5a524;--ah-steps:#4ade80;--ah-flights:#f59e0b;--ah-teal:#5eead4;--ah-ultra:#f472b6;--ah-ink:#f4f4fb;--ah-ink2:#9a9cc0;--ah-ink3:#5d5f7e;--ah-hair:rgba(255,255,255,.08);--ah-serif:'Cinzel',Georgia,serif;--ah-mono:'JetBrains Mono',ui-monospace,monospace;--ah-sans:-apple-system,BlinkMacSystemFont,'SF Pro Text','Segoe UI',system-ui,sans-serif;--ah-ease:cubic-bezier(.2,.8,.2,1)}
+#ah-overlay{position:fixed;inset:0;z-index:12500;overflow:hidden;background:var(--ah-sheet);color:var(--ah-ink);font:400 14px/1.3 var(--ah-sans);-webkit-user-select:none;user-select:none}
+.ahm *{box-sizing:border-box}
+.ahm button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cursor:pointer;-webkit-tap-highlight-color:transparent;text-align:inherit}
+.ahm p,.ahm h1,.ahm h2,.ahm h3{margin:0}
+.ahm .ah-scr{position:absolute;inset:0;display:flex;flex-direction:column;overflow-x:hidden;overflow-y:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;background:var(--ah-sheet);padding-top:env(safe-area-inset-top,0px)}
+.ahm .ah-scr::-webkit-scrollbar{display:none}
+.ahm .ah-scr>*{flex:none}
+@keyframes ah-inR{from{transform:translateX(100%)}}
+@keyframes ah-outL{to{transform:translateX(-28%);opacity:.25}}
+@keyframes ah-inL{from{transform:translateX(-28%);opacity:.25}}
+@keyframes ah-outR{to{transform:translateX(100%)}}
+@keyframes ah-fade{from{opacity:0}}
+@keyframes ah-new{from{opacity:0;transform:translateY(10px) scale(.98)}}
+@keyframes ah-leave{to{opacity:0;transform:translateX(-18px)}}
+@keyframes ah-nudge{25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+@keyframes ah-up{from{transform:translateY(100%)}}
+.ahm .ah-scr.inR{animation:ah-inR .34s var(--ah-ease) both;z-index:2;box-shadow:-24px 0 48px rgba(0,0,0,.5)}
+.ahm .ah-scr.outL{animation:ah-outL .34s var(--ah-ease) both}
+.ahm .ah-scr.inL{animation:ah-inL .34s var(--ah-ease) both}
+.ahm .ah-scr.outR{animation:ah-outR .34s var(--ah-ease) both;z-index:2}
+.ahm .ah-scr.fade{animation:ah-fade .3s both}
+.ahm .ah-scr.inR .ah-body>*{animation:ah-new .36s var(--ah-ease) both;animation-delay:120ms}
+.ahm .ah-scr.inR .ah-body>*:nth-child(2){animation-delay:160ms}.ahm .ah-scr.inR .ah-body>*:nth-child(3){animation-delay:200ms}.ahm .ah-scr.inR .ah-body>*:nth-child(4){animation-delay:240ms}.ahm .ah-scr.inR .ah-body>*:nth-child(5){animation-delay:280ms}.ahm .ah-scr.inR .ah-body>*:nth-child(6){animation-delay:320ms}.ahm .ah-scr.inR .ah-body>*:nth-child(7){animation-delay:360ms}.ahm .ah-scr.inR .ah-body>*:nth-child(n+8){animation-delay:400ms}
+.ahm .ah-new{animation:ah-new .32s var(--ah-ease) both}
+.ahm .ah-leave{animation:ah-leave .2s ease both}
+.ahm .nudge{animation:ah-nudge .24s ease}
+.ahm .ah-sp{flex:1}
+.ahm .ah-top{position:sticky;top:0;z-index:3;display:flex;align-items:center;min-height:58px;padding:12px 6px 2px;background:rgba(15,14,32,.9);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px)}
+.ahm .ah-top h1{font:700 21px/1 var(--ah-serif);letter-spacing:.03em;text-transform:uppercase;white-space:nowrap}
+.ahm .ah-cnt{padding-right:12px;font:800 10px/1 var(--ah-mono);letter-spacing:.18em;text-transform:uppercase;color:var(--ah-gold)}
+.ahm .ah-ib{flex:none;width:44px;height:44px;display:grid;place-items:center;color:var(--ah-ink2)}
+.ahm .ah-body{display:flex;flex-direction:column;gap:10px;padding:6px 16px calc(30px + env(safe-area-inset-bottom,0px))}
+.ahm .ah-lede{padding:0 4px 4px;font-size:13.5px;line-height:1.45;color:var(--ah-ink2)}
+.ahm .ah-lab{display:flex;justify-content:space-between;gap:10px;margin-top:14px;padding:0 4px;font:800 9.5px/1 var(--ah-mono);letter-spacing:.22em;text-transform:uppercase;color:var(--ah-ink2)}
+.ahm .ah-lab span+span{color:var(--ah-ink3);letter-spacing:.16em}
+.ahm .ah-lab .g{color:var(--ah-gold)}
+.ahm .ah-art{flex:none;display:grid;place-items:center;width:54px;height:54px;border-radius:11px;background:#1b1a3a center/118% no-repeat;border:1px solid rgba(255,255,255,.08)}
+.ahm .ah-art.sm{width:40px;height:40px;border-radius:9px}
+.ahm .ah-art.auto{color:var(--ah-violet);background:rgba(167,139,250,.08);border-color:rgba(167,139,250,.25)}
+.ahm .b{flex:1;min-width:0;display:flex;flex-direction:column}
+.ahm .nm{min-width:0;font:700 15px/1.2 var(--ah-serif);letter-spacing:.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ahm .ah-mode{position:relative;display:grid;grid-template-columns:1fr 1fr;padding:4px;border-radius:16px;background:rgba(255,255,255,.04);border:1px solid var(--ah-hair)}
+.ahm .ah-mode .th{position:absolute;top:4px;bottom:4px;left:4px;width:calc(50% - 4px);border-radius:12px;background:rgba(245,184,66,.12);border:1px solid rgba(245,184,66,.55);transition:transform .26s var(--ah-ease)}
+.ahm .ah-mode[data-m="targets"] .th{transform:translateX(100%)}
+.ahm .ah-mode button{position:relative;height:52px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;color:var(--ah-ink2);text-align:center}
+.ahm .ah-mode button b{font:600 15px/1 var(--ah-sans);transition:color .2s}
+.ahm .ah-mode button span{font:800 8.5px/1 var(--ah-mono);letter-spacing:.16em;text-transform:uppercase}
+.ahm .ah-mode button[aria-selected="true"] b{color:var(--ah-gold)}
+.ahm .ah-tgs{display:flex;flex-direction:column;gap:10px}
+.ahm .ah-tgs .ah-lab{margin-top:10px}
+.ahm .ah-calm{display:flex;gap:10px;padding:14px;border-radius:16px;border:1px solid var(--ah-hair);font-size:14px;line-height:1.45;color:var(--ah-ink2)}
+.ahm .ah-calm svg{flex:none;margin-top:2px;color:var(--ah-violet)}
+.ahm .ah-tc{display:flex;align-items:center;border-radius:18px;background:var(--ah-card);border:1px solid rgba(245,184,66,.3)}
+.ahm .ah-tc .main{flex:1;min-width:0;display:flex;align-items:center;gap:12px;padding:12px 0 12px 12px;text-align:left}
+.ahm .ah-tc .b{gap:3px}
+.ahm .ah-tc .wh,.ahm .ah-sw .wh{font-size:13px;color:var(--ah-ink2)}
+.ahm .ah-tc .wh b{font-weight:600;color:var(--ah-gold)}
+.ahm .el{font-size:12.5px;color:var(--ah-steps)}
+.ahm .no{display:flex;align-items:center;gap:5px;font-size:12.5px;color:var(--ah-amber)}
+.ahm .ah-tc .fb{font-size:12.5px;color:var(--ah-ink2)}
+.ahm .ah-tc.stale{border-color:rgba(245,165,36,.55)}
+.ahm .ah-tc.stale .ah-art{filter:grayscale(.8) brightness(.7)}
+.ahm .ah-tc .rm svg{box-sizing:content-box;padding:8px;border:1px solid var(--ah-hair);border-radius:50%}
+.ahm .ah-add{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;height:54px;border-radius:18px;border:1px dashed rgba(245,184,66,.5);color:var(--ah-gold);font:600 15px/1 var(--ah-sans)}
+.ahm .ah-group{border-radius:18px;background:var(--ah-card);border:1px solid var(--ah-hair);overflow:hidden}
+.ahm .ah-group>*+*{border-top:1px solid var(--ah-hair)}
+.ahm .ah-prow{display:flex;align-items:center;gap:12px;min-height:60px;padding:10px 14px}
+.ahm .ah-prow .av{flex:none;width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font:700 14px/1 var(--ah-serif);color:#fff;transition:filter .2s,opacity .2s}
+.ahm .ah-prow .l{display:flex;align-items:center;gap:6px}
+.ahm .ah-prow .n{min-width:0;font-weight:600;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ahm .ah-prow em{flex:none;font:800 8.5px/1 var(--ah-mono);letter-spacing:.14em;text-transform:uppercase;font-style:normal;color:var(--ah-ink2)}
+.ahm .ah-prow .sub{margin-top:3px;font-size:12.5px;color:var(--ah-ink2)}
+.ahm .ah-prow .sub:empty{display:none}
+.ahm .ah-prow .amb{color:var(--ah-amber)}
+.ahm .ah-prow[data-on="0"] .av{filter:grayscale(1);opacity:.5}
+.ahm .ah-prow[data-on="0"] .n{color:var(--ah-ink2)}
+.ahm .ah-tg{position:relative;flex:none;width:50px;height:30px;border-radius:15px;background:rgba(255,255,255,.13);transition:background .2s}
+.ahm .ah-tg i{position:absolute;left:3px;top:3px;width:24px;height:24px;border-radius:50%;background:#fff;transition:transform .22s var(--ah-ease)}
+.ahm .ah-tg[aria-checked="true"]{background:var(--ah-steps)}
+.ahm .ah-tg[aria-checked="true"] i{transform:translateX(20px)}
+.ahm .ah-pv{display:flex;align-items:center;gap:12px;padding:10px 14px}
+.ahm .ah-pv .l1{font-size:14px;color:var(--ah-ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ahm .ah-pv .l1 b{font-weight:600;color:var(--ah-ink)}
+.ahm .ah-pv .l2{display:flex;align-items:center;gap:5px;margin-top:3px;font-size:12.5px;color:var(--ah-ink2)}
+.ahm .ah-pv.mine .l2{color:var(--ah-gold)}.ahm .ah-pv.theirs .l2{color:var(--ah-teal)}.ahm .ah-pv.raid .l2{color:var(--ah-violet)}
+.ahm .ah-none{padding:16px 14px;font-size:14px;color:var(--ah-ink2)}
+.ahm .ah-foot{padding:8px 0 0;text-align:center;font-size:12.5px;color:var(--ah-ink2)}
+.ahm .ah-tmr{position:sticky;bottom:calc(12px + env(safe-area-inset-bottom,0px));z-index:3;margin:-46px 16px 0;height:46px;border-radius:23px;background:rgba(25,24,56,.95);border:1px solid rgba(245,184,66,.4);box-shadow:0 8px 24px rgba(0,0,0,.55);font:800 9.5px/1 var(--ah-mono);letter-spacing:.14em;text-transform:uppercase;transition:opacity .2s,transform .2s;overflow:hidden}
+.ahm .ah-tmr>span{display:flex;align-items:center;justify-content:center;gap:10px;height:100%}
+.ahm .ah-tmr em{font-style:normal;color:var(--ah-gold)}
+.ahm .ah-tmr.hide{opacity:0;pointer-events:none;transform:translateY(8px)}
+.ahm .ah-pk{border-radius:18px;background:var(--ah-card);border:1px solid var(--ah-hair);overflow:hidden;transition:border-color .2s}
+.ahm .ah-pk[data-open="1"]{border-color:rgba(245,184,66,.45)}
+.ahm .ah-pk .hd{display:flex;align-items:center;gap:12px;width:100%;min-height:78px;padding:12px;text-align:left}
+.ahm .ah-pk .b{gap:4px}
+.ahm .ah-pk .mt{font:700 9.5px/1.3 var(--ah-mono);letter-spacing:.14em;text-transform:uppercase;color:var(--ah-ink2)}
+.ahm .st{color:var(--ah-steps)}.ahm .fl{color:var(--ah-flights)}
+.ahm .ah-pk .rt{flex:none;display:flex;flex-direction:column;align-items:flex-end;gap:4px}
+.ahm .ah-pk .rt .own{display:flex;flex-direction:column;align-items:flex-end;gap:3px;font:800 8px/1 var(--ah-mono);letter-spacing:.16em;text-transform:uppercase;color:var(--ah-ink2)}
+.ahm .ah-pk .rt .own b{font-size:15px;letter-spacing:0;color:var(--ah-ink)}
+.ahm .ah-pk .chs{display:inline-flex;align-items:center;gap:4px;font:800 8.5px/1 var(--ah-mono);letter-spacing:.14em;text-transform:uppercase;color:var(--ah-gold)}
+.ahm .ah-pk.lock .ah-art{filter:grayscale(.8) brightness(.55)}
+.ahm .ah-pk.lock .nm,.ahm .ah-pk.lock .mt,.ahm .ah-pk.lock .mt span{color:var(--ah-ink3)}
+.ahm .ah-pk.lock .no{color:#f87171}
+.ahm .ah-pk .dr{display:grid;grid-template-rows:0fr;transition:grid-template-rows .3s var(--ah-ease)}
+.ahm .ah-pk[data-open="1"] .dr{grid-template-rows:1fr}
+.ahm .ah-pk .in{min-height:0;overflow:hidden;padding:0 12px}
+.ahm .ah-dr{display:flex;align-items:center;gap:10px;min-height:54px;border-top:1px solid var(--ah-hair)}
+.ahm .ck{flex:none;width:22px;height:22px;border-radius:50%;display:grid;place-items:center;border:1.5px solid var(--ah-ink3);color:var(--ah-steps)}
+.ahm .own>.ck{border-color:var(--ah-steps)}
+.ahm .ah-dr .n{font-size:14.5px;color:var(--ah-ink)}
+.ahm .own>.b .n{color:var(--ah-ink2)}
+.ahm .ry{margin-top:4px;font:800 8.5px/1 var(--ah-mono);letter-spacing:.16em;text-transform:uppercase;color:var(--ah-ink2)}
+.ahm .ry.ultra{color:var(--ah-ultra)}.ahm .ry.rare{color:var(--ah-violet)}
+.ahm .ah-ch{position:relative;flex:none;display:inline-flex;align-items:center;justify-content:center;gap:5px;height:32px;min-width:78px;padding:0 12px;border-radius:16px;background:var(--ah-gold);color:#1c1400;font:800 9.5px/1 var(--ah-mono);letter-spacing:.14em;text-transform:uppercase}
+.ahm .ah-ch.on{background:none;border:1px solid rgba(245,184,66,.6);color:var(--ah-gold)}
+.ahm .ah-any{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;height:46px;margin:10px 0 12px;border-radius:14px;border:1px solid rgba(245,184,66,.5);color:var(--ah-gold);font:600 14px/1 var(--ah-sans)}
+.ahm .ah-any.on{background:rgba(245,184,66,.1)}
+.ahm .ah-pk .in>.ah-dr:first-child{border-top:1px solid var(--ah-hair)}
+/* the swap sheet */
+.ah-sheetov{position:fixed;inset:0;z-index:12600;display:flex;flex-direction:column;justify-content:flex-end;color:var(--ah-ink);font:400 14px/1.3 var(--ah-sans)}
+.ahm .ah-dim{position:absolute;inset:0;background:rgba(5,5,14,.7)}
+.ahm .ah-sheet{position:relative;display:flex;flex-direction:column;gap:10px;padding:22px 16px calc(20px + env(safe-area-inset-bottom,0px));border-radius:24px 24px 0 0;background:#15142c;border-top:1px solid rgba(245,184,66,.3)}
+.ahm .ah-sheet h3{font:700 18px/1.2 var(--ah-serif);letter-spacing:.02em;text-transform:uppercase}
+.ahm .ah-sheet p{margin:-4px 0 4px;font-size:14px;color:var(--ah-ink2)}
+.ahm .ah-sheet p b{font-weight:600;color:var(--ah-ink)}
+.ah-sheetov.enter .ah-dim{animation:ah-fade .24s both}
+.ah-sheetov.enter .ah-sheet{animation:ah-up .34s var(--ah-ease) both}
+.ahm .ah-sw{display:flex;align-items:center;gap:12px;width:100%;min-height:60px;padding:10px 12px;border-radius:14px;border:1px solid var(--ah-hair);text-align:left}
+.ahm .ah-sw .go{flex:none;font:800 9.5px/1 var(--ah-mono);letter-spacing:.16em;text-transform:uppercase;color:var(--ah-gold)}
+.ahm .ah-btn2{width:100%;height:50px;border-radius:16px;border:1px solid rgba(255,255,255,.12);font:600 15px/1 var(--ah-sans);color:var(--ah-ink);text-align:center}
+/* Chase this — inline on the co-op boss sheet and the relic page */
+.ahm-inline{display:flex;flex-direction:column;gap:10px;margin:12px 0;color:var(--ah-ink);font:400 14px/1.3 var(--ah-sans)}
+.ahm-inline .ah-btn1,.ahm .ah-btn1{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;height:54px;border-radius:16px;border:0;background:linear-gradient(180deg,var(--ah-gold2),var(--ah-gold));color:#1c1400;font:700 16px/1 var(--ah-sans);box-shadow:0 6px 20px rgba(245,184,66,.22);cursor:pointer}
+.ahm-inline .ah-btn1:disabled{background:rgba(255,255,255,.06);color:var(--ah-ink2);box-shadow:none;cursor:default;font-weight:600;font-size:14px}
+.ahm-inline .ah-chasing{display:flex;align-items:center;height:54px;padding-left:16px;border-radius:16px;border:1px solid rgba(245,184,66,.55);background:rgba(245,184,66,.08)}
+.ahm-inline .ah-chasing .s{flex:1;min-width:0;display:flex;align-items:center;gap:10px;color:var(--ah-gold)}
+.ahm-inline .ah-chasing .s>span{min-width:0;display:flex;flex-direction:column;gap:3px;text-align:left}
+.ahm-inline .ah-chasing b{font:700 15px/1 var(--ah-sans)}
+.ahm-inline .ah-chasing em{font:400 12px/1 var(--ah-sans);font-style:normal;color:var(--ah-ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ahm-inline .ah-chasing button{flex:none;height:52px;padding:0 18px;border:0;border-left:1px solid rgba(245,184,66,.3);background:none;color:var(--ah-gold);font:800 10px/1 var(--ah-mono);letter-spacing:.16em;text-transform:uppercase;cursor:pointer}
+.ahm-inline .ah-note3{margin:0;text-align:center;font-size:13px;color:var(--ah-ink2)}
+.ahm-inline .ah-from{display:flex;align-items:center;gap:12px;padding:12px;border-radius:16px;background:var(--ah-card);border:1px solid var(--ah-hair);font-size:14px;color:var(--ah-ink2);text-align:left}
+.ahm-inline .ah-from b{font-weight:600;color:var(--ah-ink)}
+.ahm-inline .ah-from .b{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
+.ahm-inline .ah-art{flex:none;width:40px;height:40px;border-radius:9px;background:#1b1a3a center/118% no-repeat;border:1px solid rgba(255,255,255,.08)}
+.ahm-inline .el{font-size:12.5px;color:var(--ah-steps)}.ahm-inline .no{font-size:12.5px;color:var(--ah-amber)}
+/* the status row on Your Hunts */
+.ah-status{display:flex;align-items:center;gap:10px;width:100%;min-height:48px;margin:0 0 10px;padding:8px 12px 8px 14px;border-radius:14px;border:1px solid var(--ah-hair);background:rgba(255,255,255,.03);text-align:left;font:400 14px/1.3 var(--ah-sans);color:var(--ah-ink2);cursor:pointer;-webkit-tap-highlight-color:transparent}
+.ah-status>svg{flex:none;color:var(--ah-violet)}
+.ah-status .t{flex:1;min-width:0;display:flex;gap:5px;align-items:baseline}
+.ah-status .e{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ah-status b{font-weight:600;color:var(--ah-ink)}
+.ah-status i{flex:none;font-style:normal}
+.ah-status .cta{flex:none;display:inline-flex;align-items:center;gap:3px;font:800 9.5px/1 var(--ah-mono);letter-spacing:.16em;text-transform:uppercase;color:var(--ah-violet)}
+.ah-status.tgt{border-color:rgba(245,184,66,.34);background:rgba(245,184,66,.06)}
+.ah-status.tgt>svg,.ah-status.tgt .cta{color:var(--ah-gold)}
+.ah-status.warn{border-color:rgba(245,165,36,.55);background:rgba(245,165,36,.08)}
+.ah-status.warn>svg,.ah-status.warn .cta{color:var(--ah-amber)}
+.ah-status.warn .e{white-space:normal}
+/* the reason tag under a hunt card's progress line (in the Your Hunts list only) */
+.ah-tag{align-self:flex-start;display:inline-flex;align-items:center;gap:5px;height:20px;margin-top:9px;padding:0 8px;border-radius:6px;font:800 8.5px/1 var(--ah-mono);letter-spacing:.16em;text-transform:uppercase;white-space:nowrap}
+.ah-tag.mine{color:var(--ah-gold);background:rgba(245,184,66,.1);border:1px solid rgba(245,184,66,.45)}
+.ah-tag.theirs{color:var(--ah-teal);border:1px solid rgba(94,234,212,.3)}
+.hunt-row:not(.hunt-row--in-list) .ah-tag{display:none}
+/* the summon picker's refusal (design: RefusalNote) */
+.coop-friend-need--dup{display:inline-flex;align-items:center;gap:5px;color:#f5a524}
+@media (prefers-reduced-motion:reduce){.ahm *{transition:none!important}.ahm .ah-new,.ah-sheetov.enter .ah-sheet,.ah-sheetov.enter .ah-dim{animation:ah-fade .3s both!important}.ahm .nudge,.ahm .ah-leave{animation:none!important}}
