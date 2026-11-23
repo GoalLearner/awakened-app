@@ -63,9 +63,16 @@ const wgCounts = (uidCol: string) =>
 // week; 17 tracked sleep, about 5 nights each at about 7 hours). Every later gate sizes each bar the way steps are sized
 // (W1031): a beaten gate grows by how early it fell, a gate that stood eases each unfinished bar to 90% of what was done.
 // The phone sends flights and sleep per day of the week (POST /v1/worldgate/effort); the server caps each day.
-export const WG3_FROM = '2026-11-29';
-export const WG3_START_FLIGHTS = 1500;
-export const WG3_START_SLEEP = 36000;        // minutes (600 hours)
+// W1284 — owner 2026-11-22 (after "don't start it until next week" and my advice to wait): "No I want to start it this
+// week". So the three bars begin with THIS week's gate, at HALF size (750 flights, 300 hours of sleep: build 674, the
+// first that sends them, was only just uploaded and hunters update over days; a phone sends its whole week once updated).
+// The gate already existed, steps only, so ensureGate adds the two bars to an open gate of WG3_FROM or later that has none.
+// The full-size figures (1,500 / 600h) stay as the reference; later gates size themselves from how this one goes.
+export const WG3_FROM = '2026-11-22';
+export const WG3_START_FLIGHTS = 750;
+export const WG3_START_SLEEP = 18000;        // minutes (300 hours)
+/** W1284 — the first build that sends flights and sleep and grants the bounty's relic rolls (APP_BUILD_TAG ...-w1283). */
+export const WG3_MIN_BUILD = 1283;
 export const WG3_MIN_FLIGHTS = 300;
 export const WG3_MIN_SLEEP = 6000;           // minutes (100 hours)
 export const WG3_FLIGHTS_DAY_CAP = 50;       // flights a day that count
@@ -445,6 +452,12 @@ async function lossStreak(env: Env, beforeWeek: string): Promise<number> {
 /** Get-or-create this week's gate; settle LAST week's gate on first sight. */
 async function ensureGate(env: Env, week: string): Promise<GateRow> {
   let gate = await env.DB.prepare('SELECT * FROM world_gates WHERE week_start = ?').bind(week).first<GateRow>();
+  if (gate && gate.status === 'open' && gate.week_start >= WG3_FROM && (gate.hp_flights == null || gate.hp_sleep == null)) {
+    // W1284 — a gate made before the three bars began (this week's, made steps only) gets its flights and sleep bars.
+    await env.DB.prepare('UPDATE world_gates SET hp_flights = ?, hp_sleep = ? WHERE week_start = ? AND hp_flights IS NULL')
+      .bind(WG3_START_FLIGHTS, WG3_START_SLEEP, week).run();
+    gate = { ...gate, hp_flights: WG3_START_FLIGHTS, hp_sleep: WG3_START_SLEEP };
+  }
   if (gate) return gate;
   // Settle the most recent prior open gate.
   const prior = await env.DB.prepare(
@@ -843,6 +856,11 @@ export async function handleWorldgateClaim(
       ? 'The bounty asks ' + WG3_WALL_PCT + '% of the kill.'
       : 'The bounty asks ' + WORLDGATE_CLAIM_FLOOR.toLocaleString('en-US') + ' verified steps this week.');
   }
+  // W1284 — an app older than the three bars cannot grant the bounty's relic rolls (it drops them), so a three-bar
+  // bounty waits for the update: nothing is recorded, and the claim succeeds from the new app.
+  if (three && !(await knowsThreeBars(env, session.userId))) {
+    return jsonError(409, 'UPDATE_APP', 'Update Awakened to collect this bounty.');
+  }
   // W1283 — owner: "everyone on the kill wall gets 200 souls each + 1% chance at any S-tier item drop + 0.5% on the mythic
   // drop". Two rolls, rolled here once (the claim row records them), for every hunter on the Kill Wall. The phone picks
   // the relic from its own catalog: any S-rank boss's relic, or one of the three mythic weapons.
@@ -858,6 +876,18 @@ export async function handleWorldgateClaim(
     return jsonOk({ ok: true, first: false, souls: 0, bounty: 0, mvp_bonus: 0, mvp_place: place, drops: [] });   // already claimed
   }
   return jsonOk({ ok: true, first: true, souls: bounty + bonus, bounty, mvp_bonus: bonus, mvp_place: place, ...(three ? { drops } : {}) });
+}
+
+/** W1284 — the build number in an APP_BUILD_TAG ('3.0.29-w1283' → 1283), 0 when there is none. */
+export function buildNumberOf(tag: string | null | undefined): number {
+  const m = /-w(\d+)/i.exec(String(tag || ''));
+  return m ? Number(m[1]) || 0 : 0;
+}
+/** W1284 — the hunter's newest app (its last app-open ping) knows the three bars. */
+async function knowsThreeBars(env: Env, userId: string): Promise<boolean> {
+  const r = await env.DB.prepare('SELECT build FROM app_opens WHERE user_id = ? AND build IS NOT NULL ORDER BY opened_at DESC LIMIT 1')
+    .bind(userId).first<{ build: string | null }>();
+  return buildNumberOf(r?.build) >= WG3_MIN_BUILD;
 }
 
 /** W1283 — the days of `week` (YYYY-MM-DD, a Sunday) that have begun by Pacific `today`: 0 before it, up to 7. */

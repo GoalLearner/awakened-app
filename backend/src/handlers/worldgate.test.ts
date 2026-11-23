@@ -10,7 +10,7 @@
  * (weekly_step_records, 2026-06-07 .. 2026-08-16, sims excluded) so the number
  * cannot drift back into unwinnable territory unnoticed.
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 vi.mock('../lib/apns', () => ({ notifyUser: vi.fn(async () => {}) }));
 import { notifyUser } from '../lib/apns';
 import { computeGateHp, computeNextGateHp, gateKillDay, handleWorldgateGet, handleWorldgateRally, handleWorldgateClaim, WORLDGATE_CLAIM_FLOOR, WORLDGATE_SOULS, WORLDGATE_MVP_BONUS, WG_MERGED, WORLDGATE_MIN_DAYS, WORLDGATE_DAYS_FROM } from './worldgate';
@@ -214,6 +214,10 @@ function wgFresh(): WgState {
   };
 }
 beforeEach(() => { mockNotify.mockClear(); });
+// W1284 — the three bars began with the gate of 2026-11-22 (worldgate3.test.ts covers them). These are the steps-only gate's
+// cases, so their clock sits in the week of 2026-11-15 (a case that sets its own time still does).
+beforeEach(() => { vi.useFakeTimers({ toFake: ['Date'] }); vi.setSystemTime(new Date('2026-11-17T20:00:00Z')); });
+afterEach(() => { vi.useRealTimers(); });
 
 // W1134 — two days in the app or nothing counts (owner 2026-11-06: "they need to use the app at
 // least 2/7 days"; under that, "nothing counts"). The SQL itself was dry-run against production D1.

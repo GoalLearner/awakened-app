@@ -11,16 +11,21 @@ vi.mock('../lib/apns', () => ({ notifyUser: vi.fn(async () => {}) }));
 import {
   handleWorldgateGet, handleWorldgateClaim, handleWorldgateEffort, overallPct, damagePct, barsDown, computeNextBars,
   nextStepsAfterThreeBar, wgDaysBegun, wgCapDays, wgDice, WG3_FROM, WG3_START_FLIGHTS, WG3_START_SLEEP, WG3_WALL_PCT,
+  WG3_MIN_BUILD, buildNumberOf,
   WG3_DROP_S, WG3_DROP_MYTHIC, WG3_FLIGHTS_DAY_CAP, WG3_SLEEP_NIGHT_CAP, WORLDGATE_SOULS,
 } from './worldgate';
 import type { Env } from '../env';
 import type { SessionPayload } from '../session-jwt';
 
 describe('W1283 — the three-bar math', () => {
-  it('starts 2026-11-29 at 1,500 flights and 600 hours of sleep; the Kill Wall is 0.5%; the bounty rolls 1% and 0.5%', () => {
-    expect(WG3_FROM).toBe('2026-11-29');
-    expect(WG3_START_FLIGHTS).toBe(1500);
-    expect(WG3_START_SLEEP).toBe(600 * 60);
+  it('starts THIS week (2026-11-22, W1284) at half size, 750 flights and 300 hours; the Kill Wall is 0.5%; the bounty rolls 1% and 0.5%', () => {
+    expect(WG3_FROM).toBe('2026-11-22');
+    expect(WG3_START_FLIGHTS).toBe(750);
+    expect(WG3_START_SLEEP).toBe(300 * 60);
+    expect(WG3_MIN_BUILD).toBe(1283);
+    expect(buildNumberOf('3.0.29-w1283')).toBe(1283);
+    expect(buildNumberOf('3.0.28-w1263')).toBe(1263);
+    expect(buildNumberOf(null)).toBe(0);
     expect(WG3_WALL_PCT).toBe(0.5);
     expect(WG3_DROP_S).toBe(0.01);
     expect(WG3_DROP_MYTHIC).toBe(0.005);
@@ -43,8 +48,8 @@ describe('W1283 — the three-bar math', () => {
     expect(damagePct({ steps: 0, flights: 0, sleep: 0 }, hp, pool)).toBe(0);
   });
   it('the next gate: start values with no three-bar gate before; a beaten gate grows by how early it fell; one that stood eases what was left', () => {
-    expect(computeNextBars(null, null, 0)).toEqual({ flights: 1500, sleep: 36000 });
-    expect(computeNextBars({ week_start: '2026-11-22', hp: 1, hp_flights: null, hp_sleep: null, status: 'slain', slain_at: 1 }, null, 0)).toEqual({ flights: 1500, sleep: 36000 });
+    expect(computeNextBars(null, null, 0)).toEqual({ flights: 750, sleep: 18000 });
+    expect(computeNextBars({ week_start: '2026-11-15', hp: 1, hp_flights: null, hp_sleep: null, status: 'slain', slain_at: 1 }, null, 0)).toEqual({ flights: 750, sleep: 18000 });
     const wed = Date.parse('2026-12-02T20:00:00Z');   // Wednesday, Pacific
     expect(computeNextBars({ week_start: '2026-11-29', hp: 1, hp_flights: 1500, hp_sleep: 36000, status: 'slain', slain_at: wed }, null, 0)).toEqual({ flights: 1950, sleep: 46800 });
     // stood: flights were spent (kept), sleep reached 20,000 of 36,000 (eased to 90% of it)
@@ -66,11 +71,12 @@ describe('W1283 — the three-bar math', () => {
 
 // ── the handlers, over a small stand-in for D1 ──
 interface St {
-  gate: { week_start: string; hp: number; hp_flights: number; hp_sleep: number; status: string; slain_at: number | null; kill_json: string | null };
+  gate: { week_start: string; hp: number; hp_flights: number | null; hp_sleep: number | null; status: string; slain_at: number | null; kill_json: string | null };
   merged: Array<{ user_id: string; alias: string; steps: number; rank_tier?: string }>;
   effort: Array<{ user_id: string; alias: string; flights: number; sleep_min: number }>;
   friends: string[];
   claims: Map<string, string>;
+  build?: string | null;   // W1284 — the caller's newest app (default: the first three-bar build)
 }
 function env3(st: St): Env {
   const ok = { limit: async () => ({ success: true }) };
@@ -87,6 +93,7 @@ function env3(st: St): Env {
           if (/FROM world_gate_claims/.test(sql)) return st.claims.has(b[1] as string) ? { one: 1 } : null;
           if (/FROM app_open_counts WHERE user_id = \?1/.test(sql)) return { n: 7 };
           if (/SELECT flights, sleep_min FROM world_gate_effort/.test(sql)) return st.effort.find((r) => r.user_id === b[1]) ?? null;
+          if (/SELECT build FROM app_opens/.test(sql)) return st.build === undefined ? { build: '3.0.29-w1283' } : (st.build ? { build: st.build } : null);
           return null;
         },
         all: async () => {
@@ -237,8 +244,44 @@ describe('W1283 — POST /v1/worldgate/effort', () => {
     vi.useFakeTimers(); vi.setSystemTime(new Date('2026-11-30T20:00:00Z'));
     const st = fresh(); st.effort = [];
     expect(await post(st, { week: '2026-11-22', flights: [5], sleep: [5] })).toMatchObject({ ok: true, counted: false });
-    vi.setSystemTime(new Date('2026-11-24T20:00:00Z'));   // the week of 2026-11-22: steps only
-    expect(await post(st, { week: '2026-11-22', flights: [5], sleep: [5] })).toMatchObject({ ok: true, counted: false });
+    vi.setSystemTime(new Date('2026-11-17T20:00:00Z'));   // the week of 2026-11-15: steps only
+    expect(await post(st, { week: '2026-11-15', flights: [5], sleep: [5] })).toMatchObject({ ok: true, counted: false });
     expect(st.effort.length).toBe(0);
+  });
+});
+
+// W1284 — owner 2026-11-22: "No I want to start it this week".
+describe('W1284 — the three bars start this week, on a gate made steps only', () => {
+  it('the open gate of 2026-11-22 gets its 750-flight and 300-hour bars on the next read', async () => {
+    vi.useFakeTimers(); vi.setSystemTime(new Date('2026-11-23T20:00:00Z'));   // Monday of the week of 2026-11-22
+    const st = fresh();
+    st.gate = { ...st.gate, week_start: '2026-11-22', hp: 1274068, hp_flights: null, hp_sleep: null };
+    const calls: string[] = [];
+    const e = env3(st);
+    const prep = e.DB.prepare.bind(e.DB);
+    (e.DB as any).prepare = (sql: string) => { calls.push(sql); const p = prep(sql); if (/UPDATE world_gates SET hp_flights/.test(sql)) { const bind = p.bind; (p as any).bind = (...b: unknown[]) => { st.gate.hp_flights = b[0] as number; st.gate.hp_sleep = b[1] as number; return bind(...b); }; } return p; };
+    const j = (await (await handleWorldgateGet(new Request('https://x/v1/worldgate'), e, me)).json()) as Record<string, any>;
+    expect(calls.some((s) => /UPDATE world_gates SET hp_flights = \?, hp_sleep = \? WHERE week_start = \? AND hp_flights IS NULL/.test(s))).toBe(true);
+    expect(j.bars.flights.hp).toBe(750);
+    expect(j.bars.sleep.hp).toBe(18000);
+    expect(j.bars.steps.hp).toBe(1274068);
+    expect(j.effort).toBe(true);
+    expect(st.gate.hp_flights).toBe(750);
+  });
+  it('an app older than the three bars waits to collect a three-bar bounty (nothing is recorded); the new app collects it', async () => {
+    vi.useFakeTimers(); vi.setSystemTime(WED);
+    const st = fresh();
+    st.merged[1].steps = 200000;
+    st.effort.push({ user_id: 'u-ren', alias: 'RenDIESEL', flights: 500, sleep_min: 1500 });
+    await get(st);
+    expect(st.gate.status).toBe('slain');
+    st.build = '3.0.28-w1263';
+    const r = await claim(st);
+    expect(r.status).toBe(409);
+    expect(((await r.json()) as any).error).toBe('UPDATE_APP');
+    expect(st.claims.size).toBe(0);
+    st.build = '3.0.29-w1283';
+    const ok = (await (await claim(st)).json()) as Record<string, any>;
+    expect(ok).toMatchObject({ first: true, bounty: WORLDGATE_SOULS });
   });
 });
