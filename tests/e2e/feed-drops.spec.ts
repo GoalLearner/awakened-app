@@ -96,7 +96,9 @@ test.describe('Mythic drops in Hunter Activity (W1229 · W1230)', () => {
   });
 
   test('a mythic drop is its own gold row at the top of its day, naming the weapon and the hunter, a friend\'s too', async ({ page }) => {
-    const now = Date.now();
+    // W1283 — all three events stay on one day: CI at 00:01 put the event two minutes back on the day before (b7b82a8 red).
+    const midnight = new Date(); midnight.setHours(0, 0, 0, 0);
+    const now = Math.max(Date.now(), midnight.getTime() + 5 * 60_000);
     await boot(page, [
       ev('b1', 'Galilea', 'boss_kill', now, false),
       ev('m1', 'Galilea', 'mythic_drop', now - 60_000, false),

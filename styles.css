@@ -37690,3 +37690,14 @@ button.mx-sh { cursor: pointer; min-height: 40px; }
 .mu-hof-empty{margin-top:12px!important;padding:18px 16px;border-radius:16px;border:1px dashed rgba(255,255,255,.12);color:var(--mu-ink2);font:400 13.5px/1.45 var(--mu-sans);text-align:center}
 @media (max-width:360px){.mu-hm{padding-left:16px}}
 @media (prefers-reduced-motion:reduce){.mu-hbody,.mu-hc svg{transition:none}}
+
+/* W1283 — the Worldgate's three bars (steps, flights, sleep), damage in % of the kill (owner 2026-11-22) */
+.mu-frame .sleep{--mc:#a78bfa;--mc-d:#4c3a8a;--mc-g:rgba(167,139,250,.4);--mc-t:rgba(167,139,250,.12);--mc-b:rgba(167,139,250,.55)}
+.mu-bars{margin-top:16px;display:grid;gap:12px;padding:14px 14px 12px;border-radius:16px;background:rgba(255,255,255,.02);border:1px solid var(--mu-hair)}
+.mu-wgbar .mu-pl{margin-bottom:7px}
+.mu-wgbar .mu-pt{height:8px;border-radius:4px}
+.mu-wgbar .mu-pf{border-radius:4px}
+.mu-bars-n{margin-top:2px!important;font:800 8.5px/1.3 var(--mu-mono);letter-spacing:.12em;text-transform:uppercase;color:var(--mu-ink3);text-align:center}
+.mu-rv--pct b{font-size:15px}
+.mu-sparts{margin-top:6px!important;font:700 10.5px/1.35 var(--mu-mono);letter-spacing:.02em;color:var(--mu-ink2);font-variant-numeric:tabular-nums}
+.mu-enter .mu-wgbar .mu-pf{animation:mu-grow .8s cubic-bezier(.3,.7,.2,1) var(--d) backwards}

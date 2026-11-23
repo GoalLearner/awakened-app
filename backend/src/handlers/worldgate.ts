@@ -49,6 +49,80 @@ export const WORLDGATE_DAYS_FROM = '2026-11-08';
 const wgCounts = (uidCol: string) =>
   `(?1 < '${WORLDGATE_DAYS_FROM}' OR (SELECT COUNT(*) FROM app_open_counts c
       WHERE c.user_id = ${uidCol} AND c.day_pt >= ?1 AND c.day_pt <= date(?1, '+6 days') AND c.opens > 0) >= ${WORLDGATE_MIN_DAYS})`;
+
+// W1283 — THE THREE BARS (owner 2026-11-22): "I want to have the world gate do the steps + flights HP bar + Sleep total ...
+// So this worldgate will have all of these to complete to kill it. Make this realistic but challenging", "MVP will be
+// contributions to the boss kill so all three combined in a percentage damage", "the kill wall has to be % damage", and
+// "everyone on the kill wall gets 200 souls each + 1% chance at any S-tier item drop + 0.5% on the mythic drop".
+// From the gate of WG3_FROM on, a gate has three HPs: steps (`hp`, sized as before), flights and minutes asleep
+// (migration 0082). It falls when all three are spent. A hunter's DAMAGE is their share of each bar, averaged over the
+// three: (steps / steps bar + flights / flights bar + sleep / sleep bar) / 3, each bar the larger of its HP and what the
+// fleet put in, so the shares of everyone add up to the gate's damage and never past 100%. The MVPs are the top three by
+// damage, the Kill Wall is every hunter at WG3_WALL_PCT or more, and the bounty (souls + the two relic rolls) is theirs.
+// The first gate's flights and sleep HPs come from the fleet of 2026-11-15 (40 active hunters: about 1,660 flights a
+// week; 17 tracked sleep, about 5 nights each at about 7 hours). Every later gate sizes each bar the way steps are sized
+// (W1031): a beaten gate grows by how early it fell, a gate that stood eases each unfinished bar to 90% of what was done.
+// The phone sends flights and sleep per day of the week (POST /v1/worldgate/effort); the server caps each day.
+export const WG3_FROM = '2026-11-29';
+export const WG3_START_FLIGHTS = 1500;
+export const WG3_START_SLEEP = 36000;        // minutes (600 hours)
+export const WG3_MIN_FLIGHTS = 300;
+export const WG3_MIN_SLEEP = 6000;           // minutes (100 hours)
+export const WG3_FLIGHTS_DAY_CAP = 50;       // flights a day that count
+export const WG3_SLEEP_NIGHT_CAP = 540;      // minutes a night that count (9 hours)
+export const WG3_WALL_PCT = 0.5;             // damage (% of the kill) that names a hunter on the Kill Wall
+export const WG3_DROP_S = 0.01;              // the bounty's roll at an S-rank relic
+export const WG3_DROP_MYTHIC = 0.005;        // ... and at a mythic weapon
+/** The dice for the bounty's relic rolls, [0, 1). Tests replace `next`. */
+export const wgDice = { next: (): number => crypto.getRandomValues(new Uint32Array(1))[0] / 4294967296 };
+export interface Bars { steps: number; flights: number; sleep: number }
+const barShare = (v: number, hp: number, pool: number) => (v > 0 ? v / Math.max(1, hp, pool) : 0);
+/** The gate's damage, 0-100: each bar's fill (capped at 100%) averaged over the three. */
+export function overallPct(hp: Bars, pool: Bars): number {
+  const f = (p: number, h: number) => Math.min(1, Math.max(0, p) / Math.max(1, h));
+  return ((f(pool.steps, hp.steps) + f(pool.flights, hp.flights) + f(pool.sleep, hp.sleep)) / 3) * 100;
+}
+/** One hunter's damage, 0-100: their share of each bar averaged over the three. */
+export function damagePct(mine: Bars, hp: Bars, pool: Bars): number {
+  return ((barShare(mine.steps, hp.steps, pool.steps) + barShare(mine.flights, hp.flights, pool.flights)
+    + barShare(mine.sleep, hp.sleep, pool.sleep)) / 3) * 100;
+}
+const pct2 = (v: number) => Math.round(v * 100) / 100;
+/** A gate's three bars are all spent. */
+export function barsDown(hp: Bars, pool: Bars): boolean {
+  return pool.steps >= hp.steps && pool.flights >= hp.flights && pool.sleep >= hp.sleep;
+}
+/** The flights and sleep HPs of the next gate (W1283), from how the last three-bar gate went (`prior`) and what the
+ *  fleet put into its bars (`done`). No three-bar gate before: the starting HPs. */
+export function computeNextBars(
+  prior: { week_start: string; hp: number; hp_flights: number | null; hp_sleep: number | null; status: string; slain_at: number | null } | null,
+  done: Bars | null,
+  lossStreak: number,
+): { flights: number; sleep: number } {
+  if (!prior || prior.hp_flights == null || prior.hp_sleep == null || (prior.status !== 'slain' && prior.status !== 'survived')) {
+    return { flights: WG3_START_FLIGHTS, sleep: WG3_START_SLEEP };
+  }
+  if (prior.status === 'slain') {
+    const grow = HP_WIN_BY_DAY[gateKillDay(prior.week_start, prior.slain_at)] || 1;
+    return { flights: Math.max(WG3_MIN_FLIGHTS, Math.round(prior.hp_flights * grow)), sleep: Math.max(WG3_MIN_SLEEP, Math.round(prior.hp_sleep * grow)) };
+  }
+  const factor = Math.max(HP_LOSS_FLOOR, 1 - HP_LOSS_STEP * Math.max(1, lossStreak || 1));
+  const ease = (hp: number, did: number, min: number) => (did >= hp ? hp : Math.max(min, Math.round(Math.max(0, did) * factor)));
+  return { flights: ease(prior.hp_flights, done ? done.flights : 0, WG3_MIN_FLIGHTS), sleep: ease(prior.hp_sleep, done ? done.sleep : 0, WG3_MIN_SLEEP) };
+}
+/** The steps HP after a three-bar gate STOOD: a spent steps bar keeps its size, an unfinished one eases like the others. */
+export function nextStepsAfterThreeBar(prior: { hp: number }, stepsDone: number, lossStreak: number): number {
+  if (stepsDone >= prior.hp) return prior.hp;
+  const factor = Math.max(HP_LOSS_FLOOR, 1 - HP_LOSS_STEP * Math.max(1, lossStreak || 1));
+  return Math.max(HP_MIN, Math.round(Math.max(0, stepsDone) * factor));
+}
+/** A gate row carries three bars. */
+const isThree = (g: { week_start: string; hp_flights?: number | null; hp_sleep?: number | null } | null | undefined): boolean =>
+  !!g && g.week_start >= WG3_FROM && g.hp_flights != null && g.hp_sleep != null;
+/** The week's flights and sleep, one row per hunter whose week counts (the two days), sims excluded. ?1 = the week. */
+const WG_EFFORT = `SELECT e.user_id AS user_id, e.flights AS flights, e.sleep_min AS sleep_min, u.alias AS alias
+    FROM world_gate_effort e JOIN users u ON u.id = e.user_id
+   WHERE e.week_start = ?1 AND u.apple_sub NOT LIKE 'sim_test_%' AND ${wgCounts('e.user_id')}`;
 /** The week's merged steps (week-board.ts), keeping only hunters whose steps count on the gate. */
 export const WG_MERGED = MERGED_FOR_WEEK.replace('WITH merged AS (', 'WITH merged_all AS (').trimEnd() + `,
   merged AS (SELECT ma.user_id, ma.steps FROM merged_all ma WHERE ${wgCounts('ma.user_id')})`;
@@ -168,15 +242,18 @@ function ptWeekStartNow(): string {
   return d.getUTCFullYear() + '-' + String(d.getUTCMonth() + 1).padStart(2, '0') + '-' + String(d.getUTCDate()).padStart(2, '0');
 }
 
-interface GateRow { week_start: string; hp: number; status: string; slain_at: number | null; slain_by: string | null; kill_json?: string | null; }
-type Standing = { user_id: string; alias: string; rank_tier: string | null; steps: number };
+interface GateRow { week_start: string; hp: number; status: string; slain_at: number | null; slain_by: string | null; kill_json?: string | null;
+  hp_flights?: number | null; hp_sleep?: number | null; }   // W1283 — the flights and sleep HPs of a three-bar gate
+// W1283 — on a three-bar gate a standing also carries the hunter's flights, minutes asleep and damage (% of the kill).
+type Standing = { user_id: string; alias: string; rank_tier: string | null; steps: number; flights?: number; sleep?: number; pct?: number };
 type Strike = { alias: string; steps: number; at: number };
 /** W975 — the kill, frozen. user_id never leaves the server.
  *  W983 — plus EVERY hunter's damage at the kill (standings) and the latest
  *  strikes before it (recent). A slain gate reads only these: steps walked
  *  after the kill still count on the weekly Steps board, never on the gate —
  *  not in the sheet, not toward the bounty floor. */
-interface KillSnap { pool: number; hunters: number; mvps: Standing[]; standings?: Standing[]; recent?: Strike[] }
+interface KillSnap { pool: number; hunters: number; mvps: Standing[]; standings?: Standing[]; recent?: Strike[];
+  bars?: { hp: Bars; pool: Bars } }   // W1283 — a three-bar kill: each bar's HP and what the fleet put in at the kill
 
 const WG_STANDINGS_MAX = 1000;
 async function standingsOf(env: Env, week: string): Promise<Standing[]> {
@@ -207,9 +284,56 @@ async function recentStrikes(env: Env, week: string, until: number | null): Prom
   return (rows.results ?? []).map((r) => ({ alias: r.alias, steps: Number(r.steps) || 0, at: Number(r.at) || 0 }));
 }
 const byDamage = (a: Standing, b: Standing) => b.steps - a.steps || a.alias.localeCompare(b.alias);
+const byPct = (a: Standing, b: Standing) => (b.pct || 0) - (a.pct || 0) || b.steps - a.steps || a.alias.localeCompare(b.alias);
+
+/** W1283 — the week's flights and sleep pools (hunters whose week counts). */
+async function effortPools(env: Env, week: string): Promise<{ flights: number; sleep: number }> {
+  const r = await env.DB.prepare(`SELECT COALESCE(SUM(flights), 0) AS f, COALESCE(SUM(sleep_min), 0) AS s FROM (${WG_EFFORT})`)
+    .bind(week).first<{ f: number; s: number }>();
+  return { flights: Number(r?.f) || 0, sleep: Number(r?.s) || 0 };
+}
+/** W1283 — every hunter of a three-bar week with their steps, flights, sleep and damage, best first, and the three pools. */
+async function standings3(env: Env, week: string, hp: Bars): Promise<{ rows: Standing[]; pool: Bars }> {
+  const steps = await standingsOf(env, week);
+  const eff = (await env.DB.prepare(
+    `SELECT x.user_id AS user_id, x.flights AS flights, x.sleep_min AS sleep_min, x.alias AS alias, pps.rank_tier AS rank_tier
+       FROM (${WG_EFFORT}) x LEFT JOIN public_profile_summary pps ON pps.user_id = x.user_id`,
+  ).bind(week).all<{ user_id: string; flights: number; sleep_min: number; alias: string; rank_tier: string | null }>()).results ?? [];
+  const by = new Map<string, Standing>();
+  for (const s of steps) by.set(s.user_id, { ...s, flights: 0, sleep: 0 });
+  for (const e of eff) {
+    const f = Math.max(0, Number(e.flights) || 0), z = Math.max(0, Number(e.sleep_min) || 0);
+    if (!f && !z) continue;
+    const row = by.get(e.user_id) ?? { user_id: e.user_id, alias: e.alias, rank_tier: e.rank_tier ?? null, steps: 0, flights: 0, sleep: 0 };
+    row.flights = f; row.sleep = z;
+    by.set(e.user_id, row);
+  }
+  const rows = Array.from(by.values());
+  const pool: Bars = {
+    steps: rows.reduce((a, r) => a + r.steps, 0),
+    flights: rows.reduce((a, r) => a + (r.flights || 0), 0),
+    sleep: rows.reduce((a, r) => a + (r.sleep || 0), 0),
+  };
+  for (const r of rows) r.pct = pct2(damagePct({ steps: r.steps, flights: r.flights || 0, sleep: r.sleep || 0 }, hp, pool));
+  return { rows: rows.sort(byPct), pool };
+}
+const gateBars = (g: GateRow): Bars => ({ steps: g.hp, flights: Number(g.hp_flights) || 0, sleep: Number(g.hp_sleep) || 0 });
 
 /** Freeze every hunter's damage, the latest strikes, the pool and the headcount of `week` into its gate row. */
-async function snapshotKill(env: Env, week: string): Promise<KillSnap> {
+async function snapshotKill(env: Env, week: string, hp?: Bars): Promise<KillSnap> {
+  if (hp) {   // W1283 — a three-bar kill: the podium and the Kill Wall by damage, each bar frozen
+    const [s3, recent3] = await Promise.all([standings3(env, week, hp), recentStrikes(env, week, null)]);
+    const snap3: KillSnap = {
+      pool: s3.pool.steps,
+      hunters: s3.rows.length,
+      mvps: s3.rows.slice(0, 3),
+      standings: s3.rows,
+      recent: recent3,
+      bars: { hp, pool: s3.pool },
+    };
+    await env.DB.prepare('UPDATE world_gates SET kill_json = ? WHERE week_start = ?').bind(JSON.stringify(snap3), week).run();
+    return snap3;
+  }
   const [standings, recent] = await Promise.all([standingsOf(env, week), recentStrikes(env, week, null)]);
   const agg = await env.DB.prepare(
     `${WG_MERGED} SELECT COUNT(*) AS kill_hunters, COALESCE(SUM(steps), 0) AS kill_pool FROM merged`,
@@ -262,7 +386,7 @@ async function killSnap(env: Env, gate: GateRow): Promise<KillSnap | null> {
       return s;
     }
   }
-  const snap = await snapshotKill(env, gate.week_start);
+  const snap = await snapshotKill(env, gate.week_start, isThree(gate) ? gateBars(gate) : undefined);
   gate.kill_json = JSON.stringify(snap);
   return snap;
 }
@@ -270,6 +394,10 @@ async function killSnap(env: Env, gate: GateRow): Promise<KillSnap | null> {
 function frozenDamage(snap: KillSnap, userId: string): number {
   const r = (snap.standings || []).find((s) => s.user_id === userId);
   return r ? r.steps : 0;
+}
+/** W1283 — a hunter's row on a frozen three-bar kill (null when they had put in nothing by then). */
+function frozenRow(snap: KillSnap, userId: string): Standing | null {
+  return (snap.standings || []).find((s) => s.user_id === userId) ?? null;
 }
 function prevWeekOf(week: string): string {
   const d = new Date(week + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() - 7);
@@ -324,10 +452,14 @@ async function ensureGate(env: Env, week: string): Promise<GateRow> {
   ).bind(week).first<GateRow>();
   if (prior) {
     const priorPool = await weeklyPool(env, prior.week_start);
-    if (priorPool >= prior.hp) {
+    // W1283 — a three-bar gate falls only when all three bars are spent.
+    const priorDown = isThree(prior)
+      ? barsDown(gateBars(prior), { steps: priorPool, ...(await effortPools(env, prior.week_start)) })
+      : priorPool >= prior.hp;
+    if (priorDown) {
       await env.DB.prepare("UPDATE world_gates SET status = 'slain', slain_at = ? WHERE week_start = ? AND status = 'open'")
         .bind(Date.now(), prior.week_start).run();
-      await snapshotKill(env, prior.week_start);   // W975 — its final standings are the podium
+      await snapshotKill(env, prior.week_start, isThree(prior) ? gateBars(prior) : undefined);   // W975 — its final standings are the podium
     } else {
       await env.DB.prepare("UPDATE world_gates SET status = 'survived' WHERE week_start = ? AND status = 'open'")
         .bind(prior.week_start).run();
@@ -337,15 +469,31 @@ async function ensureGate(env: Env, week: string): Promise<GateRow> {
   // read again here, settled, rather than taken from `prior`, which only finds an OPEN one).
   const [pools, last, losses] = await Promise.all([
     recentPools(env, week),
-    env.DB.prepare('SELECT week_start, hp, status, slain_at FROM world_gates WHERE week_start < ? ORDER BY week_start DESC LIMIT 1')
-      .bind(week).first<{ week_start: string; hp: number; status: string; slain_at: number | null }>(),
+    env.DB.prepare('SELECT week_start, hp, hp_flights, hp_sleep, status, slain_at FROM world_gates WHERE week_start < ? ORDER BY week_start DESC LIMIT 1')
+      .bind(week).first<{ week_start: string; hp: number; hp_flights: number | null; hp_sleep: number | null; status: string; slain_at: number | null }>(),
     lossStreak(env, week),
   ]);
-  const hp = computeNextGateHp(pools, last ?? null, losses);
+  let hp = computeNextGateHp(pools, last ?? null, losses);
+  if (week >= WG3_FROM) {
+    // W1283 — a three-bar gate: flights and sleep sized from the last three-bar gate (or the start values), and after a
+    // three-bar gate that stood, a spent steps bar keeps its size instead of easing.
+    const lastThree = last && isThree(last) ? last : null;
+    let done: Bars | null = null;
+    if (lastThree && lastThree.status === 'survived') {
+      done = { steps: await weeklyPool(env, lastThree.week_start), ...(await effortPools(env, lastThree.week_start)) };
+      hp = nextStepsAfterThreeBar(lastThree, done.steps, losses);
+    }
+    const bars = computeNextBars(lastThree, done, losses);
+    try {
+      await env.DB.prepare('INSERT INTO world_gates (week_start, hp, hp_flights, hp_sleep, status, created_at) VALUES (?, ?, ?, ?, ?, ?)')
+        .bind(week, hp, bars.flights, bars.sleep, 'open', Date.now()).run();
+    } catch { /* raced — another reader created it */ }
+  } else {
   try {
     await env.DB.prepare('INSERT INTO world_gates (week_start, hp, status, created_at) VALUES (?, ?, ?, ?)')
       .bind(week, hp, 'open', Date.now()).run();
   } catch { /* raced — another reader created it */ }
+  }
   gate = await env.DB.prepare('SELECT * FROM world_gates WHERE week_start = ?').bind(week).first<GateRow>();
   return gate as GateRow;
 }
@@ -363,6 +511,136 @@ function ptDayNow(): string {
   return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Los_Angeles' }).format(new Date());
 }
 
+/** W975 — the kill to announce: this week's gate if it fell, else last week's (a gate stamped at the Sunday rollover is
+ *  only ever seen from the new week). W1283 — a three-bar kill names its MVPs by damage and carries each hunter's share. */
+async function killAnnouncement(
+  env: Env, gate: GateRow, week: string, frozenKill: KillSnap | null, userId: string,
+): Promise<{ kill: Record<string, unknown> | null; myPlace: number }> {
+  let killGate: GateRow | null = gate.status === 'slain' ? gate : null;   // (its record is frozenKill)
+  if (!killGate) {
+    const prev = await env.DB.prepare("SELECT * FROM world_gates WHERE week_start = ? AND status = 'slain'")
+      .bind(prevWeekOf(week)).first<GateRow>();
+    killGate = prev || null;
+  }
+  if (!killGate) return { kill: null, myPlace: 0 };
+  const snap = killGate === gate && frozenKill ? frozenKill : await killSnap(env, killGate);
+  if (!snap) return { kill: null, myPlace: 0 };
+  const place = snap.mvps.findIndex((m) => m.user_id === userId) + 1;
+  const myPlace = killGate.week_start === week ? place : 0;
+  if (snap.bars) {   // W1283
+    const row = frozenRow(snap, userId);
+    const mine = row ? row.pct || 0 : 0;
+    const above = (snap.standings || []).filter((s) => (s.pct || 0) > mine).length;
+    return {
+      myPlace,
+      kill: {
+        week: killGate.week_start,
+        slain_at: Number(killGate.slain_at) || 0,
+        pool: snap.pool,
+        hunters: snap.hunters,
+        mvps: snap.mvps.map((m) => ({ alias: m.alias, rank_tier: m.rank_tier, steps: m.steps, flights: m.flights || 0, sleep: m.sleep || 0, pct: m.pct || 0 })),
+        my_place: place,
+        my_steps: row ? row.steps : 0,
+        my_pct: mine,
+        my_pos: mine > 0 ? above + 1 : null,
+        mvp_bonus: WORLDGATE_MVP_BONUS,
+        bars: snap.bars,
+      },
+    };
+  }
+  let kMine = 0, kAbove = 0;
+  if (Array.isArray(snap.standings)) {   // W983 — your steps AT the kill
+    kMine = frozenDamage(snap, userId);
+    kAbove = snap.standings.filter((s) => s.steps > kMine).length;
+  } else {
+    const kw = await env.DB.prepare(
+      `${WG_MERGED}
+       SELECT (SELECT steps FROM merged WHERE user_id = ?2) AS mine,
+              (SELECT COUNT(*) FROM merged WHERE steps > COALESCE((SELECT steps FROM merged WHERE user_id = ?2), 0)) AS above_kill`,
+    ).bind(killGate.week_start, userId).first<{ mine: number | null; above_kill: number }>();
+    kMine = Number(kw?.mine) || 0; kAbove = Number(kw?.above_kill) || 0;
+  }
+  return {
+    myPlace,
+    kill: {
+      week: killGate.week_start,
+      slain_at: Number(killGate.slain_at) || 0,
+      pool: snap.pool,
+      hunters: snap.hunters,
+      mvps: snap.mvps.map((m) => ({ alias: m.alias, rank_tier: m.rank_tier, steps: m.steps })),
+      my_place: place,
+      my_steps: kMine,
+      my_pos: kMine > 0 ? kAbove + 1 : null,
+      mvp_bonus: WORLDGATE_MVP_BONUS,
+    },
+  };
+}
+
+/** W1283 — the GET answer for a three-bar gate: the three bars, damage instead of steps on every list, the Kill Wall by
+ *  damage. The steps-only fields stay (steps) so an older build still shows a steps bar. */
+async function threeBarAnswer(
+  env: Env, session: SessionPayload, week: string, gate: GateRow, frozenKill: KillSnap | null,
+  claimed: boolean, myDays: number, iCount: boolean, myDamage: number, pendingSteps: number,
+): Promise<Response> {
+  const hpB = gateBars(gate);
+  const fz = frozenKill && frozenKill.bars && Array.isArray(frozenKill.standings) ? frozenKill : null;
+  let rows: Standing[], poolB: Bars, recent: Strike[];
+  if (fz) { rows = fz.standings as Standing[]; poolB = (fz.bars as { pool: Bars }).pool; recent = fz.recent || []; }
+  else {
+    const s3 = await standings3(env, week, hpB);
+    rows = s3.rows; poolB = s3.pool; recent = await recentStrikes(env, week, null);
+  }
+  const me = rows.find((r) => r.user_id === session.userId) ?? null;
+  const myPct = me ? me.pct || 0 : 0;
+  let pendF = 0, pendS = 0;   // the two-day rule: what waits to count
+  if (!fz && !iCount) {
+    const e = await env.DB.prepare('SELECT flights, sleep_min FROM world_gate_effort WHERE week_start = ? AND user_id = ?')
+      .bind(week, session.userId).first<{ flights: number; sleep_min: number }>();
+    pendF = Number(e?.flights) || 0; pendS = Number(e?.sleep_min) || 0;
+  }
+  const friends = await env.DB.prepare(`SELECT id FROM (${FRIENDS_OF.replace(/\?2/g, '?1')}) AS f`)
+    .bind(session.userId).all<{ id: string }>();
+  const fids = new Set((friends.results ?? []).map((r) => r.id));
+  const g = rows.filter((r) => fids.has(r.user_id));
+  const onWall = rows.filter((r) => (r.pct || 0) >= WG3_WALL_PCT);
+  const rallied = await env.DB.prepare('SELECT sent FROM world_gate_rallies WHERE user_id = ? AND day = ?')
+    .bind(session.userId, ptDayNow()).first<{ sent: number }>();
+  const { kill, myPlace } = await killAnnouncement(env, gate, week, frozenKill, session.userId);
+  const mySteps = fz ? (me ? me.steps : 0) : myDamage;
+  return jsonOk({
+    ok: true, week_start: week, hp: gate.hp, pool: poolB.steps, status: gate.status,
+    my_damage: mySteps,
+    my_days: myDays, days_needed: WORLDGATE_MIN_DAYS, pending_steps: pendingSteps,
+    claim_floor: WORLDGATE_CLAIM_FLOOR, souls: WORLDGATE_SOULS,
+    claimable: gate.status === 'slain' && !claimed && (myPct >= WG3_WALL_PCT || myPlace > 0),
+    claimed: !!claimed,
+    hunters: rows.length,
+    guild: { steps: g.reduce((a, r) => a + r.steps, 0), hunters: g.length, pct: pct2(g.reduce((a, r) => a + (r.pct || 0), 0)) },
+    my_rank: myPct > 0 ? rows.filter((r) => (r.pct || 0) > myPct).length + 1 : null,
+    top: rows.slice(0, WORLDGATE_TOP).map((r) => ({
+      alias: r.alias, steps: r.steps, flights: r.flights || 0, sleep: r.sleep || 0, pct: r.pct || 0, rank_tier: r.rank_tier, me: r.user_id === session.userId,
+    })),
+    wall: onWall.slice(0, WORLDGATE_WALL_MAX).map((r) => ({ alias: r.alias, steps: r.steps, pct: r.pct || 0 })),
+    wall_count: onWall.length,
+    recent,
+    rallied_today: !!rallied,
+    kill,
+    // W1283 — the three bars (sleep in minutes), the gate's damage, yours, the Kill Wall line and the bounty's odds
+    bars: {
+      steps: { hp: hpB.steps, pool: poolB.steps, my: mySteps },
+      flights: { hp: hpB.flights, pool: poolB.flights, my: me ? me.flights || 0 : 0 },
+      sleep: { hp: hpB.sleep, pool: poolB.sleep, my: me ? me.sleep || 0 : 0 },
+    },
+    pct: pct2(overallPct(hpB, poolB)),
+    my_pct: pct2(myPct),
+    wall_pct: WG3_WALL_PCT,
+    pending_flights: pendF,
+    pending_sleep: pendS,
+    drop_odds: { s_tier: WG3_DROP_S, mythic: WG3_DROP_MYTHIC },
+    effort: gate.status === 'open',   // the phone sends its flights and sleep while the gate stands
+  });
+}
+
 export async function handleWorldgateGet(
   _request: Request,
   env: Env,
@@ -373,8 +651,12 @@ export async function handleWorldgateGet(
   const week = ptWeekStartNow();
   const gate = await ensureGate(env, week);
   const pool = await weeklyPool(env, week);
-  // First read past the line stamps the kill.
-  if (gate.status === 'open' && pool >= gate.hp) {
+  // First read past the line stamps the kill. W1283 — a three-bar gate needs all three bars spent.
+  const three = isThree(gate);
+  const down = gate.status === 'open' && (three
+    ? pool >= gate.hp && barsDown(gateBars(gate), { steps: pool, ...(await effortPools(env, week)) })
+    : pool >= gate.hp);
+  if (down) {
     const now = Date.now();
     const stamp = await env.DB.prepare("UPDATE world_gates SET status = 'slain', slain_at = ?, slain_by = ? WHERE week_start = ? AND status = 'open'")
       .bind(now, session.userId, week).run();
@@ -383,7 +665,7 @@ export async function handleWorldgateGet(
     // W975 — the request that stamps the kill freezes the podium. A raced
     // stamp leaves it to killSnap's first-read freeze a moment later.
     if (stamp && stamp.meta && Number(stamp.meta.changes) >= 1) {
-      try { gate.kill_json = JSON.stringify(await snapshotKill(env, week)); } catch { /* frozen on next read */ }
+      try { gate.kill_json = JSON.stringify(await snapshotKill(env, week, three ? gateBars(gate) : undefined)); } catch { /* frozen on next read */ }
     }
   }
   // W983 — once the gate falls, the gate is done counting: every number below
@@ -414,6 +696,7 @@ export async function handleWorldgateGet(
     myDamage = iCount ? walked : 0;
     pendingSteps = iCount ? 0 : walked;
   }
+  if (three) return threeBarAnswer(env, session, week, gate, frozenKill, !!claimed, myDays, iCount, myDamage, pendingSteps);   // W1283
 
   // ── W916 — the v2 read side: who is striking, your guild's share, the top
   // strikers + your placement, the Kill Wall, the latest strikers. All from the
@@ -470,46 +753,7 @@ export async function handleWorldgateGet(
   const rallied = await env.DB.prepare('SELECT sent FROM world_gate_rallies WHERE user_id = ? AND day = ?')
     .bind(session.userId, ptDayNow()).first<{ sent: number }>();
 
-  // W975 — the kill to announce: this week's gate if it fell, else last week's
-  // (a gate stamped at the Sunday rollover is only ever seen from the new week).
-  let killGate: GateRow | null = gate.status === 'slain' ? gate : null;   // (its record is frozenKill above)
-  if (!killGate) {
-    const prev = await env.DB.prepare("SELECT * FROM world_gates WHERE week_start = ? AND status = 'slain'")
-      .bind(prevWeekOf(week)).first<GateRow>();
-    killGate = prev || null;
-  }
-  let kill: Record<string, unknown> | null = null;
-  let myPlace = 0;
-  if (killGate) {
-    const snap = killGate === gate && frozenKill ? frozenKill : await killSnap(env, killGate);
-    if (snap) {
-      const place = snap.mvps.findIndex((m) => m.user_id === session.userId) + 1;
-      let kMine = 0, kAbove = 0;
-      if (Array.isArray(snap.standings)) {   // W983 — your steps AT the kill
-        kMine = frozenDamage(snap, session.userId);
-        kAbove = snap.standings.filter((s) => s.steps > kMine).length;
-      } else {
-        const kw = await env.DB.prepare(
-          `${WG_MERGED}
-           SELECT (SELECT steps FROM merged WHERE user_id = ?2) AS mine,
-                  (SELECT COUNT(*) FROM merged WHERE steps > COALESCE((SELECT steps FROM merged WHERE user_id = ?2), 0)) AS above_kill`,
-        ).bind(killGate.week_start, session.userId).first<{ mine: number | null; above_kill: number }>();
-        kMine = Number(kw?.mine) || 0; kAbove = Number(kw?.above_kill) || 0;
-      }
-      if (killGate.week_start === week) myPlace = place;
-      kill = {
-        week: killGate.week_start,
-        slain_at: Number(killGate.slain_at) || 0,
-        pool: snap.pool,
-        hunters: snap.hunters,
-        mvps: snap.mvps.map((m) => ({ alias: m.alias, rank_tier: m.rank_tier, steps: m.steps })),
-        my_place: place,
-        my_steps: kMine,
-        my_pos: kMine > 0 ? kAbove + 1 : null,
-        mvp_bonus: WORLDGATE_MVP_BONUS,
-      };
-    }
-  }
+  const { kill, myPlace } = await killAnnouncement(env, gate, week, frozenKill, session.userId);
 
   return jsonOk({
     ok: true, week_start: week, hp: gate.hp, pool: fz ? fz.pool : pool, status: gate.status,
@@ -551,7 +795,9 @@ export async function handleWorldgateRally(
   const week = ptWeekStartNow();
   const gate = await ensureGate(env, week);
   const pool = await weeklyPool(env, week);
-  const pct = Math.max(0, Math.min(100, Math.round((pool / Math.max(1, gate.hp)) * 100)));
+  const pct = isThree(gate)   // W1283 — the three bars' damage
+    ? Math.max(0, Math.min(100, Math.round(overallPct(gateBars(gate), { steps: pool, ...(await effortPools(env, week)) }))))
+    : Math.max(0, Math.min(100, Math.round((pool / Math.max(1, gate.hp)) * 100)));
   // W1076 — at most 200 friends per horn: each push is a few subrequests.
   const friends = await env.DB.prepare(`SELECT id FROM (${FRIENDS_OF.replace(/\?2/g, '?1')}) AS f LIMIT 200`)
     .bind(session.userId).all<{ id: string }>();
@@ -559,6 +805,8 @@ export async function handleWorldgateRally(
   await env.DB.prepare('UPDATE world_gate_rallies SET sent = ? WHERE user_id = ? AND day = ?').bind(ids.length, session.userId, day).run();
   const body = gate.status === 'slain'
     ? `${session.alias} sounds the horn: the Worldgate is DOWN this week. Come collect your share.`
+    : isThree(gate)
+    ? `${session.alias} rallies you: the Worldgate is ${pct}% down. Every step, flight and hour of sleep is a strike.`
     : `${session.alias} rallies you: the Worldgate is ${pct}% down. Every verified step you walk is a strike.`;
   const push = async () => {
     for (const id of ids) {
@@ -584,16 +832,72 @@ export async function handleWorldgateClaim(
   const snap = await killSnap(env, gate);
   const place = snap ? snap.mvps.findIndex((m) => m.user_id === session.userId) + 1 : 0;
   const atKill = snap ? frozenDamage(snap, session.userId) : 0;
-  const bounty = atKill >= WORLDGATE_CLAIM_FLOOR ? WORLDGATE_SOULS : 0;
+  // W1283 — a three-bar kill: the Kill Wall is damage (% of the kill) at the kill, not steps.
+  const three = !!(snap && snap.bars);
+  const pctAtKill = three && snap ? ((frozenRow(snap, session.userId) || { pct: 0 }).pct || 0) : 0;
+  const onWall = three ? pctAtKill >= WG3_WALL_PCT : atKill >= WORLDGATE_CLAIM_FLOOR;
+  const bounty = onWall ? WORLDGATE_SOULS : 0;
   const bonus = place > 0 ? (WORLDGATE_MVP_BONUS[place - 1] ?? 0) : 0;
   if (!bounty && !bonus) {
-    return jsonError(403, 'TOO_LITTLE_DAMAGE', 'The bounty asks ' + WORLDGATE_CLAIM_FLOOR.toLocaleString('en-US') + ' verified steps this week.');
+    return jsonError(403, 'TOO_LITTLE_DAMAGE', three
+      ? 'The bounty asks ' + WG3_WALL_PCT + '% of the kill.'
+      : 'The bounty asks ' + WORLDGATE_CLAIM_FLOOR.toLocaleString('en-US') + ' verified steps this week.');
+  }
+  // W1283 — owner: "everyone on the kill wall gets 200 souls each + 1% chance at any S-tier item drop + 0.5% on the mythic
+  // drop". Two rolls, rolled here once (the claim row records them), for every hunter on the Kill Wall. The phone picks
+  // the relic from its own catalog: any S-rank boss's relic, or one of the three mythic weapons.
+  const drops: string[] = [];
+  if (three && onWall) {
+    if (wgDice.next() < WG3_DROP_S) drops.push('s_tier');
+    if (wgDice.next() < WG3_DROP_MYTHIC) drops.push('mythic');
   }
   try {
-    await env.DB.prepare('INSERT INTO world_gate_claims (week_start, user_id, claimed_at) VALUES (?, ?, ?)')
-      .bind(week, session.userId, Date.now()).run();
+    await env.DB.prepare('INSERT INTO world_gate_claims (week_start, user_id, claimed_at' + (three ? ', drops' : '') + ') VALUES (?, ?, ?' + (three ? ', ?' : '') + ')')
+      .bind(...(three ? [week, session.userId, Date.now(), drops.join(',')] : [week, session.userId, Date.now()])).run();
   } catch {
-    return jsonOk({ ok: true, first: false, souls: 0, bounty: 0, mvp_bonus: 0, mvp_place: place });   // already claimed
+    return jsonOk({ ok: true, first: false, souls: 0, bounty: 0, mvp_bonus: 0, mvp_place: place, drops: [] });   // already claimed
   }
-  return jsonOk({ ok: true, first: true, souls: bounty + bonus, bounty, mvp_bonus: bonus, mvp_place: place });
+  return jsonOk({ ok: true, first: true, souls: bounty + bonus, bounty, mvp_bonus: bonus, mvp_place: place, ...(three ? { drops } : {}) });
+}
+
+/** W1283 — the days of `week` (YYYY-MM-DD, a Sunday) that have begun by Pacific `today`: 0 before it, up to 7. */
+export function wgDaysBegun(week: string, today: string): number {
+  const a = Date.parse(week + 'T00:00:00Z'), b = Date.parse(today + 'T00:00:00Z');
+  if (!Number.isFinite(a) || !Number.isFinite(b) || b < a) return 0;
+  return Math.min(7, Math.round((b - a) / 86400000) + 1);
+}
+/** W1283 — a day list from the phone, capped: at most `days` entries (plus one, for a phone east of Pacific time already
+ *  on the next day), each a whole number from 0 to `cap`. */
+export function wgCapDays(list: unknown, days: number, cap: number): number {
+  if (!Array.isArray(list)) return 0;
+  let sum = 0;
+  for (let i = 0; i < Math.min(7, days + 1, list.length); i++) {
+    const v = Math.floor(Number(list[i]));
+    if (Number.isFinite(v) && v > 0) sum += Math.min(cap, v);
+  }
+  return sum;
+}
+
+/**
+ * W1283 — POST /v1/worldgate/effort { week, flights: [7 days], sleep: [7 nights, minutes] }: the phone's flights and
+ * minutes asleep for each day of the gate week (Sunday first; a night belongs to the day it ends). The server caps every
+ * day (WG3_FLIGHTS_DAY_CAP flights, WG3_SLEEP_NIGHT_CAP minutes), counts only the days begun, and never lowers a total.
+ * A phone on another week, or a week before the three bars, is answered and ignored.
+ */
+export async function handleWorldgateEffort(request: Request, env: Env, session: SessionPayload): Promise<Response> {
+  const rl = await env.RL_FRIENDS_WRITE.limit({ key: session.userId });
+  if (!rl.success) return jsonError(429, 'RATE_LIMITED', 'Slow down.');
+  let body: { week?: unknown; flights?: unknown; sleep?: unknown };
+  try { body = await request.json() as typeof body; } catch { return jsonError(400, 'BAD_JSON', 'Bad body.'); }
+  const week = ptWeekStartNow();
+  if (String(body?.week || '') !== week || week < WG3_FROM) return jsonOk({ ok: true, counted: false });
+  const days = wgDaysBegun(week, ptDayNow());
+  const flights = wgCapDays(body.flights, days, WG3_FLIGHTS_DAY_CAP);
+  const sleep = wgCapDays(body.sleep, days, WG3_SLEEP_NIGHT_CAP);
+  await env.DB.prepare(
+    `INSERT INTO world_gate_effort (week_start, user_id, flights, sleep_min, updated_at) VALUES (?1, ?2, ?3, ?4, ?5)
+     ON CONFLICT(week_start, user_id) DO UPDATE SET flights = MAX(flights, excluded.flights), sleep_min = MAX(sleep_min, excluded.sleep_min),
+       updated_at = excluded.updated_at`,
+  ).bind(week, session.userId, flights, sleep, Date.now()).run();
+  return jsonOk({ ok: true, counted: true, flights, sleep });
 }

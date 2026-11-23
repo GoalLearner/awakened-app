@@ -141,7 +141,7 @@ import {
 // W870 (Wave 2 Train B) — THE TOWER REMEMBERS.
 import { handleTowerEventPost, handleTowerFriendsGet, handleTowerAvengePost } from './handlers/tower';
 // W871 (Wave 2 Train B) — THE WORLDGATE.
-import { handleWorldgateGet, handleWorldgateClaim, handleWorldgateRally } from './handlers/worldgate';
+import { handleWorldgateGet, handleWorldgateClaim, handleWorldgateRally, handleWorldgateEffort } from './handlers/worldgate';
 import { handleRecapText } from './handlers/recap';   // W1015
 // W842 (Train 4, G1) — universal-link invite loop (AASA + codes + redeem + claim).
 import {
@@ -529,6 +529,9 @@ export default {
             response = await handleWorldgateGet(request, env, session);
           } else if (path === '/v1/worldgate/claim' && method === 'POST') {
             response = await handleWorldgateClaim(request, env, session);
+          } else if (path === '/v1/worldgate/effort' && method === 'POST') {
+            // W1283 — the phone's flights and sleep for the week's three-bar gate
+            response = await handleWorldgateEffort(request, env, session);
           } else if (path === '/v1/worldgate/rally' && method === 'POST') {
             // W916 — the rally horn: once a day, every accepted friend is pushed.
             response = await handleWorldgateRally(request, env, session, ctx);

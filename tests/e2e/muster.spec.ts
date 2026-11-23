@@ -266,3 +266,82 @@ test.describe('W1282 — the Grinning God Hall of Fame', () => {
     await expect(rd.locator('.mu-fin')).toHaveCount(0);
   });
 });
+
+// W1283 — owner 2026-11-22: "I want to have the world gate do the steps + flights HP bar + Sleep total ... So this worldgate will
+// have all of these to complete to kill it", "the kill wall has to be % damage" and the bounty's 1% / 0.5% relic rolls.
+test.describe('W1283 — the three-bar Worldgate', () => {
+  const WG3 = {
+    ...WG, hp: 1500000, pool: 600000, my: 12000, hunters: 31, my_rank: 4,
+    guild: { steps: 50000, hunters: 2, pct: 3.1 },
+    top: [{ alias: 'Kestrel', steps: 90000, flights: 200, sleep: 3000, pct: 9.4, rank_tier: 'S' }, { alias: 'RenDIESEL', steps: 70000, flights: 40, sleep: 2400, pct: 4.6, rank_tier: 'A' }],
+    wall: [{ alias: 'Kestrel', steps: 90000, pct: 9.4 }], wall_count: 1, my_days: 3,
+    bars: { steps: { hp: 1500000, pool: 600000, my: 12000 }, flights: { hp: 1500, pool: 420, my: 30 }, sleep: { hp: 36000, pool: 9000, my: 1200 } },
+    pct3: 31.0, my_pct: 1.6, wall_pct: 0.5, wait_f: 0, wait_s: 0, odds: { s_tier: 0.01, mythic: 0.005 },
+  };
+  async function boot3(page: Page, extra: Record<string, unknown> = {}) {
+    await boot(page);
+    await page.evaluate((c) => { localStorage.setItem('hb_worldgate_v1', JSON.stringify({ ...c, at: Date.now() })); (window as any).__worldgate(); }, { ...WG3, ...extra });
+  }
+  test('three bars, the gate\'s damage and yours, every list by damage, the Kill tab in % with the bounty\'s odds', async ({ page }) => {
+    await boot3(page);
+    await page.evaluate(() => (window as any).__muster.open('wg'));
+    const wg = page.locator('[data-pane="wg"]');
+    await expect(wg.locator('.mu-wgbar')).toHaveCount(3, { timeout: 8_000 });
+    await expect(wg.locator('.mu-wgbar.steps .mu-pv')).toHaveText('600,000 / 1,500,000');
+    await expect(wg.locator('.mu-wgbar.flights .mu-pv')).toHaveText('420 / 1,500');
+    await expect(wg.locator('.mu-wgbar.sleep .mu-pv')).toHaveText('150h / 600h');
+    await expect(wg.locator('.mu-wgbar.flights .mu-tag')).toHaveText('28%');
+    await expect(wg.locator('.mu-bars-n')).toHaveText(/All three bars must be emptied/i);
+    await expect(wg.locator('.mu-total .mu-big b')).toHaveText('31.0%');
+    await expect(wg.locator('.mu-total .mu-lab')).toHaveText(/Damage dealt · 31 hunters/i);
+    await expect(wg.locator('.mu-rule')).toContainText('hour of sleep');
+    await expect(wg.locator('.mu-hpn')).toContainText('31.0% down');
+    await expect(wg.locator('.mu-share .mu-rv b')).toHaveText('1.6%');
+    await expect(wg.locator('.mu-share .mu-sv')).toContainText('Kill Wall secured');
+    await expect(wg.locator('.mu-sparts')).toHaveText('12,000 steps · 30 flights · 20h sleep');
+    await page.locator('[data-wg-tab="rank"]').click();
+    await expect(wg.locator('.mu-hrow').first().locator('.a')).toHaveText('9.4%');
+    await page.locator('[data-wg-tab="kill"]').click();
+    await expect(wg.locator('.mu-kill')).toContainText('Deal 0.5% of the damage before Sunday');
+    await expect(wg.locator('.mu-kill')).toContainText('with a 1% chance at an S-rank relic and 0.5% at a mythic weapon');
+    await expect(wg.locator('.mu-kill')).toContainText('The three who dealt the most damage when it falls');
+    await expect(page.locator('#wg-pulse .wg-pulse-pct')).toHaveText('31.0%');
+    const text = await wg.innerText();
+    expect(text).not.toMatch(/\bfell(ed)?\b/i);
+  });
+  test('under 0.5% the card says what is left; under two days everything waits', async ({ page }) => {
+    await boot3(page, { my_pct: 0.2, my_rank: 20 });
+    await page.evaluate(() => (window as any).__muster.open('wg'));
+    const wg = page.locator('[data-pane="wg"]');
+    await expect(wg.locator('.mu-share .mu-sv')).toHaveText('0.2% of the kill so far. Reach 0.5% to be named on the Kill Wall.', { timeout: 8_000 });
+    await page.evaluate(() => (window as any).__muster.close && (window as any).__muster.close());
+    await page.evaluate((c) => { localStorage.setItem('hb_worldgate_v1', JSON.stringify({ ...c, at: Date.now(), days_needed: 2, my_days: 1, my_pct: 0, waiting: 4200, wait_f: 12, wait_s: 840 })); }, WG3);
+    await page.evaluate(() => (window as any).__muster.open('wg'));
+    await expect(wg.locator('.mu-share .mu-sv')).toContainText('Your steps, flights and sleep count once you open the app on 2 days this week.', { timeout: 8_000 });
+    await expect(wg.locator('.mu-share .mu-sv')).toContainText('4,200 steps, 12 flights, 14h sleep waiting');
+    await expect(wg.locator('.mu-share button')).toHaveText('Counts from day 2');
+  });
+  test('sleep counts one source per night; the S-rank pool has no mythic; a bounty roll grants the relic', async ({ page }) => {
+    await boot(page);
+    const r = await page.evaluate(() => {
+      const w = (window as any).__wg3;
+      const t0 = Date.parse('2026-11-30T08:00:00Z');
+      const s = (src: string, startH: number, hours: number) => ({ startDate: new Date(t0 + startH * 3600e3).toISOString(), duration: hours, sleepState: 'Asleep', sourceBundleId: src });
+      const samples = [s('com.apple.health.watch', 0, 7), s('com.ouraring.oura', 0, 8), s('com.apple.health.watch', 20, 3)];
+      const night = w.sleepMin(samples, t0 - 2 * 3600e3, t0 + 10 * 3600e3);   // Apple's 7h, not 15h, not Oura's 8h
+      const clipped = w.sleepMin(samples, t0 + 5 * 3600e3, t0 + 10 * 3600e3);   // 2h of the watch's night left inside
+      const pool = w.sTierPool();
+      const got = w.grant('mythic');
+      const s1 = w.grant('s_tier');
+      return { night, clipped, pool, got: got && got.id, rarity: got && got.rarity, s1: s1 && s1.id, s1r: s1 && s1.rarity };
+    });
+    expect(r.night).toBe(7 * 60);
+    expect(r.clipped).toBe(2 * 60);
+    expect(r.pool.length).toBeGreaterThan(5);
+    for (const id of ['nightfall_blade', 'reverie_staff', 'vigil_bow']) expect(r.pool).not.toContain(id);
+    expect(['nightfall_blade', 'reverie_staff', 'vigil_bow']).toContain(r.got);
+    expect(r.rarity).toBe('mythic');
+    expect(r.pool).toContain(r.s1);
+    expect(['rare', 'ultra_rare']).toContain(r.s1r);
+  });
+});

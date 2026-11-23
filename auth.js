@@ -2469,12 +2469,18 @@
         body: '{}',
       });
       const data = await res.json().catch(function () { return null; });
-      if (res.status === 200 && data && data.ok) return { ok: true, first: !!data.first, souls: data.souls || 0 };
+      // W1283 — the bounty, the MVP bonus and its place, and the bounty's relic rolls ride along (the MVP card reads them)
+      if (res.status === 200 && data && data.ok) {
+        return { ok: true, first: !!data.first, souls: data.souls || 0, bounty: data.bounty || 0, mvp_bonus: data.mvp_bonus || 0,
+          mvp_place: data.mvp_place || 0, drops: Array.isArray(data.drops) ? data.drops : [] };
+      }
       return { ok: false, code: (data && data.error) || 'ERROR' };
     } catch (_) { return { ok: false, code: 'NETWORK' }; }
   }
   // W916 — the rally horn: once a day, every accepted friend is pushed about the gate.
   function rallyWorldgate() { return _authedFetch('POST', '/v1/worldgate/rally'); }
+  // W1283 — the phone's flights and minutes asleep for each day of the week's three-bar gate.
+  function postWorldgateEffort(body) { return _authedFetch('POST', '/v1/worldgate/effort', body); }
 
   // W845 (Train 5, E2) — weekly-hunger owner override (null = deterministic pick).
   async function fetchWeeklyHunger() {
@@ -2512,6 +2518,7 @@
     claimWorldgate,
     fetchRecapText,   // W1015
     rallyWorldgate,   // W916
+    postWorldgateEffort,   // W1283
     getJwt,
     refreshSession,   // W815 — silent session renewal (also auto-fires at boot/foreground)
     revokeSession,    // W1077 — server-side sign-out (bumps the account's token version)
