@@ -37225,6 +37225,12 @@ button.mx-sh { cursor: pointer; min-height: 40px; }
 .mu-row .a{color:var(--mu-violet2)}
 /* W1290 — what the strike hit with, under the name: "+4,186 steps and +7 flights" */
 .mu-row .mu-hit{display:block;margin-top:3px;font-size:12px;font-weight:700;line-height:1.35;color:var(--mu-violet2);font-variant-numeric:tabular-nums}
+/* W1291 — each part of a strike in its bar's colour; the joins stay quiet */
+.mu-row .mu-hit{color:var(--mu-ink2);font-weight:600}
+.mu-hit b{font-weight:700}
+.mu-hit .mu-h-steps{color:#4ade80}
+.mu-hit .mu-h-flights{color:#f59e0b}
+.mu-hit .mu-h-sleep{color:#a78bfa}
 .mu-frame .is-you .a{color:var(--mu-gold)!important}
 .mu-frame .is-you .mu-nmb{color:var(--mu-gold)!important}
 .mu-hrow .pos{font:700 13px/1 var(--mu-serif);color:var(--mu-ink3);text-align:center}

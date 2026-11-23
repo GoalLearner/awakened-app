@@ -165,7 +165,7 @@ function wgEnv(st: WgState): Env {
             }
             if (/ORDER BY ls\.updated_at DESC/.test(sql)) {
               const until = binds[2] as number | null;
-              const results = st.merged.filter((r) => until == null || (r.updated_at || 0) <= until).sort((a, b) => (b.updated_at || 0) - (a.updated_at || 0)).slice(0, binds[1] as number).map((r) => ({ alias: r.alias, steps: r.steps, at: r.updated_at || 0, flights: r.flights ?? 0, sleep: r.sleep ?? 0 }));
+              const results = st.merged.filter((r) => until == null || (r.updated_at || 0) <= until).sort((a, b) => (b.updated_at || 0) - (a.updated_at || 0)).slice(0, binds[1] as number).map((r) => ({ alias: r.alias, steps: r.steps, at: r.updated_at || 0, flights: r.flights ?? 0, sleep: r.sleep ?? 0, rank_tier: /pps\.rank_tier/.test(sql) ? (r.rank_tier ?? null) : undefined }));
               return { results, success: true, meta: {} };
             }
             if (/AND updated_at > \?/.test(sql)) return { results: st.merged.filter((r) => (r.updated_at || 0) > (binds[1] as number)).map((r) => ({ user_id: r.user_id })), success: true, meta: {} };
@@ -351,6 +351,14 @@ describe('W916 — the Worldgate v2 read side', () => {
     const recent = ((await res.json()) as { recent: Array<{ alias: string; steps: number; flights: number; sleep: number }> }).recent;
     expect(recent[0]).toMatchObject({ alias: 'grubbadub', flights: 7, sleep: 420 });
     expect(recent.filter((r) => r.alias !== 'grubbadub').every((r) => r.flights === 0 && r.sleep === 0)).toBe(true);
+  });
+
+  it('each recent strike carries the hunter rank, so its circle wears the rank colour (W1291)', async () => {
+    const st = wgFresh();
+    const res = await handleWorldgateGet(new Request('https://x/v1/worldgate'), wgEnv(st), meS);
+    const recent = ((await res.json()) as { recent: Array<{ alias: string; rank_tier: string | null }> }).recent;
+    expect(recent.find((r) => r.alias === 'RenDIESEL')).toMatchObject({ rank_tier: 'S' });
+    expect(recent.find((r) => r.alias === 'Richie')).toMatchObject({ rank_tier: 'A' });
   });
 
   it('the rally horn pushes every accepted friend once a day; the second horn is a no-op', async () => {

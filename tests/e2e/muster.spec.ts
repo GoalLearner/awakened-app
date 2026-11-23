@@ -330,6 +330,36 @@ test.describe('W1283 — the three-bar Worldgate', () => {
     await expect(rows.nth(1)).toContainText('struck the gate');
     expect(await page.evaluate(() => (window as any).__wgStrikeHit({ steps: 9000, sleep: 465 }))).toBe('+9,000 steps and 7.8 hours of sleep');
   });
+  // W1291 — owner 2026-11-23: "have the R colored the color of the person's rank" and "flights and steps and sleep had
+  // different colors differentiating the three"
+  test('a strike circle wears the rank colour; steps, flights and sleep each wear their bar colour', async ({ page }) => {
+    await boot3(page, { recent: [
+      { alias: 'ricin', steps: 7000, flights: 2, sleep: 420, rank_tier: 'C' },
+      { alias: 'galilea', steps: 8339, rank_tier: 'A' },
+      { alias: 'Thane', steps: 1204 },   // no rank sent: the E colour
+      { alias: 'Richie', steps: 4186, flights: 6, rank_tier: 'S+' },
+      { alias: 'nicole', steps: 12460, rank_tier: 'D' },
+      { alias: 'anthony', steps: 15702, rank_tier: 'B' },
+    ] });
+    await page.evaluate(() => (window as any).__muster.open('wg'));
+    const rows = page.locator('[data-pane="wg"] .mu-row');
+    await expect(rows).toHaveCount(6, { timeout: 8_000 });
+    const rc = (i: number) => rows.nth(i).locator('.mu-av').evaluate((el) => getComputedStyle(el).color);
+    expect(await rc(0)).toBe('rgb(52, 211, 153)');    // C
+    expect(await rc(1)).toBe('rgb(239, 68, 68)');     // A, the leaderboard's red
+    expect(await rc(2)).toBe('rgb(139, 92, 246)');    // E
+    const hit = rows.nth(0).locator('.mu-hit');
+    await expect(hit).toHaveText('+7,000 steps, +2 flights, 7 hours of sleep');
+    await expect(hit.locator('.mu-h-steps')).toHaveText('+7,000 steps');
+    await expect(hit.locator('.mu-h-flights')).toHaveText('+2 flights');
+    await expect(hit.locator('.mu-h-sleep')).toHaveText('7 hours of sleep');
+    const col = (sel: string) => hit.locator(sel).evaluate((el) => getComputedStyle(el).color);
+    expect(await col('.mu-h-steps')).toBe('rgb(74, 222, 128)');
+    expect(await col('.mu-h-flights')).toBe('rgb(245, 158, 11)');
+    expect(await col('.mu-h-sleep')).toBe('rgb(167, 139, 250)');
+    await expect(rows.nth(1).locator('.mu-hit b')).toHaveCount(1);   // steps only: no flights or sleep part
+    if (process.env.LB_SHOTS) { await rows.nth(0).scrollIntoViewIfNeeded(); await page.waitForTimeout(900); await page.screenshot({ path: process.env.LB_SHOTS + '/wg-strike-colours.png' }); }
+  });
   test('under 0.5% the card says what is left; under two days everything waits', async ({ page }) => {
     await boot3(page, { my_pct: 0.2, my_rank: 20 });
     await page.evaluate(() => (window as any).__muster.open('wg'));

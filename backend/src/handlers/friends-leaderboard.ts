@@ -41,6 +41,7 @@ interface FriendRow {
   rank_tier: string | null;
   prestige: number | null;
   founder_seq: number | null;
+  bosses_slain: number | null;   // W1291 — the crimson boss-kill stamp, as on the global board
 }
 
 export async function handleFriendsLeaderboardGet(
@@ -77,7 +78,8 @@ export async function handleFriendsLeaderboardGet(
          SELECT u.id AS user_id, u.alias AS alias,
                 COALESCE(m.steps, 0) AS current_value,
                 p.rank_label AS rank_label, p.arena_title AS arena_title, p.avatar_id AS avatar_id, p.card_bg AS card_bg, p.card_ink AS card_ink,
-                p.rank_tier AS rank_tier, p.prestige_level AS prestige, p.founder_seq AS founder_seq
+                p.rank_tier AS rank_tier, p.prestige_level AS prestige, p.founder_seq AS founder_seq,
+                p.bosses_slain_total AS bosses_slain
            FROM users u
            LEFT JOIN merged m ON m.user_id = u.id
            LEFT JOIN public_profile_summary p ON p.user_id = u.id
@@ -99,7 +101,8 @@ export async function handleFriendsLeaderboardGet(
         `SELECT u.id AS user_id, u.alias AS alias,
                 COALESCE(ls.current_value, 0) AS current_value,
                 p.rank_label AS rank_label, p.arena_title AS arena_title, p.avatar_id AS avatar_id, p.card_bg AS card_bg, p.card_ink AS card_ink,
-                p.rank_tier AS rank_tier, p.prestige_level AS prestige, p.founder_seq AS founder_seq
+                p.rank_tier AS rank_tier, p.prestige_level AS prestige, p.founder_seq AS founder_seq,
+                p.bosses_slain_total AS bosses_slain
            FROM users u
            LEFT JOIN leaderboard_snapshots ls
              ON ls.user_id = u.id AND ls.metric = ?1 AND ls.week_start = ?2
@@ -140,6 +143,7 @@ export async function handleFriendsLeaderboardGet(
       rankTier: r.rank_tier || undefined,
       prestige: r.prestige ?? 0,
       founderSeq: r.founder_seq ?? 0,
+      bosses_slain: r.bosses_slain ?? null,   // W1291
       you,
     };
   });

@@ -255,7 +255,7 @@ interface GateRow { week_start: string; hp: number; status: string; slain_at: nu
 type Standing = { user_id: string; alias: string; rank_tier: string | null; steps: number; flights?: number; sleep?: number; pct?: number };
 // W1290 — a strike also carries the hunter's flights and minutes asleep this week (0 when none), so the feed can
 // say what they hit with: "+4,186 steps and +7 flights". A kill frozen before W1290 has steps only.
-type Strike = { alias: string; steps: number; at: number; flights?: number; sleep?: number };
+type Strike = { alias: string; steps: number; at: number; flights?: number; sleep?: number; rank_tier?: string | null };
 /** W975 — the kill, frozen. user_id never leaves the server.
  *  W983 — plus EVERY hunter's damage at the kill (standings) and the latest
  *  strikes before it (recent). A slain gate reads only these: steps walked
@@ -281,20 +281,22 @@ async function standingsOf(env: Env, week: string): Promise<Standing[]> {
 async function recentStrikes(env: Env, week: string, until: number | null): Promise<Strike[]> {
   const rows = await env.DB.prepare(
     `SELECT u.alias AS alias, ls.current_value AS steps, ls.updated_at AS at,
-            COALESCE(e.flights, 0) AS flights, COALESCE(e.sleep_min, 0) AS sleep
+            COALESCE(e.flights, 0) AS flights, COALESCE(e.sleep_min, 0) AS sleep, pps.rank_tier AS rank_tier
        FROM leaderboard_snapshots ls
        JOIN users u ON u.id = ls.user_id
        LEFT JOIN world_gate_effort e ON e.week_start = ?1 AND e.user_id = ls.user_id
+       LEFT JOIN public_profile_summary pps ON pps.user_id = ls.user_id
       WHERE ls.metric = 'step_total' AND ls.week_start = ?1 AND ls.current_value > 0
         AND u.apple_sub NOT LIKE 'sim_test_%'
         AND (?3 IS NULL OR ls.updated_at <= ?3)
         AND ${wgCounts('ls.user_id')}
       ORDER BY ls.updated_at DESC
       LIMIT ?2`,
-  ).bind(week, WORLDGATE_RECENT, until).all<{ alias: string; steps: number; at: number; flights?: number; sleep?: number }>();
+  ).bind(week, WORLDGATE_RECENT, until).all<{ alias: string; steps: number; at: number; flights?: number; sleep?: number; rank_tier?: string | null }>();
   return (rows.results ?? []).map((r) => ({
     alias: r.alias, steps: Number(r.steps) || 0, at: Number(r.at) || 0,
     flights: Math.max(0, Number(r.flights) || 0), sleep: Math.max(0, Number(r.sleep) || 0),   // W1290
+    rank_tier: r.rank_tier ?? null,   // W1291 — the strike's circle wears the hunter's rank colour
   }));
 }
 const byDamage = (a: Standing, b: Standing) => b.steps - a.steps || a.alias.localeCompare(b.alias);
