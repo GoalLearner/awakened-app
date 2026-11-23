@@ -1,0 +1,6 @@
+Worldgate strikes that say what they hit with, and badges on the Friends board.
+
+• Recent Strikes on the Worldgate now say what each hunter struck with: steps, flights and sleep, each in its own colour. Each hunter's circle wears their rank colour.
+• The Friends tab on the Steps board now shows the same badges as This Week: the 100K, 200K and 300K badges and boss kills.
+• A drop past its cap now sells for souls the moment it lands, so every drop pays.
+• The 200K and 300K weeks are now pins of their own in the Wardrobe.
