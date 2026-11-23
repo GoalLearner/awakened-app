@@ -309,6 +309,27 @@ test.describe('W1283 — the three-bar Worldgate', () => {
     const text = await wg.innerText();
     expect(text).not.toMatch(/\bfell(ed)?\b/i);
   });
+  // W1290 — owner 2026-11-23: "Richie struck the gate +4,186 steps and +7 flights / Ricin ... +7,000 steps, +2 flights,
+  // 7 hours of sleep / Karen +500 steps" — and no sleep for a hunter without sleep data
+  test('each strike says what it hit with; a part that is 0 is left out', async ({ page }) => {
+    await boot3(page, { recent: [
+      { alias: 'Richie', steps: 4186, flights: 7, sleep: 0 },
+      { alias: 'ricin', steps: 7000, flights: 2, sleep: 420 },
+      { alias: 'Karen', steps: 500, flights: 0, sleep: 0 },
+      { alias: 'owl', steps: 1, flights: 1, sleep: 45 },
+      { alias: 'Thane', steps: 1204 },   // a kill frozen before W1290: steps only
+    ] });
+    await page.evaluate(() => (window as any).__muster.open('wg'));
+    const rows = page.locator('[data-pane="wg"] .mu-row');
+    await expect(rows).toHaveCount(5, { timeout: 8_000 });
+    await expect(rows.nth(0).locator('.mu-hit')).toHaveText('+4,186 steps and +7 flights');
+    await expect(rows.nth(1).locator('.mu-hit')).toHaveText('+7,000 steps, +2 flights, 7 hours of sleep');
+    await expect(rows.nth(2).locator('.mu-hit')).toHaveText('+500 steps');
+    await expect(rows.nth(3).locator('.mu-hit')).toHaveText('+1 step, +1 flight, 45 min of sleep');
+    await expect(rows.nth(4).locator('.mu-hit')).toHaveText('+1,204 steps');
+    await expect(rows.nth(1)).toContainText('struck the gate');
+    expect(await page.evaluate(() => (window as any).__wgStrikeHit({ steps: 9000, sleep: 465 }))).toBe('+9,000 steps and 7.8 hours of sleep');
+  });
   test('under 0.5% the card says what is left; under two days everything waits', async ({ page }) => {
     await boot3(page, { my_pct: 0.2, my_rank: 20 });
     await page.evaluate(() => (window as any).__muster.open('wg'));

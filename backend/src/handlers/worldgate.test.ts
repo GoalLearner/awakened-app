@@ -114,7 +114,7 @@ describe('worldgate HP (W892)', () => {
 // ── W916 — the v2 read side + the rally horn ────────────────────────────
 const mockNotify = vi.mocked(notifyUser);
 interface WgState {
-  merged: Array<{ user_id: string; alias: string; steps: number; rank_tier?: string; updated_at?: number }>;
+  merged: Array<{ user_id: string; alias: string; steps: number; rank_tier?: string; updated_at?: number; flights?: number; sleep?: number }>;   // W1290 — flights/sleep: the recent query LEFT JOINs world_gate_effort
   friends: string[];        // accepted friends of 'u-me'
   gate: { hp: number; status: string; kill_json?: string | null; slain_at?: number | null };
   claims?: Set<string>;     // W975 — user ids that claimed this week
@@ -165,7 +165,7 @@ function wgEnv(st: WgState): Env {
             }
             if (/ORDER BY ls\.updated_at DESC/.test(sql)) {
               const until = binds[2] as number | null;
-              const results = st.merged.filter((r) => until == null || (r.updated_at || 0) <= until).sort((a, b) => (b.updated_at || 0) - (a.updated_at || 0)).slice(0, binds[1] as number).map((r) => ({ alias: r.alias, steps: r.steps, at: r.updated_at || 0 }));
+              const results = st.merged.filter((r) => until == null || (r.updated_at || 0) <= until).sort((a, b) => (b.updated_at || 0) - (a.updated_at || 0)).slice(0, binds[1] as number).map((r) => ({ alias: r.alias, steps: r.steps, at: r.updated_at || 0, flights: r.flights ?? 0, sleep: r.sleep ?? 0 }));
               return { results, success: true, meta: {} };
             }
             if (/AND updated_at > \?/.test(sql)) return { results: st.merged.filter((r) => (r.updated_at || 0) > (binds[1] as number)).map((r) => ({ user_id: r.user_id })), success: true, meta: {} };
@@ -340,6 +340,17 @@ describe('W916 — the Worldgate v2 read side', () => {
     expect((j.recent as Array<{ alias: string }>)[0]!.alias).toBe('grubbadub');
     expect(j.rallied_today).toBe(false);
     expect(j.claim_floor).toBe(WORLDGATE_CLAIM_FLOOR);
+  });
+
+  // W1290 — owner 2026-11-23: a strike says what it hit with ("+4,186 steps and +7 flights"); 0 when none
+  it('each recent strike carries the hunter\'s flights and minutes asleep', async () => {
+    const st = wgFresh();
+    const g = st.merged.find((r) => r.alias === 'grubbadub')!;
+    g.flights = 7; g.sleep = 420;
+    const res = await handleWorldgateGet(new Request('https://x/v1/worldgate'), wgEnv(st), meS);
+    const recent = ((await res.json()) as { recent: Array<{ alias: string; steps: number; flights: number; sleep: number }> }).recent;
+    expect(recent[0]).toMatchObject({ alias: 'grubbadub', flights: 7, sleep: 420 });
+    expect(recent.filter((r) => r.alias !== 'grubbadub').every((r) => r.flights === 0 && r.sleep === 0)).toBe(true);
   });
 
   it('the rally horn pushes every accepted friend once a day; the second horn is a no-op', async () => {
