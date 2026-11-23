@@ -1,6 +1,6 @@
 // ─────────────────────────────────────────────────────────────
 // INCREMENT THIS VERSION NUMBER WITH EVERY NETLIFY DEPLOYMENT
-const CACHE_VERSION = 'v6.526';
+const CACHE_VERSION = 'v6.527';
 // ─────────────────────────────────────────────────────────────
 
 const CACHE_NAME = 'awakened-cache-' + CACHE_VERSION;
@@ -102,6 +102,16 @@ const PRECACHE_ASSETS = [
   '/assets/busts/avatar-skin-triarch-bust.webp',
   '/assets/busts/avatar-skin-gatebreaker-bust.webp',
   '/assets/busts/avatar-skin-violetqueen-bust.webp',   // W1288
+  '/assets/badges/boss-kills-1.webp',   // W1293 — the boss-kill ladder
+  '/assets/badges/boss-kills-2.webp',
+  '/assets/badges/boss-kills-3.webp',
+  '/assets/badges/boss-kills-4.webp',
+  '/assets/badges/boss-kills-5.webp',
+  '/assets/badges/boss-kills-6.webp',
+  '/assets/badges/boss-kills-7.webp',
+  '/assets/badges/boss-kills-8.webp',
+  '/assets/badges/boss-kills-9.webp',
+  '/assets/badges/boss-kills-10.webp',
   '/assets/busts/avatar-skin-bloodmoon-bust.webp',
   // Tab-bar icons (DALL-E art replacing the emoji set)
   '/assets/tab-icons/tab-status.png',

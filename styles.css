@@ -29059,22 +29059,33 @@ button.pc-shard { cursor: pointer; font: inherit; -webkit-appearance: none; appe
 }
 @media (prefers-reduced-motion: reduce) { .lb-rank-club100k > b > span::after { animation: none; } }
 
-/* W388 — 100-boss-kills stamp. Crimson sibling of the gold 100K stamp; the
-   crossed-blades mark + crimson read as combat, distinct from the step badge. */
+/* W1293 — the boss-kill badge is a ladder (owner 2026-11-23, after a shooter's prestige emblems: "Every 100th kill the
+   badge gets something better ... until 1000 kills"; "maybe some diamonds"): ten painted emblems (fal, Set 1), from an iron
+   buckler at 100 to a crowned, diamond-set gold crest at 1000, the count beside it in the emblem's colour. Replaces the
+   W388 crimson hexagon. The 24px emblem rides out of the 16px line, so the title line makes room (it clips for ellipsis). */
 .lb-rank-boss100 {
-  display: inline-flex; align-items: center; justify-content: center; gap: 1px; flex: none;
-  /* W583 — width flexes so upgraded century tiers (200 … 1200) never clip;
-     the %-based hex clip-path stretches with it. */
-  box-sizing: border-box; min-width: 28px; width: auto; height: 15px; margin-left: 2px;
-  padding: 0 6.5px 0.5px;
-  clip-path: polygon(25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%, 0 50%);
-  background: linear-gradient(180deg, #e2675c, #c0392b 55%, #87241a);
-  box-shadow: 0 0 6px rgba(214,69,48,0.5);
-  font-family: "JetBrains Mono", monospace; font-style: normal;
-  font-size: 7px; font-weight: 800; letter-spacing: 0.1px; line-height: 1;
-  text-transform: none; color: #fff1ec;
+  position: relative; display: inline-flex; align-items: center; gap: 1px; flex: none; margin-left: 3px; height: 16px;
+  font-style: normal; line-height: 1; text-transform: none; letter-spacing: 0;
+  --bk-c: #ff9d92; --bk-g: rgba(239,68,68,.7);
 }
-.lb-rank-boss100 svg { flex: none; margin-right: 0.5px; }
+.lb-rank-boss100 img { flex: none; width: 24px; height: 24px; margin: -4px -1px -4px -2px; object-fit: contain; filter: drop-shadow(0 1px 1.5px rgba(0,0,0,.7)); }
+.lb-rank-boss100 b { font: 800 9px/1 "JetBrains Mono", monospace; letter-spacing: .2px; color: var(--bk-c); text-shadow: 0 0 5px var(--bk-g), 0 1px 1px rgba(0,0,0,.8); }
+.lb-bk-t1  { --bk-c: #cfd2dc; --bk-g: rgba(200,205,220,.35); }
+.lb-bk-t2  { --bk-c: #f1c9a4; --bk-g: rgba(205,127,50,.55); }
+.lb-bk-t3  { --bk-c: #eef4ff; --bk-g: rgba(200,220,255,.6); }
+.lb-bk-t4  { --bk-c: #ff9d92; --bk-g: rgba(239,68,68,.7); }
+.lb-bk-t5  { --bk-c: #ffc2b8; --bk-g: rgba(239,68,68,.75); }
+.lb-bk-t6  { --bk-c: #ffc08a; --bk-g: rgba(255,120,50,.85); }
+.lb-bk-t7  { --bk-c: #ffb070; --bk-g: rgba(255,110,40,.9); }
+.lb-bk-t8  { --bk-c: #ff8a80; --bk-g: rgba(239,68,68,.9); }
+.lb-bk-t9  { --bk-c: #ffe3a3; --bk-g: rgba(255,170,60,.95); }
+.lb-bk-t10 b {
+  background: linear-gradient(90deg, #fff3c4, #ffffff, #ffd56a, #fff3c4, #ffffff); background-size: 200% 100%;
+  -webkit-background-clip: text; background-clip: text; color: transparent; text-shadow: none;
+  filter: drop-shadow(0 0 2.5px rgba(255,213,106,.95)); animation: lbClub300kShine 2.4s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) { .lb-bk-t10 b { animation: none; } }
+.lb-rank-class:has(> .lb-rank-boss100) { padding-top: 4px; padding-bottom: 4px; margin-top: -4px; margin-bottom: -4px; }
 
 /* #1 leader — enthroned hero card. W705: painted citadel backdrop (Higgsfield
    art, assets/backgrounds/lb-hero.webp) under a left-heavy scrim — the identity
