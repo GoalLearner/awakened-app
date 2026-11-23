@@ -37701,3 +37701,7 @@ button.mx-sh { cursor: pointer; min-height: 40px; }
 .mu-rv--pct b{font-size:15px}
 .mu-sparts{margin-top:6px!important;font:700 10.5px/1.35 var(--mu-mono);letter-spacing:.02em;color:var(--mu-ink2);font-variant-numeric:tabular-nums}
 .mu-enter .mu-wgbar .mu-pf{animation:mu-grow .8s cubic-bezier(.3,.7,.2,1) var(--d) backwards}
+
+/* W1286 — the 300K pin locked in the Wardrobe: no glow, no sparks, its rim dimmed like every locked pin */
+.wx-sl.is-locked .pc-pin3w > .g, .wx-sl.is-locked .pc-pin3w > .e { display: none; }
+.wx-sl.is-locked .pc-pin3w > .rim { filter: saturate(.3) brightness(.62); box-shadow: none; }

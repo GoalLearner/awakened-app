@@ -140,7 +140,9 @@ test.describe('W1143 — Frames, Inks and Auras', () => {
     await tab(page, 'pins').click();
     await expect(tab(page, 'pins')).toHaveClass(/\bon\b/);
     const pane = sheet(page).locator('.wx-pane[data-pane="pins"]');
-    await expect(pane.locator('.wx-sl')).toHaveCount(6);   // W1158 — the Step Club and Prestige joined
+    await expect(pane.locator('.wx-sl')).toHaveCount(8);   // W1158 — the Step Club and Prestige joined; W1286 — the 200K and 300K weeks
+    await expect(tile(page, 'pin', 'club200k')).toHaveClass(/is-locked/);   // W1286 — no 200K week here
+    await expect(tile(page, 'pin', 'club300k')).toHaveClass(/is-locked/);
     await expect(tile(page, 'pin', 'steps1m')).toHaveClass(/is-earned/);
     await expect(tile(page, 'pin', 'bestday')).toHaveClass(/is-earned/);
     await expect(tile(page, 'pin', 'shadows')).toHaveClass(/is-earned/);            // one shadow is enough

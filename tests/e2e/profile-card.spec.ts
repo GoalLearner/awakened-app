@@ -226,4 +226,27 @@ test.describe('W1259 — the 200K pin', () => {
     await render(page, true);
     await expect(body.locator('.pc-pins--own .pc-pin')).toHaveText(['300K WEEK']);
   });
+
+  // W1286 — owner 2026-11-22: "There's 2 new pins that we've added that needs to go here" (the Wardrobe's Pins).
+  test('the 200K and 300K weeks are pins of their own; a worn 100K pin moves to the best one once; the 100K pin stays itself', async ({ page }) => {
+    await boot(page);
+    const body = page.locator('#pc-body');
+    await page.evaluate(() => {
+      localStorage.setItem('hb_accolades_cache', JSON.stringify({ accolades: [{ type: 'step_100k_club', repeat_count: 3, best_value: 306326 }], fetched_at: Date.now() }));
+      localStorage.setItem('hb_card_pins', JSON.stringify(['club100k', 'shadows']));
+      localStorage.removeItem('hb_card_pins_split_v1');
+    });
+    await render(page, true);
+    await expect(body.locator('.pc-pins--own .pc-pin')).toHaveText(['300K WEEK']);   // moved once (shadows not earned here)
+    expect(await page.evaluate(() => JSON.parse(localStorage.getItem('hb_card_pins') || '[]'))).toEqual(['club300k', 'shadows']);
+    // chosen afterwards, the 100K pin stays the 100K pin beside the 300K one
+    await page.evaluate(() => localStorage.setItem('hb_card_pins', JSON.stringify(['club100k', 'club300k'])));
+    await render(page, true);
+    await expect(body.locator('.pc-pins--own .pc-pin')).toHaveText(['100K CLUB ×3', '300K WEEK']);
+    // a newer app's card shows each pin as chosen; an older app's 100K pin still turns into the best week
+    await render(page, false, { alias: 'Killua', rankTier: 'E', club100k: { repeatCount: 3, best: 306326 }, cardPins: [{ id: 'club200k', v: 306326 }, { id: 'club100k', v: 3 }] });
+    await expect(body.locator('.pc-pins .pc-pin')).toHaveText(['200K WEEK', '100K CLUB ×3']);
+    await render(page, false, { alias: 'Killua', rankTier: 'E', club100k: { repeatCount: 3, best: 306326 }, cardPins: [{ id: 'club100k', v: 3 }] });
+    await expect(body.locator('.pc-pins .pc-pin')).toHaveText(['300K WEEK']);
+  });
 });

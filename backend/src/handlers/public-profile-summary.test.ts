@@ -1001,6 +1001,14 @@ describe('W1155 — card pins (cardPins)', () => {
     expect(JSON.parse(lookCalls(db)[0].binds[7] as string)).toEqual([{ id: 'club100k', v: 2 }, { id: 'prestige', v: 1 }]);
   });
 
+  it('W1286 — the 200K and 300K weeks are pins of their own', async () => {
+    const db = makeDb();
+    const res = await handlePublicProfileSummaryPut(
+      makeReq({ ...validPayload, cardPins: [{ id: 'club300k', v: 312040 }, { id: 'club200k', v: 312040 }] }), makeEnv(db), session);
+    expect(res.status).toBe(200);
+    expect(JSON.parse(lookCalls(db)[0].binds[7] as string)).toEqual([{ id: 'club300k', v: 312040 }, { id: 'club200k', v: 312040 }]);
+  });
+
   it('three pins, an unknown id, or a repeated id → 400 INVALID_CARD_PINS and nothing written', async () => {
     for (const bad of [
       [{ id: 'steps1m', v: 1 }, { id: 'shadows', v: 1 }, { id: 'bestday', v: 16000 }],
