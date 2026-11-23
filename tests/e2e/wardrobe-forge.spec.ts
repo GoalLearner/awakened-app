@@ -2,7 +2,8 @@
  * Awakened — Frames, Inks and Auras in the Wardrobe (W1143, Claude Design handoff 8 "Player Card - Wardrobe").
  *
  * Owner 2026-11-07: "build the wardrobe tabs". Pinned here:
- *   - five tabs: Looks · Backgrounds · Frames · Inks · Auras;
+ *   - five tabs: Looks · Backgrounds · Inks · Auras · Pins (W1296 — the Frames tab is gone: the card shows the hunter
+ *     full body with no box, owner 2026-11-23);
  *   - every slot opens on its default worn; an item the hunter's numbers have earned wears in one tap and the
  *     worn id lands in localStorage; a locked item opens the detail pager with its condition;
  *   - the hero medallion and the own profile card wear the frame, the ink and the aura; a visitor's card keeps
@@ -56,26 +57,15 @@ const tile = (page: Page, slot: string, id: string) => sheet(page).locator('.wx-
 const CARD = { alias: 'Richie', rankTier: 'S', rankLabel: 'S RANK', avatarId: 'avatar-skin-shadowborn.png', power: 5601, bossesSlain: 316, avgStepsPerDay: 5625, ultraRareDrops: 24, bestFloor: 99, founderSeq: 1 };
 
 test.describe('W1143 — Frames, Inks and Auras', () => {
-  test('five tabs; each slot opens on its default; floor 50 earns Runebound, Frost and Gold Motes, which wear in one tap', async ({ page }) => {
+  test('five tabs, no Frames (W1296); each slot opens on its default; floor 50 earns Frost and Gold Motes, which wear in one tap', async ({ page }) => {
     await boot(page, 50);
+    await page.evaluate(() => localStorage.setItem('hb_card_frame', 'runebound'));   // worn before W1296: it paints nothing now
     await openWardrobe(page);
-    await expect(sheet(page).locator('.wx-tab')).toHaveCount(6);   // W1156 — Pins joined (W1185 — the Ultimates moved to Items)
-    await expect(sheet(page).locator('.wx-tab').nth(2)).toHaveText(/Frames/);
-    // FRAMES
-    await tab(page, 'frames').click();
-    await expect(tab(page, 'frames')).toHaveClass(/\bon\b/);
-    await expect(sheet(page).locator('.wx-pane[data-pane="frames"] .wx-sl')).toHaveCount(5);
-    await expect(tile(page, 'frame', 'gilded')).toHaveClass(/is-worn/);
-    await expect(tile(page, 'frame', 'runebound')).toHaveClass(/is-earned/);
-    await expect(tile(page, 'frame', 'eclipse')).toHaveClass(/is-locked/);
-    await expect(tile(page, 'frame', 'obsidian').locator('.wx-bt-st')).toHaveText('0 / 100');
-    await tile(page, 'frame', 'runebound').click();
-    await expect(tile(page, 'frame', 'runebound')).toHaveClass(/is-worn/);
-    await expect(tile(page, 'frame', 'gilded')).toHaveClass(/is-earned/);
-    expect(await page.evaluate(() => localStorage.getItem('hb_card_frame'))).toBe('runebound');
-    await expect(sheet(page).locator('.wx-pane[data-pane="frames"] .wx-med')).toHaveClass(/wx-fr-runebound/);
-    await expect(sheet(page).locator('.wx-pane[data-pane="frames"] .wx-hl-how')).toHaveText('Earned · Floor 50 cleared');
-    await shot(page, 'forge-01-frames');
+    await expect(sheet(page).locator('.wx-tab')).toHaveCount(5);   // W1296 — Looks · Backgrounds · Inks · Auras · Pins
+    await expect(sheet(page).locator('.wx-tab').nth(2)).toHaveText(/Inks/);
+    await expect(tab(page, 'frames')).toHaveCount(0);
+    await expect(sheet(page).locator('.wx-pane[data-pane="frames"]')).toHaveCount(0);
+    await expect(sheet(page).locator('.wx-pane[data-pane="looks"] .wx-med')).toHaveClass(/wx-fr-gilded/);
     // INKS
     await tab(page, 'inks').click();
     await expect(tile(page, 'ink', 'ivory')).toHaveClass(/is-worn/);
@@ -98,32 +88,28 @@ test.describe('W1143 — Frames, Inks and Auras', () => {
     await tile(page, 'aura', 'motes').click();
     expect(await page.evaluate(() => localStorage.getItem('hb_card_aura'))).toBe('motes');
     await expect(sheet(page).locator('.wx-pane[data-pane="auras"] .wx-med .wx-aura.motes')).toHaveCount(1);
-    expect(await page.evaluate(() => (window as any).__wx.state())).toMatchObject({ tab: 'auras', frame: 'runebound', ink: 'frost', aura: 'motes' });
+    expect(await page.evaluate(() => (window as any).__wx.state())).toMatchObject({ tab: 'auras', frame: 'gilded', ink: 'frost', aura: 'motes' });
     await shot(page, 'forge-03-auras');
-    // back on Looks, the hero wears all three
+    // back on Looks, the hero wears the aura (and no frame: W1296)
     await tab(page, 'looks').click();
-    await expect(sheet(page).locator('.wx-pane[data-pane="looks"] .wx-med')).toHaveClass(/wx-fr-runebound/);
+    await expect(sheet(page).locator('.wx-pane[data-pane="looks"] .wx-med')).toHaveClass(/wx-fr-gilded/);
     await expect(sheet(page).locator('.wx-pane[data-pane="looks"] .wx-med .wx-aura.motes')).toHaveCount(1);
   });
 
-  test('a locked frame opens the detail pager with its condition; a locked item never wears', async ({ page }) => {
+  test('a locked ink opens the detail pager with its condition; a locked item never wears', async ({ page }) => {   // W1296 — was a locked frame
     await boot(page, 10);
     await openWardrobe(page);
-    await tab(page, 'frames').click();
-    await expect(tile(page, 'frame', 'runebound')).toHaveClass(/is-locked/);
-    await expect(tile(page, 'frame', 'runebound').locator('.wx-bt-st')).toHaveText('10 / 50');
-    await tile(page, 'frame', 'runebound').click();
+    await tab(page, 'inks').click();
+    await expect(tile(page, 'ink', 'frost')).toHaveClass(/is-locked/);
+    await expect(tile(page, 'ink', 'frost').locator('.wx-bt-st')).toHaveText('10 / 40');
+    await tile(page, 'ink', 'frost').click();
     const dt = sheet(page).locator('.wx-dt');
     await expect(dt).toHaveClass(/open/);
-    // the pager holds every locked frame (Rank-forged, Obsidian, Runebound, Eclipse) and opens on the one tapped
-    await expect(dt.locator('.wx-pg')).toHaveCount(4);
-    await expect(dt.locator('.wx-pgt')).toHaveAttribute('style', /translateX\(-200%\)/);
-    const pg = dt.locator('.wx-pg').filter({ hasText: 'Runebound' });
-    await expect(pg.locator('.wx-ms-c')).toHaveText('Clear Floor 50 of the Ascent');
-    await expect(pg.locator('.wx-mini')).toHaveClass(/wx-fr-runebound/);
+    const pg = dt.locator('.wx-pg').filter({ hasText: 'Frost' });
+    await expect(pg.locator('.wx-ms-c')).toHaveText('Clear Floor 40 of the Ascent');
     await shot(page, 'forge-04-locked');
-    expect(await page.evaluate(() => localStorage.getItem('hb_card_frame'))).toBeNull();
-    expect(await page.evaluate(() => (window as any).__wx.state().detail)).toBe('sl:frame');
+    expect(await page.evaluate(() => localStorage.getItem('hb_card_ink'))).toBeNull();
+    expect(await page.evaluate(() => (window as any).__wx.state().detail)).toBe('sl:ink');
     await dt.locator('.wx-dt-x').click();
     await expect(dt).not.toHaveClass(/open/);
   });
@@ -185,18 +171,18 @@ test.describe('W1143 — Frames, Inks and Auras', () => {
     expect(await page.evaluate(() => localStorage.getItem('hb_card_pins'))).toBe('[]');
   });
 
-  test('the own profile card wears the frame, ink and aura; a visitor\'s card keeps the defaults', async ({ page }) => {
+  test('the own profile card wears the ink and the aura (no frame: W1296); a visitor\'s card keeps the defaults', async ({ page }) => {
     await boot(page, 50);
     await page.evaluate(() => { localStorage.setItem('hb_card_frame', 'runebound'); localStorage.setItem('hb_card_ink', 'frost'); localStorage.setItem('hb_card_aura', 'motes'); });
     await page.evaluate((d) => (window as any).__pcRender(d, true), CARD);
     const body = page.locator('#pc-body');
-    await expect(body.locator('.pc-med')).toHaveClass(/pc-fr-runebound/);
+    await expect(body.locator('.pc-med, [class*="pc-fr-"]')).toHaveCount(0);   // W1296 — the hunter stands full body, no frame
     await expect(body.locator('.pc-alias')).toHaveClass(/wx-ink-s/);
     expect(await body.locator('.pc-alias').evaluate((el) => getComputedStyle(el).color)).toBe('rgb(125, 211, 252)');
-    await expect(body.locator('.pc-hero > .wx-aura.motes')).toHaveCount(1);   // W1144 — the aura is the hero's weather, behind the medallion
+    await expect(body.locator('.pc-fb > .wx-aura.motes')).toHaveCount(1);   // W1296 — the aura wraps the standing hunter (W1144: the hero's weather)
     await shot(page, 'forge-05-card');
     await page.evaluate((d) => (window as any).__pcRender(Object.assign({}, d, { alias: 'RenDIESEL' }), false), CARD);
-    await expect(body.locator('.pc-med')).toHaveClass(/pc-fr-gilded/);
+    await expect(body.locator('.pc-fb-art')).toHaveCount(1);
     await expect(body.locator('.pc-alias')).not.toHaveClass(/wx-ink/);
     await expect(body.locator('.pc-hero .wx-aura')).toHaveCount(0);
   });

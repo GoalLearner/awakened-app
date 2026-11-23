@@ -3,7 +3,8 @@
  *
  * Owner 2026-11-07: "Make sure the avatar is centered... as well as removing the arena rating since we
  * don't have that open yet." Pinned here, rendered from fixture data through the QA hook (no network):
- *   - the medallion (the avatar) sits on the sheet's centre line, own card and a visitor's card alike;
+ *   - W1296: the hunter stands FULL BODY on the left (no box, no frame), the rank crest at the feet and the look's name
+ *     under it; the name, the title and the pins sit beside the figure (W1142 had a centred medallion);
  *   - no Arena Rating row, even when the profile data carries an arena standing;
  *   - the own card keeps CHANGE LOOK and its own closing line; a visitor's card names the worn look.
  */
@@ -11,7 +12,7 @@ import { test, expect, Page } from '@playwright/test';
 
 async function boot(page: Page) {
   await page.addInitScript(() => {
-    const css = '#awakened-splash,#fri-challenge-overlay,#fri-challenge-modal,#upd-banner{display:none!important;visibility:hidden!important;pointer-events:none!important}';
+    const css = '#awakened-splash,#fri-challenge-overlay,#fri-challenge-modal,#upd-banner,.habit-toast{display:none!important;visibility:hidden!important;pointer-events:none!important}';   // W1296 — .habit-toast: the daily-bonus toast can land over the crest
     const inject = () => {
       const root = document.head || document.documentElement;
       if (root && !document.getElementById('e2e-splash-kill')) { const s = document.createElement('style'); s.id = 'e2e-splash-kill'; s.textContent = css; root.appendChild(s); }
@@ -39,66 +40,71 @@ const DATA = {
   ultraRareDrops: 24, bestFloor: 99, arenaTitle: 'shadowborn', founderSeq: 1, arena: { elo: 1340, global: 3 }, verifiedStreakLabel: '41-day verified streak',
 };
 const render = (page: Page, own: boolean, extra?: Record<string, unknown>) => page.evaluate(([d, o]) => (window as any).__pcRender(d, o), [{ ...DATA, ...(extra || {}) }, own] as [Record<string, unknown>, boolean]);
+const settle = (page: Page) => page.evaluate(async () => {   // the sheet slides up on open: wait for it to stop
+  const sh = document.getElementById('pc-sheet')!;
+  let last = -1; for (let i = 0; i < 60; i++) { const y = sh.getBoundingClientRect().top; if (y === last) break; last = y; await new Promise((r) => requestAnimationFrame(r)); }
+});
 
 for (const vp of [{ width: 390, height: 844 }, { width: 375, height: 667 }]) {
   test.describe('W1142 — the Hunter Profile card @' + vp.width + 'x' + vp.height, () => {
     test.use({ viewport: vp });
 
-    test('the avatar sits on the centre line and the Arena Rating row is gone (own card)', async ({ page }) => {
+    // W1296 — owner 2026-11-23: "Thoughts on showing the full body on the card, rather than just the face", then "move the
+    // name of the skin under the avatar so the ascendant goes under the C ranked box" and "without borders is better".
+    test('the hunter stands full body beside the name, and the Arena Rating row is gone (own card)', async ({ page }) => {
       await boot(page);
       await render(page, true);
       const sheet = page.locator('#pc-sheet');
       await expect(sheet).toBeVisible();
-      const med = page.locator('#pc-body .pc-med');
-      await expect(med).toBeVisible();
-      const s = (await sheet.boundingBox())!, m = (await med.boundingBox())!, img = (await page.locator('#pc-body .pc-med-portrait img').boundingBox())!;
-      expect(Math.abs((m.x + m.width / 2) - (s.x + s.width / 2))).toBeLessThanOrEqual(2);
-      expect(Math.abs((img.x + img.width / 2) - (s.x + s.width / 2))).toBeLessThanOrEqual(2);
+      await settle(page);
+      const art = page.locator('#pc-body .pc-fb-art');
+      await expect(art).toHaveAttribute('src', 'avatar-skin-shadowborn.png');   // the full-body file, not the bust
+      expect(await art.evaluate((el) => (el as HTMLImageElement).complete && (el as HTMLImageElement).naturalWidth > 0)).toBe(true);
+      await expect(page.locator('#pc-body .pc-med')).toHaveCount(0);           // no medallion, no frame
+      const fb = (await page.locator('#pc-body .pc-fb').boundingBox())!, id = (await page.locator('#pc-body .pc-identity').boundingBox())!;
+      expect(fb.x + fb.width).toBeLessThanOrEqual(id.x + 1);                   // the figure on the left, who they are on the right
+      expect(Math.round(fb.width)).toBe(150);
+      expect(Math.round(fb.height)).toBe(226);
       await expect(page.locator('#pc-body .pc-arena')).toHaveCount(0);
       await expect(page.locator('#pc-body')).not.toContainText('ARENA RATING');
-      await expect(page.locator('#pc-body .pc-skintag')).toContainText('CHANGE LOOK');
+      await expect(page.locator('#pc-body .pc-fb-col .pc-skintag')).toContainText('CHANGE LOOK');
       await expect(page.locator('#pc-body .pc-prov')).toContainText('every hunter sees');
       await expect(page.locator('#pc-body .pc-stat .v.gold')).toHaveText('5,601');
     });
 
-    // W1144 — owner 2026-11-07 on build 623: "why it made the avatar so big and that it is covering the rank too...
-    // the aura isn't working correctly on the playercard". The medallion is the handoff's 166px, the rank crest paints
-    // on top of it, and a worn aura fills the hero block behind the medallion instead of hiding under it.
-    test('the medallion is 166px, the rank crest sits on top of it, and a worn aura fills the hero block', async ({ page }) => {
+    // W1144 — owner 2026-11-07 on build 623: "it is covering the rank too... the aura isn't working correctly on the
+    // playercard". W1296 — the crest stands at the hunter's feet, on top of everything; a worn aura wraps the figure,
+    // behind the art; a frame chosen before W1296 (or a published one) paints nothing.
+    test('the rank crest sits at the hunter\'s feet on top, a worn aura wraps the figure, and no frame paints', async ({ page }) => {
       await boot(page);
-      await page.evaluate(() => { localStorage.setItem('hb_card_aura', 'storm'); localStorage.removeItem('hb_card_frame'); });
+      await page.evaluate(() => { localStorage.setItem('hb_card_aura', 'storm'); localStorage.setItem('hb_card_frame', 'eclipse'); });
       await render(page, true);
-      const med = page.locator('#pc-body .pc-med'), crest = page.locator('#pc-body .pc-crest');
-      await expect(med).toBeVisible();
+      const crest = page.locator('#pc-body .pc-crest');
       await expect(crest).toHaveText('S');
-      // the sheet slides up on open: measure the medallion and the crest in ONE frame once the sheet has settled
-      const geo = await page.evaluate(async () => {
-        const sh = document.getElementById('pc-sheet')!;
-        let last = -1; for (let i = 0; i < 60; i++) { const y = sh.getBoundingClientRect().top; if (y === last) break; last = y; await new Promise((r) => requestAnimationFrame(r)); }
-        const m = document.querySelector('#pc-body .pc-med')!.getBoundingClientRect(), c = document.querySelector('#pc-body .pc-crest')!.getBoundingClientRect();
+      await settle(page);
+      const geo = await page.evaluate(() => {
+        const f = document.querySelector('#pc-body .pc-fb')!.getBoundingClientRect(), c = document.querySelector('#pc-body .pc-crest')!.getBoundingClientRect();
+        const t = document.querySelector('#pc-body .pc-fb-col .pc-skintag')!.getBoundingClientRect();
         const top = document.elementFromPoint(c.x + c.width / 2, c.y + c.height / 2);
-        return { mw: m.width, mh: m.height, mcx: m.x + m.width / 2, mBottom: m.bottom, cw: c.width, ccx: c.x + c.width / 2, cBottom: c.bottom, top: top ? top.className : '' };
+        return { fcx: f.x + f.width / 2, fBottom: f.bottom, ccx: c.x + c.width / 2, cBottom: c.bottom, cw: c.width, tagTop: t.top, top: top ? top.className : '' };
       });
-      expect(Math.round(geo.mw)).toBe(166);
-      expect(Math.round(geo.mh)).toBe(166);
-      expect(Math.round(geo.cw)).toBe(48);
-      expect(Math.abs(geo.ccx - geo.mcx)).toBeLessThanOrEqual(1);   // on the medallion's centre line
-      expect(geo.cBottom).toBeGreaterThan(geo.mBottom);             // hanging off its base
-      expect(geo.top).toBe('pc-crest');                             // the element on top at its own centre (W1143 had lifted the medallion over it)
-      // the aura: one, a direct child of the hero block, spanning it; nothing left inside the medallion wrap
-      const aura = page.locator('#pc-body .pc-hero > .wx-aura.storm');
+      expect(Math.round(geo.cw)).toBe(38);
+      expect(Math.abs(geo.ccx - geo.fcx)).toBeLessThanOrEqual(1);   // under the hunter's centre line
+      expect(geo.cBottom).toBeGreaterThan(geo.fBottom);             // standing at the feet
+      expect(geo.tagTop).toBeGreaterThan(geo.cBottom);              // the look's name under the crest
+      expect(geo.top).toBe('pc-crest');                             // the element on top at its own centre
+      const aura = page.locator('#pc-body .pc-fb > .wx-aura.storm');
       await expect(aura).toHaveCount(1);
-      await expect(page.locator('#pc-body .pc-med-wrap .wx-aura')).toHaveCount(0);
-      const h = (await page.locator('#pc-body .pc-hero').boundingBox())!, a = (await aura.boundingBox())!;
-      expect(Math.abs(a.width - h.width)).toBeLessThanOrEqual(1);
-      expect(Math.abs(a.height - h.height)).toBeLessThanOrEqual(1);
       expect(await aura.locator('.wx-ap').count()).toBe(10);
-      expect(await page.evaluate(() => { const a = document.querySelector('#pc-body .pc-hero > .wx-aura') as HTMLElement, w = document.querySelector('#pc-body .pc-med-wrap') as HTMLElement; return [getComputedStyle(a).zIndex, getComputedStyle(w).zIndex]; })).toEqual(['0', '1']);   // behind the medallion
+      expect(await page.evaluate(() => [getComputedStyle(document.querySelector('#pc-body .pc-fb > .wx-aura') as HTMLElement).zIndex, getComputedStyle(document.querySelector('#pc-body .pc-fb-art') as HTMLElement).zIndex])).toEqual(['0', '1']);   // behind the art
+      await expect(page.locator('#pc-body [class*="pc-fr-"]')).toHaveCount(0);
+      await render(page, false, { cardFrame: 'runebound' });
+      await expect(page.locator('#pc-body [class*="pc-fr-"], #pc-body .pc-med')).toHaveCount(0);
     });
 
-    // W1154 — no Founder badge on any card; the title sits centred; on the own card it is a button that opens the
+    // W1154 — no Founder badge on any card; the title sits centred (W1296: beside the hunter, under the name); on the own card it is a button that opens the
     // Ascent's Titles view (CHOOSE A TITLE when none is worn); a visitor's title is a plain shard.
-    test('own card: no Founder badge, the title centred and tappable → the Titles view; none worn → CHOOSE A TITLE', async ({ page }) => {
+    test('own card: no Founder badge, the title beside the hunter and tappable → the Titles view; none worn → CHOOSE A TITLE', async ({ page }) => {
       await boot(page);
       await page.evaluate(() => { localStorage.removeItem('hb_arena_title'); });
       await render(page, true);
@@ -113,13 +119,15 @@ for (const vp of [{ width: 390, height: 844 }, { width: 375, height: 667 }]) {
       await page.waitForFunction(() => !!(window as any).__pcRender && !!document.querySelector('[data-tab="profile"]'));
       await render(page, true);
       await expect(pick).toHaveText(/Contender/i);
-      const geo = await page.evaluate(async () => {
-        const sh = document.getElementById('pc-sheet')!;
-        let last = -1; for (let i = 0; i < 60; i++) { const y = sh.getBoundingClientRect().top; if (y === last) break; last = y; await new Promise((r) => requestAnimationFrame(r)); }
-        const s = sh.getBoundingClientRect(), p = document.querySelector('#pc-body .pc-shard--pick')!.getBoundingClientRect();
-        return Math.abs((p.left + p.width / 2) - (s.left + s.width / 2));
+      await settle(page);
+      const geo = await page.evaluate(() => {   // W1296 — beside the hunter, under the name (W1154 had it centred)
+        const f = document.querySelector('#pc-body .pc-fb')!.getBoundingClientRect(), p = document.querySelector('#pc-body .pc-shard--pick')!.getBoundingClientRect();
+        const n = document.querySelector('#pc-body .pc-alias')!.getBoundingClientRect();
+        return { right: p.left - f.right, under: p.top - n.bottom, aligned: Math.abs(p.left - n.left) };
       });
-      expect(geo).toBeLessThanOrEqual(2);
+      expect(geo.right).toBeGreaterThan(0);
+      expect(geo.under).toBeGreaterThanOrEqual(0);
+      expect(geo.aligned).toBeLessThanOrEqual(1);
       await pick.click();
       await expect(page.locator('#pc-sheet')).toBeHidden();
       await expect(page.locator('#arena-overlay')).toBeVisible();
@@ -127,18 +135,16 @@ for (const vp of [{ width: 390, height: 844 }, { width: 375, height: 667 }]) {
       await expect(page.locator('#arena-overlay .tm-row--worn .nm')).toHaveText('Contender');
     });
 
-    test("a visitor's card: centred too, no Arena Rating, the worn look named", async ({ page }) => {
+    test("a visitor's card: the hunter full body, no Arena Rating, the worn look named under the crest", async ({ page }) => {
       await boot(page);
       await render(page, false, { alias: 'RenDIESEL', arenaTitle: 'rt_blade', founderSeq: 2 });
-      const sheet = page.locator('#pc-sheet'), med = page.locator('#pc-body .pc-med');
-      await expect(med).toBeVisible();
-      const s = (await sheet.boundingBox())!, m = (await med.boundingBox())!;
-      expect(Math.abs((m.x + m.width / 2) - (s.x + s.width / 2))).toBeLessThanOrEqual(2);
+      await expect(page.locator('#pc-body .pc-fb-art')).toHaveAttribute('src', 'avatar-skin-shadowborn.png');
+      await expect(page.locator('#pc-body .pc-med')).toHaveCount(0);
       await expect(page.locator('#pc-body .pc-arena')).toHaveCount(0);
       await expect(page.locator('#pc-body .pc-founder')).toHaveCount(0);                 // W1154 — no Founder badge
       await expect(page.locator('#pc-body div.pc-shard')).toHaveText(/Blade/i);         // W1154 — a plain shard, from the published title
       await expect(page.locator('#pc-body button.pc-shard--pick')).toHaveCount(0);
-      await expect(page.locator('#pc-body .pc-skintag')).toContainText('THE SHADOWBORN');
+      await expect(page.locator('#pc-body .pc-fb-col .pc-skintag')).toContainText('THE SHADOWBORN');
       await expect(page.locator('#pc-body .pc-prov')).toContainText('global leaderboard');
     });
   });

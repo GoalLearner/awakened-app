@@ -1,5 +1,6 @@
-New boss-kill badges, Worldgate strikes that say what they hit with, and badges on the Friends board.
+Full-body hunter cards, new boss-kill badges, and Worldgate strikes that say what they hit with.
 
+• Hunter cards now show your whole look, head to toe, with your rank at your feet. Tap any hunter on a leaderboard to see theirs.
 • New boss-kill badges: every 100 bosses you defeat earns a better badge on the Steps board, from an iron shield at 100 to a crowned, diamond-set gold crest at 1,000.
 • Recent Strikes on the Worldgate now say what each hunter struck with: steps, flights and sleep, each in its own colour. Each hunter's circle wears their rank colour.
 • The Friends tab on the Steps board now shows the same badges as This Week: the 100K, 200K and 300K badges and boss kills.

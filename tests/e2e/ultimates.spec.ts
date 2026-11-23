@@ -109,7 +109,7 @@ test.describe('W1168/W1169 — earned ultimates', () => {
     await boot(page, 37, Object.assign({}, EARNED, { hb_dev_ults: '0', hb_ult_choice: 'feast' }));
     expect(await page.evaluate(() => (window as any).Arena._battle.ultsLive())).toBe(true);
     await openWardrobe(page);
-    await expect(sheet(page).locator('.wx-tab')).toHaveCount(6);   // W1185
+    await expect(sheet(page).locator('.wx-tab')).toHaveCount(5);   // W1185; W1296 — no Frames
     await expect(sheet(page).locator('.wx-tab[data-tab="ults"]')).toHaveCount(0);
     await page.evaluate(() => { const b = document.getElementById('wd-close'); if (b) (b as HTMLElement).click(); });
     await intoFight(page, 37);
