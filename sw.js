@@ -1,6 +1,6 @@
 // ─────────────────────────────────────────────────────────────
 // INCREMENT THIS VERSION NUMBER WITH EVERY NETLIFY DEPLOYMENT
-const CACHE_VERSION = 'v6.521';
+const CACHE_VERSION = 'v6.522';
 // ─────────────────────────────────────────────────────────────
 
 const CACHE_NAME = 'awakened-cache-' + CACHE_VERSION;
@@ -101,6 +101,7 @@ const PRECACHE_ASSETS = [
   '/assets/busts/avatar-skin-thirdblade-bust.webp',
   '/assets/busts/avatar-skin-triarch-bust.webp',
   '/assets/busts/avatar-skin-gatebreaker-bust.webp',
+  '/assets/busts/avatar-skin-violetqueen-bust.webp',   // W1288
   '/assets/busts/avatar-skin-bloodmoon-bust.webp',
   // Tab-bar icons (DALL-E art replacing the emoji set)
   '/assets/tab-icons/tab-status.png',

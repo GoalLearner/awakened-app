@@ -8519,6 +8519,15 @@ test.describe('BZ · A bought skin gets worn (W1032)', () => {
     await page.evaluate(() => { document.getElementById('wd-sheet')!.classList.add('hidden'); document.getElementById('wd-overlay')!.classList.add('hidden'); });
     expect((await refresh(page, [DAWN])).equipped).toBe(DAWN);                        // closed without wearing it: now it goes on
   });
+
+  // W1288 — a one-of-one gift is put on by its reveal ("MADE FOR YOU"), never quietly at launch
+  test('a gifted look is left for its reveal', async ({ page }) => {
+    await freshApp(page);
+    await page.evaluate(() => { localStorage.setItem('hb_avatar_skin', 'avatar-ranger.png'); localStorage.removeItem('hb_skins_worn_v1'); });
+    const r = await refresh(page, ['avatar-skin-violetqueen.png']);
+    expect(r.equipped).toBe('avatar-ranger.png');
+    expect(r.worn).not.toContain('avatar-skin-violetqueen.png');
+  });
 });
 
 // W1014 — the Monday recap: the first briefing of a new week leads with last week (Mon–Sun PST)

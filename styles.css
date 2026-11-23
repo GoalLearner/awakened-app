@@ -35404,6 +35404,9 @@ button.mx-sh { cursor: pointer; min-height: 40px; }
 /* W1105 — the Rising: three rows of three under the seven */
 #wd-sheet.wx .wx-rising { grid-template-columns: repeat(6, minmax(0,1fr)); }
 #wd-sheet.wx .wx-rising .wx-sk:first-child { grid-column: span 2; }
+/* W1288 — Yours Alone: a one-of-one look, centred on its own row */
+#wd-sheet.wx .wx-only { grid-template-columns: repeat(6, minmax(0,1fr)); }
+#wd-sheet.wx .wx-only .wx-sk:first-child { grid-column: 3 / span 2; }
 .wx-sk:active, .wx-lk:active { transform: scale(.94); }
 .wx-sk-port { position: relative; width: 80px; height: 80px; }
 .wx-ring { position: absolute; inset: 0; transform: rotate(-90deg); overflow: visible; }

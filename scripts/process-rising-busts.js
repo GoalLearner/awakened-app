@@ -8,6 +8,7 @@ const BOX = {
   huntmaster: [65, 12, 160], vanguard: [92, 52, 116], ascendant: [75, 75, 150],   // W1130 — vanguard = the v5 art
   stridewalker: [86, 28, 130], unbroken: [75, 25, 145], oathbound: [65, 22, 160],
   thirdblade: [65, 28, 140], triarch: [62, 15, 190], gatebreaker: [65, 50, 160],
+  violetqueen: [95, 27, 110],   // W1288 — Galilea's own look (C:\dev\videoforge\awk-galilea-d5.mjs)
 };
 const only = process.argv.slice(2);
 (async () => {
