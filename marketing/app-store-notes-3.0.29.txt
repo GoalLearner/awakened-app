@@ -1,6 +1,9 @@
-Auto Hunts, and the 300K badge.
+The three-bar Worldgate, the Raid Hall of Fame, Auto Hunts and the 300K badge.
 
+• The Worldgate now has three HP bars: steps, flights and sleep. Every step, flight and hour of sleep you log strikes it, and it goes down when all three bars are empty. Your share of the damage decides the MVPs and the Kill Wall, and everyone on the Kill Wall gets 200 souls plus a 1% chance at an S-rank relic and 0.5% at a mythic weapon.
+• Raid Hall of Fame: Team Battles now shows the five fastest Grinning God clears. Tap one to see its six hunters and its MVP.
 • Auto Hunts: steer the co-op hunts the game makes for you each day. Pick up to 3 bosses or drops to chase, choose which friends you hunt with, and see tomorrow's hunts before they start. Tap the row at the top of Your Hunts. Left on Auto, the game now favours bosses you have never beaten and drops you still lack.
+• The Twin Maw now drops every common, so you can finish your commons collection.
 • The 300K badge: walk 300,000 steps in one week and a new 300K badge takes the place of your 200K badge on the Steps board and your profile. The 200K badge now shows on your profile too.
 • Raid teams that wait: a raid team that drops below four hunters now waits for new ones with its clock stopped, instead of losing time. Team Battles shows when a team is waiting.
 • No twin hunts: you can no longer end up with two of the same hunt with the same friend.
