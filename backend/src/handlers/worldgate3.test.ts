@@ -18,7 +18,7 @@ import type { Env } from '../env';
 import type { SessionPayload } from '../session-jwt';
 
 describe('W1283 — the three-bar math', () => {
-  it('starts THIS week (2026-11-22, W1284) at half size, 750 flights and 300 hours; the Kill Wall is 1% (W1294); the bounty rolls 1% and 0.5%', () => {
+  it('starts THIS week (2026-11-22, W1284) at half size, 750 flights and 300 hours; the Kill Wall is 2% (W1294); the bounty rolls 1% and 0.5%', () => {
     expect(WG3_FROM).toBe('2026-11-22');
     expect(WG3_START_FLIGHTS).toBe(750);
     expect(WG3_START_SLEEP).toBe(300 * 60);
@@ -26,7 +26,7 @@ describe('W1283 — the three-bar math', () => {
     expect(buildNumberOf('3.0.29-w1283')).toBe(1283);
     expect(buildNumberOf('3.0.28-w1263')).toBe(1263);
     expect(buildNumberOf(null)).toBe(0);
-    expect(WG3_WALL_PCT).toBe(1);   // W1294 — owner: bigger than 0.5%
+    expect(WG3_WALL_PCT).toBe(2);   // W1294 — owner: "2% and deploy"
     expect(WG3_DROP_S).toBe(0.01);
     expect(WG3_DROP_MYTHIC).toBe(0.005);
     expect(WG3_FLIGHTS_DAY_CAP).toBe(50);
@@ -150,7 +150,7 @@ const WED = new Date('2026-12-02T20:00:00Z');
 afterEach(() => { vi.useRealTimers(); });
 
 describe('W1283 — GET /v1/worldgate on a three-bar gate', () => {
-  it('the three bars, the gate\'s damage and yours; the lists rank by damage; the Kill Wall is 1% or more', async () => {
+  it('the three bars, the gate\'s damage and yours; the lists rank by damage; the Kill Wall is 2% or more', async () => {
     vi.useFakeTimers(); vi.setSystemTime(WED);
     const j = await get(fresh());
     expect(j.bars).toEqual({
@@ -165,7 +165,7 @@ describe('W1283 — GET /v1/worldgate on a three-bar gate', () => {
     expect(j.my_rank).toBe(1);
     expect(j.wall.map((w: any) => w.alias)).toEqual(['Richie', 'RenDIESEL', 'Kestrel', 'Sleeper']);   // Lowly: 0.1%
     expect(j.wall_count).toBe(4);
-    expect(j.wall_pct).toBe(1);
+    expect(j.wall_pct).toBe(2);
     expect(j.drop_odds).toEqual({ s_tier: 0.01, mythic: 0.005 });
     expect(j.effort).toBe(true);
     expect(j.status).toBe('open');
@@ -221,12 +221,12 @@ describe('W1283 — the bounty on a three-bar kill', () => {
     expect(a.bounty).toBe(WORLDGATE_SOULS);
     spy.mockRestore();
   });
-  it('under 1% of the kill and off the podium: no bounty', async () => {
+  it('under 2% of the kill and off the podium: no bounty', async () => {
     const st = await slainState();
     const low: SessionPayload = { userId: 'u-low', alias: 'Lowly' } as SessionPayload;
     const r = await handleWorldgateClaim(new Request('https://x/v1/worldgate/claim', { method: 'POST' }), env3(st), low);
     expect(r.status).toBe(403);
-    expect(((await r.json()) as any).detail).toMatch(/asks 1% of the kill/);
+    expect(((await r.json()) as any).detail).toMatch(/asks 2% of the kill/);
   });
 });
 
