@@ -75,7 +75,7 @@ test.describe('A one-of-one look (W1288)', () => {
     await sh.locator('[data-sk="violetqueen"]').click();
     await expect(sh.locator('.wx-hl-nm')).toHaveText('The Violet Queen');
     await expect(sh.locator('.wx-hl-sub')).toContainText('One of One');
-    await expect(sh.locator('.wx-hl-how')).toHaveText('Made for Galilea · Nov 23');
+    await expect(sh.locator('.wx-hl-how')).toHaveText('');   // W1289 — owner: no "Made for Galilea" line
     expect(await page.evaluate(() => localStorage.getItem('hb_avatar_skin'))).toBe('avatar-skin-violetqueen.png');
     if (SHOTS) await page.screenshot({ path: SHOTS + '/gift-01-wardrobe.png' });
   });
@@ -104,6 +104,7 @@ test.describe('A one-of-one look (W1288)', () => {
     await expect(ce).toContainText('The Violet Queen');
     await expect(ce).toContainText('One of One');
     await expect(ce).toContainText('MADE FOR YOU');
+    await expect(ce).not.toContainText('Galilea');   // W1289
     expect(await page.evaluate(() => JSON.parse(localStorage.getItem('hb_earn_rising_seen_v1') || '[]'))).toEqual(['avatar-skin-violetqueen.png']);
     if (SHOTS) { await page.waitForTimeout(3500); await page.screenshot({ path: SHOTS + '/gift-02-reveal.png' }); }
     // the next answer owes nothing
