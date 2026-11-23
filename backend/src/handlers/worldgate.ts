@@ -77,7 +77,9 @@ export const WG3_MIN_FLIGHTS = 300;
 export const WG3_MIN_SLEEP = 6000;           // minutes (100 hours)
 export const WG3_FLIGHTS_DAY_CAP = 50;       // flights a day that count
 export const WG3_SLEEP_NIGHT_CAP = 540;      // minutes a night that count (9 hours)
-export const WG3_WALL_PCT = 0.5;             // damage (% of the kill) that names a hunter on the Kill Wall
+// W1294 — owner 2026-11-23: "I think the kill wall damage should be bigger than 0.5%". Doubled to 1%: on last week's
+// steps (62 hunters) 40 cleared 0.5%, 31 clear 1%, 20 would clear 2%. An even share of a ~40-hunter kill is about 2.5%.
+export const WG3_WALL_PCT = 1;               // damage (% of the kill) that names a hunter on the Kill Wall (W1283: 0.5)
 export const WG3_DROP_S = 0.01;              // the bounty's roll at an S-rank relic
 export const WG3_DROP_MYTHIC = 0.005;        // ... and at a mythic weapon
 /** The dice for the bounty's relic rolls, [0, 1). Tests replace `next`. */
