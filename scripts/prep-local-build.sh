@@ -177,6 +177,13 @@ mkdir -p www/assets/busts
 if compgen -G "assets/busts/*.webp" > /dev/null; then
   cp assets/busts/*.webp www/assets/busts/
 fi
+# W1297 — the boss-kill ladder's ten emblems (W1293). Like the busts, app.js builds the path by string concat
+# ('assets/badges/boss-kills-' + n + '.webp'), so the HTML/CSS/JS scan below never saw it: build 678 shipped
+# without this dir and every boss-kill badge showed a broken-image "?" on the board.
+mkdir -p www/assets/badges
+if compgen -G "assets/badges/*.webp" > /dev/null; then
+  cp assets/badges/*.webp www/assets/badges/
+fi
 echo "  www/ assembled."
 echo ""
 
@@ -186,7 +193,9 @@ echo ""
 # JS is absent from www/ — so it's caught here, not on a device.
 echo "── Asset-reference check ──"
 ASSET_FAIL=0
-for ref in $(grep -ohrE "assets/[A-Za-z0-9_./-]+\.(png|jpe?g|webp|svg|m4a|mp3|gif)" www/index.html www/styles.css www/app.js 2>/dev/null | sort -u); do
+# W1297 — sw.js too: its precache list names every asset by full path, including the ones app.js builds by concat
+# (the busts, the boss-kill emblems), so a forgotten copy line now fails here instead of on a phone.
+for ref in $(grep -ohrE "assets/[A-Za-z0-9_./-]+\.(png|jpe?g|webp|svg|m4a|mp3|gif)" www/index.html www/styles.css www/app.js www/sw.js 2>/dev/null | sort -u); do
   if [ ! -f "www/$ref" ]; then echo "  ERROR: referenced asset missing from www/: $ref"; ASSET_FAIL=1; fi
 done
 if [ "$ASSET_FAIL" = "1" ]; then echo "  Add the missing file(s) to the copy list in this script, then rebuild."; exit 1; fi
