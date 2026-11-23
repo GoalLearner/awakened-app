@@ -100,3 +100,41 @@ test.describe('Every boss that drops a relic (W1109)', () => {
     await expect(page.locator('#reveal-card-source')).toHaveText('From: The Footsore Herald', { timeout: 10_000 });
   });
 });
+
+// W1287 — owner 2026-11-22: "If a cap is reached, item should be sold so at least user gets rewarded even tho they reached
+// their cap". A drop past its stack cap sells on the spot: a rare at its market sell price, a common at a quarter of what a
+// rare of its tier sells for.
+test.describe('W1287 — a drop past its cap sells for souls', () => {
+  test('every capped drop pays souls, the Drop History says what it sold for, the toast says so', async ({ page }) => {
+    await boot(page);
+    const r = await page.evaluate(() => {
+      const w = window as any;
+      const C = w.Drops.CARDS;
+      const ids = Object.keys(C).filter((k) => C[k].source_boss === 'the_steel_wolf' && (C[k].rarity === 'common' || C[k].rarity === 'rare'));
+      const inv = w.Drops.state;
+      ids.forEach((id) => { inv.cards[id] = { discovered: true, count: C[id].rarity === 'common' ? 1 : 3, first_acquired_date: '2026-01-01' }; });
+      const souls = () => JSON.parse(localStorage.getItem('hb_souls') || '{"balance":0}').balance;
+      const before = souls();
+      let paid = 0; const capped: any[] = [];
+      for (let i = 0; i < 300 && capped.length < 6; i++) {
+        const d = w.Drops.rollBossDrop('the_steel_wolf');
+        if (d && d.wasCapped) { capped.push({ id: d.card.id, rarity: d.card.rarity, tier: d.card.tier, soldFor: d.soldFor }); paid += d.soldFor; }
+      }
+      const ledger = JSON.parse(localStorage.getItem('hb_drop_ledger') || '[]').filter((e: any) => e.wasCapped);
+      return { capped, paid, delta: souls() - before, ledgerSold: ledger.map((e: any) => e.soldFor), ids: ids.length };
+    });
+    expect(r.ids).toBeGreaterThan(0);
+    expect(r.capped.length).toBeGreaterThan(0);
+    for (const c of r.capped) {
+      expect(c.soldFor, c.id).toBeGreaterThan(0);
+      if (c.rarity === 'common' && c.tier === 'E') expect(c.soldFor).toBe(20);
+    }
+    expect(r.delta).toBe(r.paid);
+    expect(r.ledgerSold.slice(0, r.capped.length).every((n: number) => n > 0)).toBe(true);
+    await page.evaluate(() => (window as any).openDropLedger());
+    const st = page.locator('.dh-state--sold').first();
+    await expect(st).toBeVisible({ timeout: 8_000 });
+    await expect(st).toContainText(/Sold \+\d[\d,]* souls/i);
+    await expect(page.locator('.dh-state--cap')).toHaveCount(0);
+  });
+});

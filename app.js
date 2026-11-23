@@ -160,7 +160,7 @@
   const APP_VERSION = '3.0.29';   // W1270 — 3.0.28 APPROVED by 2026-11-21 7:06 PM PST (build 667; Apple refused build 670 under 3.0.28: "The train version '3.0.28' is closed for new build submissions"), so 3.0.29 opened carrying W1259 (the 200K pin), W1263 (waiting raid teams), W1264-W1266 (the 300K badge), W1267 (no twin hunts) and W1268/W1269 (Auto Hunts). [history] W1246 — 3.0.27 APPROVED by 2026-11-19 12:15 PM PST (Apple refused build 664 under 3.0.27: "train version '3.0.27' is closed"), so 3.0.28 opened carrying W1245 (steps: one device per day, the legitimate one with the most). [history] W1233 — 3.0.26 SUBMITTED for review 2026-11-17 (build 655, tag 3.0.26-w1230), so 3.0.27 opened early, as W1205 did (an approval refuses an upload under the approved number), carrying W1233 (duels: your ultimate, special attack and shadows, and the Echo's own). [history] W1220 — 3.0.25 APPROVED 2026-11-16 9:44 AM PST (submitted 2026-11-15 2:06 PM PST, build 651, tag 3.0.25-w1213), so 3.0.26 opened carrying W1220 (strangers' shadows fold into one feed row), W1221 (your pinned row under a board opens your card), W1222 (the like limit says what it is), W1225 (invites say "You both get 500 souls"), W1226 (a refused audio start is caught, not reported as an error), W1227 (six calorie bosses, E to S, dropping the sleep bosses' relics), W1228 (the S calorie boss drops a mythic at 1%), W1229 (a mythic drop is its own announcement to every hunter; the crown on the card and feed names) and W1230 (ultra-rares stay friends-only: the owner wanted only mythics). [history] W1205 — 3.0.25 opened 2026-11-14 BEFORE 3.0.24 was approved (3.0.24 = build 649, waiting for review since 2026-11-13): an upload under 3.0.24 is refused the moment Apple approves it, so build 650 goes up as 3.0.25 carrying W1202 (every boss in the Kill Log, the Raid group), W1203 (no 150k step cap) and W1204 (hunts named by partner). [history] W1169 — 3.0.23 APPROVED 2026-11-08 (submitted 2026-11-07 5:00 PM PST, LIVE 2:33 PM PST on the 8th; almost certainly build 628 = w1161: pins, the Wardrobe tap fix), so 3.0.24 opened carrying W1162-W1169 (the 3.0.23 store notes, the board update, matched hunt partners, Add as friend, late steps reach the board, The Patient Flame falls by itself, earned ultimates behind their flag). [history] W1134 — 3.0.22 APPROVED 2026-11-06 (submitted 4:53 AM PST from build 617 = w1132: the Shadowborn + the Elite Eight, the Rising redrawn, profile cards name the look, every open counted), so 3.0.23 opened carrying W1134 (the Worldgate counts a hunter's steps only after 2 days in the app that week). [history] W1127 — 3.0.21 LIVE on the App Store 2026-11-05 9:34 AM PST (built from w1126: no memberships, kill stamps without a title, the tier crests, the onboarding's "How did you find the Gate?"), so 3.0.22 opened carrying W1127 (the app-open ping says when it is a real open; the server counts every one per Pacific day). [history] W1124 — 3.0.20 LIVE on the App Store 2026-11-01 12:50 PM PST (built from w1120: final standings Sunday, shadows in the public feed, Shadow Army on Status); 3.0.21 opened carrying W1121 (its What's New, never shown: re-keyed to 3.0.21), W1122 (no memberships), W1124 (kill stamp without a title, inlined tier crests) and W1125 (the onboarding's last screen asks how the hunter found the app; W1126 keeps it in place when the keyboard opens). [history] W1114 — 3.0.19 approved 2026-10-30 (submitted 1:45 AM PST, w1113: shadows 1 in 5, armor upgrades, relic power by boss rank, relic cards three across); 3.0.20 opened with the feed's boss rank chips, no What's New entry yet. W1107 — 3.0.18 approved and LIVE 2026-10-28 8:02 AM PST (submitted 2026-10-27 7:41 PM PST, build 602 = w1106: the four steps trios, the Rising's nine looks, the earned line in the Wardrobe, the richer-backup offer); 3.0.19 opened at approval. [history] W1103 — 3.0.17 approved 2026-10-27 (build 600, submitted 2026-10-26 6:21 PM PST: the automatic friend hunts, the earned looks, the two-tab Wardrobe); 3.0.18 opened at approval, carrying W1102 (the app offers back a richer cloud backup). [history] W1097 — 3.0.16 approved + live 2026-10-26 (build 599, the iOS 27 fix); 3.0.17 opened at approval. Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.16 = the post-3.0.15 train, opened 2026-10-23 (W1085): 3.0.15 was submitted 2026-10-22 2:55 PM PST from build 595 (w1083: the tally, the preview row, the security pass) and approved the same day, so the train closed under it. It carries W1084 (the tally leads the 3.0.15 What's New) forward. [history] 3.0.15 = the post-3.0.14 train, opened 2026-10-22 (W1080): 3.0.14 was approved and LIVE 2026-10-21 5:08 PM PST from build 591 (w1074) — the first 592 upload was refused ("train closed"), the sixth time an approval closed a train under a build. It carries W1077/W1078 (sign-out ends the session, cloud save checksum + gzip, socket token out of the URL, invite links ask first) forward. [history] 3.0.14 = the post-3.0.13 train, opened 2026-10-21 (W1074): 3.0.13 was approved and went LIVE 2026-10-20 3:50 AM PST from build 587 (w1068), so it carries W1069 (the floor 100 curve), W1070-W1073 (the ten weekly step and sleep bosses and their drops) and the real-screen screenshots and header Apple asked for (App Review 2.3.3) forward. [history] 3.0.11 = the post-3.0.10 train, opened 2026-10-05: Apple's store lookup showed 3.0.10 LIVE (released 11:35 AM PST that day, built from w1024, so it carried W1023 the 9:45 PM finish-strong reminder and nothing after). It carries forward W1025 (Myrmidon King art), W1026 (one request for every co-op hunt) and W1027 (steps 'today' = the device's day), all pushed under the 3.0.10 tag after that build was cut. [history] 3.0.10 = the post-3.0.9 train, opened 2026-10-04 when the owner passed on Apple's approval of 3.0.9 (submitted 2026-10-02 12:41 PM PST, approved 2026-10-03; carried W1002–W1022: weekly to-do planner, to-dos first in the briefing, the Monday recap, times-a-week vows, the interactive Status tab, the Jump Manual program, the flights-hunt result fix). It carries W1023 (the 9:45 PM finish-strong reminder) forward. First TWO-DIGIT patch: every version compare in the app is numeric (_updVersionNewer, the What's New compare), never a string compare. [history] 3.0.9 = the post-3.0.8 train, opened 2026-09-25 the moment Apple approved 3.0.8 (submitted 4:57 PM PST, approved the same evening; carried W989–W1001: Items overhaul, Resolved + mod view counts, the sectioned Habits tab + to-dos v2, topic edit). [history] 3.0.8 = the post-3.0.7 train, opened 2026-09-24 the moment Apple approved 3.0.7 (build 543, submitted 1:15 AM PST, approved same day; the Worldgate In-App Event was approved in the same hour). Carries forward: the three description corrections (Ranked PvP / Streak Shields / five-hunter raid = Premium) go out WITH this version, since a description only changes with a new version. [history] 3.0.7 carried W968–W987 (vows yours + glory verified, morning briefing v2, hunt results, Worldgate MVPs + weekly line + strike freeze, Community Updates + briefing line, mod preview rows, awakened:// scheme). [history] 3.0.7 = the post-3.0.6 train, opened 2026-09-20 the moment Apple approved 3.0.6 (submitted 3:14 AM PST that day, approved same day) — an approval CLOSES a train, and uploading under the approved number is refused (CFBundleShortVersionString must exceed it). This has now bitten FOUR times; the bump is done at approval, not at upload. [history] 3.0.6 carried W960–W967 (Manage Vows fix, rank-bar hairline, Worldgate kill ceremony, division-up celebration, owner preview row, 3.0.6 release notes). [history] 3.0.4 = the post-3.0.3 train, opened 2026-09-11 because Apple approved 3.0.3 (live 2026-09-09) and an approval closes a train — carries W935 (weekly-board upload fix + Apple Health asked on every onboarding path). [history] 3.0.3 = the post-3.0.2 train, opened 2026-09-07 the morning after Apple approved 3.0.2 (submitted 2026-09-06 4:41 PM PT; approval closes a train — twice-bitten lesson) — carries W917-W919b (Ledger view, Streak Shields deleted, handoff 29) forward under the new number. [history] 3.0.2 = the post-release train, opened 2026-09-04 because Apple closes a train on approval (build 493 under 3.0.1 was refused: CFBundleShortVersionString must exceed the approved 3.0.1) — carries W903 (boss-sheet hotfix) + W905 (Status is the hunter profile again). 3.0.1 "MAKE IT LAND" = the repair release (W882-W890): Wave-2 progression joins cloud sync, the activation funnel is instrumented end to end, silent Wave-2 server failures leave breadcrumbs, the altar routes to a same-day first kill, the Double Dungeon stops reporting false failures and yields when the stair is unavailable, the beat What's New used to eat is chained, and every banked free engage is visible before the tap. 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.29-w1286';
+  const APP_BUILD_TAG = '3.0.29-w1287';
   // W1192 — the relic and boss paintings are WebP now (the app was 376.9 MB, 290 MB of it these PNGs). A path saved
   // before (the drop history, a friend's card, a cloud save) still says .png: the first time one fails to load it is
   // pointed at the .webp beside it, before the image's own error handler can hide it.
@@ -6206,6 +6206,7 @@
         sourceLabel: sourceLabel || 'A hunt',
         wasFirst:    !!dropInfo.wasFirst,
         wasCapped:   !!dropInfo.wasCapped,
+        soldFor:     Math.max(0, Number(dropInfo.soldFor) || 0),   // W1287 — souls a drop past its cap sold for
         count_after: (typeof dropInfo.count === 'number') ? dropInfo.count : null,
         seen:        false,
       };
@@ -6624,7 +6625,8 @@
       : '<svg viewBox="0 0 24 24" fill="none" class="dh-glyph">' + (_DH_SLOTG[slot] || _DH_SLOTG._default) + '</svg>';
     const spark = bucket !== 'common' ? '<span class="dh-spark"></span>' : '';
     let stCls, stLabel;
-    if (e.wasCapped) { stCls = 'cap'; stLabel = 'Cap reached'; }
+    if (e.wasCapped && e.soldFor > 0) { stCls = 'sold'; stLabel = 'Sold +' + Math.round(e.soldFor).toLocaleString('en-US') + ' souls'; }   // W1287 — past the cap, sold for souls
+    else if (e.wasCapped) { stCls = 'cap'; stLabel = 'Cap reached'; }
     else if (e.wasFirst === false) { stCls = 'dup'; stLabel = 'Duplicate'; }
     else { stCls = 'new'; stLabel = 'New relic'; }
     const isCoop = e.source === 'coop';
@@ -8030,14 +8032,17 @@
     const entry = inv.cards[card.id] || { discovered: false, count: 0, first_acquired_date: null };
     const first = !entry.discovered;
     const cap = STACK_CAPS[card.rarity] != null ? STACK_CAPS[card.rarity] : Infinity;
-    if ((entry.count || 0) < cap) {
+    const capped = (entry.count || 0) >= cap;
+    if (!capped) {
       entry.discovered = true; entry.count = (entry.count || 0) + 1;
       if (first) { entry.first_acquired_date = getDeviceLocalDate(); try { _stampRelicArchiveNew(card.id); } catch (_) {} }
       inv.cards[card.id] = entry;
       if (first && !inv.reveal_queue.includes(card.id)) inv.reveal_queue.push(card.id);
     }
+    const sold = capped ? _sellCappedDrop(card) : 0;   // W1287 — a rare past its cap sells for souls
     persistInventory();
-    _wgToast('The Worldgate dropped ' + (card.name || 'a relic') + '.');
+    try { recordDropTransaction({ card: card, wasFirst: first && !capped, wasCapped: capped, count: entry.count, soldFor: sold }, null, { source: 'dungeon', sourceName: 'The Worldgate' }); } catch (_) {}
+    _wgToast('The Worldgate dropped ' + (card.name || 'a relic') + (sold > 0 ? '. You had the most you can hold, so it sold for ' + sold.toLocaleString('en-US') + ' souls.' : '.'));
     try { processRevealQueue(); } catch (_) {}
     return card;
   }
@@ -25054,6 +25059,25 @@
     return Math.max(10, Math.round(base * ratio / 10) * 10);
   }
 
+  // W1287 — owner 2026-11-22: "If a cap is reached, item should be sold so at least user gets rewarded even tho they
+  // reached their cap". A drop past its stack cap (a common past 1, a rare past 3; ultra-rares and mythics have none) is
+  // sold on the spot: a rare at its market sell price, a common (never on the market) at a quarter of what a rare of its
+  // tier sells for (E 20 up to S 250 souls).
+  function relicCapSellPrice(cardId) {
+    const card = CARDS[cardId]; if (!card || card.rarity === 'mythic') return 0;
+    if (card.rarity === 'common') {
+      const t = RELIC_GRIND_BASE[card.tier] || RELIC_GRIND_BASE.C;
+      return Math.max(10, Math.round(t.rare * RELIC_SQUEEZE_SELL_RATIO * 0.25 / 10) * 10);
+    }
+    return relicSellPrice(cardId) || 0;
+  }
+  /** W1287 — sell a drop that arrived past its cap: the souls land now; returns what it paid (0 when it could not). */
+  function _sellCappedDrop(card) {
+    const n = card ? relicCapSellPrice(card.id) : 0;
+    if (!(n > 0)) return 0;
+    try { earnSouls(n, 'relic_sell_' + card.id); return n; } catch (_) { return 0; }
+  }
+
   // W645 — relics that can NEVER be bought with souls, only earned as drops.
   // Nightfall's whole point is the Erebus chase ("the only source of the Mythic
   // blade Nightfall" — the dungeon's own kill text). The W289 buy price assumed
@@ -25617,6 +25641,7 @@
     const wasFirstAcquisition = !entry.discovered;
     const cap = STACK_CAPS[dropped.rarity] != null ? STACK_CAPS[dropped.rarity] : Infinity;
     const wasCapped = (entry.count || 0) >= cap;
+    const soldFor = wasCapped ? _sellCappedDrop(dropped) : 0;   // W1287 — past the cap: sold for souls on the spot
 
     if (!wasCapped) {
       entry.discovered = true;
@@ -25676,7 +25701,7 @@
     // Single choke-point → captures co-op, solo, dupes, commons, capped.
     try {
       recordDropTransaction(
-        { card: dropped, wasFirst: wasFirstAcquisition, wasCapped: wasCapped, count: entry.count },
+        { card: dropped, wasFirst: wasFirstAcquisition, wasCapped: wasCapped, count: entry.count, soldFor: soldFor },
         bossId, dropOpts);
     } catch (_) {}
 
@@ -25706,6 +25731,7 @@
       card:     dropped,
       wasFirst: wasFirstAcquisition && !wasCapped,
       wasCapped,
+      soldFor,   // W1287 — souls paid for a drop past its cap
       count:    entry.count || 0,
       cap,
       fromPity,
@@ -25862,8 +25888,9 @@
           ? 'Fate answered: '
           : 'Pulled: ';
       if (wasCapped) {
+        const _sold = Number(dropInfo.soldFor) || 0;   // W1287 — sold on the spot for souls
         toastMsg += ' Duplicate ' + card.name + ' (' + rarityLabel +
-                    '). Cap reached (' + cap + ').';
+                    (_sold > 0 ? '). Cap reached, sold for ' + _sold.toLocaleString('en-US') + ' souls.' : '). Cap reached (' + cap + ').');
       } else if (!wasFirst) {
         toastMsg += ' Duplicate ' + card.name + ' (' + rarityLabel +
                     '). You have ' + count + '.';
@@ -25950,6 +25977,7 @@
             // label a duplicate honestly instead of always "RELIC ACQUIRED"
             // (now exposed on nearly every co-op win by the seen-key fix).
             wasCapped: !!(dropInfo && dropInfo.wasCapped),
+            soldFor:  (dropInfo && Number(dropInfo.soldFor)) || 0,   // W1287
             count:    (dropInfo && typeof dropInfo.count === 'number') ? dropInfo.count : null,
             cap:      (dropInfo && typeof dropInfo.cap === 'number') ? dropInfo.cap : null,
           } : null,
@@ -27035,7 +27063,9 @@
     // bosses' S jackpot (W1073) made a first mythic a weekly possibility instead of an Erebus-only one.
     const sealed = !!(drop.wasFirst && (drop.rarity === 'rare' || drop.rarity === 'ultra_rare' || drop.rarity === 'mythic'));
     const r = (typeof RARITY_LABELS !== 'undefined' && RARITY_LABELS[drop.rarity]) || drop.rarity || '';
-    return sealed ? { n: 'A sealed relic', r: r + ' · revealed next' } : { n: drop.name || 'A relic', r: r + (drop.wasFirst === false ? ' · duplicate' : '') };
+    const sold = Number(drop.soldFor) || 0;   // W1287 — past the cap: sold for souls
+    return sealed ? { n: 'A sealed relic', r: r + ' · revealed next' }
+      : { n: drop.name || 'A relic', r: r + (sold > 0 ? ' · sold for ' + sold.toLocaleString('en-US') + ' souls' : drop.wasFirst === false ? ' · duplicate' : '') };
   }
 
   /** Co-op party + goal from a hunt instance (the viewer is marked). */

@@ -37705,3 +37705,6 @@ button.mx-sh { cursor: pointer; min-height: 40px; }
 /* W1286 — the 300K pin locked in the Wardrobe: no glow, no sparks, its rim dimmed like every locked pin */
 .wx-sl.is-locked .pc-pin3w > .g, .wx-sl.is-locked .pc-pin3w > .e { display: none; }
 .wx-sl.is-locked .pc-pin3w > .rim { filter: saturate(.3) brightness(.62); box-shadow: none; }
+
+/* W1287 — a drop past its cap, sold for souls: the Drop History says what it paid */
+.dh-state--sold { color: #f5b842; } .dh-state--sold .dh-d { background: #f5b842; box-shadow: 0 0 6px rgba(245,184,66,.6); }
