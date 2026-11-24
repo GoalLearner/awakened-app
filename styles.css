@@ -37763,3 +37763,6 @@ button.mx-sh { cursor: pointer; min-height: 40px; }
 .pc-hero--fb .pc-identity .pc-pins { margin-top: 10px; }
 .pc-hero--fb .pc-identity .pc-skintag { margin-top: 12px; }
 .pc-fb-col--bare { padding-bottom: 28px; }
+/* W1300 — the name and the pins sit higher, level with the hunter's shoulders (owner 2026-11-23: "put the name and badges a
+   bit higher on the card"); a fixed top instead of centring on the column, so own and visitor cards line up the same. */
+.pc-hero--fb .pc-identity { align-self: flex-start; margin-top: 44px; }
