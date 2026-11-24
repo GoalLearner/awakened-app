@@ -829,14 +829,26 @@ describe('POST /v1/users/me/public-achievement-events — validation (1z.200)', 
     expect(((await res.json()) as { error: string }).error).toBe('INVALID_EVENT_KEY');
   });
 
-  it('rejects rare_item_drop with non-null eventValue', async () => {
-    const db = makeDb();
-    const res = await handlePublicAchievementEventsPost(
-      makeReq({ events: [{ ...VALID_RARE_ITEM_DROP, eventValue: 1 }] }),
+  // W1307 — owner 2026-11-24: "it would give hunters more information as they play the game". A rare past its cap
+  // is sold on the spot; its post carries the souls, a whole number, and nothing else.
+  it('W1307 — rare_item_drop takes the souls a capped rare sold for, and nothing else', async () => {
+    const db = makeDb({ perInsertChanges: [1] });
+    const ok = await handlePublicAchievementEventsPost(
+      makeReq({ events: [{ ...VALID_RARE_ITEM_DROP, eventValue: 450 }] }),
       makeEnv(db), session,
     );
-    expect(res.status).toBe(400);
-    expect(((await res.json()) as { error: string }).error).toBe('INVALID_EVENT_VALUE');
+    expect(ok.status).toBe(200);
+    const ins = db._calls().filter((c) => !/^SELECT COUNT/.test(c.sql))[0]!;
+    expect(ins.binds[4]).toBe('found a rare item');
+    expect(ins.binds[5]).toBe(450);
+    for (const bad of [0, -5, 1.5, '450', 100001]) {
+      const res = await handlePublicAchievementEventsPost(
+        makeReq({ events: [{ ...VALID_RARE_ITEM_DROP, eventValue: bad }] }),
+        makeEnv(makeDb()), session,
+      );
+      expect(res.status, String(bad)).toBe(400);
+      expect(((await res.json()) as { error: string }).error).toBe('INVALID_EVENT_VALUE');
+    }
   });
 
   it('rejects rare_item_drop with non-null rarity', async () => {

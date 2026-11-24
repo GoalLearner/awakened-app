@@ -202,6 +202,10 @@ const ULTRA_RARE_DROP_KEY   = 'ultra_rare';
 // / slot / rarity tier are NEVER accepted.
 const RARE_ITEM_DROP_LABEL = 'found a rare item';
 const RARE_ITEM_DROP_KEY   = 'rare';
+// W1307 — a rare past its stack cap is sold on the spot, and its post carries the souls it sold for (owner 2026-11-24:
+// "it would give hunters more information as they play the game"). A whole number in a sane band; the card itself
+// still never travels. (The dearest rare sells for about 3,000 today.)
+const RARE_ITEM_SOLD_SOULS_MAX = 100_000;
 
 // v3 Phase 1z.226A — 100K Step Club accolade unlock. Single
 // canonical event per accolade lifetime. The value 100000 is the
@@ -655,14 +659,18 @@ function validateEvent(
         detail: `rare_item_drop eventKey must be exactly "${RARE_ITEM_DROP_KEY}".`,
       };
     }
-    if (raw.eventValue !== undefined && raw.eventValue !== null) {
+    // W1307 — null, or the souls a rare past its cap sold for.
+    if (raw.eventValue === undefined || raw.eventValue === null) {
+      eventValue = null;
+    } else if (isInt(raw.eventValue, 1, RARE_ITEM_SOLD_SOULS_MAX)) {
+      eventValue = raw.eventValue;
+    } else {
       return {
         ok: false,
         code: 'INVALID_EVENT_VALUE',
-        detail: 'rare_item_drop eventValue must be null.',
+        detail: `rare_item_drop eventValue must be null or the souls it sold for (1..${RARE_ITEM_SOLD_SOULS_MAX}).`,
       };
     }
-    eventValue = null;
     if (raw.rarity !== undefined && raw.rarity !== null) {
       return {
         ok: false,

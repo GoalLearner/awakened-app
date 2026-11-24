@@ -185,3 +185,92 @@ test.describe('Mythic drops in Hunter Activity (W1229 · W1230)', () => {
     expect(await page.evaluate(() => document.querySelectorAll('.pc-crown, .board-av-crown').length)).toBe(0);
   });
 });
+
+// W1307 — owner 2026-11-24: "Galilea had all these kills but no drop, is this because they're duplicates and sold for
+// souls?" -> "Yeah it would give hunters more information as they play the game". Only the first copy of each relic
+// used to post; every later rare, ultra-rare and mythic copy now posts too, and a rare past its cap names its souls.
+test.describe('Repeat drops in Hunter Activity (W1307)', () => {
+  test('every repeat rare, ultra-rare and mythic posts under a fresh id; a rare past its cap carries its souls; a first find waits for its reveal; commons stay off', async ({ page }) => {
+    await boot(page);
+    await catchPosts(page);
+    const r = await page.evaluate(() => {
+      const w = window as any, D = w.Drops, C = D.CARDS;
+      const by: Record<string, { rare: string[]; ultra: string[] }> = {};
+      Object.keys(C).forEach((id) => {
+        const c = C[id]; if (!c.source_boss) return;
+        const b = (by[c.source_boss] = by[c.source_boss] || { rare: [], ultra: [] });
+        if (c.rarity === 'rare') b.rare.push(id); if (c.rarity === 'ultra_rare') b.ultra.push(id);
+      });
+      const own = (ids: string[], n: number) => ids.forEach((id) => { D.state.cards[id] = { ...(D.state.cards[id] || {}), discovered: n > 0, count: n, first_acquired_date: n > 0 ? '2026-11-01' : null }; });
+      const seen = () => (w.__paeQueuePeek() as string[]).length + ((w.__posted || []) as unknown[]).length;
+      for (const boss of Object.keys(by)) {
+        const b = by[boss]; if (!b.rare.length || !b.ultra.length) continue;
+        own(b.rare, 0);
+        const before = seen();
+        const first = D.rollBossDrop(boss, { dropTable: { rare: 1 } });
+        if (!first) continue;   // a boss the solo roll does not know
+        const firstPosts = seen() - before;
+        D.state.reveal_queue.length = 0;   // the reveal (and its own post) is not this test's
+        own(b.rare, 3);
+        const sold = D.rollBossDrop(boss, { dropTable: { rare: 1 } });
+        own(b.rare, 1);
+        const kept = D.rollBossDrop(boss, { dropTable: { rare: 1 } });
+        own(b.ultra, 1);
+        const ultra = D.rollBossDrop(boss, { dropTable: { ultra_rare: 1 } });
+        const common = Object.keys(C).find((id) => C[id].rarity === 'common');
+        w.__postRepeatDrop(C[common!], 120);
+        for (const id of ['nightfall_blade', 'reverie_staff', 'vigil_bow']) { w.__postRepeatDrop(C[id], 0); w.__postRepeatDrop(C[id], 0); }
+        return { first: first.wasFirst, firstPosts, sold: [sold.wasCapped, sold.soldFor], kept: [kept.wasCapped, kept.wasFirst], ultra: [ultra.card.rarity, ultra.wasFirst] };
+      }
+      return null;
+    });
+    expect(r).not.toBeNull();
+    expect(r!.first).toBe(true);
+    expect(r!.firstPosts).toBe(0);   // the first copy posts from its reveal, as before
+    expect(r!.sold[0]).toBe(true);
+    expect(r!.sold[1]).toBeGreaterThan(0);
+    expect(r!.kept).toEqual([false, false]);
+    expect(r!.ultra).toEqual(['ultra_rare', false]);
+    await expect.poll(() => page.evaluate(() => ((window as any).__posted as unknown[]).length), { timeout: 15_000 }).toBe(9);
+    const posted = await page.evaluate(() => (window as any).__posted as any[]);
+    const rares = posted.filter((e) => e.eventType === 'rare_item_drop');
+    expect(rares.map((e) => [e.eventKey, e.eventLabel, e.rarity])).toEqual([['rare', 'found a rare item', null], ['rare', 'found a rare item', null]]);
+    expect(rares.map((e) => e.eventValue)).toEqual([r!.sold[1], null]);
+    const ultras = posted.filter((e) => e.eventType === 'ultra_rare_drop');
+    expect(ultras.map((e) => [e.eventKey, e.eventLabel, e.eventValue, e.rarity])).toEqual([['ultra_rare', 'looted an ultra-rare item', null, null]]);
+    const my = posted.filter((e) => e.eventType === 'mythic_drop');
+    expect(my).toHaveLength(6);
+    for (const e of my) {
+      expect(e.eventLabel).toBe('found ' + SERVER_MYTHICS[e.eventKey]);
+      expect(e.clientEventId).toMatch(/^mythic:[A-Za-z0-9_\-]{4,64}$/);
+    }
+    expect(posted.every((e) => /^[A-Za-z0-9_:\-]{1,128}$/.test(e.clientEventId))).toBe(true);
+    expect(new Set(posted.map((e) => e.clientEventId)).size).toBe(9);   // every drop its own post
+  });
+
+  test('a sold rare names its souls, and a hunter\'s items fold into one chip per kind, ultra-rare first', async ({ page }) => {
+    const midnight = new Date(); midnight.setHours(0, 0, 0, 0);
+    const now = Math.max(Date.now(), midnight.getTime() + 5 * 60_000);
+    const rare = { eventKey: 'rare', eventLabel: 'found a rare item' };
+    await boot(page, [
+      ev('b1', 'Galilea', 'boss_kill', now, false),
+      ev('r1', 'Galilea', 'rare_item_drop', now - 10_000, false, { ...rare, eventValue: 1450 }),
+      ev('r2', 'Galilea', 'rare_item_drop', now - 20_000, false, rare),
+      ev('u1', 'Galilea', 'ultra_rare_drop', now - 30_000, false),
+      ev('r3', 'Galilea', 'rare_item_drop', now - 40_000, false, rare),
+    ]);
+    await openFeed(page);
+    const gal = page.locator('.fa-hunter').filter({ has: page.locator('.fa-hn[data-board-profile="Galilea"]') });
+    await expect(gal).toHaveCount(1);
+    const chips = gal.locator('.fa-hs .fa-chip');
+    await expect(chips).toHaveCount(3);
+    await expect(chips.nth(0)).toContainText('The Carouser');
+    await expect(chips.nth(1)).toHaveText('ultra-rare item');
+    await expect(chips.nth(2)).toHaveText('3 rare items');
+    await gal.locator('.fa-hh').click();
+    const sold = gal.locator('.fa-act-txt').filter({ hasText: 'sold for' });
+    await expect(sold).toHaveCount(1);
+    await expect(sold).toHaveText('found a rare item · sold for 1,450 souls');
+    await expect(gal.locator('.fa-act-txt').filter({ hasText: /^found a rare item$/ })).toHaveCount(2);
+  });
+});
