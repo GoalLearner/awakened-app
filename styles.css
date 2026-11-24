@@ -37766,3 +37766,11 @@ button.mx-sh { cursor: pointer; min-height: 40px; }
 /* W1300 — the name and the pins sit higher, level with the hunter's shoulders (owner 2026-11-23: "put the name and badges a
    bit higher on the card"); a fixed top instead of centring on the column, so own and visitor cards line up the same. */
 .pc-hero--fb .pc-identity { align-self: flex-start; margin-top: 44px; }
+
+/* W1303 — the boss-kill emblem on the hunter card (owner 2026-11-23: "I want to add bosses slain on the profile card"):
+   the leaderboard's ladder emblem (W1293), bigger, under the name and above the pins. Nothing below 100 kills. */
+.pc-identity .lb-rank-boss100.pc-bk { height: auto; margin: 6px 0 0 -3px; gap: 3px; }
+.pc-identity .pc-bk img { width: 38px; height: 38px; margin: 0; filter: drop-shadow(0 2px 3px rgba(0,0,0,.75)); }
+.pc-identity .pc-bk b { font-size: 15px; letter-spacing: .6px; }
+.pc-identity .pc-bk:not(.lb-bk-t10) b { text-shadow: 0 0 8px var(--bk-g), 0 1px 2px rgba(0,0,0,.85); }
+.pc-hero--fb .pc-identity .pc-bk + .pc-pins { margin-top: 8px; }

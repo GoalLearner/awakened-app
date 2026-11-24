@@ -147,6 +147,35 @@ for (const vp of [{ width: 390, height: 844 }, { width: 375, height: 667 }]) {
       await expect(page.locator('#pc-body .pc-fb-col div.pc-shard')).toHaveText(/Blade/i);   // the title sits under the crest
       await expect(page.locator('#pc-body .pc-prov')).toContainText('global leaderboard');
     });
+
+    // W1303 — owner 2026-11-23: "I want to add bosses slain on the profile card". The leaderboard's ladder emblem sits
+    // under the name, above the pins: the highest century crossed, nothing below 100, the crowned crest past 1000.
+    test('the boss-kill emblem sits under the name, above the pins; none below 100', async ({ page }) => {
+      await boot(page);
+      await render(page, true);   // 316 kills
+      const bk = page.locator('#pc-body .pc-identity > .lb-rank-boss100.pc-bk');
+      await expect(bk).toHaveCount(1);
+      await expect(bk.locator('b')).toHaveText('300');
+      await expect(bk.locator('img')).toHaveAttribute('src', 'assets/badges/boss-kills-3.webp');
+      await expect.poll(() => bk.locator('img').evaluate((el) => (el as HTMLImageElement).complete && (el as HTMLImageElement).naturalWidth > 0)).toBe(true);
+      await settle(page);
+      const geo = await page.evaluate(() => {
+        const a = document.querySelector('#pc-body .pc-alias')!.getBoundingClientRect(), b = document.querySelector('#pc-body .pc-bk')!.getBoundingClientRect();
+        const p = document.querySelector('#pc-body .pc-bk')!.nextElementSibling!.getBoundingClientRect(), i = document.querySelector('#pc-body .pc-bk img')!.getBoundingClientRect();   // the pins, or CHANGE LOOK when none
+        return { below: b.top - a.bottom, abovePins: p.top - b.bottom, img: Math.round(i.width), left: Math.abs(b.left - a.left) };
+      });
+      expect(geo.below).toBeGreaterThanOrEqual(0);
+      expect(geo.abovePins).toBeGreaterThanOrEqual(0);
+      expect(geo.img).toBe(38);
+      expect(geo.left).toBeLessThanOrEqual(4);   // on the name's left edge
+      await render(page, false, { alias: 'RenDIESEL', bossesSlain: 1234 });
+      await expect(bk.locator('b')).toHaveText('1200');
+      await expect(bk.locator('img')).toHaveAttribute('src', 'assets/badges/boss-kills-10.webp');
+      await render(page, false, { alias: 'justin', bossesSlain: 99 });
+      await expect(page.locator('#pc-body .lb-rank-boss100')).toHaveCount(0);
+      await render(page, false, { alias: 'sim', bossesSlain: 500, _sim: true });   // never faked: a sim wears none
+      await expect(page.locator('#pc-body .lb-rank-boss100')).toHaveCount(0);
+    });
   });
 }
 
