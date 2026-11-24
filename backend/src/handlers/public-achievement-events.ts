@@ -8,7 +8,7 @@
  *       regex. Duplicates collapse via UNIQUE (user_id,
  *       client_event_id) + ON CONFLICT DO NOTHING.
  *
- *   GET /v1/friends/activity?limit=30
+ *   GET /v1/friends/activity?limit=30   (W1306: every event of the last 24 hours, plus the newest `limit` before that)
  *     - Authenticated. Returns newest events across accepted
  *       friends + the viewer themselves, joined to alias +
  *       rankLabel so the client can render in one roundtrip.
@@ -372,6 +372,14 @@ const FEED_MAX_LIMIT       = 50;
 const FEED_PUBLIC_SHADOWS_MAX = 20;
 // W1229 — mythic drops from every hunter, read on top of the limit the same way.
 const FEED_PUBLIC_DROPS_MAX = 30;
+// W1306 — the last 24 hours come WHOLE (owner 2026-11-23, after one hunter's late burst of 28 feats pushed every other
+// friend's boss kills out of the 30-newest window: "Why is there a limit? Can we make it unlimited for the day?").
+// 24 hours covers "today" in every time zone. `limit` now counts only the older events (yesterday and back). The cap is
+// a safety net, not a product limit: each hunter can post at most EVENTS_PER_USER_PER_DAY (100) a day.
+const FEED_DAY_MS  = 24 * 60 * 60 * 1000;
+const FEED_DAY_MAX = 500;
+// D1 takes at most 100 bound parameters a query; the likes lookup reads the feed's ids in chunks below that.
+const LIKES_IDS_PER_QUERY = 90;
 const FEED_SELECT = `SELECT e.id                AS id,
             e.user_id           AS user_id,
             e.event_type        AS event_type,
@@ -1122,9 +1130,9 @@ export async function handleFriendsActivityGet(
   // friend's current alias and (optional) rankLabel so the
   // client renders in one roundtrip. rank_points + metadata_json
   // are never selected.
-  const results = await env.DB.prepare(
-    `${FEED_SELECT}
-      WHERE (e.user_id = ?
+  // W1306 — two windows in one read: every event of the last 24 hours (up to the safety cap), then the newest `limit`
+  // events before that. Same friend scope in both; the rows are merged and re-sorted below.
+  const FEED_SCOPE = `(e.user_id = ?
          OR e.user_id IN (
              SELECT CASE WHEN f.requester_user_id = ?
                          THEN f.recipient_user_id
@@ -1133,17 +1141,28 @@ export async function handleFriendsActivityGet(
               WHERE f.status = 'accepted'
                 AND (f.requester_user_id = ? OR f.recipient_user_id = ?)
            ))
+        AND NOT (e.client_event_id = 'step_100k_club' AND e.server_created_at >= ${FAME_FROM_MS})`;
+  const dayFrom = Date.now() - FEED_DAY_MS;
+  const results = await env.DB.prepare(
+    `SELECT * FROM (${FEED_SELECT}
+      WHERE ${FEED_SCOPE}
         AND e.server_created_at > ?
-        AND NOT (e.client_event_id = 'step_100k_club' AND e.server_created_at >= ${FAME_FROM_MS})
       ORDER BY e.server_created_at DESC
-      LIMIT ?`,
+      LIMIT ?)
+     UNION ALL
+     SELECT * FROM (${FEED_SELECT}
+      WHERE ${FEED_SCOPE}
+        AND e.server_created_at > ? AND e.server_created_at <= ?
+      ORDER BY e.server_created_at DESC
+      LIMIT ?)`,
   )
     .bind(
-      session.userId,
-      session.userId,
-      session.userId,
-      session.userId,
+      session.userId, session.userId, session.userId, session.userId,
+      dayFrom,
+      FEED_DAY_MAX,
+      session.userId, session.userId, session.userId, session.userId,
       Date.now() - FEED_LOOKBACK_MS,
+      dayFrom,
       limit,
     )
     .all<FeedRow>();
@@ -1261,14 +1280,21 @@ const LIKERS_OWN_MAX = 12;   // W921
 async function feedLikes(env: Env, userId: string, ids: string[], ownIds?: Set<string>): Promise<Map<string, LikeAgg>> {
   const out = new Map<string, LikeAgg>();
   if (!ids.length) return out;
-  const rows = await env.DB.prepare(
-    `SELECT l.event_id AS event_id, l.user_id AS user_id, u.alias AS alias, l.created_at AS created_at
-       FROM feed_likes l
-       JOIN users u ON u.id = l.user_id
-      WHERE l.event_id IN (${ids.map(() => '?').join(',')})
-      ORDER BY l.created_at ASC`,
-  ).bind(...ids).all<{ event_id: string; user_id: string; alias: string; created_at?: number }>();
-  for (const r of rows.results ?? []) {
+  // W1306 — a whole day of feats can pass D1's 100-bind limit: read the likes in chunks (oldest like first in each,
+  // and one event's likes always sit in one chunk, so the order per event holds).
+  const likeRows: Array<{ event_id: string; user_id: string; alias: string; created_at?: number }> = [];
+  for (let i = 0; i < ids.length; i += LIKES_IDS_PER_QUERY) {
+    const part = ids.slice(i, i + LIKES_IDS_PER_QUERY);
+    const rows = await env.DB.prepare(
+      `SELECT l.event_id AS event_id, l.user_id AS user_id, u.alias AS alias, l.created_at AS created_at
+         FROM feed_likes l
+         JOIN users u ON u.id = l.user_id
+        WHERE l.event_id IN (${part.map(() => '?').join(',')})
+        ORDER BY l.created_at ASC`,
+    ).bind(...part).all<{ event_id: string; user_id: string; alias: string; created_at?: number }>();
+    for (const r of rows.results ?? []) likeRows.push(r);
+  }
+  for (const r of likeRows) {
     const agg = out.get(r.event_id) || { n: 0, mine: false, likers: [], latest: null };
     agg.n += 1;
     if (r.user_id === userId) agg.mine = true;

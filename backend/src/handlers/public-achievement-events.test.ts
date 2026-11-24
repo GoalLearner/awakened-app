@@ -1763,9 +1763,36 @@ describe('GET /v1/friends/activity — feed read (1z.200)', () => {
     expect(calls.filter((c) => !/^SELECT COUNT/.test(c.sql))[0]?.sql).toMatch(/status = 'accepted'/);
     expect(calls.filter((c) => !/^SELECT COUNT/.test(c.sql))[0]?.sql).toMatch(/ORDER BY e\.server_created_at DESC/);
     expect(calls.filter((c) => !/^SELECT COUNT/.test(c.sql))[0]?.sql).toMatch(/LIMIT \?/);
-    // limit + 4 user-id binds = 5 positional binds total.
-    expect(calls.filter((c) => !/^SELECT COUNT/.test(c.sql))[0]?.binds.length).toBe(6);   // W1076 — the 90-day feed bound
-    expect(calls.filter((c) => !/^SELECT COUNT/.test(c.sql))[0]?.binds[5]).toBe(30);   // W1076 — binds: 4 ids, the lookback, the limit
+    // W1306 — two windows: [4 ids, the 24-hour start, the day cap] then [4 ids, the 90-day lookback, the 24-hour start, the limit]
+    const q = calls.filter((c) => !/^SELECT COUNT/.test(c.sql))[0]!;
+    expect(q.binds.length).toBe(13);
+    expect(q.binds[5]).toBe(500);                        // the whole last 24 hours (a safety cap, not a product limit)
+    expect(q.binds[12]).toBe(30);                        // the limit counts only the older events
+    expect(q.sql).toMatch(/UNION ALL/);
+    const day = q.binds[4] as number, lookback = q.binds[10] as number;
+    expect(q.binds[11]).toBe(day);                       // the older window ends where the day starts
+    expect(Date.now() - day).toBeGreaterThanOrEqual(24 * 3600 * 1000 - 5000);
+    expect(Date.now() - day).toBeLessThanOrEqual(24 * 3600 * 1000 + 5000);
+    expect(day - lookback).toBeGreaterThan(80 * 24 * 3600 * 1000);
+  });
+
+  // W1306 — owner 2026-11-23: "Why is there a limit? Can we make it unlimited for the day?" One hunter's burst of 28
+  // feats had pushed every other friend's boss kills out of the 30-newest window.
+  it('W1306 — a busy day is returned whole, past the old limit, and its likes are read in chunks under 100 binds', async () => {
+    const rows = Array.from({ length: 140 }, (_, i) => ({
+      id: 'e' + i, user_id: (i % 2 ? 'ricin' : 'galilea') + '-uid', event_type: 'boss_kill', event_key: 'glass_strider',
+      event_label: 'defeated The Glass Strider', event_value: 1, rarity: 'D', server_created_at: NOW_UTC - i * 1000,
+      alias: i % 2 ? 'ricin' : 'galilea', rank_label: 'C',
+    }));
+    const db = makeDb({ feedRows: rows, publicShadowRows: [] });
+    const res = await handleFriendsActivityGet(new Request('https://example.com/v1/friends/activity?limit=30'), makeEnv(db), session);
+    const json = await res.json() as { events: Array<{ id: string; alias: string }> };
+    expect(json.events.length).toBe(140);
+    expect(json.events.filter((e) => e.alias === 'galilea').length).toBe(70);
+    const likeReads = db._calls().filter((c) => /FROM feed_likes/.test(c.sql));
+    expect(likeReads.length).toBe(2);
+    for (const c of likeReads) expect(c.binds.length).toBeLessThanOrEqual(90);
+    expect(likeReads.reduce((n, c) => n + c.binds.length, 0)).toBe(140);
   });
 
   it('exposes rankLabel as null when LEFT JOIN miss', async () => {
