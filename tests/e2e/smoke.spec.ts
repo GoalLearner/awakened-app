@@ -7651,11 +7651,11 @@ test.describe('BI2 · Briefing tiles (W1178, W1179)', () => {
   test('W1179: the facts are short, sourced, rotate daily, and never run two of a kind in a row', async ({ page }) => {
     await seed(page, {});
     const facts = await page.evaluate(() => (window as any).__tb.facts()) as string[][];
-    expect(facts.length).toBeGreaterThanOrEqual(24);
+    expect(facts.length).toBeGreaterThanOrEqual(58);   // W1305 — 32 more
     expect(facts.filter((f) => f[0] === 'Sleep').length).toBeGreaterThanOrEqual(10);
     for (let i = 0; i < facts.length; i++) {
       const [tag, text, more, src] = facts[i];
-      expect(['Sleep', 'Vitamin D', 'Women', 'Strength', 'Walking']).toContain(tag);
+      expect(['Sleep', 'Vitamin D', 'Women', 'Strength', 'Walking', 'Heart', 'Smoking', 'Nutrients']).toContain(tag);
       expect(text.length).toBeLessThanOrEqual(60);
       expect(more.length).toBeLessThanOrEqual(120);
       expect(src.length).toBeGreaterThan(2);
