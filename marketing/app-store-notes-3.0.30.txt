@@ -1,8 +1,9 @@
-Full-body hunter cards, new boss-kill badges, and Worldgate strikes that say what they hit with.
+Full-body hunter cards, new boss-kill badges, and clearer Worldgate strikes.
 
-• Hunter cards now show your whole look, head to toe, with your rank at your feet. Tap any hunter on a leaderboard to see theirs.
-• New boss-kill badges: every 100 bosses you defeat earns a better badge on the Steps board, from an iron shield at 100 to a crowned, diamond-set gold crest at 1,000.
-• Recent Strikes on the Worldgate now say what each hunter struck with: steps, flights and sleep, each in its own colour. Each hunter's circle wears their rank colour.
-• The Friends tab on the Steps board now shows the same badges as This Week: the 100K, 200K and 300K badges and boss kills.
-• A drop past its cap now sells for souls the moment it lands, so every drop pays.
-• The 200K and 300K weeks are now pins of their own in the Wardrobe.
+• Hunter cards now show your whole look, head to toe, with your rank at your feet and your title beneath it. Tap any hunter on a leaderboard to see theirs.
+• New boss-kill badges: every 100 bosses you defeat earns a better badge, from an iron shield at 100 to a crowned, diamond-set gold crest at 1,000.
+• Recent Strikes on the Worldgate now show what each hunter struck with: steps, flights and sleep, each in its own color.
+• The Friends tab on the Steps board now shows everyone's badges.
+• A drop past its cap now sells for souls the moment it lands.
+• The 200K and 300K weeks are now pins in the Wardrobe.
+• Bloodmoon, Dawnbringer, The Third Blade, The Unbroken, Vanguard and Stardust Sovereign look sharper.
