@@ -3,10 +3,12 @@
  *
  * Owner 2026-11-07: "Make sure the avatar is centered... as well as removing the arena rating since we
  * don't have that open yet." Pinned here, rendered from fixture data through the QA hook (no network):
- *   - W1296: the hunter stands FULL BODY on the left (no box, no frame), the rank crest at the feet and the look's name
- *     under it; the name, the title and the pins sit beside the figure (W1142 had a centred medallion);
- *   - no Arena Rating row, even when the profile data carries an arena standing;
- *   - the own card keeps CHANGE LOOK and its own closing line; a visitor's card names the worn look.
+ *   - W1308 (Claude Design "Hunter Profile - Clean", B; owner 2026-11-24: "more organized and aligned correctly and more
+ *     clean"): one grid, 20px margins and two equal columns shared by the hero and the record. The hunter stands in a
+ *     framed plate with the rank crest in its corner; the name, the title and the seals (pins + boss kills) sit on the
+ *     plate's baseline, starting where the record's right column starts; the record is one panel; the actions share
+ *     one row pattern (the own card's Change look, a friend's Spar their Echo, the owner's Make moderator);
+ *   - no Arena Rating row, even when the profile data carries an arena standing.
  */
 import { test, expect, Page } from '@playwright/test';
 
@@ -45,88 +47,95 @@ const settle = (page: Page) => page.evaluate(async () => {   // the sheet slides
   let last = -1; for (let i = 0; i < 60; i++) { const y = sh.getBoundingClientRect().top; if (y === last) break; last = y; await new Promise((r) => requestAnimationFrame(r)); }
 });
 
+const box = (page: Page, sel: string) => page.evaluate((q) => { const r = document.querySelector(q)!.getBoundingClientRect(); return { l: r.left, r: r.right, t: r.top, b: r.bottom, w: r.width, h: r.height }; }, sel);
+
 for (const vp of [{ width: 390, height: 844 }, { width: 375, height: 667 }]) {
-  test.describe('W1142 — the Hunter Profile card @' + vp.width + 'x' + vp.height, () => {
+  test.describe('W1308 — the Hunter Profile card @' + vp.width + 'x' + vp.height, () => {
     test.use({ viewport: vp });
 
-    // W1296 — owner 2026-11-23: "Thoughts on showing the full body on the card, rather than just the face", then "move the
-    // name of the skin under the avatar so the ascendant goes under the C ranked box" and "without borders is better".
-    test('the hunter stands full body beside the name, and the Arena Rating row is gone (own card)', async ({ page }) => {
+    test('one grid: the plate, the name column and the record line up; no Arena Rating; the own card changes its look', async ({ page }) => {
       await boot(page);
       await render(page, true);
-      const sheet = page.locator('#pc-sheet');
-      await expect(sheet).toBeVisible();
+      await expect(page.locator('#pc-sheet')).toBeVisible();
       await settle(page);
-      const art = page.locator('#pc-body .pc-fb-art');
-      await expect(art).toHaveAttribute('src', 'avatar-skin-shadowborn.png');   // the full-body file, not the bust
+      const art = page.locator('#pc-body .pcc-plate .pcc-art');
+      await expect(art).toHaveAttribute('src', 'avatar-skin-shadowborn.png');   // the full-body file
       expect(await art.evaluate((el) => (el as HTMLImageElement).complete && (el as HTMLImageElement).naturalWidth > 0)).toBe(true);
-      await expect(page.locator('#pc-body .pc-med')).toHaveCount(0);           // no medallion, no frame
-      const fb = (await page.locator('#pc-body .pc-fb').boundingBox())!, id = (await page.locator('#pc-body .pc-identity').boundingBox())!;
-      expect(fb.x + fb.width).toBeLessThanOrEqual(id.x + 1);                   // the figure on the left, who they are on the right
-      expect(Math.round(fb.width)).toBe(150);
-      expect(Math.round(fb.height)).toBe(226);
+      await expect(page.locator('#pc-body .pc-med, #pc-body .pc-fb, #pc-body .pc-prov, #pc-body .pc-flavor, #pc-body .pc-skintag')).toHaveCount(0);
+      await expect(page.locator('#pc-sheet .pc-head')).toBeHidden();
+      const sh = await box(page, '#pc-sheet'), plate = await box(page, '#pc-body .pcc-plate'), rec = await box(page, '#pc-body .pcc-rec');
+      const name = await box(page, '#pc-body .pcc-name'), id = await box(page, '#pc-body .pcc-id'), lbl2 = await box(page, '#pc-body .pcc-cell:nth-child(2) .pcc-lbl');
+      expect(Math.abs(plate.l - sh.l - 20)).toBeLessThanOrEqual(1.5);   // 20px margins
+      expect(Math.abs(rec.l - plate.l)).toBeLessThanOrEqual(1);
+      expect(Math.abs(sh.r - rec.r - 20)).toBeLessThanOrEqual(1.5);
+      expect(Math.round(plate.h)).toBe(252);
+      expect(Math.abs(plate.w - rec.w / 2)).toBeLessThanOrEqual(1);    // the plate is the record's left column
+      expect(Math.abs(name.l - lbl2.l)).toBeLessThanOrEqual(1);        // the name starts where the right column's text does
+      expect(Math.abs(id.b - plate.b)).toBeLessThanOrEqual(1);         // on the plate's baseline
+      expect(rec.t).toBeGreaterThan(plate.b);
       await expect(page.locator('#pc-body .pc-arena')).toHaveCount(0);
       await expect(page.locator('#pc-body')).not.toContainText('ARENA RATING');
-      await expect(page.locator('#pc-body .pc-identity .pc-skintag')).toContainText('CHANGE LOOK');   // W1299 — under the name and pins
-      await expect(page.locator('#pc-body .pc-prov')).toContainText('every hunter sees');
-      await expect(page.locator('#pc-body .pc-stat .v.gold')).toHaveText('5,601');
+      await expect(page.locator('#pc-body .pcc-v.gold')).toHaveText('5,601');
+      await expect(page.locator('#pc-body .pcc-cell')).toHaveCount(4);
+      await expect(page.locator('#pc-body .pcc-fv')).toHaveText('99 / 100');
+      const look = page.locator('#pc-body .pcc-actions > .pcc-act--gold[data-wardrobe]');
+      await expect(look).toContainText('Change look');
+      await expect(look).toContainText('every hunter sees');
+      const act = await box(page, '#pc-body .pcc-act');
+      expect(Math.abs(act.l - rec.l)).toBeLessThanOrEqual(1);
+      expect(Math.abs(act.r - rec.r)).toBeLessThanOrEqual(1);
+      if (process.env.LB_SHOTS) await page.screenshot({ path: process.env.LB_SHOTS + '/card-own-' + vp.width + '.png' });
+      await look.click();
+      await expect(page.locator('#pc-sheet')).toBeHidden();
+      await expect(page.locator('#wd-sheet')).toBeVisible();
     });
 
-    // W1144 — owner 2026-11-07 on build 623: "it is covering the rank too... the aura isn't working correctly on the
-    // playercard". W1296 — the crest stands at the hunter's feet, on top of everything; a worn aura wraps the figure,
-    // behind the art; a frame chosen before W1296 (or a published one) paints nothing.
-    test('the rank crest sits at the hunter\'s feet on top, a worn aura wraps the figure, and no frame paints', async ({ page }) => {
+    // W1144 — a worn aura shows behind the hunter, never over them or the crest; a frame chosen before W1296 paints nothing.
+    test('the rank crest sits in the plate\'s corner on top, a worn aura stays behind the hunter, and no frame paints', async ({ page }) => {
       await boot(page);
       await page.evaluate(() => { localStorage.setItem('hb_card_aura', 'storm'); localStorage.setItem('hb_card_frame', 'eclipse'); });
       await render(page, true);
-      const crest = page.locator('#pc-body .pc-crest');
+      const crest = page.locator('#pc-body .pcc-plate > .pcc-crest');
       await expect(crest).toHaveText('S');
       await settle(page);
       const geo = await page.evaluate(() => {
-        const f = document.querySelector('#pc-body .pc-fb')!.getBoundingClientRect(), c = document.querySelector('#pc-body .pc-crest')!.getBoundingClientRect();
-        const t = document.querySelector('#pc-body .pc-fb-col .pc-shard')!.getBoundingClientRect();   // W1299 — the title, under the crest
+        const p = document.querySelector('#pc-body .pcc-plate')!.getBoundingClientRect(), c = document.querySelector('#pc-body .pcc-crest')!.getBoundingClientRect();
         const top = document.elementFromPoint(c.x + c.width / 2, c.y + c.height / 2);
-        return { fcx: f.x + f.width / 2, fBottom: f.bottom, ccx: c.x + c.width / 2, cBottom: c.bottom, cw: c.width, tagTop: t.top, top: top ? top.className : '' };
+        return { dl: c.left - p.left, dt: c.top - p.top, cw: c.width, top: top ? top.className : '' };
       });
-      expect(Math.round(geo.cw)).toBe(38);
-      expect(Math.abs(geo.ccx - geo.fcx)).toBeLessThanOrEqual(1);   // under the hunter's centre line
-      expect(geo.cBottom).toBeGreaterThan(geo.fBottom);             // standing at the feet
-      expect(geo.tagTop).toBeGreaterThan(geo.cBottom);              // the title under the crest (W1299; was the look's name)
-      expect(geo.top).toBe('pc-crest');                             // the element on top at its own centre
-      const aura = page.locator('#pc-body .pc-fb > .wx-aura.storm');
+      expect(Math.round(geo.dl)).toBe(10);
+      expect(Math.round(geo.dt)).toBe(10);
+      expect(Math.round(geo.cw)).toBe(28);
+      expect(geo.top).toBe('pcc-crest');
+      const aura = page.locator('#pc-body .pcc-plate > .wx-aura.storm');
       await expect(aura).toHaveCount(1);
       expect(await aura.locator('.wx-ap').count()).toBe(10);
-      expect(await page.evaluate(() => [getComputedStyle(document.querySelector('#pc-body .pc-fb > .wx-aura') as HTMLElement).zIndex, getComputedStyle(document.querySelector('#pc-body .pc-fb-art') as HTMLElement).zIndex])).toEqual(['0', '1']);   // behind the art
+      expect(await page.evaluate(() => [getComputedStyle(document.querySelector('#pc-body .pcc-plate > .wx-aura') as HTMLElement).zIndex, getComputedStyle(document.querySelector('#pc-body .pcc-art') as HTMLElement).zIndex])).toEqual(['0', '1']);
       await expect(page.locator('#pc-body [class*="pc-fr-"]')).toHaveCount(0);
       await render(page, false, { cardFrame: 'runebound' });
       await expect(page.locator('#pc-body [class*="pc-fr-"], #pc-body .pc-med')).toHaveCount(0);
     });
 
-    // W1154 — no Founder badge on any card; the title sits centred (W1296: beside the hunter, under the name); on the own card it is a button that opens the
-    // Ascent's Titles view (CHOOSE A TITLE when none is worn); a visitor's title is a plain shard.
-    test('own card: no Founder badge, the title under the rank crest and tappable → the Titles view; none worn → CHOOSE A TITLE', async ({ page }) => {
+    // W1154 — the own card's title is a button that opens the Ascent's Titles view (CHOOSE A TITLE when none is worn).
+    // W1308 — it sits under the name, on the name's left edge.
+    test('own card: no Founder badge; the title under the name, tappable → the Titles view; none worn → CHOOSE A TITLE', async ({ page }) => {
       await boot(page);
       await page.evaluate(() => { localStorage.removeItem('hb_arena_title'); });
       await render(page, true);
       const body = page.locator('#pc-body');
       await expect(body.locator('.pc-founder')).toHaveCount(0);
-      const pick = body.locator('button.pc-shard--pick');
+      const pick = body.locator('button.pcc-title--pick');
       await expect(pick).toHaveCount(1);
       await expect(pick).toHaveText(/Choose a title/i);
-      // a worn title shows by name, from this phone (not the published data), on the centre line
       await page.evaluate(() => { localStorage.setItem('hb_arena_title', 'rt_contender'); localStorage.setItem('hb_arena_v2', JSON.stringify({ rating: 1000, bestRating: 1000, currentFloor: 51, highestCleared: 50, wins: 50, losses: 0, streak: 0, bestStreak: 0, dailyDate: '', dailyLosses: 0, reclaimDate: '', reclaimFloors: [], reclaimSouls: 0 })); });
       await page.reload();   // the Ascent state is read at boot
       await page.waitForFunction(() => !!(window as any).__pcRender && !!document.querySelector('[data-tab="profile"]'));
       await render(page, true);
       await expect(pick).toHaveText(/Contender/i);
       await settle(page);
-      const geo = await page.evaluate(() => {   // W1299 — under the rank crest, on the hunter's centre line (W1296 had it beside, W1154 centred)
-        const f = document.querySelector('#pc-body .pc-fb')!.getBoundingClientRect(), p = document.querySelector('#pc-body .pc-shard--pick')!.getBoundingClientRect();
-        const c = document.querySelector('#pc-body .pc-crest')!.getBoundingClientRect();
-        return { under: p.top - c.bottom, centre: Math.abs((p.left + p.width / 2) - (f.left + f.width / 2)) };
-      });
-      expect(geo.under).toBeGreaterThan(0);
-      expect(geo.centre).toBeLessThanOrEqual(2);
+      const n = await box(page, '#pc-body .pcc-name'), t = await box(page, '#pc-body .pcc-title');
+      expect(t.t).toBeGreaterThanOrEqual(n.b);
+      expect(Math.abs(t.l - n.l)).toBeLessThanOrEqual(1);
       await pick.click();
       await expect(page.locator('#pc-sheet')).toBeHidden();
       await expect(page.locator('#arena-overlay')).toBeVisible();
@@ -134,53 +143,57 @@ for (const vp of [{ width: 390, height: 844 }, { width: 375, height: 667 }]) {
       await expect(page.locator('#arena-overlay .tm-row--worn .nm')).toHaveText('Contender');
     });
 
-    test("a visitor's card: the hunter full body, no Arena Rating, no look name, the title under the crest", async ({ page }) => {
+    test("a visitor's card: the hunter in the plate, the published title, no Change look; the owner's Make moderator keeps the grid", async ({ page }) => {
       await boot(page);
       await render(page, false, { alias: 'RenDIESEL', arenaTitle: 'rt_blade', founderSeq: 2 });
-      await expect(page.locator('#pc-body .pc-fb-art')).toHaveAttribute('src', 'avatar-skin-shadowborn.png');
-      await expect(page.locator('#pc-body .pc-med')).toHaveCount(0);
-      await expect(page.locator('#pc-body .pc-arena')).toHaveCount(0);
-      await expect(page.locator('#pc-body .pc-founder')).toHaveCount(0);                 // W1154 — no Founder badge
-      await expect(page.locator('#pc-body div.pc-shard')).toHaveText(/Blade/i);         // W1154 — a plain shard, from the published title
-      await expect(page.locator('#pc-body button.pc-shard--pick')).toHaveCount(0);
-      await expect(page.locator('#pc-body .pc-skintag')).toHaveCount(0);                // W1299 — the look's name left the card
-      await expect(page.locator('#pc-body .pc-fb-col div.pc-shard')).toHaveText(/Blade/i);   // the title sits under the crest
-      await expect(page.locator('#pc-body .pc-prov')).toContainText('global leaderboard');
+      await expect(page.locator('#pc-body .pcc-art')).toHaveAttribute('src', 'avatar-skin-shadowborn.png');
+      await expect(page.locator('#pc-body .pc-arena, #pc-body .pc-founder, #pc-body .pc-prov')).toHaveCount(0);
+      await expect(page.locator('#pc-body div.pcc-title')).toHaveText(/Blade/i);
+      await expect(page.locator('#pc-body button.pcc-title--pick, #pc-body .pcc-act--gold')).toHaveCount(0);
+      await expect(page.locator('#pc-body .pcc-actions')).toBeHidden();   // a stranger: no rows at all
+      // the owner's Make moderator joins the actions column (as _boardDecorateProfileCard places it), the record's width
+      await page.evaluate(() => { const b = document.createElement('button'); b.className = 'board-grant'; b.textContent = 'Make moderator'; document.querySelector('#pc-body .pcc-actions')!.appendChild(b); });
+      await settle(page);
+      const rec = await box(page, '#pc-body .pcc-rec'), mod = await box(page, '#pc-body .pcc-actions .board-grant');
+      expect(Math.abs(mod.l - rec.l)).toBeLessThanOrEqual(1);
+      expect(Math.abs(mod.r - rec.r)).toBeLessThanOrEqual(1);
+      expect(Math.round(mod.h)).toBe(46);
+      if (process.env.LB_SHOTS) await page.screenshot({ path: process.env.LB_SHOTS + '/card-visitor-' + vp.width + '.png' });
     });
 
-    // W1303 — owner 2026-11-23: "I want to add bosses slain on the profile card". The leaderboard's ladder emblem sits
-    // under the name (W1304: under the pins, "Under the 7 shadows"), above CHANGE LOOK: the highest century crossed,
-    // nothing below 100, the crowned crest past 1000.
-    test('the boss-kill emblem sits under the name and the pins, above CHANGE LOOK; none below 100', async ({ page }) => {
+    // W1303 — owner 2026-11-23: "I want to add bosses slain on the profile card"; W1304 — under the pins. W1308 — one seal
+    // in the list: the tier emblem and "300+ BOSS KILLS", the last line. Nothing below 100; a sim wears none.
+    test('the boss-kill tier is the last seal under the pins; none below 100', async ({ page }) => {
       await boot(page);
       await render(page, true);   // 316 kills
-      const bk = page.locator('#pc-body .pc-identity > .lb-rank-boss100.pc-bk');
+      const bk = page.locator('#pc-body .pcc-seals > .pcc-seal--bk');
       await expect(bk).toHaveCount(1);
-      await expect(bk.locator('b')).toHaveText('300');
+      await expect(bk).toHaveText('300+ BOSS KILLS');
+      await expect(bk.locator('b')).toHaveText('300+');
       await expect(bk.locator('img')).toHaveAttribute('src', 'assets/badges/boss-kills-3.webp');
       await expect.poll(() => bk.locator('img').evaluate((el) => (el as HTMLImageElement).complete && (el as HTMLImageElement).naturalWidth > 0)).toBe(true);
+      await render(page, false, { alias: 'Richie', cardPins: [{ id: 'steps1m', v: 1000000 }, { id: 'shadows', v: 7 }] });
+      await expect(page.locator('#pc-body .pcc-seal')).toHaveText(['1,000,000 STEPS', '7 SHADOWS', '300+ BOSS KILLS']);
       await settle(page);
-      const geo = await page.evaluate(() => {
-        const a = document.querySelector('#pc-body .pc-alias')!.getBoundingClientRect(), b = document.querySelector('#pc-body .pc-bk')!.getBoundingClientRect();
-        const p = document.querySelector('#pc-body .pc-bk')!.nextElementSibling!.getBoundingClientRect(), i = document.querySelector('#pc-body .pc-bk img')!.getBoundingClientRect();   // the pins, or CHANGE LOOK when none
-        return { below: b.top - a.bottom, abovePins: p.top - b.bottom, img: Math.round(i.width), left: Math.abs(b.left - a.left) };
-      });
-      expect(geo.below).toBeGreaterThanOrEqual(0);
-      expect(geo.abovePins).toBeGreaterThanOrEqual(0);
-      expect(geo.img).toBe(38);
-      expect(geo.left).toBeLessThanOrEqual(4);   // on the name's left edge
-      await render(page, false, { alias: 'Richie', cardPins: [{ id: 'steps1m', v: 1000000 }, { id: 'shadows', v: 7 }] });   // W1304 — under the pins
-      await expect(page.locator('#pc-body .pc-identity > .pc-pins + .pc-bk')).toHaveCount(1);
-      await settle(page);
-      const under = await page.evaluate(() => document.querySelector('#pc-body .pc-bk')!.getBoundingClientRect().top - document.querySelector('#pc-body .pc-identity .pc-pins')!.getBoundingClientRect().bottom);
-      expect(under).toBeGreaterThanOrEqual(0);
+      const s1 = await box(page, '#pc-body .pcc-seal:nth-child(1)'), s3 = await box(page, '#pc-body .pcc-seal:nth-child(3)'), n = await box(page, '#pc-body .pcc-name');
+      expect(s3.t).toBeGreaterThan(s1.b);
+      expect(Math.abs(s1.l - n.l)).toBeLessThanOrEqual(1);   // the seals start on the name's left edge
       await render(page, false, { alias: 'RenDIESEL', bossesSlain: 1234 });
-      await expect(bk.locator('b')).toHaveText('1200');
+      await expect(bk).toHaveText('1,200+ BOSS KILLS');
       await expect(bk.locator('img')).toHaveAttribute('src', 'assets/badges/boss-kills-10.webp');
       await render(page, false, { alias: 'justin', bossesSlain: 99 });
-      await expect(page.locator('#pc-body .lb-rank-boss100')).toHaveCount(0);
+      await expect(page.locator('#pc-body .pcc-seal--bk')).toHaveCount(0);
       await render(page, false, { alias: 'sim', bossesSlain: 500, _sim: true });   // never faked: a sim wears none
-      await expect(page.locator('#pc-body .lb-rank-boss100')).toHaveCount(0);
+      await expect(page.locator('#pc-body .pcc-seal--bk')).toHaveCount(0);
+    });
+
+    test('a long name steps down a size and stays inside its column', async ({ page }) => {
+      await boot(page);
+      await render(page, false, { alias: 'Immortalshadow' });
+      await expect(page.locator('#pc-body .pcc-name')).toHaveClass(/pcc-name--xl/);
+      await settle(page);
+      const n = await box(page, '#pc-body .pcc-name'), sh = await box(page, '#pc-sheet');
+      expect(n.r).toBeLessThanOrEqual(sh.r - 16 + 1);
     });
   });
 }
@@ -197,20 +210,20 @@ test.describe('W1158 — the Step Club seal and the Prestige chip are pins', () 
     await boot(page);
     const body = page.locator('#pc-body');
     await render(page, false, { ...REN, cardPins: null });
-    await expect(body.locator('.pc-pins .pc-pin')).toHaveText(['100K CLUB ×2', 'PRESTIGE 1']);
-    // W1160 — each pin wears its own metal (emblem + material class); the emblem adds no text of its own
-    await expect(body.locator('.pc-pin--club100k .em svg')).toHaveCount(1);
-    await expect(body.locator('.pc-pin--prestige .em .st')).toHaveCount(1);        // one star for Prestige 1
+    await expect(body.locator('.pcc-seal--pin')).toHaveText(['100K CLUB ×2', 'PRESTIGE 1']);
+    // W1160 / W1308 — each seal wears its pin's badge (the club's hex, the prestige star); the badge adds no text of its own
+    await expect(body.locator('.pcc-seal--club100k .pcc-hex svg')).toHaveCount(1);
+    await expect(body.locator('.pcc-seal--prestige .st')).toHaveCount(1);        // one star for Prestige 1
     await expect(body.locator('.pc-club100k')).toHaveCount(0);
     await expect(body.locator('.pc-prestige')).toHaveCount(0);
-    await expect(body.locator('.pc-pins--own')).toHaveCount(0);
+    await expect(body.locator('.pcc-seals--own')).toHaveCount(0);
     await render(page, false, { ...REN, cardPins: [] });
-    await expect(body.locator('.pc-pins')).toHaveCount(0);
+    await expect(body.locator('.pcc-seal--pin')).toHaveCount(0);
     await render(page, false, { ...REN, cardPins: [{ id: 'bestday', v: 20140 }] });
-    await expect(body.locator('.pc-pins .pc-pin')).toHaveText(['20,140 IN A DAY']);
+    await expect(body.locator('.pcc-seal--pin')).toHaveText(['20,140 IN A DAY']);
     // Prestige is the S+ endgame: an S hunter's stray prestige number is not a pin; a club member below S+ wears the club alone
     await render(page, false, { alias: 'RenDIESEL', rankTier: 'S', prestige: 1, club100k: { repeatCount: 1, best: 101000 } });
-    await expect(body.locator('.pc-pins .pc-pin')).toHaveText(['100K CLUB']);
+    await expect(body.locator('.pcc-seal--pin')).toHaveText(['100K CLUB']);
   });
 
   test('the own card: the accolade cached on this phone wears the club pin by default; "[]" chosen → none', async ({ page }) => {
@@ -218,13 +231,13 @@ test.describe('W1158 — the Step Club seal and the Prestige chip are pins', () 
     const body = page.locator('#pc-body');
     await page.evaluate(() => { localStorage.removeItem('hb_card_pins'); localStorage.removeItem('hb_accolades_cache'); });
     await render(page, true);
-    await expect(body.locator('.pc-pins')).toHaveCount(0);   // nothing earned, nothing chosen
+    await expect(body.locator('.pcc-seal--pin')).toHaveCount(0);   // nothing earned, nothing chosen
     await page.evaluate(() => localStorage.setItem('hb_accolades_cache', JSON.stringify({ accolades: [{ type: 'step_100k_club', repeat_count: 3, best_value: 120000 }], fetched_at: Date.now() })));
     await render(page, true);
-    await expect(body.locator('.pc-pins--own .pc-pin')).toHaveText(['100K CLUB ×3']);
+    await expect(body.locator('.pcc-seals--own .pcc-seal--pin')).toHaveText(['100K CLUB ×3']);
     await page.evaluate(() => localStorage.setItem('hb_card_pins', '[]'));
     await render(page, true);
-    await expect(body.locator('.pc-pins')).toHaveCount(0);
+    await expect(body.locator('.pcc-seal--pin')).toHaveCount(0);
   });
 });
 
@@ -236,19 +249,19 @@ test.describe('W1259 — the 200K pin', () => {
     await boot(page);
     const body = page.locator('#pc-body');
     await render(page, false, { alias: 'Killua', rankTier: 'E', club100k: { repeatCount: 2, best: 267892 }, cardPins: null });
-    await expect(body.locator('.pc-pins .pc-pin')).toHaveText(['200K WEEK']);
-    await expect(body.locator('.pc-pin--club200k .em svg')).toHaveCount(1);
-    await expect(body.locator('.pc-pin--club100k')).toHaveCount(0);
-    if (process.env.LB_SHOTS) await page.locator('#pc-body .pc-pins').screenshot({ path: process.env.LB_SHOTS + '/pin-200k.png' });
+    await expect(body.locator('.pcc-seal--pin')).toHaveText(['200K WEEK']);
+    await expect(body.locator('.pcc-seal--club200k .pcc-hex--violet svg')).toHaveCount(1);
+    await expect(body.locator('.pcc-seal--club100k')).toHaveCount(0);
+    if (process.env.LB_SHOTS) await page.locator('#pc-body .pcc-seals').screenshot({ path: process.env.LB_SHOTS + '/pin-200k.png' });
     // a chosen club pin upgrades too; a 199,999 week stays the 100K pin
     await render(page, false, { alias: 'Killua', rankTier: 'E', club100k: { repeatCount: 2, best: 267892 }, cardPins: [{ id: 'club100k', v: 2 }] });
-    await expect(body.locator('.pc-pins .pc-pin')).toHaveText(['200K WEEK']);
+    await expect(body.locator('.pcc-seal--pin')).toHaveText(['200K WEEK']);
     await render(page, false, { alias: 'Angelo', rankTier: 'E', club100k: { repeatCount: 2, best: 199999 }, cardPins: null });
-    await expect(body.locator('.pc-pins .pc-pin')).toHaveText(['100K CLUB ×2']);
+    await expect(body.locator('.pcc-seal--pin')).toHaveText(['100K CLUB ×2']);
     // the own card
     await page.evaluate(() => { localStorage.removeItem('hb_card_pins'); localStorage.setItem('hb_accolades_cache', JSON.stringify({ accolades: [{ type: 'step_100k_club', repeat_count: 2, best_value: 250000 }], fetched_at: Date.now() })); });
     await render(page, true);
-    await expect(body.locator('.pc-pins--own .pc-pin')).toHaveText(['200K WEEK']);
+    await expect(body.locator('.pcc-seals--own .pcc-seal--pin')).toHaveText(['200K WEEK']);
     if (process.env.LB_SHOTS) await page.screenshot({ path: process.env.LB_SHOTS + '/card-200k.png' });
   });
 
@@ -257,15 +270,15 @@ test.describe('W1259 — the 200K pin', () => {
     await boot(page);
     const body = page.locator('#pc-body');
     await render(page, false, { alias: 'Killua', rankTier: 'E', club100k: { repeatCount: 3, best: 306326 }, cardPins: null });
-    await expect(body.locator('.pc-pins .pc-pin')).toHaveText(['300K WEEK']);
-    await expect(body.locator('.pc-pin3w .w')).toHaveCount(0);   // W1265 — no wings on the pin
-    await expect(body.locator('.pc-pin--club200k')).toHaveCount(0);
+    await expect(body.locator('.pcc-seal--pin')).toHaveText(['300K WEEK']);
+    await expect(body.locator('.pcc-seal--club300k .pcc-hex--nebula')).toHaveCount(1);
+    await expect(body.locator('.pcc-seal--club200k')).toHaveCount(0);
     if (process.env.LB_SHOTS) await page.screenshot({ path: process.env.LB_SHOTS + '/card-300k.png' });
     await render(page, false, { alias: 'Ricin', rankTier: 'E', club100k: { repeatCount: 1, best: 299999 }, cardPins: null });
-    await expect(body.locator('.pc-pins .pc-pin')).toHaveText(['200K WEEK']);
+    await expect(body.locator('.pcc-seal--pin')).toHaveText(['200K WEEK']);
     await page.evaluate(() => { localStorage.removeItem('hb_card_pins'); localStorage.setItem('hb_accolades_cache', JSON.stringify({ accolades: [{ type: 'step_100k_club', repeat_count: 3, best_value: 306326 }], fetched_at: Date.now() })); });
     await render(page, true);
-    await expect(body.locator('.pc-pins--own .pc-pin')).toHaveText(['300K WEEK']);
+    await expect(body.locator('.pcc-seals--own .pcc-seal--pin')).toHaveText(['300K WEEK']);
   });
 
   // W1286 — owner 2026-11-22: "There's 2 new pins that we've added that needs to go here" (the Wardrobe's Pins).
@@ -278,16 +291,16 @@ test.describe('W1259 — the 200K pin', () => {
       localStorage.removeItem('hb_card_pins_split_v1');
     });
     await render(page, true);
-    await expect(body.locator('.pc-pins--own .pc-pin')).toHaveText(['300K WEEK']);   // moved once (shadows not earned here)
+    await expect(body.locator('.pcc-seals--own .pcc-seal--pin')).toHaveText(['300K WEEK']);   // moved once (shadows not earned here)
     expect(await page.evaluate(() => JSON.parse(localStorage.getItem('hb_card_pins') || '[]'))).toEqual(['club300k', 'shadows']);
     // chosen afterwards, the 100K pin stays the 100K pin beside the 300K one
     await page.evaluate(() => localStorage.setItem('hb_card_pins', JSON.stringify(['club100k', 'club300k'])));
     await render(page, true);
-    await expect(body.locator('.pc-pins--own .pc-pin')).toHaveText(['100K CLUB ×3', '300K WEEK']);
+    await expect(body.locator('.pcc-seals--own .pcc-seal--pin')).toHaveText(['100K CLUB ×3', '300K WEEK']);
     // a newer app's card shows each pin as chosen; an older app's 100K pin still turns into the best week
     await render(page, false, { alias: 'Killua', rankTier: 'E', club100k: { repeatCount: 3, best: 306326 }, cardPins: [{ id: 'club200k', v: 306326 }, { id: 'club100k', v: 3 }] });
-    await expect(body.locator('.pc-pins .pc-pin')).toHaveText(['200K WEEK', '100K CLUB ×3']);
+    await expect(body.locator('.pcc-seal--pin')).toHaveText(['200K WEEK', '100K CLUB ×3']);
     await render(page, false, { alias: 'Killua', rankTier: 'E', club100k: { repeatCount: 3, best: 306326 }, cardPins: [{ id: 'club100k', v: 3 }] });
-    await expect(body.locator('.pc-pins .pc-pin')).toHaveText(['300K WEEK']);
+    await expect(body.locator('.pcc-seal--pin')).toHaveText(['300K WEEK']);
   });
 });

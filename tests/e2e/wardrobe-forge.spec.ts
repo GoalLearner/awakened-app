@@ -156,12 +156,12 @@ test.describe('W1143 — Frames, Inks and Auras', () => {
     await expect(sheet(page)).toBeHidden();
     await page.evaluate((d) => (window as any).__pcRender(d, true), CARD);
     const body = page.locator('#pc-body');
-    await expect(body.locator('.pc-pins--own .pc-pin')).toHaveText(['1 SHADOW']);
+    await expect(body.locator('.pcc-seals--own .pcc-seal--pin')).toHaveText(['1 SHADOW']);
     await page.evaluate((d) => (window as any).__pcRender(Object.assign({}, d, { alias: 'RenDIESEL', cardPins: [{ id: 'wgmvp', v: 2 }, { id: 'shadows', v: 11 }] }), false), CARD);
-    await expect(body.locator('.pc-pins .pc-pin')).toHaveText(['2× WORLDGATE MVP', '11 SHADOWS']);
-    await expect(body.locator('.pc-pins--own')).toHaveCount(0);
+    await expect(body.locator('.pcc-seal--pin')).toHaveText(['2× WORLDGATE MVP', '11 SHADOWS']);
+    await expect(body.locator('.pcc-seals--own')).toHaveCount(0);
     await page.evaluate((d) => (window as any).__pcRender(d, true), CARD);
-    await body.locator('.pc-pins--own').click();
+    await body.locator('.pcc-seals--own').click();
     await expect(sheet(page)).toBeVisible();
     await expect(tab(page, 'pins')).toHaveClass(/\bon\b/);
     // W1161 — the worn pin under the medallion is a button: tap its × to take it off; zero pins is allowed and published as []
@@ -179,11 +179,11 @@ test.describe('W1143 — Frames, Inks and Auras', () => {
     await expect(body.locator('.pc-med, [class*="pc-fr-"]')).toHaveCount(0);   // W1296 — the hunter stands full body, no frame
     await expect(body.locator('.pc-alias')).toHaveClass(/wx-ink-s/);
     expect(await body.locator('.pc-alias').evaluate((el) => getComputedStyle(el).color)).toBe('rgb(125, 211, 252)');
-    await expect(body.locator('.pc-fb > .wx-aura.motes')).toHaveCount(1);   // W1296 — the aura wraps the standing hunter (W1144: the hero's weather)
+    await expect(body.locator('.pcc-plate > .wx-aura.motes')).toHaveCount(1);   // W1308 — the aura stands behind the hunter in the plate
     await shot(page, 'forge-05-card');
     await page.evaluate((d) => (window as any).__pcRender(Object.assign({}, d, { alias: 'RenDIESEL' }), false), CARD);
-    await expect(body.locator('.pc-fb-art')).toHaveCount(1);
+    await expect(body.locator('.pcc-art')).toHaveCount(1);
     await expect(body.locator('.pc-alias')).not.toHaveClass(/wx-ink/);
-    await expect(body.locator('.pc-hero .wx-aura')).toHaveCount(0);
+    await expect(body.locator('.pcc-hero .wx-aura')).toHaveCount(0);
   });
 });

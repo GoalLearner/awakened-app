@@ -37775,3 +37775,88 @@ button.mx-sh { cursor: pointer; min-height: 40px; }
 .pc-identity .pc-bk:not(.lb-bk-t10) b { text-shadow: 0 0 8px var(--bk-g), 0 1px 2px rgba(0,0,0,.85); }
 /* W1304 — under the pins (owner 2026-11-23: "Under the 7 shadows"), above CHANGE LOOK */
 .pc-hero--fb .pc-identity .pc-pins + .pc-bk { margin-top: 9px; }
+
+/* ══ W1308 — THE HUNTER CARD, CLEANED UP (Claude Design handoff 13 "Hunter Profile - Clean", version B "Portrait plate";
+   owner 2026-11-24: "more organized and aligned correctly and more clean"). One grid: 20px margins, two equal columns
+   shared by the hero and the record. The hunter stands in a framed plate; the name, the title and the seals sit on its
+   baseline; the record is one panel with hairlines; the actions share one row pattern. Scoped .pcc-*; the old .pc-hero,
+   .pc-fb, .pc-shard, .pc-pins (on the card), .pc-skintag, .pc-prov and .pc-flavor rules no longer match anything here. ══ */
+#pc-sheet.vn-sheet, #pc-sheet.vn-sheet.pc--painted { background: #0a0a17; border: 1px solid rgba(255,255,255,.09); border-bottom: 0; border-radius: 26px 26px 0 0; }
+#pc-sheet .pc-head { display: none; }
+#pc-sheet .vn-drag-handle { position: absolute; top: 8px; left: 50%; z-index: 4; width: 36px; height: 5px; margin: 0 0 0 -18px; border-radius: 3px; background: rgba(255,255,255,.3); }
+.pcc-hero { position: relative; display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); align-items: end; padding: 34px 20px 0; }
+/* the hunter's card background fills the top of the sheet; none → a dark violet dawn */
+.pcc-scene { position: absolute; left: 0; right: 0; top: 0; height: 400px; pointer-events: none; background: radial-gradient(110% 70% at 50% 0%, #1f1b44, #0a0a17 72%); }
+#pc-sheet.pc--painted .pcc-scene {
+  background: radial-gradient(64% 44% at 78% 54%, rgba(10,10,23,.62), rgba(10,10,23,0) 75%),
+    linear-gradient(180deg, rgba(10,10,23,.42) 0%, rgba(10,10,23,.05) 20%, rgba(10,10,23,.16) 42%, rgba(10,10,23,.66) 62%, rgba(10,10,23,.92) 76%, #0a0a17 90%),
+    var(--lb-row-art) 50% 40% / cover no-repeat, #0a0a17; }
+/* the plate: the look standing in a framed window onto the same scene, the rank crest in its corner, the aura behind */
+.pcc-plate { position: relative; z-index: 1; height: 252px; border-radius: 16px; overflow: hidden; background: radial-gradient(100% 75% at 50% 22%, #26224f, #0d0c22 72%); box-shadow: 0 0 0 1px rgba(0,0,0,.45), 0 22px 44px -16px rgba(0,0,0,.9); }
+#pc-sheet.pc--painted .pcc-plate { background: linear-gradient(180deg, rgba(10,10,23,.06), rgba(10,10,23,.45)), var(--lb-row-art) 30% 40% / cover no-repeat, #0d0c22; }
+.pcc-plate::after { content: ""; position: absolute; inset: 0; z-index: 3; border-radius: inherit; box-shadow: inset 0 0 0 1px rgba(255,255,255,.18); pointer-events: none; }
+.pcc-plate > .wx-aura { inset: 0; z-index: 0; }
+.pcc-art { position: absolute; inset: 0; z-index: 1; display: block; width: 100%; height: 100%; max-width: none; object-fit: cover; object-position: 50% 100%; pointer-events: none; }
+.pcc-crest { position: absolute; left: 10px; top: 10px; z-index: 4; display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 8px;
+  background: linear-gradient(180deg, rgba(255,255,255,.24), rgba(255,255,255,0)), var(--pc-rank, #a78bfa); box-shadow: 0 2px 10px rgba(0,0,0,.5);
+  font: 700 16px/1 "Cinzel", Georgia, serif; color: #0a0a17; }
+/* who they are: the name, the title, then the seals under one hairline; the column starts where the record's right column does */
+.pcc-id { position: relative; z-index: 1; min-width: 0; padding-left: 16px; display: flex; flex-direction: column; align-items: flex-start; }
+#pc-sheet .pcc-name { display: block; max-width: 100%; font: 800 30px/1.05 -apple-system, "SF Pro Display", system-ui, "Segoe UI", sans-serif; letter-spacing: -.5px; color: #f3f1fa; text-shadow: 0 2px 14px rgba(0,0,0,.55); overflow-wrap: anywhere; }
+#pc-sheet .pcc-name.pcc-name--l { font-size: 24px; letter-spacing: -.3px; }
+#pc-sheet .pcc-name.pcc-name--xl { font-size: 20px; letter-spacing: -.2px; }
+#pc-sheet .pcc-name.pcc-name--xxl { font-size: 17px; letter-spacing: 0; }
+.pcc-title { display: flex; align-items: center; gap: 7px; max-width: 100%; margin: 9px 0 0; padding: 0; border: 0; background: none; text-align: left;
+  font: 700 10px/1.2 "JetBrains Mono", ui-monospace, monospace; letter-spacing: 1.6px; text-transform: uppercase; color: var(--tc, #c8c6d8); text-shadow: 0 1px 8px rgba(0,0,0,.85); }
+.pcc-title i { flex: none; width: 6px; height: 6px; transform: rotate(45deg); background: var(--tc, #c8c6d8); }
+.pcc-title span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pcc-title svg { flex: none; margin-left: 1px; opacity: .8; }
+button.pcc-title { cursor: pointer; -webkit-appearance: none; appearance: none; -webkit-tap-highlight-color: transparent; }
+.pcc-seals { align-self: stretch; list-style: none; margin: 14px 0 0; padding: 12px 0 0; border-top: 1px solid rgba(255,255,255,.1); display: flex; flex-direction: column; gap: 7px; }
+.pcc-seals--own { cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.pcc-seal { display: grid; grid-template-columns: 28px minmax(0,1fr); align-items: center; column-gap: 9px; min-height: 22px;
+  font: 600 9.5px/1.2 "JetBrains Mono", ui-monospace, monospace; letter-spacing: 1.2px; text-transform: uppercase; color: #c3c1d4; text-shadow: 0 1px 8px rgba(0,0,0,.85); }
+.pcc-seal b { color: #f3f1fa; font-weight: 800; }
+.pcc-stx { min-width: 0; }
+.pcc-badge { display: flex; align-items: center; justify-content: center; height: 22px; }
+.pcc-badge svg { display: block; overflow: visible; }
+.pcc-badge img { display: block; width: auto; height: 21px; }
+.pcc-dm { width: 7px; height: 7px; transform: rotate(45deg); background: #c8c6d8; border-radius: 1px; }
+.pcc-hex { position: relative; display: block; width: 28px; height: 16px; }
+.pcc-hex path { fill: #1a1206; stroke: #f5b842; stroke-opacity: .85; }
+.pcc-hex::after { content: attr(data-t); position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding-top: 1px;
+  font: 800 7px/1 "JetBrains Mono", ui-monospace, monospace; letter-spacing: 0; color: #f5b842; text-shadow: none; }
+.pcc-hex--violet path { fill: #140c26; stroke: #b48cff; } .pcc-hex--violet::after { color: #d9c6ff; }
+.pcc-hex--nebula path { fill: #140c26; stroke: #ffd56a; stroke-opacity: 1; } .pcc-hex--nebula::after { color: #ffe9a8; }
+/* the record: one panel, hairlines instead of five boxes */
+.pcc-rec { position: relative; margin: 20px 20px 0; display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); border-radius: 16px; background: rgba(255,255,255,.028); box-shadow: inset 0 0 0 1px rgba(255,255,255,.09); }
+.pcc-cell { min-width: 0; display: flex; flex-direction: column; gap: 9px; padding: 15px 16px 16px; border-bottom: 1px solid rgba(255,255,255,.07); }
+.pcc-cell:nth-child(odd) { border-right: 1px solid rgba(255,255,255,.07); }
+.pcc-lbl { font: 700 9px/1.2 "JetBrains Mono", ui-monospace, monospace; letter-spacing: 1.5px; text-transform: uppercase; color: #8e8ca6; }
+.pcc-v { font: 700 26px/1 "Cinzel", Georgia, serif; letter-spacing: .3px; color: #f3f1fa; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.pcc-v.gold { color: #f5b842; }
+.pcc-floor { grid-column: 1 / -1; padding: 15px 16px 17px; }
+.pcc-fl { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.pcc-fv { font: 600 12px/1 "Cinzel", Georgia, serif; color: #8e8ca6; white-space: nowrap; }
+.pcc-fv b { font-size: 17px; color: #f3f1fa; }
+.pcc-bar { margin-top: 11px; height: 3px; border-radius: 2px; background: rgba(255,255,255,.08); overflow: hidden; }
+.pcc-bar i { display: block; height: 100%; border-radius: inherit; background: #f5b842; }
+/* the actions: one row pattern, the same margins as everything else */
+.pcc-actions { position: relative; margin: 12px 20px 0; display: flex; flex-direction: column; gap: 10px; }
+.pcc-actions:empty { display: none; }
+.pcc-act { display: grid; grid-template-columns: 34px minmax(0,1fr) 8px; align-items: center; column-gap: 12px; width: 100%; height: 62px; margin: 0; padding: 0 18px 0 16px;
+  border: 0; border-radius: 16px; text-align: left; cursor: pointer; font: inherit; background: var(--ac-bg); box-shadow: inset 0 0 0 1px var(--ac-line); color: var(--ac);
+  -webkit-appearance: none; appearance: none; -webkit-tap-highlight-color: transparent; transition: transform .12s ease; }
+.pcc-act:active { transform: scale(.985); }
+.pcc-act--teal { --ac: #5eead4; --ac-line: rgba(94,234,212,.3); --ac-bg: rgba(94,234,212,.05); }
+.pcc-act--gold { --ac: #f5b842; --ac-line: rgba(245,184,66,.32); --ac-bg: rgba(245,184,66,.05); }
+.pcc-aic { width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: inset 0 0 0 1px var(--ac-line); }
+.pcc-atx { min-width: 0; display: flex; flex-direction: column; gap: 5px; }
+.pcc-atx b { font: 700 15px/1.1 "Cinzel", Georgia, serif; letter-spacing: .3px; color: #f3f1fa; }
+.pcc-atx small { font: 500 9.5px/1.2 "JetBrains Mono", ui-monospace, monospace; letter-spacing: .3px; color: var(--ac); opacity: .85; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pcc-actions .board-grant { display: flex; align-items: center; justify-content: center; gap: 9px; width: 100%; height: 46px; margin: 0; padding: 0 14px; border: 0; border-radius: 14px;
+  background: transparent; box-shadow: inset 0 0 0 1px rgba(255,255,255,.09); font: 700 10px/1 "JetBrains Mono", ui-monospace, monospace; letter-spacing: 1.8px; text-transform: uppercase; color: #c3c1d4; }
+.pcc-actions .board-grant::before { content: ""; flex: none; width: 16px; height: 12px;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 12'%3E%3Cpath d='M1 3.4 4.7 7 8 1.2 11.3 7 15 3.4 13.5 11h-11Z' fill='%23f5b842'/%3E%3C/svg%3E") center / contain no-repeat; }
+.pcc-actions .board-grant[data-armed="1"] { color: #f3f1fa; box-shadow: inset 0 0 0 1px rgba(245,184,66,.45); background: rgba(245,184,66,.06); }
+@media (max-width: 360px) { .pcc-hero { padding-left: 16px; padding-right: 16px; } .pcc-rec, .pcc-actions { margin-left: 16px; margin-right: 16px; } .pcc-id { padding-left: 12px; } #pc-sheet .pcc-name { font-size: 26px; } }
