@@ -37754,3 +37754,12 @@ button.mx-sh { cursor: pointer; min-height: 40px; }
 .pc-hero--fb .pc-shard { max-width: 100%; min-width: 0; }
 .pc-hero--fb .pc-shard span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 @media (max-width: 360px) { .pc-hero.pc-hero--fb { gap: 10px; padding-left: 12px; padding-right: 12px; } .pc-hero--fb .pc-alias { font-size: 24px; } }
+
+/* W1299 — the look's name left the card (owner 2026-11-23: "Don't want too much information on these player cards") and
+   the Ascent title took its place under the rank crest ("move the ascent name to where the name of the avatar was"). The
+   right column is the name and the pins; the own card's CHANGE LOOK sits under them. */
+.pc-fb-col .pc-shard { margin: 24px -16px 0; max-width: calc(100% + 32px); white-space: nowrap; }
+.pc-fb-col .pc-shard span { letter-spacing: 1.1px; overflow: hidden; text-overflow: ellipsis; }
+.pc-hero--fb .pc-identity .pc-pins { margin-top: 10px; }
+.pc-hero--fb .pc-identity .pc-skintag { margin-top: 12px; }
+.pc-fb-col--bare { padding-bottom: 28px; }

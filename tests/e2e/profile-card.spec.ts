@@ -67,7 +67,7 @@ for (const vp of [{ width: 390, height: 844 }, { width: 375, height: 667 }]) {
       expect(Math.round(fb.height)).toBe(226);
       await expect(page.locator('#pc-body .pc-arena')).toHaveCount(0);
       await expect(page.locator('#pc-body')).not.toContainText('ARENA RATING');
-      await expect(page.locator('#pc-body .pc-fb-col .pc-skintag')).toContainText('CHANGE LOOK');
+      await expect(page.locator('#pc-body .pc-identity .pc-skintag')).toContainText('CHANGE LOOK');   // W1299 — under the name and pins
       await expect(page.locator('#pc-body .pc-prov')).toContainText('every hunter sees');
       await expect(page.locator('#pc-body .pc-stat .v.gold')).toHaveText('5,601');
     });
@@ -84,14 +84,14 @@ for (const vp of [{ width: 390, height: 844 }, { width: 375, height: 667 }]) {
       await settle(page);
       const geo = await page.evaluate(() => {
         const f = document.querySelector('#pc-body .pc-fb')!.getBoundingClientRect(), c = document.querySelector('#pc-body .pc-crest')!.getBoundingClientRect();
-        const t = document.querySelector('#pc-body .pc-fb-col .pc-skintag')!.getBoundingClientRect();
+        const t = document.querySelector('#pc-body .pc-fb-col .pc-shard')!.getBoundingClientRect();   // W1299 — the title, under the crest
         const top = document.elementFromPoint(c.x + c.width / 2, c.y + c.height / 2);
         return { fcx: f.x + f.width / 2, fBottom: f.bottom, ccx: c.x + c.width / 2, cBottom: c.bottom, cw: c.width, tagTop: t.top, top: top ? top.className : '' };
       });
       expect(Math.round(geo.cw)).toBe(38);
       expect(Math.abs(geo.ccx - geo.fcx)).toBeLessThanOrEqual(1);   // under the hunter's centre line
       expect(geo.cBottom).toBeGreaterThan(geo.fBottom);             // standing at the feet
-      expect(geo.tagTop).toBeGreaterThan(geo.cBottom);              // the look's name under the crest
+      expect(geo.tagTop).toBeGreaterThan(geo.cBottom);              // the title under the crest (W1299; was the look's name)
       expect(geo.top).toBe('pc-crest');                             // the element on top at its own centre
       const aura = page.locator('#pc-body .pc-fb > .wx-aura.storm');
       await expect(aura).toHaveCount(1);
@@ -104,7 +104,7 @@ for (const vp of [{ width: 390, height: 844 }, { width: 375, height: 667 }]) {
 
     // W1154 — no Founder badge on any card; the title sits centred (W1296: beside the hunter, under the name); on the own card it is a button that opens the
     // Ascent's Titles view (CHOOSE A TITLE when none is worn); a visitor's title is a plain shard.
-    test('own card: no Founder badge, the title beside the hunter and tappable → the Titles view; none worn → CHOOSE A TITLE', async ({ page }) => {
+    test('own card: no Founder badge, the title under the rank crest and tappable → the Titles view; none worn → CHOOSE A TITLE', async ({ page }) => {
       await boot(page);
       await page.evaluate(() => { localStorage.removeItem('hb_arena_title'); });
       await render(page, true);
@@ -120,14 +120,13 @@ for (const vp of [{ width: 390, height: 844 }, { width: 375, height: 667 }]) {
       await render(page, true);
       await expect(pick).toHaveText(/Contender/i);
       await settle(page);
-      const geo = await page.evaluate(() => {   // W1296 — beside the hunter, under the name (W1154 had it centred)
+      const geo = await page.evaluate(() => {   // W1299 — under the rank crest, on the hunter's centre line (W1296 had it beside, W1154 centred)
         const f = document.querySelector('#pc-body .pc-fb')!.getBoundingClientRect(), p = document.querySelector('#pc-body .pc-shard--pick')!.getBoundingClientRect();
-        const n = document.querySelector('#pc-body .pc-alias')!.getBoundingClientRect();
-        return { right: p.left - f.right, under: p.top - n.bottom, aligned: Math.abs(p.left - n.left) };
+        const c = document.querySelector('#pc-body .pc-crest')!.getBoundingClientRect();
+        return { under: p.top - c.bottom, centre: Math.abs((p.left + p.width / 2) - (f.left + f.width / 2)) };
       });
-      expect(geo.right).toBeGreaterThan(0);
-      expect(geo.under).toBeGreaterThanOrEqual(0);
-      expect(geo.aligned).toBeLessThanOrEqual(1);
+      expect(geo.under).toBeGreaterThan(0);
+      expect(geo.centre).toBeLessThanOrEqual(2);
       await pick.click();
       await expect(page.locator('#pc-sheet')).toBeHidden();
       await expect(page.locator('#arena-overlay')).toBeVisible();
@@ -135,7 +134,7 @@ for (const vp of [{ width: 390, height: 844 }, { width: 375, height: 667 }]) {
       await expect(page.locator('#arena-overlay .tm-row--worn .nm')).toHaveText('Contender');
     });
 
-    test("a visitor's card: the hunter full body, no Arena Rating, the worn look named under the crest", async ({ page }) => {
+    test("a visitor's card: the hunter full body, no Arena Rating, no look name, the title under the crest", async ({ page }) => {
       await boot(page);
       await render(page, false, { alias: 'RenDIESEL', arenaTitle: 'rt_blade', founderSeq: 2 });
       await expect(page.locator('#pc-body .pc-fb-art')).toHaveAttribute('src', 'avatar-skin-shadowborn.png');
@@ -144,7 +143,8 @@ for (const vp of [{ width: 390, height: 844 }, { width: 375, height: 667 }]) {
       await expect(page.locator('#pc-body .pc-founder')).toHaveCount(0);                 // W1154 — no Founder badge
       await expect(page.locator('#pc-body div.pc-shard')).toHaveText(/Blade/i);         // W1154 — a plain shard, from the published title
       await expect(page.locator('#pc-body button.pc-shard--pick')).toHaveCount(0);
-      await expect(page.locator('#pc-body .pc-fb-col .pc-skintag')).toContainText('THE SHADOWBORN');
+      await expect(page.locator('#pc-body .pc-skintag')).toHaveCount(0);                // W1299 — the look's name left the card
+      await expect(page.locator('#pc-body .pc-fb-col div.pc-shard')).toHaveText(/Blade/i);   // the title sits under the crest
       await expect(page.locator('#pc-body .pc-prov')).toContainText('global leaderboard');
     });
   });
