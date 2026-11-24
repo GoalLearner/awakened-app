@@ -12,6 +12,10 @@ on:
         description: 'How many recent builds to list'
         required: false
         default: '8'
+      build:
+        description: 'Optional: one build number to look up in every processing state (e.g. 680)'
+        required: false
+        default: ''
 
 jobs:
   status:
@@ -23,6 +27,7 @@ jobs:
           ASC_API_ISSUER_ID: ${{ secrets.ASC_API_ISSUER_ID }}
           ASC_API_KEY_B64: ${{ secrets.ASC_API_KEY_B64 }}
           LIMIT: ${{ github.event.inputs.limit }}
+          BUILD: ${{ github.event.inputs.build }}
         run: |
           cat > asc.js <<'JS'
           const crypto = require('crypto');
@@ -41,7 +46,10 @@ jobs:
           };
           (async () => {
             const lim = Math.max(1, Math.min(30, parseInt(process.env.LIMIT || '8', 10) || 8));
-            const j = await get('/v1/builds?sort=-uploadedDate&limit=' + lim + '&include=app,preReleaseVersion&fields[builds]=version,uploadedDate,processingState,expired,app,preReleaseVersion&fields[apps]=name,bundleId&fields[preReleaseVersions]=version');
+            const one = (process.env.BUILD || '').trim();
+            const q = one ? 'filter[version]=' + encodeURIComponent(one) + '&filter[processingState]=PROCESSING,FAILED,INVALID,VALID&limit=20' : 'sort=-uploadedDate&limit=' + lim;
+            const j = await get('/v1/builds?' + q + '&include=app,preReleaseVersion&fields[builds]=version,uploadedDate,processingState,expired,app,preReleaseVersion&fields[apps]=name,bundleId&fields[preReleaseVersions]=version');
+            if (one) console.log('builds numbered ' + one + ' in any state: ' + j.data.length);
             const inc = {}; (j.included || []).forEach((x) => { inc[x.type + ':' + x.id] = x.attributes; });
             for (const b of j.data) {
               const app = inc['apps:' + (b.relationships.app.data || {}).id] || {};
