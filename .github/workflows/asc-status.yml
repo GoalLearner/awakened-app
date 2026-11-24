@@ -1,0 +1,53 @@
+# W1301 — READ-ONLY: what App Store Connect says about our recent builds (owner 2026-11-23: build 680 uploaded at 4:39 PM
+# PST, "UPLOADED" in the ship log, but never reached TestFlight — "can you check why 680 hasn't been uploaded to testflight").
+# Asks the App Store Connect API (same key as ship.yml) for the newest builds of every app on the account and prints each
+# one's version, build number, upload time, processing state (PROCESSING / FAILED / INVALID / VALID) and whether it has
+# expired. Changes nothing.
+name: App Store build status
+
+on:
+  workflow_dispatch:
+    inputs:
+      limit:
+        description: 'How many recent builds to list'
+        required: false
+        default: '8'
+
+jobs:
+  status:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ask App Store Connect
+        env:
+          ASC_API_KEY_ID: ${{ secrets.ASC_API_KEY_ID }}
+          ASC_API_ISSUER_ID: ${{ secrets.ASC_API_ISSUER_ID }}
+          ASC_API_KEY_B64: ${{ secrets.ASC_API_KEY_B64 }}
+          LIMIT: ${{ github.event.inputs.limit }}
+        run: |
+          cat > asc.js <<'JS'
+          const crypto = require('crypto');
+          const key = Buffer.from(process.env.ASC_API_KEY_B64, 'base64').toString('utf8');
+          const b64u = (o) => Buffer.from(typeof o === 'string' ? o : JSON.stringify(o)).toString('base64url');
+          const now = Math.floor(Date.now() / 1000);
+          const head = b64u({ alg: 'ES256', kid: process.env.ASC_API_KEY_ID, typ: 'JWT' });
+          const body = b64u({ iss: process.env.ASC_API_ISSUER_ID, iat: now, exp: now + 900, aud: 'appstoreconnect-v1' });
+          const sig = crypto.sign('sha256', Buffer.from(head + '.' + body), { key, dsaEncoding: 'ieee-p1363' }).toString('base64url');
+          const jwt = head + '.' + body + '.' + sig;
+          const get = async (path) => {
+            const r = await fetch('https://api.appstoreconnect.apple.com' + path, { headers: { Authorization: 'Bearer ' + jwt } });
+            const t = await r.text();
+            if (!r.ok) throw new Error(r.status + ' ' + t.slice(0, 400));
+            return JSON.parse(t);
+          };
+          (async () => {
+            const lim = Math.max(1, Math.min(30, parseInt(process.env.LIMIT || '8', 10) || 8));
+            const j = await get('/v1/builds?sort=-uploadedDate&limit=' + lim + '&include=app,preReleaseVersion&fields[builds]=version,uploadedDate,processingState,expired,app,preReleaseVersion&fields[apps]=name,bundleId&fields[preReleaseVersions]=version');
+            const inc = {}; (j.included || []).forEach((x) => { inc[x.type + ':' + x.id] = x.attributes; });
+            for (const b of j.data) {
+              const app = inc['apps:' + (b.relationships.app.data || {}).id] || {};
+              const pre = inc['preReleaseVersions:' + ((b.relationships.preReleaseVersion || {}).data || {}).id] || {};
+              console.log([app.name || '?', pre.version || '?', 'build ' + b.attributes.version, b.attributes.uploadedDate, b.attributes.processingState, b.attributes.expired ? 'EXPIRED' : ''].join('  |  '));
+            }
+          })().catch((e) => { console.error('ASC API error:', e.message); process.exit(1); });
+          JS
+          node asc.js
