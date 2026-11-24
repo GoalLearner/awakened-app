@@ -73,6 +73,13 @@ for (const vp of [{ width: 390, height: 844 }, { width: 375, height: 667 }]) {
       expect(Math.abs(name.l - lbl2.l)).toBeLessThanOrEqual(1);        // the name starts where the right column's text does
       expect(Math.abs(id.b - plate.b)).toBeLessThanOrEqual(1);         // on the plate's baseline
       expect(rec.t).toBeGreaterThan(plate.b);
+      // W1309 — owner: "I don't want them to get cut, maybe make the frames invisble?": no box, no edge, no clip; the whole
+      // picture shows inside the column (contain), standing on its floor
+      expect(await page.evaluate(() => { const p = getComputedStyle(document.querySelector('#pc-body .pcc-plate')!), a = getComputedStyle(document.querySelector('#pc-body .pcc-art')!);
+        return [p.overflow, p.backgroundImage, p.boxShadow, p.borderRadius, a.objectFit, getComputedStyle(document.querySelector('#pc-body .pcc-plate')!, '::after').content]; })).toEqual(['visible', 'none', 'none', '0px', 'contain', 'none']);
+      const shown = await art.evaluate((el) => { const im = el as HTMLImageElement, r = im.getBoundingClientRect(), k = Math.min(r.width / im.naturalWidth, r.height / im.naturalHeight); return { w: im.naturalWidth * k, h: im.naturalHeight * k, bw: r.width, bh: r.height }; });
+      expect(shown.w).toBeLessThanOrEqual(shown.bw + 0.5);   // the whole picture fits: nothing trimmed off any side
+      expect(shown.h).toBeLessThanOrEqual(shown.bh + 0.5);
       await expect(page.locator('#pc-body .pc-arena')).toHaveCount(0);
       await expect(page.locator('#pc-body')).not.toContainText('ARENA RATING');
       await expect(page.locator('#pc-body .pcc-v.gold')).toHaveText('5,601');

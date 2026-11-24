@@ -37792,11 +37792,12 @@ button.mx-sh { cursor: pointer; min-height: 40px; }
     linear-gradient(180deg, rgba(10,10,23,.42) 0%, rgba(10,10,23,.05) 20%, rgba(10,10,23,.16) 42%, rgba(10,10,23,.66) 62%, rgba(10,10,23,.92) 76%, #0a0a17 90%),
     var(--lb-row-art) 50% 40% / cover no-repeat, #0a0a17; }
 /* the plate: the look standing in a framed window onto the same scene, the rank crest in its corner, the aura behind */
-.pcc-plate { position: relative; z-index: 1; height: 252px; border-radius: 16px; overflow: hidden; background: radial-gradient(100% 75% at 50% 22%, #26224f, #0d0c22 72%); box-shadow: 0 0 0 1px rgba(0,0,0,.45), 0 22px 44px -16px rgba(0,0,0,.9); }
-#pc-sheet.pc--painted .pcc-plate { background: linear-gradient(180deg, rgba(10,10,23,.06), rgba(10,10,23,.45)), var(--lb-row-art) 30% 40% / cover no-repeat, #0d0c22; }
-.pcc-plate::after { content: ""; position: absolute; inset: 0; z-index: 3; border-radius: inherit; box-shadow: inset 0 0 0 1px rgba(255,255,255,.18); pointer-events: none; }
+/* W1309 — the frame is invisible (owner 2026-11-24: "sometimes the avatars are getting cut and I don't want them to get cut,
+   maybe make the frames invisble?"): no box, border, shadow or clip; the whole look shows (contain, standing on the
+   column's floor) on the scene behind it. The column keeps its place in the grid and the crest its corner. */
+.pcc-plate { position: relative; z-index: 1; height: 252px; }
 .pcc-plate > .wx-aura { inset: 0; z-index: 0; }
-.pcc-art { position: absolute; inset: 0; z-index: 1; display: block; width: 100%; height: 100%; max-width: none; object-fit: cover; object-position: 50% 100%; pointer-events: none; }
+.pcc-art { position: absolute; inset: 0; z-index: 1; display: block; width: 100%; height: 100%; max-width: none; object-fit: contain; object-position: 50% 100%; pointer-events: none; }
 .pcc-crest { position: absolute; left: 10px; top: 10px; z-index: 4; display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 8px;
   background: linear-gradient(180deg, rgba(255,255,255,.24), rgba(255,255,255,0)), var(--pc-rank, #a78bfa); box-shadow: 0 2px 10px rgba(0,0,0,.5);
   font: 700 16px/1 "Cinzel", Georgia, serif; color: #0a0a17; }
