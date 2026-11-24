@@ -149,8 +149,9 @@ for (const vp of [{ width: 390, height: 844 }, { width: 375, height: 667 }]) {
     });
 
     // W1303 — owner 2026-11-23: "I want to add bosses slain on the profile card". The leaderboard's ladder emblem sits
-    // under the name, above the pins: the highest century crossed, nothing below 100, the crowned crest past 1000.
-    test('the boss-kill emblem sits under the name, above the pins; none below 100', async ({ page }) => {
+    // under the name (W1304: under the pins, "Under the 7 shadows"), above CHANGE LOOK: the highest century crossed,
+    // nothing below 100, the crowned crest past 1000.
+    test('the boss-kill emblem sits under the name and the pins, above CHANGE LOOK; none below 100', async ({ page }) => {
       await boot(page);
       await render(page, true);   // 316 kills
       const bk = page.locator('#pc-body .pc-identity > .lb-rank-boss100.pc-bk');
@@ -168,6 +169,11 @@ for (const vp of [{ width: 390, height: 844 }, { width: 375, height: 667 }]) {
       expect(geo.abovePins).toBeGreaterThanOrEqual(0);
       expect(geo.img).toBe(38);
       expect(geo.left).toBeLessThanOrEqual(4);   // on the name's left edge
+      await render(page, false, { alias: 'Richie', cardPins: [{ id: 'steps1m', v: 1000000 }, { id: 'shadows', v: 7 }] });   // W1304 — under the pins
+      await expect(page.locator('#pc-body .pc-identity > .pc-pins + .pc-bk')).toHaveCount(1);
+      await settle(page);
+      const under = await page.evaluate(() => document.querySelector('#pc-body .pc-bk')!.getBoundingClientRect().top - document.querySelector('#pc-body .pc-identity .pc-pins')!.getBoundingClientRect().bottom);
+      expect(under).toBeGreaterThanOrEqual(0);
       await render(page, false, { alias: 'RenDIESEL', bossesSlain: 1234 });
       await expect(bk.locator('b')).toHaveText('1200');
       await expect(bk.locator('img')).toHaveAttribute('src', 'assets/badges/boss-kills-10.webp');

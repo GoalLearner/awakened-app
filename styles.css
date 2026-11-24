@@ -37773,4 +37773,5 @@ button.mx-sh { cursor: pointer; min-height: 40px; }
 .pc-identity .pc-bk img { width: 38px; height: 38px; margin: 0; filter: drop-shadow(0 2px 3px rgba(0,0,0,.75)); }
 .pc-identity .pc-bk b { font-size: 15px; letter-spacing: .6px; }
 .pc-identity .pc-bk:not(.lb-bk-t10) b { text-shadow: 0 0 8px var(--bk-g), 0 1px 2px rgba(0,0,0,.85); }
-.pc-hero--fb .pc-identity .pc-bk + .pc-pins { margin-top: 8px; }
+/* W1304 — under the pins (owner 2026-11-23: "Under the 7 shadows"), above CHANGE LOOK */
+.pc-hero--fb .pc-identity .pc-pins + .pc-bk { margin-top: 9px; }
