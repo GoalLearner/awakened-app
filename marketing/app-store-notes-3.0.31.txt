@@ -1,0 +1,5 @@
+A cleaner hunter card, and every rare drop in Hunter Activity.
+
+• Hunter cards are cleaner: your whole look on the left, your name, title and badges on the right, and your stats in one panel.
+• Every rare, ultra-rare and mythic drop now shows in Hunter Activity, not just the first of each. A rare sold for souls shows what it earned.
+• Hunter Activity now shows everything your friends did in the last 24 hours.
