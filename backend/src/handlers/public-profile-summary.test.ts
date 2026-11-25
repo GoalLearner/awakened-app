@@ -1009,6 +1009,15 @@ describe('W1155 — card pins (cardPins)', () => {
     expect(JSON.parse(lookCalls(db)[0].binds[7] as string)).toEqual([{ id: 'club300k', v: 312040 }, { id: 'club200k', v: 312040 }]);
   });
 
+  // W1312 — the Mythics pin: its number says which mythic weapons (one bit each), so a visitor's card names the right one
+  it('W1312 — the Mythics pin is a pin the server keeps', async () => {
+    const db = makeDb();
+    const res = await handlePublicProfileSummaryPut(
+      makeReq({ ...validPayload, cardPins: [{ id: 'mythics', v: 5 }, { id: 'steps1m', v: 1200000 }] }), makeEnv(db), session);
+    expect(res.status).toBe(200);
+    expect(JSON.parse(lookCalls(db)[0].binds[7] as string)).toEqual([{ id: 'mythics', v: 5 }, { id: 'steps1m', v: 1200000 }]);
+  });
+
   it('three pins, an unknown id, or a repeated id → 400 INVALID_CARD_PINS and nothing written', async () => {
     for (const bad of [
       [{ id: 'steps1m', v: 1 }, { id: 'shadows', v: 1 }, { id: 'bestday', v: 16000 }],

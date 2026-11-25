@@ -126,7 +126,7 @@ test.describe('W1143 — Frames, Inks and Auras', () => {
     await tab(page, 'pins').click();
     await expect(tab(page, 'pins')).toHaveClass(/\bon\b/);
     const pane = sheet(page).locator('.wx-pane[data-pane="pins"]');
-    await expect(pane.locator('.wx-sl')).toHaveCount(8);   // W1158 — the Step Club and Prestige joined; W1286 — the 200K and 300K weeks
+    await expect(pane.locator('.wx-sl')).toHaveCount(9);   // W1158 — the Step Club and Prestige joined; W1286 — the 200K and 300K weeks; W1312 — the Mythics
     await expect(tile(page, 'pin', 'club200k')).toHaveClass(/is-locked/);   // W1286 — no 200K week here
     await expect(tile(page, 'pin', 'club300k')).toHaveClass(/is-locked/);
     await expect(tile(page, 'pin', 'steps1m')).toHaveClass(/is-earned/);
@@ -169,6 +169,50 @@ test.describe('W1143 — Frames, Inks and Auras', () => {
     expect(await page.evaluate(() => (window as any).__wx.state().pins)).toEqual([]);
     await expect(pane.locator('.wx-hl .pc-pin')).toHaveText('NO PINS');
     expect(await page.evaluate(() => localStorage.getItem('hb_card_pins'))).toBe('[]');
+  });
+
+  // W1312 — owner 2026-11-24: "Yes build the mythics pin". Earned by a mythic weapon; one names it, two count, three read
+  // ALL 3; the badge lights a panel per weapon owned; a locked tile shows the whole set; the card shows it as a seal.
+  test('W1312 — the Mythics pin: earned by a mythic weapon, names one, counts two, ALL 3 at three; the card wears it', async ({ page }) => {
+    await boot(page, 50, { hb_inventory: JSON.stringify({ cards: { reverie_staff: { discovered: true, count: 1, first_acquired_date: '2026-11-20', upgrade_level: 0 } } }) });
+    expect(await page.evaluate(() => { const st = (window as any).__wx.stats(); return [st.mega, st.mythics]; })).toEqual([1, 2]);   // the staff: bit 2
+    await openWardrobe(page);
+    await tab(page, 'pins').click();
+    const pane = sheet(page).locator('.wx-pane[data-pane="pins"]');
+    await expect(pane.locator('.wx-sl').first()).toHaveAttribute('data-id', 'mythics');   // the rarest leads the shelf
+    const t = tile(page, 'pin', 'mythics');
+    await expect(t).toHaveClass(/is-earned/);
+    await expect(t.locator('.pc-pin--mythics')).toHaveText('REVERIE');
+    await expect(t.locator('.pmy-off')).toHaveCount(2);   // the blade and the bow still dark
+    await t.click();
+    expect(await page.evaluate(() => (window as any).__wx.state().pins)).toEqual(['mythics']);
+    await expect(pane.locator('.wx-hl .pc-pins .pc-pin')).toHaveText(['REVERIE']);
+    await shot(page, 'forge-07-mythics');
+    // the own card wears it as a seal; a visitor's card names the right weapon from the published number
+    await page.evaluate(() => document.getElementById('wd-overlay')!.click());
+    await page.evaluate((d) => (window as any).__pcRender(d, true), CARD);
+    const body = page.locator('#pc-body');
+    await expect(body.locator('.pcc-seals--own .pcc-seal--pin')).toHaveText(['REVERIE']);
+    await expect(body.locator('.pcc-seal--mythics .pmy img')).toHaveAttribute('src', 'assets/badges/pin-mythics.webp');
+    await expect.poll(() => body.locator('.pcc-seal--mythics .pmy img').evaluate((el) => (el as HTMLImageElement).complete && (el as HTMLImageElement).naturalWidth > 0)).toBe(true);
+    for (const [v, txt, off] of [[1, 'NIGHTFALL', 2], [4, 'VIGIL', 2], [5, '2 MYTHICS', 1], [7, 'ALL 3 MYTHICS', 0]] as [number, string, number][]) {
+      await page.evaluate(([d, n]) => (window as any).__pcRender(Object.assign({}, d, { alias: 'RenDIESEL', cardPins: [{ id: 'mythics', v: n }] }), false), [CARD, v] as [typeof CARD, number]);
+      await expect(body.locator('.pcc-seal--pin')).toHaveText([txt]);
+      await expect(body.locator('.pcc-seal--mythics .pmy-off')).toHaveCount(off);
+    }
+    if (SHOTS) await page.screenshot({ path: SHOTS + '/forge-08-mythics-card.png' });
+  });
+
+  test('W1312 — no mythic weapon: the Mythics tile is locked and shows the whole set', async ({ page }) => {
+    await boot(page, 50);
+    await openWardrobe(page);
+    await tab(page, 'pins').click();
+    const t = tile(page, 'pin', 'mythics');
+    await expect(t).toHaveClass(/is-locked/);
+    await expect(t.locator('.pc-pin--mythics')).toHaveText('ALL 3 MYTHICS');
+    await expect(t.locator('.pmy-off')).toHaveCount(0);
+    await expect(t.locator('.wx-bt-st')).toHaveText('0 / 1');
+    await shot(page, 'forge-09-mythics-locked');
   });
 
   test('the own profile card wears the ink and the aura (no frame: W1296); a visitor\'s card keeps the defaults', async ({ page }) => {

@@ -1,6 +1,6 @@
 // ─────────────────────────────────────────────────────────────
 // INCREMENT THIS VERSION NUMBER WITH EVERY NETLIFY DEPLOYMENT
-const CACHE_VERSION = 'v6.539';
+const CACHE_VERSION = 'v6.540';
 // ─────────────────────────────────────────────────────────────
 
 const CACHE_NAME = 'awakened-cache-' + CACHE_VERSION;
@@ -112,6 +112,7 @@ const PRECACHE_ASSETS = [
   '/assets/badges/boss-kills-8.webp',
   '/assets/badges/boss-kills-9.webp',
   '/assets/badges/boss-kills-10.webp',
+  '/assets/badges/pin-mythics.webp',   // W1312 — the Mythics pin's badge
   '/assets/busts/avatar-skin-bloodmoon-bust.webp',
   // Tab-bar icons (DALL-E art replacing the emoji set)
   '/assets/tab-icons/tab-status.png',
