@@ -29,6 +29,7 @@ interface ProfileRow {
   card_frame: string | null;   // W1146 — the Wardrobe's frame / ink / aura (null = default)
   card_ink: string | null;
   card_aura: string | null;
+  card_title_ink: string | null;   // W1315 — the title's colour (null = its tier colour)
   card_pins: string | null;    // W1155 — JSON array of {id, v}, at most two
   founder_seq: number | null;   // W656 — free Founder marker number (null = none)
   arena_title: string | null;
@@ -87,7 +88,7 @@ export async function handlePublicProfileGet(
             pps.rank_label AS rank_label, pps.rank_tier AS rank_tier,
             pps.prestige_level AS prestige,
             pps.power AS power, pps.avatar_id AS avatar_id, pps.card_bg AS card_bg, pps.arena_title AS arena_title,
-            pps.card_frame AS card_frame, pps.card_ink AS card_ink, pps.card_aura AS card_aura, pps.card_pins AS card_pins,
+            pps.card_frame AS card_frame, pps.card_ink AS card_ink, pps.card_aura AS card_aura, pps.card_pins AS card_pins, pps.card_title_ink AS card_title_ink,
             pps.founder_seq AS founder_seq,
             pps.bosses_slain_total AS bosses_slain_total,
             pps.ultra_rare_drops_total AS ultra_rare_drops_total,
@@ -153,6 +154,7 @@ export async function handlePublicProfileGet(
     cardFrame: row.card_frame ?? null,   // W1146 — the card look (the client keeps its defaults for an unknown id)
     cardInk: row.card_ink ?? null,
     cardAura: row.card_aura ?? null,
+    cardTitleInk: row.card_title_ink ?? null,   // W1315
     cardPins: parseCardPins(row.card_pins),   // W1155 — the published pins; W1158 — null = never chose, [] = chose none
     founderSeq: row.founder_seq ?? null,           // W656 — Founder # (prestige badge)
     // W912 — the developer / moderator crown (board_moderators role), shown on the card.

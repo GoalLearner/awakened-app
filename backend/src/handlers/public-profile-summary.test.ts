@@ -930,7 +930,7 @@ describe('W1146 — card look (cardFrame / cardInk / cardAura)', () => {
     expect(callsOf(db).filter((c) => /INSERT INTO public_profile_summary/.test(c.sql)).length).toBe(1);   // the upsert's bind shape is untouched
     const upd = lookCalls(db);
     expect(upd.length).toBe(1);
-    expect(upd[0].binds).toEqual([1, 'runebound', 1, 'frost', 1, 'motes', 0, null, session.userId]);   // W1155 — pins ride the same statement (not sent → preserved)
+    expect(upd[0].binds).toEqual([1, 'runebound', 1, 'frost', 1, 'motes', 0, null, 0, null, session.userId]);   // W1155 — pins ride the same statement (not sent → preserved)
   });
 
   it('null clears one slot; the slots not sent keep their CASE sentinel at 0 (preserved)', async () => {
@@ -940,7 +940,7 @@ describe('W1146 — card look (cardFrame / cardInk / cardAura)', () => {
     expect(res.status).toBe(200);
     const upd = lookCalls(db);
     expect(upd.length).toBe(1);
-    expect(upd[0].binds).toEqual([0, null, 1, null, 0, null, 0, null, session.userId]);
+    expect(upd[0].binds).toEqual([0, null, 1, null, 0, null, 0, null, 0, null, session.userId]);
   });
 
   it('no slot sent → no look statement at all', async () => {
@@ -961,6 +961,37 @@ describe('W1146 — card look (cardFrame / cardInk / cardAura)', () => {
   });
 });
 
+// ── W1315 — the title's colour (owner 2026-11-25: "allow users to select a color for their ascent title") ──
+describe('W1315 — title colour (cardTitleInk)', () => {
+  const callsOf = (db: unknown) => (db as { _calls: () => { sql: string; binds: unknown[] }[] })._calls();
+  const lookCalls = (db: unknown) => callsOf(db).filter((c) => /UPDATE public_profile_summary SET\s+card_frame/.test(c.sql));
+
+  it('an ink id is stored in card_title_ink; the other look slots stay preserved', async () => {
+    const db = makeDb();
+    const res = await handlePublicProfileSummaryPut(makeReq({ ...validPayload, cardTitleInk: 'void' }), makeEnv(db), session);
+    expect(res.status).toBe(200);
+    const upd = lookCalls(db);
+    expect(upd.length).toBe(1);
+    expect(upd[0].sql).toMatch(/card_title_ink = CASE WHEN \? = 1 THEN \? ELSE card_title_ink END/);
+    expect(upd[0].binds).toEqual([0, null, 0, null, 0, null, 0, null, 1, 'void', session.userId]);
+  });
+
+  it('null goes back to the tier colour of the title', async () => {
+    const db = makeDb();
+    const res = await handlePublicProfileSummaryPut(makeReq({ ...validPayload, cardTitleInk: null }), makeEnv(db), session);
+    expect(res.status).toBe(200);
+    expect(lookCalls(db)[0].binds.slice(8)).toEqual([1, null, session.userId]);
+  });
+
+  it('an id outside the inks is refused (400, INVALID_CARD_TITLE_INK) and nothing is written', async () => {
+    const db = makeDb();
+    const res = await handlePublicProfileSummaryPut(makeReq({ ...validPayload, cardTitleInk: 'neon' }), makeEnv(db), session);
+    expect(res.status).toBe(400);
+    expect(((await res.json()) as { error?: string }).error).toBe('INVALID_CARD_TITLE_INK');
+    expect(callsOf(db).filter((c) => /INSERT INTO public_profile_summary/.test(c.sql)).length).toBe(0);
+  });
+});
+
 // ── W1155 — the card's pins: up to two {id, v}, JSON in card_pins, riding the W1146 look statement ──
 describe('W1155 — card pins (cardPins)', () => {
   const callsOf = (db: unknown) => (db as { _calls: () => { sql: string; binds: unknown[] }[] })._calls();
@@ -976,7 +1007,7 @@ describe('W1155 — card pins (cardPins)', () => {
     expect(upd[0].binds.slice(0, 6)).toEqual([0, null, 0, null, 0, null]);
     expect(upd[0].binds[6]).toBe(1);
     expect(JSON.parse(upd[0].binds[7] as string)).toEqual([{ id: 'steps1m', v: 1004112 }, { id: 'shadows', v: 11 }]);
-    expect(upd[0].binds[8]).toBe(session.userId);
+    expect(upd[0].binds.slice(8)).toEqual([0, null, session.userId]);   // W1315 — the title colour, not sent → preserved
   });
 
   // W1158 — NULL and '[]' mean different things to a visitor's card: NULL = this hunter never chose (the card wears

@@ -157,6 +157,7 @@ interface PutBody {
   cardFrame?: unknown;   // W1146 — card look ids (null = default; omitted = preserve)
   cardInk?: unknown;
   cardAura?: unknown;
+  cardTitleInk?: unknown;   // W1315 — the Ascent title's colour: one of the name's inks (null = the title's own tier colour)
   cardPins?: unknown;    // W1155 — up to two {id, v} pins (null = none; omitted = preserve)
   power?: unknown;
   avgStepsPerDay?: unknown;
@@ -194,6 +195,7 @@ interface Validated {
   cardFrame: AchField<string>;   // W1146 — card look, same set/clear/preserve semantics
   cardInk: AchField<string>;
   cardAura: AchField<string>;
+  cardTitleInk: AchField<string>;   // W1315
   cardPins: AchField<string>;    // W1155 — JSON array of {id, v}, at most two
   // Profile card (W-next) — same set/clear/preserve semantics.
   avatarId: AchField<string>;
@@ -466,10 +468,11 @@ function validate(body: PutBody):
     cardFrame: { set: false, value: null } as AchField<string>,
     cardInk: { set: false, value: null } as AchField<string>,
     cardAura: { set: false, value: null } as AchField<string>,
+    cardTitleInk: { set: false, value: null } as AchField<string>,   // W1315 — the title's colour, from the same inks
   };
-  const lookIds: Record<keyof typeof look, readonly string[]> = { cardFrame: CARD_FRAME_IDS, cardInk: CARD_INK_IDS, cardAura: CARD_AURA_IDS };
-  const lookCodes: Record<keyof typeof look, string> = { cardFrame: 'INVALID_CARD_FRAME', cardInk: 'INVALID_CARD_INK', cardAura: 'INVALID_CARD_AURA' };
-  for (const key of ['cardFrame', 'cardInk', 'cardAura'] as const) {
+  const lookIds: Record<keyof typeof look, readonly string[]> = { cardFrame: CARD_FRAME_IDS, cardInk: CARD_INK_IDS, cardAura: CARD_AURA_IDS, cardTitleInk: CARD_INK_IDS };
+  const lookCodes: Record<keyof typeof look, string> = { cardFrame: 'INVALID_CARD_FRAME', cardInk: 'INVALID_CARD_INK', cardAura: 'INVALID_CARD_AURA', cardTitleInk: 'INVALID_CARD_TITLE_INK' };
+  for (const key of ['cardFrame', 'cardInk', 'cardAura', 'cardTitleInk'] as const) {
     const raw = body[key];
     if (!(key in body) || raw === undefined) continue;
     if (raw === null) { look[key] = { set: true, value: null }; continue; }
@@ -569,6 +572,7 @@ function validate(body: PutBody):
       cardFrame: look.cardFrame,   // W1146
       cardInk: look.cardInk,
       cardAura: look.cardAura,
+      cardTitleInk: look.cardTitleInk,   // W1315
       cardPins,                    // W1155
       power,
       avgStepsPerDay,
@@ -758,13 +762,14 @@ export async function handlePublicProfileSummaryPut(
   // W1146 — the card look (frame / ink / aura) rides its own statement so the main upsert's bind
   // shape stays put; it runs only when the client set at least one slot (set or clear), and a slot
   // the client omitted is preserved by its CASE sentinel.
-  if (v.cardFrame.set || v.cardInk.set || v.cardAura.set || v.cardPins.set) {
+  if (v.cardFrame.set || v.cardInk.set || v.cardAura.set || v.cardPins.set || v.cardTitleInk.set) {
     await env.DB.prepare(
       `UPDATE public_profile_summary SET
           card_frame = CASE WHEN ? = 1 THEN ? ELSE card_frame END,
           card_ink   = CASE WHEN ? = 1 THEN ? ELSE card_ink END,
           card_aura  = CASE WHEN ? = 1 THEN ? ELSE card_aura END,
-          card_pins  = CASE WHEN ? = 1 THEN ? ELSE card_pins END
+          card_pins  = CASE WHEN ? = 1 THEN ? ELSE card_pins END,
+          card_title_ink = CASE WHEN ? = 1 THEN ? ELSE card_title_ink END
         WHERE user_id = ?`,
     )
       .bind(
@@ -772,6 +777,7 @@ export async function handlePublicProfileSummaryPut(
         v.cardInk.set ? 1 : 0, v.cardInk.value,
         v.cardAura.set ? 1 : 0, v.cardAura.value,
         v.cardPins.set ? 1 : 0, v.cardPins.value,   // W1155
+        v.cardTitleInk.set ? 1 : 0, v.cardTitleInk.value,   // W1315
         session.userId,
       )
       .run();

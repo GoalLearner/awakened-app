@@ -27744,6 +27744,16 @@ body.combat-active #app * { animation-play-state: paused !important; }
 .tm-band-tier { display: inline-flex; align-items: center; gap: 5px; font-family: "JetBrains Mono", monospace; font-size: 8px; font-weight: 800; letter-spacing: 1.8px; }
 .tm-band-tier i { width: 5px; height: 5px; transform: rotate(45deg); border-radius: 1px; }
 .tm-ladder { margin-top: 16px; display: flex; flex-direction: column; gap: 5px; }
+/* W1315 — the worn title's colour, under the HIGHEST FLOOR band: the title's own (a gem in its tier colour) + the name's ten inks */
+.tm-inks { margin: 14px 20px 0; }
+.tm-inks .lbl { display: block; font-family: "JetBrains Mono", monospace; font-size: 8px; font-weight: 800; letter-spacing: 2.2px; color: #6b6b86; margin: 0 0 6px 2px; }
+.tm-inks .sw { display: grid; grid-template-columns: repeat(11, 1fr); gap: 4px; }
+.tm-ink { position: relative; height: 34px; padding: 0; border: 0; background: none; cursor: pointer; -webkit-appearance: none; appearance: none; -webkit-tap-highlight-color: transparent; }
+.tm-ink::before { content: ''; position: absolute; left: 50%; top: 50%; width: 22px; height: 22px; margin: -11px 0 0 -11px; border-radius: 50%; background: var(--c); box-shadow: inset 0 0 0 1px rgba(255,255,255,.16); }
+.tm-ink.on::before { box-shadow: 0 0 0 2px #0b0b16, 0 0 0 3.5px #f5f3fb; }
+.tm-ink--tier::before { background: #14141f; box-shadow: inset 0 0 0 1px rgba(255,255,255,.22); }
+.tm-ink--tier.on::before { box-shadow: inset 0 0 0 1px rgba(255,255,255,.22), 0 0 0 2px #0b0b16, 0 0 0 3.5px #f5f3fb; }
+.tm-ink--tier::after { content: ''; position: absolute; left: 50%; top: 50%; width: 8px; height: 8px; margin: -4px 0 0 -4px; transform: rotate(45deg); background: var(--c); }
 .tm-row { --tm-c: #f5b842; --tm-hi: #ffe9b0; margin: 0 20px; border-radius: 11px; border: 1px solid transparent; background: rgba(255,255,255,0.03); padding: 0 14px; height: 47px; display: flex; align-items: center; gap: 13px; }
 .tm-row--iron   { --tm-c: #8b89a0; --tm-hi: #c8c6d8; }
 .tm-row--teal   { --tm-c: #5eead4; --tm-hi: #c8fff2; }
@@ -37813,6 +37823,10 @@ button.mx-sh { cursor: pointer; min-height: 40px; }
 .pcc-title span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .pcc-title svg { flex: none; margin-left: 1px; opacity: .8; }
 button.pcc-title { cursor: pointer; -webkit-appearance: none; appearance: none; -webkit-tap-highlight-color: transparent; }
+/* W1315 — a living ink on the title: the name's gradient sweep on the words and the gem (no text-shadow: it would darken the clipped fill) */
+.pcc-title--g span { background-image: var(--tg); background-size: 300% 100%; -webkit-background-clip: text; background-clip: text; color: transparent; -webkit-text-fill-color: transparent; text-shadow: none; filter: drop-shadow(0 1px 3px rgba(0,0,0,.85)); animation: wx-inksweep 3.6s linear infinite; }
+.pcc-title--g i { background: var(--tg); background-size: 300% 100%; }
+@media (prefers-reduced-motion: reduce) { .pcc-title--g span { animation: none; } }
 .pcc-seals { align-self: stretch; list-style: none; margin: 14px 0 0; padding: 12px 0 0; border-top: 1px solid rgba(255,255,255,.1); display: flex; flex-direction: column; gap: 7px; }
 .pcc-seals--own { cursor: pointer; -webkit-tap-highlight-color: transparent; }
 .pcc-seal { display: grid; grid-template-columns: 28px minmax(0,1fr); align-items: center; column-gap: 9px; min-height: 22px;

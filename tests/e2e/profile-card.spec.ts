@@ -167,6 +167,58 @@ for (const vp of [{ width: 390, height: 844 }, { width: 375, height: 667 }]) {
       if (process.env.LB_SHOTS) { await page.locator('#arena-overlay .tm-row--worn').scrollIntoViewIfNeeded(); await page.screenshot({ path: process.env.LB_SHOTS + '/titles-' + vp.width + '.png' }); }
     });
 
+    // W1315 — owner 2026-11-25: "allow users to select a color for their ascent title so it matches their aesthetic".
+    // The Titles view's TITLE COLOR row: the title's own colour + the name's ten inks. The card wears the choice; a
+    // visitor's card wears the published one (an unknown id or none → the tier colour); the heartbeat carries it.
+    test('the title color: picked on the Titles view, worn on the card, published, and read on a visitor\'s card', async ({ page }) => {
+      await boot(page);
+      await page.evaluate(() => { localStorage.setItem('hb_arena_title', 'rt_sovereign'); localStorage.setItem('hb_arena_v2', JSON.stringify({ rating: 1000, bestRating: 1000, currentFloor: 61, highestCleared: 60, wins: 60, losses: 0, streak: 0, bestStreak: 0, dailyDate: '', dailyLosses: 0, reclaimDate: '', reclaimFloors: [], reclaimSouls: 0 })); });
+      await page.reload();
+      await page.waitForFunction(() => !!(window as any).__pcRender && !!document.querySelector('[data-tab="profile"]'));
+      await page.evaluate(() => {   // a signed-in phone: catch the heartbeat
+        const A = (window as any).Auth; A.getCurrentUser = () => ({ jwt: 'e2e', alias: 'Richie' });
+        A.submitPublicProfileSummary = async (p: unknown) => { (window as any).__sent = p; return { ok: true }; };
+      });
+      const color = (sel: string) => page.locator(sel).evaluate((e) => getComputedStyle(e).color);
+      await render(page, true);
+      expect(await color('#pc-body button.pcc-title--pick')).toBe('rgb(167, 139, 250)');   // Sovereign's violet tier
+      await page.locator('#pc-body button.pcc-title--pick').click();
+      const sw = page.locator('#arena-overlay .tm-inks .tm-ink');
+      await expect(sw).toHaveCount(11);
+      await expect(sw.first()).toHaveClass(/tm-ink--tier/);
+      await expect(sw.first()).toHaveClass(/\bon\b/);
+      await page.locator('#arena-overlay .tm-ink[data-ink="rose"]').click();
+      await expect(page.locator('#arena-overlay .tm-ink[data-ink="rose"]')).toHaveClass(/\bon\b/);
+      await expect(page.locator('#arena-overlay .tm-ink[aria-checked="true"]')).toHaveCount(1);
+      expect(await page.evaluate(() => localStorage.getItem('hb_title_ink'))).toBe('rose');
+      expect(await color('#arena-overlay .tm-row--worn .nm')).toBe('rgb(251, 113, 133)');
+      // the swatches stay on one row inside the screen
+      const r = await page.locator('#arena-overlay .tm-inks .sw').evaluate((e) => { const a = e.getBoundingClientRect(); const k = Array.from(e.children).map((c) => c.getBoundingClientRect().top); return { right: a.right, rows: new Set(k).size }; });
+      expect(r.rows).toBe(1);
+      expect(r.right).toBeLessThanOrEqual(vp.width);
+      if (process.env.LB_SHOTS) await page.screenshot({ path: process.env.LB_SHOTS + '/title-color-' + vp.width + '.png' });
+      // published on the next heartbeat (8 s debounce)
+      await expect.poll(() => page.evaluate(() => ((window as any).__sent || {}).cardTitleInk), { timeout: 15000 }).toBe('rose');
+      // the own card: a solid ink colours the words; a living ink sweeps its gradient
+      await page.evaluate(() => { document.getElementById('arena-overlay')!.style.display = 'none'; });   // back to the card
+      await render(page, true);
+      expect(await color('#pc-body button.pcc-title--pick')).toBe('rgb(251, 113, 133)');
+      await page.evaluate(() => localStorage.setItem('hb_title_ink', 'void'));
+      await render(page, true);
+      await expect(page.locator('#pc-body button.pcc-title--pick')).toHaveClass(/pcc-title--g/);
+      expect(await page.locator('#pc-body .pcc-title--g span').evaluate((e) => getComputedStyle(e).backgroundImage)).toContain('linear-gradient');
+      await settle(page);
+      if (process.env.LB_SHOTS) await page.screenshot({ path: process.env.LB_SHOTS + '/title-color-card-' + vp.width + '.png' });
+      // a visitor's card reads the published colour; none or an unknown id → the tier colour
+      for (const [ink, want] of [['teal', 'rgb(94, 234, 212)'], [null, 'rgb(167, 139, 250)'], ['neon', 'rgb(167, 139, 250)']] as Array<[string | null, string]>) {
+        await render(page, false, { alias: 'galilea', arenaTitle: 'rt_sovereign', cardTitleInk: ink });
+        expect(await color('#pc-body div.pcc-title')).toBe(want);
+      }
+      // the F100 title's own colour is gold on the card (it read iron grey)
+      await render(page, false, { alias: 'galilea', arenaTitle: 'summit_second_awakened', cardTitleInk: null });
+      expect(await color('#pc-body div.pcc-title')).toBe('rgb(245, 184, 66)');
+    });
+
     test("a visitor's card: the hunter in the plate, the published title, no Change look; the owner's Make moderator keeps the grid", async ({ page }) => {
       await boot(page);
       await render(page, false, { alias: 'RenDIESEL', arenaTitle: 'rt_blade', founderSeq: 2 });

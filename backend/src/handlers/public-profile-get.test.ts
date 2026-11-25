@@ -76,6 +76,15 @@ describe('GET /v1/users/:alias/profile', () => {
     expect(b.avatarId).toBeNull();
   });
 
+  // W1315 — the title's colour rides the card; none chosen → null (the title's tier colour)
+  it('serves the chosen title colour, null when none was chosen', async () => {
+    for (const [v, want] of [['void', 'void'], [null, null]] as Array<[string | null, string | null]>) {
+      const db = makeDb({ alias: 'galilea', rank_label: 'A', rank_tier: 'A', arena_title: 'rt_sovereign', card_ink: 'void', card_title_ink: v });
+      const b = await (await handlePublicProfileGet(req(), makeEnv(db), session, 'galilea')).json() as Record<string, unknown>;
+      expect(b.cardTitleInk).toBe(want);
+    }
+  });
+
   it('404s an unknown alias', async () => {
     const res = await handlePublicProfileGet(req(), makeEnv(makeDb(null)), session, 'ghost');
     expect(res.status).toBe(404);
