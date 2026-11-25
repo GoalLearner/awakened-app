@@ -230,7 +230,8 @@ const ARENA_TITLE_LABELS: Record<string, string> = {
   rt_sovereign:       'Sovereign',
   rt_apex:            'Apex',
   rt_monarch:         'Monarch',
-  rt_grandmaster:     'Grandmaster',
+  rt_grandmaster:     'Master',        // W1314 — renamed from Grandmaster (owner 2026-11-25)
+  summit_second_awakened: 'Grandmaster', // W1314 — the floor-100 title (was 'The Second Awakened', never listed here)
   // legacy W257-era ids — events from pre-W266 clients still validate
   asc_brawler:        'Brawler',
   asc_wallbreaker:    'Wallbreaker',
@@ -246,6 +247,13 @@ const ARENA_TITLE_LABELS: Record<string, string> = {
   asc_rank_duelist:   'Ranked Blade',
   asc_rank_elite:     'Ranked Elite',
   asc_rank_apex:      'Apex',
+};
+
+// W1314 — the names clients up to 3.0.31 still send for the two renamed titles. Accepted, then stored under the
+// current name, so an older app's batch is not refused (one bad event refuses the whole batch) and the feed reads right.
+const ARENA_TITLE_OLD_NAMES: Record<string, string> = {
+  rt_grandmaster:         'Grandmaster',
+  summit_second_awakened: 'The Second Awakened',
 };
 
 // W389 — required Ascent floor for each CURRENT (rt_*) arena title. These unlock
@@ -474,7 +482,7 @@ function validateEvent(
       detail: 'eventLabel must be a non-empty string.',
     };
   }
-  const eventLabel = raw.eventLabel;
+  let eventLabel = raw.eventLabel;   // W1314 — an old title name is rewritten to the current one
 
   if (typeof raw.clientEventId !== 'string'
       || raw.clientEventId.length === 0
@@ -900,6 +908,8 @@ function validateEvent(
       };
     }
     const expectedLabel = 'earned the title "' + titleName + '"';
+    const oldName = ARENA_TITLE_OLD_NAMES[eventKey];
+    if (oldName && eventLabel === 'earned the title "' + oldName + '"') eventLabel = expectedLabel;
     if (eventLabel !== expectedLabel) {
       return {
         ok: false,

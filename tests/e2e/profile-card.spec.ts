@@ -150,6 +150,23 @@ for (const vp of [{ width: 390, height: 844 }, { width: 375, height: 667 }]) {
       await expect(page.locator('#arena-overlay .tm-row--worn .nm')).toHaveText('Contender');
     });
 
+    // W1314 — owner 2026-11-25: "I think F90 should be master and F100 should be grandmaster". Same ids, new names.
+    test('the Titles view: F90 is Master, F100 is Grandmaster, worn on the card', async ({ page }) => {
+      await boot(page);
+      await page.evaluate(() => { localStorage.setItem('hb_arena_title', 'summit_second_awakened'); localStorage.setItem('hb_arena_v2', JSON.stringify({ rating: 1000, bestRating: 1000, currentFloor: 100, highestCleared: 100, wins: 100, losses: 0, streak: 0, bestStreak: 0, dailyDate: '', dailyLosses: 0, reclaimDate: '', reclaimFloors: [], reclaimSouls: 0 })); });
+      await page.reload();
+      await page.waitForFunction(() => !!(window as any).__pcRender && !!document.querySelector('[data-tab="profile"]'));
+      await render(page, true);
+      const pick = page.locator('#pc-body button.pcc-title--pick');
+      await expect(pick).toHaveText(/^Grandmaster$/i);
+      await pick.click();
+      const rows = page.locator('#arena-overlay .tm-row');
+      expect(await rows.evaluateAll((els) => els.slice(-2).map((e) => [e.querySelector('.at')!.textContent, e.querySelector('.nm')!.textContent]))).toEqual([['F90', 'Master'], ['F100', 'Grandmaster']]);
+      await expect(page.locator('#arena-overlay .tm-row--worn .nm')).toHaveText('Grandmaster');
+      await expect(page.locator('#arena-overlay')).not.toContainText('Second Awakened');
+      if (process.env.LB_SHOTS) { await page.locator('#arena-overlay .tm-row--worn').scrollIntoViewIfNeeded(); await page.screenshot({ path: process.env.LB_SHOTS + '/titles-' + vp.width + '.png' }); }
+    });
+
     test("a visitor's card: the hunter in the plate, the published title, no Change look; the owner's Make moderator keeps the grid", async ({ page }) => {
       await boot(page);
       await render(page, false, { alias: 'RenDIESEL', arenaTitle: 'rt_blade', founderSeq: 2 });

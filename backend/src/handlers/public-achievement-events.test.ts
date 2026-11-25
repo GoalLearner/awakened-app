@@ -1641,6 +1641,42 @@ describe('arena_title_earned (W258)', () => {
     expect(db._calls().filter((c) => !/^SELECT COUNT/.test(c.sql))[0]?.binds[4]).toBe('earned the title "Warbringer"');
   });
 
+  // W1314 — owner 2026-11-25: F90 is now "Master", F100 "Grandmaster". Older apps still send the old names: accepted,
+  // stored under the new ones. A name that belongs to another title is still refused.
+  for (const [key, sent, stored] of [
+    ['rt_grandmaster', 'Master', 'Master'],
+    ['rt_grandmaster', 'Grandmaster', 'Master'],
+    ['summit_second_awakened', 'Grandmaster', 'Grandmaster'],
+    ['summit_second_awakened', 'The Second Awakened', 'Grandmaster'],
+  ] as const) {
+    it(`W1314 — ${key} sent as "${sent}" is stored as "${stored}"`, async () => {
+      const db = makeDb({ perInsertChanges: [1] });
+      const res = await handlePublicAchievementEventsPost(
+        makeReq({ events: [{
+          ...VALID_ARENA_TITLE,
+          eventKey: key,
+          eventLabel: 'earned the title "' + sent + '"',
+          clientEventId: 'arena_title:' + key,
+        }] }), makeEnv(db), session,
+      );
+      expect(res.status).toBe(200);
+      expect(db._calls().filter((c) => !/^SELECT COUNT/.test(c.sql))[0]?.binds[4]).toBe('earned the title "' + stored + '"');
+    });
+  }
+
+  it('W1314 — an old title name on another id is refused', async () => {
+    const db = makeDb();
+    const res = await handlePublicAchievementEventsPost(
+      makeReq({ events: [{
+        ...VALID_ARENA_TITLE,
+        eventKey: 'rt_monarch',
+        eventLabel: 'earned the title "Grandmaster"',
+        clientEventId: 'arena_title:rt_monarch',
+      }] }), makeEnv(db), session,
+    );
+    expect(res.status).toBe(400);
+  });
+
   it('rejects a legacy label on a W266 id (cross-era tamper)', async () => {
     const db = makeDb();
     const res = await handlePublicAchievementEventsPost(
