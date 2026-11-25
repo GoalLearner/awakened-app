@@ -341,7 +341,7 @@ interface SweepFixture {
   queue?: string[];   // W1248 — the raid finder, oldest first
   doneRows?: Record<string, unknown>[];   // W1254 — finished raids for The Muster
   hallRows?: Record<string, unknown>[];   // W1282 — the Hall of Fame (the five fastest wins)
-  swapRows?: { instance_id: string; in_user_id: string }[];   // W1254 — stand-ins
+  swapRows?: { instance_id: string; in_user_id?: string; out_user_id?: string }[];   // W1254 — stand-ins; W1311 — leavers
   beaten?: Record<string, string[]>;   // W1268 — automatic bosses each hunter has beaten (default: every hunter, every boss)
   autoPrefs?: { user_id: string; mode: string; targets_json: string; match_on: number; raid_on: number }[];   // W1268
   sleepers?: string[];   // W1281 — hunters whose phone saw sleep in the last 7 nights
@@ -1242,18 +1242,49 @@ describe('W1248 — raid stand-ins: a raider away 24 hours gives the seat to som
     expect(batchSql(c, 'SET banked_steps').length).toBe(0);
   });
 
-  it('W1249 — locked in: a raider away 30h with 1,000+ raid steps keeps the seat; 999 does not', async () => {
-    expect(RAID_LOCK_STEPS).toBe(1000);
+  it('W1249 / W1311 — locked in: a raider away 30h with 3,000+ raid steps keeps the seat; 2,999 does not', async () => {
+    expect(RAID_LOCK_STEPS).toBe(3000);   // W1311 — owner 2026-11-24: "a better number than 1000 steps" → 3,000
     const locked = base();
-    locked.progress = [{ bid: 'R1', user_id: 'p5', event_type: 'steps_total', s: 1000 }];
+    locked.progress = [{ bid: 'R1', user_id: 'p5', event_type: 'steps_total', s: 3000 }];
     const a: Call[] = [];
     expect((await sweepCoopAutoHunts(makeEnv(sweepDb(locked, a)), ctx)).swaps).toBe(0);
     expect(batchSql(a, 'SET banked_steps').length).toBe(0);
     const open = base();
-    open.progress = [{ bid: 'R1', user_id: 'p5', event_type: 'steps_total', s: 999 }];
+    open.progress = [{ bid: 'R1', user_id: 'p5', event_type: 'steps_total', s: 2999 }];
     const b: Call[] = [];
     expect((await sweepCoopAutoHunts(makeEnv(sweepDb(open, b)), ctx)).swaps).toBe(1);
-    expect(batchSql(b, 'SET banked_steps = banked_steps + ?4')[0].args.slice(0, 4)).toEqual(['R1', 'p5', 'x1', 999]);
+    expect(batchSql(b, 'SET banked_steps = banked_steps + ?4')[0].args.slice(0, 4)).toEqual(['R1', 'p5', 'x1', 2999]);
+  });
+
+  // W1311 — owner 2026-11-24 ("Yes, fix both"): Renaldo left Rival's raid with 625 steps, then came back as its stand-in,
+  // and his 625 counted twice (banked + his own row, whose phone counts from the raid's start). A leaver never returns.
+  it('W1311 — pickStandIn never draws someone who already left this raid', () => {
+    const none = () => false;
+    expect(pickStandIn(['q1'], ['x1'], ['c1'], none, () => 0, ['q1'])).toBe('x1');
+    expect(pickStandIn([], ['x1', 'x2'], ['c1'], none, () => 0, ['x1'])).toBe('x2');
+    expect(pickStandIn([], ['x1'], ['c1'], none, () => 0, ['x1'])).toBeNull();
+  });
+
+  it('W1311 — a hunter who left this raid is not drawn back as its stand-in (the seat waits instead)', async () => {
+    const back = base();
+    back.swapRows = [{ instance_id: 'R1', out_user_id: 'x1', in_user_id: 'p5' }];   // x1 left R1 earlier; the only free hunter
+    const a: Call[] = [];
+    expect((await sweepCoopAutoHunts(makeEnv(sweepDb(back, a)), ctx)).swaps).toBe(0);
+    expect(batchSql(a, 'SET banked_steps').length).toBe(0);
+    const other = base();
+    other.swapRows = [{ instance_id: 'R2', out_user_id: 'x1', in_user_id: 'z9' }];   // left ANOTHER raid: still welcome here
+    const b: Call[] = [];
+    expect((await sweepCoopAutoHunts(makeEnv(sweepDb(other, b)), ctx)).swaps).toBe(1);
+    expect(batchSql(b, 'INTO coop_raid_swaps')[0].args.slice(0, 3)).toEqual(['R1', 'p5', 'x1']);
+  });
+
+  it('W1311 — planRaidMoves never moves a walker back into a raid they left', () => {
+    const none = () => false;
+    const v = (id: string, over: Partial<RaidView>): RaidView => ({ id, startsMs: 0, progress: 0.5, canGive: false, members: [], active: [], open: [], ...over });
+    const giver = v('G', { canGive: true, startsMs: 100, progress: 0.1, members: ['m', 'g2'], active: ['m'] });
+    const target = v('T', { startsMs: 50, members: ['t1', 't2', 't3', 'x'], active: ['t1', 't2', 't3'], open: ['x'] });
+    expect(planRaidMoves([giver, target], none)).toEqual([{ from: 'G', moves: [{ m: 'm', x: 'x', to: 'T' }], sideline: [] }]);
+    expect(planRaidMoves([giver, { ...target, left: ['m'] }], none)).toEqual([]);
   });
 
   it('W1250 — seen = REAL opens only: the query reads app_open_counts, and an open counted before 0078 lasts to the end of its Pacific day', async () => {
@@ -1512,6 +1543,26 @@ describe('W1254 — GET /v1/coop-boss/raids/live', () => {
     expect(body.draw.days[6]).toBe(true);
     expect(body.draw.opens).toBe(3);
     expect(body.draw.in_raid).toBe(true);
+  });
+
+  // W1311 — owner 2026-11-24: "only show away when not locked in": past RAID_LOCK_STEPS a hunter keeps the seat however
+  // long they are away, so the tag never shows on them (ZeRuthless 4,785, Galilea 13,755 on Rival's raid).
+  it('W1311 — AWAY only on a hunter still under the 3,000-step lock', async () => {
+    const now = Date.now();
+    const start = new Date(now - 40 * H).toISOString();
+    const raid = { id: 'R1', boss_id: 'the_grinning_god', status: 'active', auto: 1, challenger_user_id: 'u1', partner_user_id: 'u2',
+      partner2_user_id: 'u3', starts_at: start, ends_at: new Date(now + 40 * H).toISOString(), goal_steps: 200000, goal_flights: 200 };
+    const f: SweepFixture = {
+      raidRows: [raid],
+      participants: [{ instance_id: 'R1', user_id: 'u2', joined_at: start }, { instance_id: 'R1', user_id: 'u3', joined_at: start }],
+      progress: [{ bid: 'R1', user_id: 'u2', event_type: 'steps_total', s: 3000 }, { bid: 'R1', user_id: 'u3', event_type: 'steps_total', s: 2999 }],
+      lastSeen: { u1: now - H, u2: now - 30 * H, u3: now - 30 * H },
+      myOpens: [{ day_pt: today, opens: 1 }],
+    };
+    const env = { DB: sweepDb(f, []), RL_FRIENDS_READ: { limit: async () => ({ success: true }) } } as unknown as Env;
+    const body = await (await handleRaidsLive(new Request('https://x/v1/coop-boss/raids/live'), env, { userId: 'u1' } as SessionPayload)).json() as any;
+    const by = Object.fromEntries(body.raids[0].members.map((m: any) => [m.steps, !!m.away]));
+    expect(by).toEqual({ 0: false, 3000: false, 2999: true });   // the viewer, locked in, still swappable
   });
 });
 

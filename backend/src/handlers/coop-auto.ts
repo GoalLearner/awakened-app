@@ -1454,7 +1454,7 @@ async function sweepAutoRaids(
 
 /** W1248 — RAID STAND-INS (owner 2026-11-20: "If a player on a raid is currently inactive for 24 hours straight,
  *  replace them with a person that is waiting to be on a raid or that is active and qualifies to be raiding").
- *  W1249: only while under RAID_LOCK_STEPS raid steps; 1,000+ locks the seat in for the rest of the raid.
+ *  W1249: only while under RAID_LOCK_STEPS raid steps (W1311: 3,000); that many locks the seat in for the rest of the raid.
  *  Every pass, before new raids form: a member of a live automatic raid who has not REALLY opened the app (W1250: a
  *  background wake is not an open) for RAID_IDLE_HOURS, counted from the later of their last open and the moment they took the
  *  seat (so someone just drawn always gets a full day), gives the seat to a stand-in: a hunter waiting in the
@@ -1467,8 +1467,10 @@ export const RAID_IDLE_HOURS = 24;
 export const MAX_SWAPS_PER_RUN = 12;
 /** W1249 — owner 2026-11-20: "if they've already registered steps into the raid...they get locked in...only steps
  *  less than 1000 ... get replaced" (chose: away 24h AND under 1,000). A raider whose raid steps reached this is
- *  locked in for the rest of the raid, however long they are away. */
-export const RAID_LOCK_STEPS = 1000;
+ *  locked in for the rest of the raid, however long they are away.
+ *  W1311 — owner 2026-11-24: "maybe the steps needs to be a better number than 1000 steps" -> 3,000 (chosen over 5,000
+ *  and 10,000): a short walk, about 9% of a hunter's share of the 200,000-step raid. */
+export const RAID_LOCK_STEPS = 3000;
 const RAID_IDLE_MS = RAID_IDLE_HOURS * 3_600_000;
 
 /** W1248 — true when this hunter was in the app within the last RAID_IDLE_HOURS. */
@@ -1495,12 +1497,15 @@ export function pickStandIn(
   team: readonly string[],
   isBlocked: (a: string, b: string) => boolean,
   rnd: () => number = Math.random,
+  left: readonly string[] = [],
 ): string | null {
-  const ok = (uid: string) => !!uid && !team.includes(uid) && !team.some((t) => isBlocked(t, uid));
+  // W1311 — never someone who already left this raid: their steps from before they left are banked on the team, and
+  // their phone counts from the raid's start again, so they would count twice (Renaldo, 2026-11-24: 625 steps).
+  const ok = (uid: string) => !!uid && !team.includes(uid) && !left.includes(uid) && !team.some((t) => isBlocked(t, uid));
   for (const uid of waiting) if (ok(uid)) return uid;
-  const left = pool.filter(ok);
-  if (!left.length) return null;
-  return left[Math.min(left.length - 1, Math.floor(rnd() * left.length))] ?? null;
+  const free = pool.filter(ok);
+  if (!free.length) return null;
+  return free[Math.min(free.length - 1, Math.floor(rnd() * free.length))] ?? null;
 }
 
 /** W1248 → W1250 — when each hunter last REALLY opened the app, over the last 14 Pacific days (ms). Owner 2026-11-20:
@@ -1524,6 +1529,24 @@ async function lastSeenByUser(env: Env, nowMs: number): Promise<Map<string, numb
       if (Number.isFinite(end)) t = end - 1;
     }
     if (t > (out.get(r.user_id) ?? 0)) out.set(r.user_id, t);
+  }
+  return out;
+}
+
+/** W1311 — who has left each of these raids (swapped out, or an open seat a moved walker took): never drawn back in. */
+export async function leaversByInstance(env: Env, ids: readonly string[]): Promise<Map<string, string[]>> {
+  const out = new Map<string, string[]>();
+  for (const slice of chunks(Array.from(ids))) {
+    if (!slice.length) continue;
+    const ph = slice.map(() => '?').join(',');
+    const rs = (await env.DB.prepare(`SELECT instance_id, out_user_id FROM coop_raid_swaps WHERE instance_id IN (${ph})`)
+      .bind(...slice).all<{ instance_id: string; out_user_id?: string }>()).results ?? [];
+    for (const r of rs) {
+      if (!r.instance_id || !r.out_user_id) continue;
+      const list = out.get(r.instance_id) ?? [];
+      if (!list.includes(r.out_user_id)) list.push(r.out_user_id);
+      out.set(r.instance_id, list);
+    }
   }
   return out;
 }
@@ -1679,13 +1702,15 @@ async function sweepRaidStandIns(
     blocks.has(pairKey(a, b)) || optouts.has(a + '>' + b) || optouts.has(b + '>' + a);
   const goal = thousands(cfg.goalSteps) + ' steps' + (cfg.goalFlights ? ' and ' + thousands(cfg.goalFlights) + ' flights' : '');
   let swaps = 0;
+  const leavers = await leaversByInstance(env, Array.from(idleBy.keys()));   // W1311
   for (const r of rows) {
     const idle = idleBy.get(r.id);
     if (!idle) continue;
     let team = participantIds(r);
+    const left = leavers.get(r.id) ?? [];
     for (const out of idle) {
       if (swaps >= MAX_SWAPS_PER_RUN) return swaps;
-      const inn = pickStandIn(waiting, pool, team.filter((u) => u !== out), isBlocked, rnd);
+      const inn = pickStandIn(waiting, pool, team.filter((u) => u !== out), isBlocked, rnd, left.concat([out]));
       if (!inn) break;   // nobody free for this team: the seat stays as it is until someone is
       const p = prog.get(r.id) ?? emptyProgress();
       const banked = { steps: p.steps.get(out) || 0, flights: p.flights.get(out) || 0 };
@@ -1738,6 +1763,8 @@ export interface RaidView {
   members: string[];
   active: string[];
   open: string[];
+  /** W1311 — hunters who already left this raid: never moved back into it */
+  left?: string[];
 }
 export interface RaidMovePlan { from: string; moves: { m: string; x: string; to: string }[]; sideline: string[] }
 
@@ -1762,6 +1789,7 @@ export function planRaidMoves(
     for (const m of team) {
       const to = Array.from(live.values())
         .filter((r) => r.id !== from.id && r.active.length > size && r.open.length > 0 && r.startsMs <= from.startsMs &&
+          !(r.left ?? []).includes(m) &&   // W1311 — never back into a raid they left
           !r.members.some((x) => !r.open.includes(x) && (isBlocked(x, m) || isBlocked(m, x))))
         .sort((a, b) => b.progress - a.progress || b.active.length - a.active.length || (a.id < b.id ? -1 : 1))[0];
       if (!to) continue;
@@ -1944,7 +1972,7 @@ async function sweepRaidMoves(
   ).bind(AUTO_RAID_BOSS, new Date(nowMs).toISOString()).all<CoopBossRow>()).results ?? [];
   if (rows.length < 2) return 0;
   const ids = rows.map((r) => r.id);
-  const [parts, prog, seen] = await Promise.all([loadParticipants(env, ids), getCoopProgressForInstances(env, ids), lastSeen()]);
+  const [parts, prog, seen, leavers] = await Promise.all([loadParticipants(env, ids), getCoopProgressForInstances(env, ids), lastSeen(), leaversByInstance(env, ids)]);
   const byId = new Map<string, CoopBossRow>();
   const views: RaidView[] = [];
   for (const r of rows) {
@@ -1970,6 +1998,7 @@ async function sweepRaidMoves(
       members,
       active: members.filter((u) => seenWithin(seen, u, nowMs)).sort((a, b) => steps(b) - steps(a)),
       open: members.filter((u) => idle.has(u) && steps(u) < RAID_LOCK_STEPS),
+      left: leavers.get(r.id) ?? [],   // W1311
     });
   }
   const [optouts, blocks] = await shared();
@@ -2134,8 +2163,9 @@ async function sweepRaidWaiting(
     const joinedNow: string[] = [];
     if (members.length < AUTO_RAID_PARTY) {
       const fp = await fillPool();
+      const left = (await leaversByInstance(env, [r.id])).get(r.id) ?? [];   // W1311
       while (members.length < AUTO_RAID_PARTY) {
-        const inn = pickStandIn(fp.waiting, fp.pool, members, fp.isBlocked, rnd);
+        const inn = pickStandIn(fp.waiting, fp.pool, members, fp.isBlocked, rnd, left);
         if (!inn) break;
         for (const list of [fp.waiting, fp.pool]) { const i = list.indexOf(inn); if (i >= 0) list.splice(i, 1); }
         const res = await env.DB.prepare(
@@ -2191,7 +2221,8 @@ async function sweepRaidWaiting(
  *  performance per teams because these two are big team battles" → the Claude Design handoff "The Muster"). Any hunter
  *  may read it. Every live automatic raid of The Grinning God with each hunter by NAME only: rank letter, raid steps
  *  and flights, and two flags, never a time (the handoff's privacy rule): away = no real app open for MUSTER_AWAY_HOURS,
- *  counted from the later of their last open and their seat; stand-in = took the seat by a swap or move (W1248/W1251).
+ *  counted from the later of their last open and their seat, and still under RAID_LOCK_STEPS (W1311: a locked-in hunter
+ *  is never AWAY); stand-in = took the seat by a swap or move (W1248/W1251).
  *  Plus what swapped-out hunters left (banked), the last four finished raids (won: hours taken + MVP; time ran out:
  *  the share of the goal, steps and flights each capped at 100% and averaged) and the viewer's draw: real opens over
  *  the last 7 Pacific days against AUTO_RAID_MIN_OPENS, and whether they are in a live raid. */
@@ -2271,7 +2302,9 @@ export async function handleRaidsLive(_request: Request, env: Env, session: Sess
           steps: p.steps.get(u) || 0,
           flights: p.flights.get(u) || 0,
           ...(me ? { me: true } : {}),
-          ...(!me && nowMs - since >= awayMs ? { away: true } : {}),
+          // W1311 — owner 2026-11-24: "only show away when not locked in": a hunter past RAID_LOCK_STEPS keeps the seat
+          // however long they are away, so the tag would only say a swap is coming that never will
+          ...(!me && (p.steps.get(u) || 0) < RAID_LOCK_STEPS && nowMs - since >= awayMs ? { away: true } : {}),
           ...(subs.has(r.id + '|' + u) ? { sub: true } : {}),
         };
       }),
