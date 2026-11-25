@@ -126,7 +126,7 @@ test.describe('W1143 — Frames, Inks and Auras', () => {
     await tab(page, 'pins').click();
     await expect(tab(page, 'pins')).toHaveClass(/\bon\b/);
     const pane = sheet(page).locator('.wx-pane[data-pane="pins"]');
-    await expect(pane.locator('.wx-sl')).toHaveCount(9);   // W1158 — the Step Club and Prestige joined; W1286 — the 200K and 300K weeks; W1312 — the Mythics
+    await expect(pane.locator('.wx-sl')).toHaveCount(13);   // W1158 — the Step Club and Prestige joined; W1286 — the 200K and 300K weeks; W1312 — the Mythics; W1313 — four status pins
     await expect(tile(page, 'pin', 'club200k')).toHaveClass(/is-locked/);   // W1286 — no 200K week here
     await expect(tile(page, 'pin', 'club300k')).toHaveClass(/is-locked/);
     await expect(tile(page, 'pin', 'steps1m')).toHaveClass(/is-earned/);
@@ -213,6 +213,70 @@ test.describe('W1143 — Frames, Inks and Auras', () => {
     await expect(t.locator('.pmy-off')).toHaveCount(0);
     await expect(t.locator('.wx-bt-st')).toHaveText('0 / 1');
     await shot(page, 'forge-09-mythics-locked');
+  });
+
+  // W1313 — owner 2026-11-24: "Do all of them build". God Slayer (Grinning God raids won), Weekly Champion (weeks at #1,
+  // the server's count), Anomaly Hunter (5+ hidden quests), Everest (2,903 flights since this hunter began).
+  test('W1313 — the four status pins: earned from their numbers, their labels, and a visitor\'s card names them', async ({ page }) => {
+    const progress = { opened: { best: 3, current: 3 }, flame: { best: 0 }, coop: { wins: 0, trioWins: 0, trioRanks: [], podium: 0 }, weekly: { wins: 3 } };
+    await boot(page, 50, {
+      hb_coop_kills: JSON.stringify({ the_grinning_god: { count: 2 } }),
+      hb_earn_progress_v1: JSON.stringify({ weeklyWins: 3, at: Date.now() }),
+      hb_stirs_v1: JSON.stringify({ fired: { the_long_day: 1, shadow_legion: 1, kill_before_dawn: 1, the_late_seal: 1, century_stair: 1, triple_hunt: 1 }, dawns: {}, fragments: [] }),
+      hb_leaderboard: JSON.stringify({ steps_daily: {}, flights_daily: {}, lifetime_flights_total: 3000, lifetime_flights_at: Date.now(), lifetime_steps_start_date: '2026-05-15' }),
+    });
+    await page.evaluate((p) => { (window as any).Auth.earnSkins = async () => ({ ok: true, skins: [], granted: [], progress: p, acquired: null }); }, progress);
+    expect(await page.evaluate(() => { const st = (window as any).__wx.stats(); return [st.godKills, st.weeklyWins, st.anomalies, st.flightsLife]; })).toEqual([2, 3, 6, 3000]);
+    await openWardrobe(page);
+    await tab(page, 'pins').click();
+    const pane = sheet(page).locator('.wx-pane[data-pane="pins"]');
+    expect(await pane.locator('.wx-sl').evaluateAll((els) => els.slice(0, 5).map((e) => e.getAttribute('data-id')))).toEqual(['mythics', 'godslayer', 'weekly1', 'anomalies', 'everest']);
+    for (const [id, txt] of [['godslayer', 'GOD SLAYER ×2'], ['weekly1', 'WEEKLY #1 ×3'], ['anomalies', '6 ANOMALIES'], ['everest', 'EVEREST CLIMBED']]) {
+      await expect(tile(page, 'pin', id)).toHaveClass(/is-earned/);
+      await expect(tile(page, 'pin', id).locator('.pc-pin--' + id)).toHaveText(txt);
+      await expect(tile(page, 'pin', id).locator('.pim')).toHaveAttribute('src', 'assets/badges/pin-' + id + '.webp');
+    }
+    await expect.poll(() => tile(page, 'pin', 'everest').locator('.pim').evaluate((el) => (el as HTMLImageElement).complete && (el as HTMLImageElement).naturalWidth > 0)).toBe(true);
+    await tile(page, 'pin', 'godslayer').click();
+    await tile(page, 'pin', 'weekly1').click();
+    expect(await page.evaluate(() => (window as any).__wx.state().pins)).toEqual(['godslayer', 'weekly1']);
+    await shot(page, 'forge-10-status-pins');
+    // a visitor's card from the published numbers
+    await page.evaluate(() => document.getElementById('wd-overlay')!.click());
+    const body = page.locator('#pc-body');
+    for (const [pins, txt] of [
+      [[{ id: 'godslayer', v: 1 }, { id: 'everest', v: 6000 }], ['GOD SLAYER', 'EVEREST ×2']],
+      [[{ id: 'weekly1', v: 1 }, { id: 'anomalies', v: 9 }], ['WEEKLY #1', '9 ANOMALIES']],
+    ] as [{ id: string; v: number }[], string[]][]) {
+      await page.evaluate(([d, p]) => (window as any).__pcRender(Object.assign({}, d, { alias: 'RenDIESEL', cardPins: p }), false), [CARD, pins] as [typeof CARD, typeof pins]);
+      await expect(body.locator('.pcc-seal--pin')).toHaveText(txt);
+    }
+    if (SHOTS) await page.screenshot({ path: SHOTS + '/forge-11-status-card.png' });
+  });
+
+  test('W1313 — none earned: the four status tiles are locked with their goals', async ({ page }) => {
+    await boot(page, 50);
+    await openWardrobe(page);
+    await tab(page, 'pins').click();
+    for (const id of ['godslayer', 'weekly1', 'anomalies', 'everest']) await expect(tile(page, 'pin', id)).toHaveClass(/is-locked/);
+    await expect(tile(page, 'pin', 'anomalies').locator('.wx-bt-st')).toHaveText('0 / 5');
+    await expect(tile(page, 'pin', 'anomalies').locator('.pc-pin--anomalies')).toHaveText('5 ANOMALIES');
+    await expect(tile(page, 'pin', 'everest').locator('.pc-pin--everest')).toHaveText('EVEREST CLIMBED');
+  });
+
+  test('W1313 — Everest counts flights since the hunter began from Apple Health, never lower, never more than 1,000 a day', async ({ page }) => {
+    await boot(page, 50, { hb_leaderboard: JSON.stringify({ steps_daily: {}, flights_daily: { '2026-11-20': 40, '2026-11-21': 60 }, lifetime_steps_start_date: '2026-11-01' }) });
+    const run = (health: number | null, stamp?: number) => page.evaluate(async ([h, at]) => {
+      const w = window as any;
+      if (at !== undefined) { const st = JSON.parse(localStorage.getItem('hb_leaderboard') || '{}'); st.lifetime_flights_at = at; localStorage.setItem('hb_leaderboard', JSON.stringify(st)); }
+      w.Health = Object.assign(w.Health || {}, { getFlightsClimbedBetween: async () => h });
+      return w.__lbRefreshLifetimeFlights();
+    }, [health, stamp] as [number | null, number | undefined]);
+    expect(await run(3120, 0)).toBe(3120);            // Health since Nov 1
+    expect(await run(10, 0)).toBe(3120);              // never lower
+    expect(await run(5000, Date.now())).toBe(3120);   // asked within 6 hours: not again
+    expect(await run(99999999, 0)).toBeLessThanOrEqual(1000 * 60);   // a day is at most 1,000 flights
+    expect(await page.evaluate(() => (window as any).__wx.stats().flightsLife)).toBeGreaterThan(3120);
   });
 
   test('the own profile card wears the ink and the aura (no frame: W1296); a visitor\'s card keeps the defaults', async ({ page }) => {

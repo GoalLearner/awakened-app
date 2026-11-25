@@ -48,6 +48,8 @@ import { readEntitlements } from './iap-entitlements';
 import { computePacts } from '../lib/pact-streak';
 import { loadStartedPactRows } from './coop-pacts';
 import { COOP_BOSS_CFG } from './coop-boss';
+import { fameWeekOk } from '../lib/fame-days';   // W1313 — the Weekly Champion pin
+import { getAccoladeWeekStart } from '../lib/accolade-week';
 
 export const EARN_VERDANT = 'avatar-skin-verdant.png';
 export const EARN_EMBER = 'avatar-skin-emberforged.png';
@@ -184,6 +186,22 @@ export function coopFromWins(rows: { boss_id: string; n: number }[], podium: num
   return { wins, trioWins, trioRanks: TRIARCH_RANKS.filter((k) => ranks.has(k)), podium: Number(podium) | 0 };
 }
 
+/** W1313 — the Weekly Champion pin: finished weeks this hunter ended #1 on the Steps board (weekly_step_records, the Hall of
+ *  Fame's book: no sim rows, and a week counts only with two days in the app, W1197). A tie at the top is a win for each. */
+async function weeklyProgress(env: Env, userId: string, nowMs: number): Promise<{ wins: number }> {
+  try {
+    const row = await env.DB.prepare(
+      `SELECT COUNT(*) AS n FROM weekly_step_records w
+        WHERE w.user_id = ?1 AND w.week_start < ?2 AND ${fameWeekOk('w.user_id', 'w.week_start')}
+          AND w.steps = (SELECT MAX(x.steps) FROM weekly_step_records x
+                          WHERE x.week_start = w.week_start AND ${fameWeekOk('x.user_id', 'x.week_start')})`,
+    ).bind(userId, getAccoladeWeekStart(nowMs)).first<{ n: number }>();
+    return { wins: Number(row?.n) | 0 };
+  } catch {
+    return { wins: 0 };
+  }
+}
+
 /** A hunt counts for the challenger and for every ally who joined it, once it was won. */
 async function coopProgress(env: Env, userId: string): Promise<CoopProgress> {
   try {
@@ -235,11 +253,12 @@ export async function handleSkinsEarn(request: Request, env: Env, session: Sessi
     raw.filter((c): c is string => typeof c === 'string' && EARNABLE_SKINS.includes(c) && !SERVER_ONLY.has(c)),
   );
 
-  const [ent, opened, flame, coop] = await Promise.all([
+  const [ent, opened, flame, coop, weekly] = await Promise.all([
     readEntitlements(env, session.userId),
     openProgress(env, session.userId),
     flameProgress(env, session.userId),
     coopProgress(env, session.userId),
+    weeklyProgress(env, session.userId, Date.now()),   // W1313
   ]);
   if (opened.best >= OPEN_RUN_GOAL) claims.add(EARN_VERDANT);
   if (flame.best >= FLAME_GOAL) claims.add(EARN_EMBER);
@@ -267,5 +286,5 @@ export async function handleSkinsEarn(request: Request, env: Env, session: Sessi
       }
     });
   }
-  return jsonOk({ ok: true, skins: Array.from(owned), granted, progress: { opened, flame, coop }, acquired: await acquiredMap(env, session.userId) });
+  return jsonOk({ ok: true, skins: Array.from(owned), granted, progress: { opened, flame, coop, weekly }, acquired: await acquiredMap(env, session.userId) });
 }

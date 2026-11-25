@@ -1010,6 +1010,15 @@ describe('W1155 — card pins (cardPins)', () => {
   });
 
   // W1312 — the Mythics pin: its number says which mythic weapons (one bit each), so a visitor's card names the right one
+  it('W1313 — God Slayer, Weekly Champion, Anomaly Hunter and Everest are pins the server keeps', async () => {
+    for (const pins of [[{ id: 'godslayer', v: 1 }, { id: 'weekly1', v: 3 }], [{ id: 'anomalies', v: 9 }, { id: 'everest', v: 3120 }]]) {
+      const db = makeDb();
+      const res = await handlePublicProfileSummaryPut(makeReq({ ...validPayload, cardPins: pins }), makeEnv(db), session);
+      expect(res.status).toBe(200);
+      expect(JSON.parse(lookCalls(db)[0].binds[7] as string)).toEqual(pins);
+    }
+  });
+
   it('W1312 — the Mythics pin is a pin the server keeps', async () => {
     const db = makeDb();
     const res = await handlePublicProfileSummaryPut(

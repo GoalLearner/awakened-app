@@ -160,7 +160,7 @@
   const APP_VERSION = '3.0.31';   // W1310 — 3.0.30 RELEASED 2026-11-24 (build 683, W1305: hunters on 3.0.30-w1305 from 1:45 PM PST; Apple refused build 685 under 3.0.30: "The train version '3.0.30' is closed for new build submissions"), so 3.0.31 opened carrying W1306 (the friend feed returns every event of the last 24 hours), W1307 (every repeat rare, ultra-rare and mythic drop reaches Hunter Activity; a sold rare names its souls) and W1308/W1309 (the cleaned-up hunter card, its frame invisible). [history] W1292 — 3.0.29 APPROVED 2026-11-23 (build 674, submitted 2026-11-22 6:25 PM PST; Apple: "eligible for distribution"), so 3.0.30 opened before build 678 went up, carrying W1285-W1287 (What's New 3.0.29 rewritten, the 200K/300K pins, a drop past its cap sells for souls), W1288/W1289 (the Violet Queen), W1290 (each strike says what it hit with) and W1291 (Friends tab badges, rank-coloured strike circles, coloured strike parts). [history] W1270 — 3.0.28 APPROVED by 2026-11-21 7:06 PM PST (build 667; Apple refused build 670 under 3.0.28: "The train version '3.0.28' is closed for new build submissions"), so 3.0.29 opened carrying W1259 (the 200K pin), W1263 (waiting raid teams), W1264-W1266 (the 300K badge), W1267 (no twin hunts) and W1268/W1269 (Auto Hunts). [history] W1246 — 3.0.27 APPROVED by 2026-11-19 12:15 PM PST (Apple refused build 664 under 3.0.27: "train version '3.0.27' is closed"), so 3.0.28 opened carrying W1245 (steps: one device per day, the legitimate one with the most). [history] W1233 — 3.0.26 SUBMITTED for review 2026-11-17 (build 655, tag 3.0.26-w1230), so 3.0.27 opened early, as W1205 did (an approval refuses an upload under the approved number), carrying W1233 (duels: your ultimate, special attack and shadows, and the Echo's own). [history] W1220 — 3.0.25 APPROVED 2026-11-16 9:44 AM PST (submitted 2026-11-15 2:06 PM PST, build 651, tag 3.0.25-w1213), so 3.0.26 opened carrying W1220 (strangers' shadows fold into one feed row), W1221 (your pinned row under a board opens your card), W1222 (the like limit says what it is), W1225 (invites say "You both get 500 souls"), W1226 (a refused audio start is caught, not reported as an error), W1227 (six calorie bosses, E to S, dropping the sleep bosses' relics), W1228 (the S calorie boss drops a mythic at 1%), W1229 (a mythic drop is its own announcement to every hunter; the crown on the card and feed names) and W1230 (ultra-rares stay friends-only: the owner wanted only mythics). [history] W1205 — 3.0.25 opened 2026-11-14 BEFORE 3.0.24 was approved (3.0.24 = build 649, waiting for review since 2026-11-13): an upload under 3.0.24 is refused the moment Apple approves it, so build 650 goes up as 3.0.25 carrying W1202 (every boss in the Kill Log, the Raid group), W1203 (no 150k step cap) and W1204 (hunts named by partner). [history] W1169 — 3.0.23 APPROVED 2026-11-08 (submitted 2026-11-07 5:00 PM PST, LIVE 2:33 PM PST on the 8th; almost certainly build 628 = w1161: pins, the Wardrobe tap fix), so 3.0.24 opened carrying W1162-W1169 (the 3.0.23 store notes, the board update, matched hunt partners, Add as friend, late steps reach the board, The Patient Flame falls by itself, earned ultimates behind their flag). [history] W1134 — 3.0.22 APPROVED 2026-11-06 (submitted 4:53 AM PST from build 617 = w1132: the Shadowborn + the Elite Eight, the Rising redrawn, profile cards name the look, every open counted), so 3.0.23 opened carrying W1134 (the Worldgate counts a hunter's steps only after 2 days in the app that week). [history] W1127 — 3.0.21 LIVE on the App Store 2026-11-05 9:34 AM PST (built from w1126: no memberships, kill stamps without a title, the tier crests, the onboarding's "How did you find the Gate?"), so 3.0.22 opened carrying W1127 (the app-open ping says when it is a real open; the server counts every one per Pacific day). [history] W1124 — 3.0.20 LIVE on the App Store 2026-11-01 12:50 PM PST (built from w1120: final standings Sunday, shadows in the public feed, Shadow Army on Status); 3.0.21 opened carrying W1121 (its What's New, never shown: re-keyed to 3.0.21), W1122 (no memberships), W1124 (kill stamp without a title, inlined tier crests) and W1125 (the onboarding's last screen asks how the hunter found the app; W1126 keeps it in place when the keyboard opens). [history] W1114 — 3.0.19 approved 2026-10-30 (submitted 1:45 AM PST, w1113: shadows 1 in 5, armor upgrades, relic power by boss rank, relic cards three across); 3.0.20 opened with the feed's boss rank chips, no What's New entry yet. W1107 — 3.0.18 approved and LIVE 2026-10-28 8:02 AM PST (submitted 2026-10-27 7:41 PM PST, build 602 = w1106: the four steps trios, the Rising's nine looks, the earned line in the Wardrobe, the richer-backup offer); 3.0.19 opened at approval. [history] W1103 — 3.0.17 approved 2026-10-27 (build 600, submitted 2026-10-26 6:21 PM PST: the automatic friend hunts, the earned looks, the two-tab Wardrobe); 3.0.18 opened at approval, carrying W1102 (the app offers back a richer cloud backup). [history] W1097 — 3.0.16 approved + live 2026-10-26 (build 599, the iOS 27 fix); 3.0.17 opened at approval. Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.16 = the post-3.0.15 train, opened 2026-10-23 (W1085): 3.0.15 was submitted 2026-10-22 2:55 PM PST from build 595 (w1083: the tally, the preview row, the security pass) and approved the same day, so the train closed under it. It carries W1084 (the tally leads the 3.0.15 What's New) forward. [history] 3.0.15 = the post-3.0.14 train, opened 2026-10-22 (W1080): 3.0.14 was approved and LIVE 2026-10-21 5:08 PM PST from build 591 (w1074) — the first 592 upload was refused ("train closed"), the sixth time an approval closed a train under a build. It carries W1077/W1078 (sign-out ends the session, cloud save checksum + gzip, socket token out of the URL, invite links ask first) forward. [history] 3.0.14 = the post-3.0.13 train, opened 2026-10-21 (W1074): 3.0.13 was approved and went LIVE 2026-10-20 3:50 AM PST from build 587 (w1068), so it carries W1069 (the floor 100 curve), W1070-W1073 (the ten weekly step and sleep bosses and their drops) and the real-screen screenshots and header Apple asked for (App Review 2.3.3) forward. [history] 3.0.11 = the post-3.0.10 train, opened 2026-10-05: Apple's store lookup showed 3.0.10 LIVE (released 11:35 AM PST that day, built from w1024, so it carried W1023 the 9:45 PM finish-strong reminder and nothing after). It carries forward W1025 (Myrmidon King art), W1026 (one request for every co-op hunt) and W1027 (steps 'today' = the device's day), all pushed under the 3.0.10 tag after that build was cut. [history] 3.0.10 = the post-3.0.9 train, opened 2026-10-04 when the owner passed on Apple's approval of 3.0.9 (submitted 2026-10-02 12:41 PM PST, approved 2026-10-03; carried W1002–W1022: weekly to-do planner, to-dos first in the briefing, the Monday recap, times-a-week vows, the interactive Status tab, the Jump Manual program, the flights-hunt result fix). It carries W1023 (the 9:45 PM finish-strong reminder) forward. First TWO-DIGIT patch: every version compare in the app is numeric (_updVersionNewer, the What's New compare), never a string compare. [history] 3.0.9 = the post-3.0.8 train, opened 2026-09-25 the moment Apple approved 3.0.8 (submitted 4:57 PM PST, approved the same evening; carried W989–W1001: Items overhaul, Resolved + mod view counts, the sectioned Habits tab + to-dos v2, topic edit). [history] 3.0.8 = the post-3.0.7 train, opened 2026-09-24 the moment Apple approved 3.0.7 (build 543, submitted 1:15 AM PST, approved same day; the Worldgate In-App Event was approved in the same hour). Carries forward: the three description corrections (Ranked PvP / Streak Shields / five-hunter raid = Premium) go out WITH this version, since a description only changes with a new version. [history] 3.0.7 carried W968–W987 (vows yours + glory verified, morning briefing v2, hunt results, Worldgate MVPs + weekly line + strike freeze, Community Updates + briefing line, mod preview rows, awakened:// scheme). [history] 3.0.7 = the post-3.0.6 train, opened 2026-09-20 the moment Apple approved 3.0.6 (submitted 3:14 AM PST that day, approved same day) — an approval CLOSES a train, and uploading under the approved number is refused (CFBundleShortVersionString must exceed it). This has now bitten FOUR times; the bump is done at approval, not at upload. [history] 3.0.6 carried W960–W967 (Manage Vows fix, rank-bar hairline, Worldgate kill ceremony, division-up celebration, owner preview row, 3.0.6 release notes). [history] 3.0.4 = the post-3.0.3 train, opened 2026-09-11 because Apple approved 3.0.3 (live 2026-09-09) and an approval closes a train — carries W935 (weekly-board upload fix + Apple Health asked on every onboarding path). [history] 3.0.3 = the post-3.0.2 train, opened 2026-09-07 the morning after Apple approved 3.0.2 (submitted 2026-09-06 4:41 PM PT; approval closes a train — twice-bitten lesson) — carries W917-W919b (Ledger view, Streak Shields deleted, handoff 29) forward under the new number. [history] 3.0.2 = the post-release train, opened 2026-09-04 because Apple closes a train on approval (build 493 under 3.0.1 was refused: CFBundleShortVersionString must exceed the approved 3.0.1) — carries W903 (boss-sheet hotfix) + W905 (Status is the hunter profile again). 3.0.1 "MAKE IT LAND" = the repair release (W882-W890): Wave-2 progression joins cloud sync, the activation funnel is instrumented end to end, silent Wave-2 server failures leave breadcrumbs, the altar routes to a same-day first kill, the Double Dungeon stops reporting false failures and yields when the stair is unavailable, the beat What's New used to eat is chained, and every banked free engage is visible before the tap. 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.31-w1312';
+  const APP_BUILD_TAG = '3.0.31-w1313';
   // W1192 — the relic and boss paintings are WebP now (the app was 376.9 MB, 290 MB of it these PNGs). A path saved
   // before (the drop history, a friend's card, a cloud save) still says .png: the first time one fails to load it is
   // pointed at the .webp beside it, before the image's own error handler can hide it.
@@ -30627,6 +30627,9 @@
         // can't yield a true all-time average). Submitted on the profile heartbeat.
         lifetime_steps_total:      raw.lifetime_steps_total      || 0,
         lifetime_steps_start_date: raw.lifetime_steps_start_date || null,
+        // W1313 — flights climbed since this hunter began (the Everest pin), and when Apple Health was last asked
+        lifetime_flights_total:    raw.lifetime_flights_total    || 0,
+        lifetime_flights_at:       raw.lifetime_flights_at       || 0,
       };
     } catch (e) {
       _logSwallow('loadLeaderboardState:parse', e);   // W491 — silently resets step/sleep streaks + lifetime totals
@@ -30639,6 +30642,7 @@
         flights_daily: {},
         best_7day_flights_total: 0, best_7day_flights_window_end: null,
         lifetime_steps_total: 0, lifetime_steps_start_date: null,
+        lifetime_flights_total: 0, lifetime_flights_at: 0,
       };
     }
   }
@@ -30976,6 +30980,36 @@
   // increments through the day; we want the latest figure). Best
   // peak updated when the current-week running sum exceeds the
   // historical best.
+  // W1313 — the Everest pin's number: flights climbed since this hunter began (lifetime_steps_start_date, the Million
+  // Steps pin's meaning), asked of Apple Health in one query at most every 6 hours, never lower than the daily map's sum
+  // (a year kept, W726b), and only ever raised. A day is clamped at 1,000 flights like the daily map.
+  const LB_FLIGHTS_LIFE_EVERY_MS = 6 * 3_600_000;
+  async function lbRefreshLifetimeFlights() {
+    try {
+      const state = loadLeaderboardState();
+      const daySum = Object.keys(state.flights_daily || {}).reduce(function (n, d) { return n + (Number(state.flights_daily[d]) || 0); }, 0);
+      let best = Math.max(state.lifetime_flights_total | 0, daySum);
+      const due = Date.now() - (Number(state.lifetime_flights_at) || 0) >= LB_FLIGHTS_LIFE_EVERY_MS;
+      if (due && typeof Health !== 'undefined' && Health && typeof Health.getFlightsClimbedBetween === 'function') {
+        const start = state.lifetime_steps_start_date || Object.keys(state.steps_daily || {}).sort()[0] || getDeviceLocalDate();
+        const t0 = new Date(start + 'T00:00:00');
+        const v = await Health.getFlightsClimbedBetween(t0.toISOString(), new Date().toISOString());
+        if (typeof v === 'number' && Number.isFinite(v) && v >= 0) {
+          const days = Math.max(1, Math.round((Date.now() - t0.getTime()) / 86_400_000) + 1);
+          best = Math.max(best, Math.min(Math.round(v), days * 1000));
+        }
+        const s2 = loadLeaderboardState();   // read again: the week's refresh may have written meanwhile
+        s2.lifetime_flights_total = Math.max(s2.lifetime_flights_total | 0, best);
+        s2.lifetime_flights_at = Date.now();
+        saveLeaderboardState(s2);
+        return s2.lifetime_flights_total;
+      }
+      if (best > (state.lifetime_flights_total | 0)) { state.lifetime_flights_total = best; saveLeaderboardState(state); }
+      return best;
+    } catch (_) { return 0; }
+  }
+  try { window.__lbRefreshLifetimeFlights = lbRefreshLifetimeFlights; } catch (_) {}   // W1313 — QA
+
   function lbRecordFlightsToday(flights) {
     if (typeof flights !== 'number' || !Number.isFinite(flights) || flights < 0) return;
     const state = loadLeaderboardState();
@@ -61922,11 +61956,12 @@
   function _pccHex(t, tone) {
     return '<span class="pcc-hex pcc-hex--' + tone + '" data-t="' + t + '"><svg width="28" height="16" viewBox="0 0 28 16" aria-hidden="true"><path d="M4.5.5h19l4 7.5-4 7.5h-19L.5 8Z"/></svg></span>';
   }
-  // a seal's line: the pin's own label, its first word with a number in it bold ("<b>8</b> SHADOWS", "PRESTIGE <b>1</b>")
+  // a seal's line: the pin's own label, its count in bold ("<b>8</b> SHADOWS", "PRESTIGE <b>1</b>", "<b>100K</b> CLUB").
+  // W1313 — the count, not any word with a digit: "WEEKLY #1 <b>×10</b>" (a name like "#1" stays plain).
   function _pccLine(label) {
     const w = String(label || '').split(' ');
     let done = false;
-    return w.map(function (x) { if (!done && /\d/.test(x)) { done = true; return '<b>' + esc(x) + '</b>'; } return esc(x); }).join(' ');
+    return w.map(function (x) { if (!done && /^×?\d[\d,.]*[KM+×]?$/.test(x)) { done = true; return '<b>' + esc(x) + '</b>'; } return esc(x); }).join(' ');
   }
   // W1308 — the seals: the worn pins (resolved as the pins row did: W1158 defaults, W1259/W1286 club weeks), then the
   // boss-kill tier (W1303: the highest century crossed, nothing below 100). '' when there is nothing to show. The own
@@ -62154,12 +62189,26 @@
   // MVP): one names it, two reads "2 MYTHICS", all three "ALL 3 MYTHICS". Earned at the first (stat `mega` = how many),
   // and its number is WHICH (`mythics`, one bit a weapon, below) so another hunter's card names the right one. Weapons
   // only: some mythic looks can be bought, and a status pin is earned. Mythics are never sold (no cap), so owned = found.
+  const EVEREST_FLIGHTS = 2903;   // W1313 — 29,032 ft; Apple Health counts a flight as about 10 ft
   const MYTHIC_PIN_SLOTS = [{ id: 'nightfall_blade', short: 'NIGHTFALL' }, { id: 'reverie_staff', short: 'REVERIE' }, { id: 'vigil_bow', short: 'VIGIL' }];
   function _mythicPinCount(v) { let n = 0; for (let i = 0; i < MYTHIC_PIN_SLOTS.length; i++) if ((v | 0) & (1 << i)) n++; return n; }
   const WX_PINS = [
     { id: 'mythics', n: 'Mythics', r: 'M', c: '#c084fc', k: 'num', stat: 'mega', vstat: 'mythics', goal: 1, lab: 'Mythic weapons', cond: 'Find a mythic weapon', line: 'A mythic weapon found',
       label: function (v) { const n = _mythicPinCount(v); if (n === 1) { const s = MYTHIC_PIN_SLOTS.find(function (x, i) { return ((v | 0) & (1 << i)); }); return s ? s.short : 'MYTHIC'; } return n >= MYTHIC_PIN_SLOTS.length ? 'ALL 3 MYTHICS' : n + ' MYTHICS'; },
       preview: function (v) { return (v | 0) || 7; } },   // a locked tile shows the whole set
+    // W1313 — four more status pins (owner 2026-11-24: "Do all of them build"; badges from the fal mockup's first take).
+    // God Slayer: The Grinning God raid won (the raid ledger this phone keeps, hb_coop_kills). Weekly Champion: finished
+    // a week #1 on the Steps board (the server counts it, with the Hall of Fame's two-days-in-the-app rule). Anomaly
+    // Hunter: five hidden quests found (the Anomalies shelf). Everest: 2,903 flights since this hunter began (29,032 ft,
+    // a flight being 10 ft), from Apple Health.
+    { id: 'godslayer', n: 'God Slayer', r: 'M', c: '#ef4444', k: 'num', stat: 'godKills', goal: 1, lab: 'Grinning God slain', cond: 'Win a raid against The Grinning God', line: 'The Grinning God slain',
+      label: function (v) { return (v | 0) > 1 ? 'GOD SLAYER ×' + (v | 0) : 'GOD SLAYER'; } },
+    { id: 'weekly1', n: 'Weekly Champion', r: 'L', c: '#60a5fa', k: 'num', stat: 'weeklyWins', goal: 1, lab: 'Weeks at #1', cond: 'Finish a week #1 on the Steps board', line: 'A week at #1',
+      label: function (v) { return (v | 0) > 1 ? 'WEEKLY #1 ×' + (v | 0) : 'WEEKLY #1'; } },
+    { id: 'anomalies', n: 'Anomaly Hunter', r: 'L', c: '#22d3ee', k: 'num', stat: 'anomalies', goal: 5, lab: 'Hidden quests found', cond: 'Find 5 hidden quests', line: 'Five hidden quests found',
+      label: function (v) { return (v | 0) + ' ANOMALIES'; } },
+    { id: 'everest', n: 'Everest', r: 'L', c: '#bae6fd', k: 'num', stat: 'flightsLife', goal: EVEREST_FLIGHTS, lab: 'Flights climbed', cond: 'Climb 2,903 flights, the height of Everest', line: 'Everest climbed',
+      label: function (v) { const n = Math.floor((v | 0) / EVEREST_FLIGHTS); return n > 1 ? 'EVEREST ×' + n : 'EVEREST CLIMBED'; } },
     { id: 'steps1m', n: 'Million Steps', r: 'M', c: '#f5b842', k: 'num', stat: 'steps',   goal: 1e6,   lab: 'Lifetime steps', cond: 'Walk 1,000,000 steps',           line: 'A million steps walked',  label: function () { return '1,000,000 STEPS'; } },
     // W1158 — the card's gold Step Club seal and its Prestige pill became pins (owner: "keep in mind the 100K club... rendiesel
     // has a prestige 1"); until a hunter chooses, these two wear themselves — see WX_PINS_DEFAULT
@@ -62241,6 +62290,10 @@
     return '<path class="' + cls + '" d="M' + cx + ' ' + (cy - r) + 'L' + (cx + k) + ' ' + (cy - k) + 'L' + (cx + r) + ' ' + cy + 'L' + (cx + k) + ' ' + (cy + k) + 'L' + cx + ' ' + (cy + r) + 'L' + (cx - k) + ' ' + (cy + k) + 'L' + (cx - r) + ' ' + cy + 'L' + (cx - k) + ' ' + (cy - k) + 'Z" fill="#ffd76a"/>';
   }
   const WX_PIN_EMBLEM = {
+    godslayer: function () { return '<img class="pim" src="assets/badges/pin-godslayer.webp" alt="" draggable="false" decoding="async">'; },   // W1313
+    weekly1: function () { return '<img class="pim" src="assets/badges/pin-weekly1.webp" alt="" draggable="false" decoding="async">'; },
+    anomalies: function () { return '<img class="pim" src="assets/badges/pin-anomalies.webp" alt="" draggable="false" decoding="async">'; },
+    everest: function () { return '<img class="pim" src="assets/badges/pin-everest.webp" alt="" draggable="false" decoding="async">'; },
     mythics: function (v) {   // W1312 — painted (fal), not drawn: blade, staff and bow, each panel lit for a weapon owned
       let h = '<span class="pmy"><img src="assets/badges/pin-mythics.webp" alt="" draggable="false" decoding="async">';
       for (let i = 0; i < MYTHIC_PIN_SLOTS.length; i++) if (!((v | 0) & (1 << i))) h += '<i class="pmy-off pmy-' + i + '"></i>';
@@ -62394,7 +62447,7 @@
     const st = { floor: 0, kills: 0, rank: 'E', steps: 0, week: 0, sworn: 0, streak: 0, shadows: 0, flame: 0, opened: 0,
       tier: 'bronze', mega: 0, log: 0, logTotal: 1, grinning: 0, founder: 0, gates: {},
       day: 0, perfect: 0, coopWins: 0, trioWins: 0, trioRanks: 0, podium: 0,   // W1105 — the Rising
-      club: 0, prestige: 0, clubBest: 0, mythics: 0 };   // W1312 — mythics: one bit a mythic weapon owned (the Mythics pin); W1158 — 100K Step Club weeks + Prestige level (the card's default pins); W1286 — the best week (200K/300K pins)
+      club: 0, prestige: 0, clubBest: 0, mythics: 0, godKills: 0, weeklyWins: 0, anomalies: 0, flightsLife: 0 };   // W1313 — the four status pins   // W1312 — mythics: one bit a mythic weapon owned (the Mythics pin); W1158 — 100K Step Club weeks + Prestige level (the card's default pins); W1286 — the best week (200K/300K pins)
     try { st.clubBest = _club100kBestOwn(); } catch (_) {}
     try {
       const daily = loadLeaderboardState().steps_daily || {};
@@ -62418,6 +62471,10 @@
     st.flame = Math.max(st.flame, sp.flame | 0);
     st.opened = sp.opened | 0;
     st.coopWins = sp.coopWins | 0; st.trioWins = sp.trioWins | 0; st.trioRanks = sp.trioRanks | 0; st.podium = sp.podium | 0;   // the server's own counts
+    st.weeklyWins = sp.weeklyWins | 0;   // W1313 — weeks finished #1 on the Steps board (the server's count)
+    try { st.godKills = (_loadCoopKills()['the_grinning_god'] || {}).count | 0; } catch (_) {}   // W1313 — Grinning God raids won
+    try { st.anomalies = Object.keys((_stirsLoad() || {}).fired || {}).length; } catch (_) {}   // W1313 — hidden quests found
+    try { st.flightsLife = loadLeaderboardState().lifetime_flights_total | 0; } catch (_) {}   // W1313 — flights since this hunter began
     try { if (_pvpRating) st.tier = String(_pvpTier(_pvpRating.peakElo || _pvpRating.elo).name || 'Bronze').toLowerCase(); } catch (_) {}
     try { const inv = getInventory().cards || {}; st.mega = Object.keys(CARDS).filter(function (cid) { return CARDS[cid].rarity === 'mythic' && ((inv[cid] || {}).count || 0) > 0; }).length; } catch (_) {}
     try { const inv = getInventory().cards || {}; st.mythics = MYTHIC_PIN_SLOTS.reduce(function (m, x, i) { return m | ((((inv[x.id] || {}).count) || 0) > 0 ? (1 << i) : 0); }, 0); } catch (_) {}   // W1312
@@ -63480,7 +63537,7 @@
             const p = r.progress || {};
             if (r.acquired && typeof r.acquired === 'object') { try { localStorage.setItem(SKINS_ACQUIRED_KEY, JSON.stringify(r.acquired)); } catch (_) {} }   // W1106
             const pc = p.coop || {};   // W1105 — the server's co-op wins and Worldgate podiums
-            try { localStorage.setItem(EARN_PROG_KEY, JSON.stringify({ opened: (p.opened && p.opened.best) | 0, openedNow: (p.opened && p.opened.current) | 0, flame: (p.flame && p.flame.best) | 0, coopWins: pc.wins | 0, trioWins: pc.trioWins | 0, trioRanks: Array.isArray(pc.trioRanks) ? pc.trioRanks.length : 0, podium: pc.podium | 0, at: now })); } catch (_) {}
+            try { localStorage.setItem(EARN_PROG_KEY, JSON.stringify({ opened: (p.opened && p.opened.best) | 0, openedNow: (p.opened && p.opened.current) | 0, flame: (p.flame && p.flame.best) | 0, coopWins: pc.wins | 0, trioWins: pc.trioWins | 0, trioRanks: Array.isArray(pc.trioRanks) ? pc.trioRanks.length : 0, podium: pc.podium | 0, weeklyWins: (p.weekly && p.weekly.wins) | 0, at: now })); } catch (_) {}   // W1313 — weeklyWins
             let granted = (r.granted || []).filter(function (id) { return !!_wxSkinById(id); });
             // W1105 — a Rising skin the server wrote while this phone ran an older build (which drops
             // ids it does not know) has never been celebrated: it is owed once, here.
@@ -79903,6 +79960,7 @@
     // way today's progressive flights still get recorded as the
     // day continues even if the once-per-window backfill is
     // throttled or unavailable.
+    try { lbRefreshLifetimeFlights(); } catch (_) {}   // W1313 — the Everest pin
     try {
       lbRefreshFlightsThisWeekFromHealth().then(res => {
         if (!res || !res.ok) {

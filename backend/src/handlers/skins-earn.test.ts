@@ -85,6 +85,8 @@ interface Fx {
   owned?: string[]; opens?: { date_utc: string; build: string | null }[]; pactRows?: Record<string, unknown>[];
   wins?: { boss_id: string; n: number }[]; podium?: number;   // W1105
   bought?: string[];   // W1106 — owned skins that came from a purchase
+  weekly?: number;   // W1313 — weeks finished #1 on the Steps board
+  sqls?: string[];   // W1313 — every query, for its shape
 }
 function makeEnv(fx: Fx, writes: string[][]) {
   const all = (sql: string): unknown[] => {
@@ -103,9 +105,9 @@ function makeEnv(fx: Fx, writes: string[][]) {
   };
   const db = {
     prepare: (sql: string) => ({
-      bind: (...args: unknown[]) => ({
+      bind: (...args: unknown[]) => (fx.sqls?.push(sql), {
         all: async () => ({ results: all(sql), success: true, meta: {} }),
-        first: async () => (sql.includes('FROM world_gates') ? { n: fx.podium ?? 0 } : null),
+        first: async () => (sql.includes('FROM world_gates') ? { n: fx.podium ?? 0 } : sql.includes('FROM weekly_step_records') ? { n: fx.weekly ?? 0 } : null),
         run: async () => ({ success: true, meta: { changes: 1 } }),
         _sql: sql, _args: args,
       }),
@@ -238,6 +240,20 @@ describe('POST /v1/users/me/skins/earn — the Rising (W1105)', () => {
     expect(r.granted).toEqual([]);
     expect(w).toEqual([]);
   });
+  // W1313 — the Weekly Champion pin: the server counts the finished weeks a hunter ended #1 (the Hall of Fame's book and its
+  // two-days-in-the-app rule), never this week, and reports it beside the co-op numbers.
+  it('W1313 — reports the weeks finished #1 on the Steps board (finished weeks only, the fame rule)', async () => {
+    const sqls: string[] = [];
+    const r = await (await handleSkinsEarn(req({}), makeEnv({ weekly: 3, sqls }, []), session)).json() as { progress: { weekly: { wins: number } } };
+    expect(r.progress.weekly).toEqual({ wins: 3 });
+    const q = sqls.find((x) => x.includes('FROM weekly_step_records'))!;
+    expect(q).toContain('w.week_start < ?2');
+    expect(q).toContain('MAX(x.steps)');
+    expect(q).toContain('app_open_counts');   // fameWeekOk
+    const none = await (await handleSkinsEarn(req({}), makeEnv({}, []), session)).json() as { progress: { weekly: { wins: number } } };
+    expect(none.progress.weekly).toEqual({ wins: 0 });
+  });
+
   it('the server grants them from its own wins and podiums, and reports the numbers', async () => {
     const w: string[][] = [];
     const r = await (await handleSkinsEarn(req({}), makeEnv({ wins: trio(1), podium: 1 }, w), session)).json() as {
