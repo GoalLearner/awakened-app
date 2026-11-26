@@ -228,10 +228,9 @@ test.describe('B · Status tab', () => {
     await expect(page.locator('#profile-panel')).toBeHidden();
     await page.locator('#tab-profile').click();
     await expect(page.locator('#tab-profile.active')).toBeVisible();
-    // Hunter Profile banner uses a serif `Hunter Profile` title with
-    // letterspacing — match case-insensitively to be resilient to
-    // copy tweaks.
-    await expect(page.getByText(/hunter profile/i).first()).toBeVisible();
+    // W1330 — the "Hunter Profile" banner is gone (owner 2026-11-26: fewer words); the profile card is the content
+    await expect(page.locator('#status-content .sc-card--profile')).toBeVisible();
+    await expect(page.locator('#status-content')).not.toContainText(/hunter profile/i);
   });
 });
 
@@ -10827,7 +10826,7 @@ test.describe('CC · The Shadow Army drops like a pet (W1035 · W1047)', () => {
     await page.evaluate(() => { document.getElementById('tab-profile')!.click(); (document.querySelector('[data-open-shadows]') as HTMLElement).click(); });   // W1119 — the strip lives on Status
     await expect(page.locator('#shadow-roster .shr-sub').filter({ hasText: 'S-RANK' })).toContainText('+2%');
     await expect(page.locator('#shadow-roster .shr-sub').filter({ hasText: 'E-RANK' })).toContainText('+0.75%');
-    await expect(page.locator('#shadow-roster .sw-foot')).toContainText('E 0.75% TO S 2%');
+    await expect(page.locator('#shadow-roster .sw-foot')).toHaveCount(0);   // W1330 — each row shows its own %
   });
 
   // W1058 — owner 2026-10-15: "make sure the shadows get shown on this stats page for the boosts".

@@ -37,7 +37,7 @@ test.describe('The Shadow Army strip sits on the Status card (W1119)', () => {
   test('an awakened hunter sees the strip and not the flavor line; a tap opens the roster', async ({ page }) => {
     await openStatus(page, { cls: 'WILL', shadows: ['the_carouser', 'the_steel_wolf'] });
     const card = page.locator('#status-content .sc-card--profile');
-    await expect(card.locator('#shadow-strip')).toContainText('SHADOW ARMY · 2 RAISED');
+    await expect(card.locator('#shadow-strip')).toContainText(/SHADOW ARMY · (2|\d+ \/ 2) · \+/);   // W1330 — marching (of raised) and the power
     await expect(card.locator('#shadow-strip')).not.toHaveClass(/hidden/);
     await expect(card).not.toContainText(PALADIN);
     await expect(card.locator('.sc-awakening-msg')).toHaveCount(0);

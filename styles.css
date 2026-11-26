@@ -37930,3 +37930,6 @@ button.pcc-title { cursor: pointer; -webkit-appearance: none; appearance: none; 
 
 /* W1329 — the vows header has a kicker only on the To-do (its week range) */
 .vows-header-kicker:empty { display: none; }
+
+/* W1330 — the stat sheet's description paragraph is empty now */
+#stat-detail-desc:empty { display: none; }
