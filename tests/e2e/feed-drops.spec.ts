@@ -268,9 +268,60 @@ test.describe('Repeat drops in Hunter Activity (W1307)', () => {
     await expect(chips.nth(1)).toHaveText('ultra-rare item');
     await expect(chips.nth(2)).toHaveText('3 rare items');
     await gal.locator('.fa-hh').click();
-    const sold = gal.locator('.fa-act-txt').filter({ hasText: 'sold for' });
+    // W1321 — in groups: the boss, then the drops (the ultra-rare first); a drop reads as the item, its souls a tag
+    await expect(gal.locator('.fa-sec')).toHaveText(['Bosses1', 'Drops4']);
+    const sold = gal.locator('.fa-act-txt').filter({ has: page.locator('.fa-souls') });
     await expect(sold).toHaveCount(1);
-    await expect(sold).toHaveText('found a rare item · sold for 1,450 souls');
-    await expect(gal.locator('.fa-act-txt').filter({ hasText: /^found a rare item$/ })).toHaveCount(2);
+    await expect(sold).toHaveText('Rare item+1,450 souls');
+    await expect(sold.locator('.fa-souls')).toHaveText('+1,450 souls');
+    await expect(gal.locator('.fa-act-txt').filter({ hasText: /^Rare item$/ })).toHaveCount(2);
+    await expect(gal.locator('.fa-act .fa-act-txt')).toHaveText([/The Carouser/, 'Ultra-rare item', 'Rare item+1,450 souls', 'Rare item', 'Rare item']);
+    await expect(gal.locator('.fa-like').first()).toHaveText('♡');
+    await expect(gal.locator('.fa-like').first()).toHaveAttribute('aria-label', 'Like');
+  });
+});
+
+// W1321 — owner 2026-11-25 (RenDIESEL's day: 13 rows of kills, ultra-rares and sold rares mixed): "let's organize this so
+// it looks more organized and aesthetic instead of all randomly". Bosses strongest first, then the drops, each a group.
+test.describe('W1321 — an opened hunter, organized', () => {
+  for (const vp of [{ width: 390, height: 844 }, { width: 375, height: 667 }]) {
+    test('bosses by rank, then drops (ultra-rare first, sold souls as a tag), a heart for the like @' + vp.width, async ({ page }) => {
+      await page.setViewportSize(vp);
+      const now = Date.now(), m = 60_000, h = 3_600_000;
+      const kill = (id: string, name: string, rk: string, at: number) => ev(id, 'RenDIESEL', 'boss_kill', at, false, { eventKey: id, eventLabel: 'defeated ' + name, rarity: rk });
+      const rare = (id: string, at: number, sold: number) => ev(id, 'RenDIESEL', 'rare_item_drop', at, false, { eventKey: 'rare', eventLabel: 'found a rare item', eventValue: sold });
+      await boot(page, [
+        kill('k1', 'The Steel Wolf', 'E', now - 2 * m), ev('u1', 'RenDIESEL', 'ultra_rare_drop', now - 2 * m, false),
+        kill('k2', 'The Carouser', 'E', now - 2 * m), kill('k3', 'The Glass Strider', 'D', now - 2 * m),
+        ev('u2', 'RenDIESEL', 'ultra_rare_drop', now - 2 * m, false), kill('k4', 'The Marathon Wraith', 'C', now - 2 * m),
+        kill('k5', 'The Ascendant Colossus', 'C', now - 2 * m), rare('r1', now - 2 * m, 420), kill('k6', 'The Unbroken Anvil', 'A', now - 2 * m),
+        rare('r2', now - 14 * h, 160), kill('k7', 'The Threefold Court', 'C', now - 14 * h), rare('r3', now - 14 * h, 160),
+        kill('k8', 'The Gaunt Wardens', 'C', now - 14 * h),
+      ]);
+      await openFeed(page);
+      const ren = page.locator('.fa-hunter').filter({ has: page.locator('.fa-hn[data-board-profile="RenDIESEL"]') });
+      await ren.locator('.fa-hh').click();
+      await expect(ren.locator('.fa-sec')).toHaveText(['Bosses8', 'Drops5']);
+      const ranks = await ren.locator('.fa-act .guildhall-boss-sub-rank').allTextContents();
+      expect(ranks).toEqual(['A', 'C', 'C', 'C', 'C', 'D', 'E', 'E']);
+      const drops = ren.locator('.fa-sec--it ~ .fa-act .fa-act-txt');
+      await expect(drops).toHaveText(['Ultra-rare item', 'Ultra-rare item', 'Rare item+420 souls', 'Rare item+160 souls', 'Rare item+160 souls']);
+      // every row stays on one line, and the like is a heart
+      const tall = await ren.locator('.fa-act').evaluateAll((els) => els.filter((e) => e.getBoundingClientRect().height > 40).length);
+      expect(tall).toBe(0);
+      await expect(ren.locator('.fa-like')).toHaveCount(13);
+      await expect(ren.locator('.fa-like').first()).toHaveText('♡');
+      if (process.env.LB_SHOTS) { await ren.scrollIntoViewIfNeeded(); await ren.screenshot({ path: process.env.LB_SHOTS + '/feed-organized-' + vp.width + '.png' }); }
+    });
+  }
+
+  test('one kind only: no group label', async ({ page }) => {
+    const now = Date.now();
+    await boot(page, [ev('b1', 'Galilea', 'boss_kill', now, false), ev('b2', 'Galilea', 'boss_kill', now - 5000, false)]);
+    await openFeed(page);
+    const gal = page.locator('.fa-hunter').filter({ has: page.locator('.fa-hn[data-board-profile="Galilea"]') });
+    await gal.locator('.fa-hh').click();
+    await expect(gal.locator('.fa-act')).toHaveCount(2);
+    await expect(gal.locator('.fa-sec')).toHaveCount(0);
   });
 });

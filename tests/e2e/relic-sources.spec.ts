@@ -121,13 +121,15 @@ test.describe('W1287 — a drop past its cap sells for souls', () => {
         if (d && d.wasCapped) { capped.push({ id: d.card.id, rarity: d.card.rarity, tier: d.card.tier, soldFor: d.soldFor }); paid += d.soldFor; }
       }
       const ledger = JSON.parse(localStorage.getItem('hb_drop_ledger') || '[]').filter((e: any) => e.wasCapped);
-      return { capped, paid, delta: souls() - before, ledgerSold: ledger.map((e: any) => e.soldFor), ids: ids.length };
+      const hand: Record<string, number> = {}; ids.forEach((id) => { hand[id] = w.Drops.relicSellPrice ? w.Drops.relicSellPrice(id) : 0; });
+      return { capped, paid, delta: souls() - before, ledgerSold: ledger.map((e: any) => e.soldFor), ids: ids.length, hand };
     });
     expect(r.ids).toBeGreaterThan(0);
     expect(r.capped.length).toBeGreaterThan(0);
     for (const c of r.capped) {
       expect(c.soldFor, c.id).toBeGreaterThan(0);
-      if (c.rarity === 'common' && c.tier === 'E') expect(c.soldFor).toBe(20);
+      if (c.rarity === 'common' && c.tier === 'E') expect(c.soldFor).toBe(10);   // W1321 — the auto-sell pays half (was 20)
+      if (c.rarity === 'rare') expect(c.soldFor).toBe(Math.max(10, Math.round(r.hand[c.id] * 0.5 / 10) * 10));   // half the hand price
     }
     expect(r.delta).toBe(r.paid);
     expect(r.ledgerSold.slice(0, r.capped.length).every((n: number) => n > 0)).toBe(true);

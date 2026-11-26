@@ -182,7 +182,8 @@ test.describe('A risen shadow reaches the public feed (W1117)', () => {
     await row.locator('.fa-hh').click();
     await row.locator('.fa-like').click();
     await expect(page.locator('.habit-toast').first()).toHaveText(/You can like up to 12 feats a minute\. Try again in a moment\./);
-    await expect(row.locator('.fa-like')).toHaveText('♡ LIKE');   // the optimistic like rolls back
+    await expect(row.locator('.fa-like')).toHaveText('♡');   // the optimistic like rolls back (W1321 — a heart)
+    await expect(row.locator('.fa-like')).toHaveAttribute('aria-pressed', 'false');
     await page.evaluate(() => { document.querySelectorAll('.habit-toast').forEach((t) => t.remove()); (window as any).Auth.feedLike = async () => ({ ok: false, code: 'SERVER_ERROR' }); });
     await row.locator('.fa-like').click();
     await expect(page.locator('.habit-toast').first()).toHaveText(/Could not like that right now\./);

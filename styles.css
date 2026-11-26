@@ -37915,3 +37915,11 @@ button.pcc-title { cursor: pointer; -webkit-appearance: none; appearance: none; 
    centres on its row (the NEW TOPIC button, the HUNTER / ALL switch). */
 .board-head { align-items: center; }
 .fa-head { align-items: center; }
+
+/* W1321 — an opened hunter, organized (owner 2026-11-25): a small label per group, a drop on one line with its souls as a
+   gold tag, the like a heart rather than a LIKE pill (thirteen pills in a column read as noise). */
+.fa-sec { display: flex; align-items: baseline; gap: 6px; padding: 11px 0 3px; font-family: var(--b-mono); font-size: 8px; font-weight: 800; letter-spacing: 1.8px; text-transform: uppercase; color: var(--b-ink3); }
+.fa-sec b { font-weight: 800; color: var(--b-ink2); }
+.fa-sec + .fa-act { border-top: 0; }
+.fa-souls { margin-left: 7px; font-family: var(--b-mono); font-size: 9.5px; font-weight: 800; letter-spacing: .3px; color: var(--b-gold); white-space: nowrap; }
+.fa-like { width: 30px; height: 24px; padding: 0; justify-content: center; font-size: 13px; letter-spacing: 0; line-height: 1; }
