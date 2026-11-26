@@ -1974,7 +1974,7 @@ test.describe('Q · Community board (W907)', () => {
     });
     const sheet = page.locator('.board-sheet--topic');
     await expect(sheet).toBeVisible();
-    await expect(sheet.locator('.board-sheet-sub')).toHaveText('IDEAS · 3 REPLIES · 2 HUNTERS');
+    await expect(sheet.locator('.board-sheet-sub')).toHaveText('2 HUNTERS');   // W1328 — the tag and the reply count show below
     await expect(sheet.locator('.board-op .board-op-title')).toHaveText('App Ideas');
     await expect(sheet.locator('.board-op .board-pill--op')).toBeVisible();
     await expect(sheet.locator('.board-op [data-board-vote]')).toHaveClass(/board-up--on/);
@@ -9682,7 +9682,7 @@ test.describe('BH · Hunt results (W980)', () => {
       if (role) await expect(page.locator('#board-body .board-tag--seen')).toHaveText('9 SEEN');
       await page.evaluate(() => (window as any).__board.open('dddddddd-0001'));
       const sub = page.locator('.board-sheet--topic [data-board-sub]');
-      await expect(sub).toContainText(/REPLIES/, { timeout: 6_000 });
+      await expect(sub).toContainText(/HUNTERS?/, { timeout: 6_000 });   // W1328 — the sub-line is the hunter count now
       if (role) await expect(sub).toContainText('SEEN BY 9'); else await expect(sub).not.toContainText('SEEN');
       await page.evaluate(() => { const s = document.querySelector('.board-sheet--topic'); if (s) s.remove(); });
     }

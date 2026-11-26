@@ -37923,3 +37923,7 @@ button.pcc-title { cursor: pointer; -webkit-appearance: none; appearance: none; 
 .fa-sec + .fa-act { border-top: 0; }
 .fa-souls { margin-left: 7px; font-family: var(--b-mono); font-size: 9.5px; font-weight: 800; letter-spacing: .3px; color: var(--b-gold); white-space: nowrap; }
 .fa-like { width: 30px; height: 24px; padding: 0; justify-content: center; font-size: 13px; letter-spacing: 0; line-height: 1; }
+
+/* W1328 — a friend request row is just the name now (the meta line left): the name takes the free space so it sits by
+   the avatar instead of floating in the middle of a space-between row. */
+.friend-row--incoming .social-row-main, .friend-row--outgoing .social-row-main { flex: 1 1 auto; }
