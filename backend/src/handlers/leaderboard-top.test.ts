@@ -22,7 +22,7 @@ interface CapturedCall {
 function makeDb(opts: {
   // W453/W656/W704 — rows may carry the optional passthrough columns the live
   // SELECT projects (prestige/rank_tier/founder_seq/avatar_id); absent = null-ish.
-  topRows?: Array<{ alias: string; current_value: number; prestige?: number; rank_tier?: string; founder_seq?: number; avatar_id?: string }>;
+  topRows?: Array<{ alias: string; current_value: number; prestige?: number; rank_tier?: string; founder_seq?: number; avatar_id?: string; arena_title?: string; card_title_ink?: string | null }>;   // W1316 — the title and its colour
   myRow?: { current_value: number } | null;
   rank?: number;
 } = {}) {
