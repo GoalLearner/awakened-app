@@ -5720,7 +5720,7 @@ test.describe('AP · The hunt row (W951)', () => {
     });
     const row = page.locator('#hunt-row');
     await expect(row).toHaveClass(/hunt-row--won/);
-    await expect(row.locator('.hunt-row-line')).toHaveText('Defeated — tap to claim');
+    await expect(row.locator('.hunt-row-line')).toHaveText('Defeated · Claim');   // W1329
     await row.click();
     await expect(page.locator('#boss-result-overlay')).toBeVisible({ timeout: 5_000 });
   });
@@ -6181,7 +6181,7 @@ test.describe('AU · Seal a new vow (W958)', () => {
     await habits(page);
     await page.locator('#add-habit-btn').click();
     await expect(page.locator('#lib-sheet')).toBeVisible({ timeout: 5_000 });
-    await expect(page.locator('#lib-sheet .lib-eyebrow')).toHaveText('THE LIBRARY');
+    await expect(page.locator('#lib-sheet .lib-eyebrow')).toHaveCount(0);   // W1329 — the title names it
     await expect(page.locator('#lib-title')).toHaveText('Seal a new vow');
     await expect(page.locator('#lib-close-btn')).toHaveText('DONE');
     // The slots line is the one the sheet already kept honest.
@@ -7920,7 +7920,7 @@ test.describe('BT · Status tab interactive (W1020)', () => {
     await expect(page.locator('#today-vows')).toHaveClass(/tv-drop--open/);
     await expect(page.locator('#today-strip')).toHaveAttribute('aria-expanded', 'true');
     expect(await rows(page)).toEqual(['Call a friend|+1 FOCUS', 'Tidy the desk|+1 INT', 'Meditate|+1 FOCUS']);   // custom vows are locked to +1 XP (W970)
-    await expect(page.locator('#today-vows .tv-count')).toHaveText('3 / 3');
+    await expect(page.locator('#today-vows .tv-count')).toHaveCount(0);   // W1329 — the strip above shows the count
     await expect(page.locator('#pack-progress-modal')).toHaveCount(0);
     // seal one from the list: the counter, the list row and the dropdown all follow
     await page.click('#today-vows [data-tv-id="b"]');
@@ -7933,7 +7933,7 @@ test.describe('BT · Status tab interactive (W1020)', () => {
     await expect(page.locator('#completed-count')).toHaveText('2');
     await page.click('#today-vows [data-tv-id="c"]');
     await expect(page.locator('#completed-count')).toHaveText('3');
-    await expect(page.locator('#today-vows .tv-empty')).toHaveText('Every vow is sealed. The day is complete.', { timeout: 4_000 });
+    await expect(page.locator('#today-vows .tv-empty')).toHaveText('All sealed.', { timeout: 4_000 });   // W1329
     expect(await page.evaluate(() => { const d = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Los_Angeles' }).format(new Date()); return (JSON.parse(localStorage.getItem('hb_completions') || '{}')[d] || []).length; })).toBe(3);
     // tap again: it closes
     await page.click('#today-strip .today-strip-left');

@@ -19,7 +19,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800;900&family=Cormorant+Garamond:ital,wght@0,500;1,500;1,600&family=JetBrains+Mono:wght@400;500;700;800&family=Grenze+Gotisch:wght@400..900&family=Chakra+Petch:wght@500;600;700&family=Alegreya+Sans:ital,wght@0,400;0,500;0,700;1,400;1,500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=853">
+  <link rel="stylesheet" href="styles.css?v=854">
   <!-- Preload tab-bar icons so they render instantly on first paint
        instead of pop-in. Above the fold, always visible — eager load. -->
   <link rel="preload" as="image" href="assets/tab-icons/tab-status.png">
@@ -315,12 +315,11 @@
         <div class="metric-card metric-card--spark metric-card--bosses"
              role="button" tabindex="0" aria-label="Open Kill Log">
           <div class="metric-card-head">
-            <span class="metric-card-label">BOSSES · SLAIN</span>
+            <span class="metric-card-label">BOSSES SLAIN</span>
             <span class="metric-card-reset metric-card-reset--chev" aria-hidden="true">›</span>
           </div>
           <div class="metric-card-body metric-card-body--bosses">
             <span id="top-bosses-slain-total" class="metric-card-value metric-card-value--combat">0</span>
-            <span class="metric-card-unit metric-card-unit--cta">KILL LOG</span>
           </div>
         </div>
       </div>
@@ -485,7 +484,7 @@
         <!-- Rest-day fallback. Surfaced when habits exist but none scheduled today. -->
         <div class="empty-state-restday" id="empty-state-restday">
           <div class="empty-icon">✓</div>
-          <p>No habits scheduled today.<br>Enjoy your rest day! 😴</p>
+          <p>Rest day.</p>
         </div>
 
         <!-- First Vow hero. -->
@@ -500,7 +499,6 @@
               </div>
             </div>
             <div class="ev-headline">YOUR FIRST VOW</div>
-            <div class="ev-stanza">The system is waiting for your first promise.</div>
           </div>
           <!-- v3 Phase 1z.250 — Quick-pick vows are now MULTI-SELECT.
                Tapping a chip toggles its `is-selected` state in memory
@@ -1882,7 +1880,6 @@
   <div id="guild-bosses-sheet" class="vn-sheet hidden">
     <div class="vn-drag-handle"></div>
     <div class="lb-rank-header">
-      <div class="lb-rank-eyebrow">BOSSES SLAIN</div>
       <h2 class="lb-rank-title">Kill Log</h2>
       <button id="guild-bosses-close" class="vn-close-btn" type="button" aria-label="Close">✕</button>
     </div>
@@ -1914,7 +1911,6 @@
           <div class="guild-bosses-ledger-lbl">TOP RANK</div>
         </div>
       </div>
-      <p class="lb-rank-blurb guild-bosses-blurb">Archived by rank. The deeper the rank, the rarer the kill.</p>
       <div id="guild-bosses-codex" class="guild-bosses-codex" hidden>
         <div id="guild-bosses-list" class="guild-bosses-list"></div>
       </div>
@@ -1939,7 +1935,6 @@
             <div class="guild-bosses-ledger-lbl">SOULS · 7D</div>
           </div>
         </div>
-        <p class="lb-rank-blurb guild-bosses-blurb">The last seven days of the hunt.</p>
         <div class="ghh-filters" role="group" aria-label="Filter hunts">
           <button type="button" class="ghh-chip active" data-ghh-filter="all">All</button>
           <button type="button" class="ghh-chip" data-ghh-filter="solo">Solo</button>
@@ -1975,7 +1970,6 @@
       <button type="button" class="tod-tri-btn tod-tri-btn--on" data-tod="day" role="radio" aria-checked="true">DAY</button>
       <button type="button" class="tod-tri-btn" data-tod="evening" role="radio" aria-checked="false">EVENING</button>
     </div>
-    <div class="tod-hint">Time of day places the vow in your list. It changes nothing else.</div>
     <div id="edit-goal-row" class="edit-goal-row hidden">
       <span class="edit-goal-label" id="edit-goal-label">Goal</span>
       <div class="edit-goal-stepper">
@@ -2095,7 +2089,6 @@
     <div class="lib-drag-handle"></div>
     <div class="lib-header">
       <div class="lib-head-text">
-        <div class="lib-eyebrow">THE LIBRARY</div>
         <h2 id="lib-title" class="lib-title">Seal a new vow</h2>
         <div id="lib-sub" class="lib-sub"></div>
       </div>
@@ -2119,7 +2112,7 @@
     <div id="lib-chips" class="lib-chips" role="tablist" aria-label="Habit categories"></div>
     <div id="lib-scroll" class="lib-scroll">
       <div id="lib-starter" class="lib-starter">
-        <div class="lib-k">Start fast <span>tap a path to select it all</span></div>
+        <div class="lib-k">Start fast</div>
         <div id="lib-packs" class="lib-packs"></div>
         <div id="lib-create-row" class="lib-create-row" role="button" tabindex="0"></div>
       </div>
@@ -2515,7 +2508,6 @@
   <div id="custom-overlay" class="custom-overlay hidden">
     <div class="custom-card">
       <div class="custom-title">Create Your Own Habit</div>
-      <div class="custom-sub">Pick the stat it builds and how demanding it is.</div>
 
       <div class="custom-row">
         <button id="custom-emoji-btn" class="custom-emoji-btn" type="button" aria-label="Chosen habit icon">⚡</button>
@@ -2527,7 +2519,6 @@
            still toggles the grid; selecting an icon collapses it and
            updates the button preview. -->
       <div class="custom-icon-label">CHOOSE HABIT ICON</div>
-      <div class="custom-icon-sub">Pick the symbol this habit will carry.</div>
       <div id="custom-icon-grid" class="custom-icon-grid" aria-label="Choose habit icon"></div>
       <a id="custom-emoji-fallback" class="custom-emoji-fallback" href="#">Use emoji instead</a>
 
@@ -2541,12 +2532,11 @@
         <button type="button" class="tod-tri-btn tod-tri-btn--on" data-tod="day" role="radio" aria-checked="true">DAY</button>
         <button type="button" class="tod-tri-btn" data-tod="evening" role="radio" aria-checked="false">EVENING</button>
       </div>
-      <div class="tod-hint">Time of day places the vow in your list. It changes nothing else.</div>
 
       <!-- W489 — difficulty picker (easy/medium/hard; legendary intentionally omitted, anti-gaming).
            Reuses the edit modal's .diff-row/.diff-btn/.edit-diff-help styling — no new CSS. -->
       <!-- W970 — no picker: every vow you make is Easy (+1 XP), locked. -->
-      <div class="edit-diff-help">Every vow you make is worth +1 XP.</div>
+      <div class="edit-diff-help">+1 XP per seal</div>
       <!-- W508 — surface the W485 difficulty tilt: the daily Compound (~90% of rank XP) scales by the
            routine's AVERAGE difficulty. Populated live from AwakenedEconomy.customCompoundDifficultyFactor
            so it can never disagree with the award path. Display-only. -->
@@ -2927,7 +2917,7 @@
   <script src="simulated-leaderboard.js?v=13"></script>
   <script src="lib/economy.js?v=4"></script>
   <script src="lib/drops.js?v=2"></script>
-  <script src="app.js?v=1665"></script>
+  <script src="app.js?v=1666"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>

@@ -37927,3 +37927,6 @@ button.pcc-title { cursor: pointer; -webkit-appearance: none; appearance: none; 
 /* W1328 — a friend request row is just the name now (the meta line left): the name takes the free space so it sits by
    the avatar instead of floating in the middle of a space-between row. */
 .friend-row--incoming .social-row-main, .friend-row--outgoing .social-row-main { flex: 1 1 auto; }
+
+/* W1329 — the vows header has a kicker only on the To-do (its week range) */
+.vows-header-kicker:empty { display: none; }
