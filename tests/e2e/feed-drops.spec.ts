@@ -287,7 +287,7 @@ test.describe('W1321 — an opened hunter, organized', () => {
   for (const vp of [{ width: 390, height: 844 }, { width: 375, height: 667 }]) {
     test('bosses by rank, then drops (ultra-rare first, sold souls as a tag), a heart for the like @' + vp.width, async ({ page }) => {
       await page.setViewportSize(vp);
-      const now = Date.now(), m = 60_000, h = 3_600_000;
+      const now = Date.now(), m = 60_000;   // minutes apart, one day (CI runs in UTC: hours back can cross midnight)
       const kill = (id: string, name: string, rk: string, at: number) => ev(id, 'RenDIESEL', 'boss_kill', at, false, { eventKey: id, eventLabel: 'defeated ' + name, rarity: rk });
       const rare = (id: string, at: number, sold: number) => ev(id, 'RenDIESEL', 'rare_item_drop', at, false, { eventKey: 'rare', eventLabel: 'found a rare item', eventValue: sold });
       await boot(page, [
@@ -295,8 +295,8 @@ test.describe('W1321 — an opened hunter, organized', () => {
         kill('k2', 'The Carouser', 'E', now - 2 * m), kill('k3', 'The Glass Strider', 'D', now - 2 * m),
         ev('u2', 'RenDIESEL', 'ultra_rare_drop', now - 2 * m, false), kill('k4', 'The Marathon Wraith', 'C', now - 2 * m),
         kill('k5', 'The Ascendant Colossus', 'C', now - 2 * m), rare('r1', now - 2 * m, 420), kill('k6', 'The Unbroken Anvil', 'A', now - 2 * m),
-        rare('r2', now - 14 * h, 160), kill('k7', 'The Threefold Court', 'C', now - 14 * h), rare('r3', now - 14 * h, 160),
-        kill('k8', 'The Gaunt Wardens', 'C', now - 14 * h),
+        rare('r2', now - 20 * m, 160), kill('k7', 'The Threefold Court', 'C', now - 20 * m), rare('r3', now - 20 * m, 160),
+        kill('k8', 'The Gaunt Wardens', 'C', now - 20 * m),
       ]);
       await openFeed(page);
       const ren = page.locator('.fa-hunter').filter({ has: page.locator('.fa-hn[data-board-profile="RenDIESEL"]') });
