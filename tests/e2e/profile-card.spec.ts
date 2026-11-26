@@ -249,6 +249,40 @@ for (const vp of [{ width: 390, height: 844 }, { width: 375, height: 667 }]) {
       if (process.env.LB_SHOTS) await page.locator('#arena-overlay .tm-inks').screenshot({ path: process.env.LB_SHOTS + '/title-ink-locked-' + vp.width + '.png' });
     });
 
+    // W1318 — owner 2026-11-25: "is there a way to change the title and when chosen and exited ... I am still on the player
+    // card". The Titles view opened from the card: EXIT, and the back row, reopen the card (not the Ascent's tower).
+    test('the Titles view opened from the card goes back to the card', async ({ page }) => {
+      await boot(page);
+      await page.evaluate(() => { localStorage.setItem('hb_arena_title', 'rt_apex'); localStorage.setItem('hb_arena_v2', JSON.stringify({ rating: 1000, bestRating: 1000, currentFloor: 81, highestCleared: 80, wins: 80, losses: 0, streak: 0, bestStreak: 0, dailyDate: '', dailyLosses: 0, reclaimDate: '', reclaimFloors: [], reclaimSouls: 0 })); });
+      await page.reload();
+      await page.waitForFunction(() => !!(window as any).__pcRender && !!document.querySelector('[data-tab="profile"]'));
+      await page.evaluate((d) => {
+        const A = (window as any).Auth;
+        A.getCurrentUser = () => ({ jwt: 'e2e', alias: 'Richie' });
+        A.fetchPublicProfile = async () => Object.assign({ ok: true }, d, { arenaTitle: 'rt_apex' });
+      }, DATA);
+      await page.evaluate(() => (window as any).__openProfileCard('Richie'));
+      const pick = page.locator('#pc-body button.pcc-title--pick');
+      for (const leave of ['exit', 'back']) {
+        await pick.click();
+        await expect(page.locator('#arena-overlay .tm-name')).toHaveText('Titles');
+        await expect(page.locator('#arena-overlay [data-ar="pcback"]')).toHaveText(/Back to your card/);
+        await page.locator('#arena-overlay .tm-row[data-tid="rt_monarch"]').click();   // choose Monarch
+        await expect(page.locator('#arena-overlay .tm-row--worn .nm')).toHaveText('Monarch');
+        if (leave === 'exit') await page.locator('#arena-close').click(); else await page.locator('#arena-overlay [data-ar="pcback"]').click();
+        await expect(page.locator('#arena-overlay')).toBeHidden();
+        await expect(page.locator('#pc-sheet')).toBeVisible();
+        await expect(pick).toHaveText(/Monarch/i);   // the card, wearing the new title
+        await page.evaluate(() => localStorage.setItem('hb_arena_title', 'rt_apex'));
+        await page.evaluate(() => (window as any).__openProfileCard('Richie'));
+        await expect(pick).toHaveText(/Apex/i);
+      }
+      // the Ascent opened any other way keeps its tower
+      await page.evaluate(() => (window as any).openArena(true));
+      await page.evaluate(() => document.getElementById('pc-sheet')!.classList.add('hidden'));
+      await expect(page.locator('#arena-overlay [data-ar="pcback"]')).toHaveCount(0);
+    });
+
     test("a visitor's card: the hunter in the plate, the published title, no Change look; the owner's Make moderator keeps the grid", async ({ page }) => {
       await boot(page);
       await render(page, false, { alias: 'RenDIESEL', arenaTitle: 'rt_blade', founderSeq: 2 });
