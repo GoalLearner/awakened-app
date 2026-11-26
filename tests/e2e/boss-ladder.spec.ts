@@ -116,3 +116,67 @@ test.describe('W1316 — the title colour on the board rows', () => {
     });
   }
 });
+
+// W1319 — owner 2026-11-25: "I want to remove the last week box on the global steps leaderboard ... make sure it looks
+// organized, clean and aligned. I also want to remove The Hall - Every Hunter, 14 Hunters Grouped by Hunter, Your own
+// feats Grouped by day ... this is what makes the app looks vibe coded".
+test.describe('W1319 — fewer words', () => {
+  for (const vp of [{ width: 390, height: 844 }, { width: 375, height: 667 }]) {
+    test('the Steps board: no LAST WEEK box and no "also won last week" chip, the leader right under the week row @' + vp.width, async ({ page }) => {
+      await page.setViewportSize(vp);
+      await boot(page);
+      await page.evaluate(() => {
+        const A = (window as any).Auth;
+        const rows = [
+          { rank: 1, alias: 'ricin', current_value: 78151, bosses_slain: 100, arena_title: 'rt_sovereign' },
+          { rank: 2, alias: 'krag', current_value: 51189 },
+          { rank: 3, alias: 'rival', current_value: 43194, arena_title: 'rt_warbringer' },
+        ];
+        A.fetchLeaderboardTop = async () => ({ ok: true, final: false, week: null, top: rows, me: null });
+        // last week's champion IS this week's leader: the old chip's case too
+        A.fetchLastWeekSteps = async () => ({ ok: true, champion: { alias: 'ricin', steps: 306326 }, me: { rank: 23 }, total: 40, myTitle: { count: 2 }, records: [] });
+        A.fetchStep100kClub = async () => ({ ok: true, members: [], me: null });
+        A.fetchLeaderboardArchive = async (week: string) => ({ ok: true, week, records: [], me: null, weeksAvailable: [week] });
+        (window as any).openLeaderboardRanking('step_total');
+      });
+      const sheet = page.locator('#lb-rank-sheet');
+      await expect(sheet.locator('.lb-rank-leader')).toBeVisible({ timeout: 8_000 });
+      await page.waitForTimeout(400);   // the last-week fetch has landed
+      await expect(page.locator('#lb-lastweek-recap')).toHaveCount(0);
+      await expect(sheet.locator('.lb-leader-lastweek')).toHaveCount(0);
+      await expect(sheet).not.toContainText(/last week/i);
+      expect(await page.evaluate(() => localStorage.getItem('hb_step_crowns'))).toBe('2');   // the crown count still lands
+      if (SHOTS) await page.screenshot({ path: SHOTS + '/lb-no-lastweek-' + vp.width + '.png' });
+    });
+
+    test('Community: no kicker over COMMUNITY BOARD or HUNTER ACTIVITY, no GROUPED BY line; each title centred on its row @' + vp.width, async ({ page }) => {
+      await page.setViewportSize(vp);
+      await page.addInitScript(() => {
+        const now = Date.now();
+        localStorage.setItem('hb_friends_activity_cache_v1', JSON.stringify({ ts: now, events: [
+          { id: 'w1319-1', alias: 'galilea', rankLabel: 'A', eventType: 'boss_kill', eventKey: 'glass_strider', eventLabel: 'defeated The Glass Strider', eventValue: 1, rarity: null, createdAt: new Date(now - 3600e3).toISOString(), likes: 0, liked: false, likers: [], likedAt: null },
+        ] }));
+      });
+      await boot(page);
+      await page.evaluate(() => document.getElementById('tab-social')!.click());
+      const mid = (sel: string) => page.locator(sel).first().evaluate((e) => { const r = e.getBoundingClientRect(); return r.top + r.height / 2; });
+      // the board
+      await expect(page.locator('#board-section .board-h2')).toHaveText(/Community Board/i);
+      await expect(page.locator('#board-section .board-head .board-sub')).toHaveCount(0);
+      await expect(page.locator('#board-section')).not.toContainText(/every hunter/i);
+      expect(Math.abs((await mid('#board-section .board-h2')) - (await mid('#board-new')))).toBeLessThanOrEqual(2);
+      if (SHOTS) await page.screenshot({ path: SHOTS + '/community-board-' + vp.width + '.png' });
+      // the friends pane, ALL then HUNTER
+      await page.evaluate(() => (document.querySelector('[data-cm-pane="friends"]') as HTMLElement).click());
+      const sec = page.locator('#guildhall-activity-section');
+      await expect(sec.locator('.board-h2')).toHaveText(/Hunter Activity/i);
+      await expect(page.locator('#fa-sub, #fa-tools')).toHaveCount(0);
+      for (const mode of ['guild', 'hunter']) {
+        await page.locator('#guildhall-filter-' + mode).click();
+        await expect(sec).not.toContainText(/grouped by|your own feats|friend feats|\d+ hunters?\b(?! ·)/i);
+        expect(Math.abs((await mid('#guildhall-activity-section .board-h2')) - (await mid('#guildhall-activity-section .guildhall-activity-filter')))).toBeLessThanOrEqual(2);
+        if (SHOTS) await page.screenshot({ path: SHOTS + '/community-activity-' + mode + '-' + vp.width + '.png' });
+      }
+    });
+  }
+});

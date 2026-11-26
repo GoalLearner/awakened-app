@@ -19,7 +19,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800;900&family=Cormorant+Garamond:ital,wght@0,500;1,500;1,600&family=JetBrains+Mono:wght@400;500;700;800&family=Grenze+Gotisch:wght@400..900&family=Chakra+Petch:wght@500;600;700&family=Alegreya+Sans:ital,wght@0,400;0,500;0,700;1,400;1,500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=850">
+  <link rel="stylesheet" href="styles.css?v=851">
   <!-- Preload tab-bar icons so they render instantly on first paint
        instead of pop-in. Above the fold, always visible — eager load. -->
   <link rel="preload" as="image" href="assets/tab-icons/tab-status.png">
@@ -806,7 +806,6 @@
         <div class="board-head">
           <svg class="board-sigil" width="70" height="70" viewBox="0 0 70 70" aria-hidden="true"><path d="M35 4l27 15.5v31L35 66 8 50.5v-31z" fill="none" stroke="#f5b842" stroke-width="1.2"/><path d="M35 14l18 10.5v21L35 56 17 45.5v-21z" fill="none" stroke="#f5b842" stroke-width=".8"/><path d="M35 4v62M8 19.5l54 31M62 19.5l-54 31" stroke="#f5b842" stroke-width=".6"/></svg>
           <div class="board-head-txt">
-            <div class="board-sub">The Hall · every hunter</div>
             <h2 class="board-h2">Community Board</h2>
           </div>
           <button id="board-new" class="board-newbtn" type="button" data-board-new><svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><path d="M5 1v8M1 5h8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>NEW TOPIC</button>
@@ -848,7 +847,6 @@
              screen readers; CSS keys off [data-active="true"]. -->
         <div class="guildhall-section-head fa-head">
           <div class="guildhall-section-headtxt">
-            <div id="fa-sub" class="board-sub">Friend feats</div>
             <h2 class="board-h2">Hunter Activity</h2>
           </div>
           <!-- W922 — one segmented switch everywhere (owner: "same font, same color") -->
@@ -864,7 +862,7 @@
                     aria-pressed="true">ALL</button>
           </div>
         </div>
-        <div id="fa-tools" class="fa-tools"><span id="fa-tools-lbl">GROUPED BY HUNTER</span></div><!-- W923 — seen is automatic; MARK ALL SEEN deleted -->
+        <!-- W1319 — the kicker (YOUR OWN FEATS / N HUNTERS) and the GROUPED BY line are gone (owner 2026-11-25: "too much fluff") -->
         <div id="guildhall-activity-body" class="guildhall-activity-body"></div>
       </section>
 
@@ -1494,7 +1492,6 @@
       <div id="lb-week-reset" class="lb-week-reset hidden" aria-live="polite"></div>
       <p id="lb-rank-blurb" class="lb-rank-blurb">—</p>
       <!-- W321 — last-week recap (champion + your placement), This Week tab only. -->
-      <div id="lb-lastweek-recap" class="lb-lastweek-recap hidden" aria-live="polite"></div>
       <div id="lb-rank-mebest" class="lb-rank-mebest hidden"></div>
       <div id="lb-rank-list" class="lb-rank-list"></div>
     </div>
@@ -2932,7 +2929,7 @@
   <script src="simulated-leaderboard.js?v=13"></script>
   <script src="lib/economy.js?v=3"></script>
   <script src="lib/drops.js?v=2"></script>
-  <script src="app.js?v=1655"></script>
+  <script src="app.js?v=1656"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>

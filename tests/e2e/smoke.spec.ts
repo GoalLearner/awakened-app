@@ -2113,11 +2113,10 @@ test.describe('U · Auto-seen friend feats (W923)', () => {
     await page.evaluate(() => document.getElementById('tab-social')!.click());
     await page.evaluate(() => (document.querySelector('[data-cm-pane="friends"]') as HTMLElement).click());
     await expect(page.locator('.fa-seen')).toHaveCount(0);
-    await expect(page.locator('#fa-sub')).toContainText('1 NEW');
     await expect(page.locator('#cm-friends-badge')).toBeVisible();
+    await expect(page.locator('#cm-friends-badge')).toHaveText('1');   // W1319 — the count lives on the badge (the kicker is gone)
     // ~4 s on screen → seen, no tap
-    await expect(page.locator('#fa-sub')).not.toContainText('NEW', { timeout: 10_000 });
-    await expect(page.locator('#cm-friends-badge')).toBeHidden();
+    await expect(page.locator('#cm-friends-badge')).toBeHidden({ timeout: 10_000 });
     const stamped = await page.evaluate(() => Date.now() - (window as any).__fa.seenTs());
     expect(stamped).toBeLessThan(60_000);
   });

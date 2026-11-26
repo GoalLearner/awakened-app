@@ -37910,3 +37910,8 @@ button.pcc-title { cursor: pointer; -webkit-appearance: none; appearance: none; 
 .pc-pin--anomalies .lbl { text-shadow: -1px 0 rgba(236,72,153,.65), 1px 0 rgba(34,211,238,.65); animation: wxPinGlitch 3.8s steps(1) infinite; }
 @keyframes wxPinGlitch { 0%, 92%, 100% { transform: none; } 93% { transform: translateX(1px); } 95% { transform: translateX(-1px); } 97% { transform: translateX(.5px); } }
 .pc-pin--everest { --c: #e0f2fe; --rim: rgba(224,242,254,.6); --bgp: linear-gradient(180deg, #16305a, #0b1733); }
+
+/* W1319 — fewer words (owner 2026-11-25): the kickers above COMMUNITY BOARD and HUNTER ACTIVITY are gone, so each title
+   centres on its row (the NEW TOPIC button, the HUNTER / ALL switch). */
+.board-head { align-items: center; }
+.fa-head { align-items: center; }
