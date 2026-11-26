@@ -315,6 +315,42 @@ test.describe('W1321 — an opened hunter, organized', () => {
     });
   }
 
+  // W1322 — owner: "What about Shadows, New rank ups, slept over 7 hours, walked 10,000 steps, verified workout, etc."
+  for (const vp of [{ width: 390, height: 844 }, { width: 375, height: 667 }]) {
+    test('every kind has its group: Shadows, Milestones, Bosses, Drops, Health @' + vp.width, async ({ page }) => {
+      await page.setViewportSize(vp);
+      const now = Date.now(), m = 60_000;
+      const e = (id: string, type: string, label: string, at: number, extra: Record<string, unknown> = {}) => ev(id, 'Galilea', type, at, false, { eventKey: id, eventLabel: label, eventValue: null, rarity: null, ...extra });
+      await boot(page, [
+        e('st1', 'step_milestone_bucket', 'crossed 10,000 steps today', now - 1 * m, { eventValue: 10000 }),
+        e('ru1', 'rank_up', 'reached A II', now - 2 * m),
+        e('sl1', 'verified_sleep_7h', 'slept over 7 hours last night', now - 3 * m),
+        ev('bk1', 'Galilea', 'boss_kill', now - 4 * m, false, { eventKey: 'the_unbroken_anvil', eventLabel: 'defeated The Unbroken Anvil', rarity: 'A' }),
+        e('wk1', 'verified_workout', 'completed a verified workout', now - 5 * m),
+        e('sh1', 'shadow_drop', 'claimed the Shadow of The Steel Wolf', now - 6 * m, { eventKey: 'the_steel_wolf' }),
+        e('pd1', 'perfect_day', 'sealed a 7-day Perfect streak', now - 7 * m, { eventValue: 7 }),
+        ev('ur1', 'Galilea', 'ultra_rare_drop', now - 8 * m, false),
+        e('fl1', 'flights_milestone_bucket', 'climbed 10 flights today', now - 9 * m, { eventValue: 10 }),
+        e('vs1', 'verified_streak', 'reached a 7-day verified streak', now - 10 * m, { eventValue: 7 }),
+      ]);
+      await openFeed(page);
+      const gal = page.locator('.fa-hunter').filter({ has: page.locator('.fa-hn[data-board-profile="Galilea"]') });
+      await gal.locator('.fa-hh').click();
+      await expect(gal.locator('.fa-sec')).toHaveText(['Shadows1', 'Milestones2', 'Bosses1', 'Drops1', 'Health5']);
+      const ids = await gal.locator('.fa-act').evaluateAll((els) => els.map((x) => x.getAttribute('data-fa-ev')));
+      expect(ids).toEqual(['sh1', 'ru1', 'pd1', 'bk1', 'ur1', 'wk1', 'sl1', 'vs1', 'st1', 'fl1']);
+      // each row reads as the thing itself, on one line
+      await expect(gal.locator('.fa-sec--ms ~ .fa-act .fa-act-txt').first()).toHaveText('Reached A II');
+      await expect(gal.locator('.fa-act--shadow .fa-act-txt')).toHaveText('Shadow of The Steel Wolf');
+      const txt = await gal.locator('.fa-act .fa-act-txt').allTextContents();
+      expect(txt.slice(2)).toEqual(['7-day Perfect streak', 'AThe Unbroken Anvil',   // the rank chip's letter leads the boss row
+         'Ultra-rare item', 'Verified workout ✓', 'Slept over 7 hours ✓', '7-day verified streak ✓', '10,000 steps', '10 flights']);
+      const tall = await gal.locator('.fa-act:not(.fa-act--shadow)').evaluateAll((els) => els.filter((x) => x.getBoundingClientRect().height > 40).length);
+      expect(tall).toBe(0);
+      if (process.env.LB_SHOTS) { await gal.scrollIntoViewIfNeeded(); await gal.screenshot({ path: process.env.LB_SHOTS + '/feed-all-kinds-' + vp.width + '.png' }); }
+    });
+  }
+
   test('one kind only: no group label', async ({ page }) => {
     const now = Date.now();
     await boot(page, [ev('b1', 'Galilea', 'boss_kill', now, false), ev('b2', 'Galilea', 'boss_kill', now - 5000, false)]);

@@ -124,7 +124,7 @@ test.describe('A risen shadow reaches the public feed (W1117)', () => {
     const opened = justin.locator('.fa-act--shadow');
     await expect(opened).toHaveCount(1);
     await expect(opened.locator('.fa-ico--shadow')).toHaveText('✧');
-    await expect(opened.locator('.fa-act-txt')).toHaveText('claimed the Shadow of The Ascendant Colossus');
+    await expect(opened.locator('.fa-act-txt')).toHaveText('Shadow of The Ascendant Colossus');   // W1322 — in a hunter's list the row is the shadow itself
     await expect(opened.locator('.fa-act-sub')).toHaveText('+1.25% in every Ascent fight');   // a C-rank boss
     const ren = page.locator('.fa-hunter').filter({ hasText: /rendiesel/i });
     await expect(ren.locator('.fa-chip--sh')).toHaveText('Shadow of Erebus, the Shadow Sovereign');
