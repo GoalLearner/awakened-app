@@ -160,7 +160,7 @@
   const APP_VERSION = '3.0.32';   // W1324 — 3.0.31 APPROVED 2026-11-25 (submitted 10:36 PM PST from build 690 = 3.0.31-w1323: the cleaner hunter card, five new pins, title colors and Master/Grandmaster, XP past level 20, the organized Hunter Activity, the Worldgate bar locks), so 3.0.32 opened at approval. 3.0.30 and 3.0.31 shipped without an in-app What's New sheet (the newest is 3.0.29): 3.0.32's sheet should carry their news, as W1237 did. [history] W1310 — 3.0.30 RELEASED 2026-11-24 (build 683, W1305: hunters on 3.0.30-w1305 from 1:45 PM PST; Apple refused build 685 under 3.0.30: "The train version '3.0.30' is closed for new build submissions"), so 3.0.31 opened carrying W1306 (the friend feed returns every event of the last 24 hours), W1307 (every repeat rare, ultra-rare and mythic drop reaches Hunter Activity; a sold rare names its souls) and W1308/W1309 (the cleaned-up hunter card, its frame invisible). [history] W1292 — 3.0.29 APPROVED 2026-11-23 (build 674, submitted 2026-11-22 6:25 PM PST; Apple: "eligible for distribution"), so 3.0.30 opened before build 678 went up, carrying W1285-W1287 (What's New 3.0.29 rewritten, the 200K/300K pins, a drop past its cap sells for souls), W1288/W1289 (the Violet Queen), W1290 (each strike says what it hit with) and W1291 (Friends tab badges, rank-coloured strike circles, coloured strike parts). [history] W1270 — 3.0.28 APPROVED by 2026-11-21 7:06 PM PST (build 667; Apple refused build 670 under 3.0.28: "The train version '3.0.28' is closed for new build submissions"), so 3.0.29 opened carrying W1259 (the 200K pin), W1263 (waiting raid teams), W1264-W1266 (the 300K badge), W1267 (no twin hunts) and W1268/W1269 (Auto Hunts). [history] W1246 — 3.0.27 APPROVED by 2026-11-19 12:15 PM PST (Apple refused build 664 under 3.0.27: "train version '3.0.27' is closed"), so 3.0.28 opened carrying W1245 (steps: one device per day, the legitimate one with the most). [history] W1233 — 3.0.26 SUBMITTED for review 2026-11-17 (build 655, tag 3.0.26-w1230), so 3.0.27 opened early, as W1205 did (an approval refuses an upload under the approved number), carrying W1233 (duels: your ultimate, special attack and shadows, and the Echo's own). [history] W1220 — 3.0.25 APPROVED 2026-11-16 9:44 AM PST (submitted 2026-11-15 2:06 PM PST, build 651, tag 3.0.25-w1213), so 3.0.26 opened carrying W1220 (strangers' shadows fold into one feed row), W1221 (your pinned row under a board opens your card), W1222 (the like limit says what it is), W1225 (invites say "You both get 500 souls"), W1226 (a refused audio start is caught, not reported as an error), W1227 (six calorie bosses, E to S, dropping the sleep bosses' relics), W1228 (the S calorie boss drops a mythic at 1%), W1229 (a mythic drop is its own announcement to every hunter; the crown on the card and feed names) and W1230 (ultra-rares stay friends-only: the owner wanted only mythics). [history] W1205 — 3.0.25 opened 2026-11-14 BEFORE 3.0.24 was approved (3.0.24 = build 649, waiting for review since 2026-11-13): an upload under 3.0.24 is refused the moment Apple approves it, so build 650 goes up as 3.0.25 carrying W1202 (every boss in the Kill Log, the Raid group), W1203 (no 150k step cap) and W1204 (hunts named by partner). [history] W1169 — 3.0.23 APPROVED 2026-11-08 (submitted 2026-11-07 5:00 PM PST, LIVE 2:33 PM PST on the 8th; almost certainly build 628 = w1161: pins, the Wardrobe tap fix), so 3.0.24 opened carrying W1162-W1169 (the 3.0.23 store notes, the board update, matched hunt partners, Add as friend, late steps reach the board, The Patient Flame falls by itself, earned ultimates behind their flag). [history] W1134 — 3.0.22 APPROVED 2026-11-06 (submitted 4:53 AM PST from build 617 = w1132: the Shadowborn + the Elite Eight, the Rising redrawn, profile cards name the look, every open counted), so 3.0.23 opened carrying W1134 (the Worldgate counts a hunter's steps only after 2 days in the app that week). [history] W1127 — 3.0.21 LIVE on the App Store 2026-11-05 9:34 AM PST (built from w1126: no memberships, kill stamps without a title, the tier crests, the onboarding's "How did you find the Gate?"), so 3.0.22 opened carrying W1127 (the app-open ping says when it is a real open; the server counts every one per Pacific day). [history] W1124 — 3.0.20 LIVE on the App Store 2026-11-01 12:50 PM PST (built from w1120: final standings Sunday, shadows in the public feed, Shadow Army on Status); 3.0.21 opened carrying W1121 (its What's New, never shown: re-keyed to 3.0.21), W1122 (no memberships), W1124 (kill stamp without a title, inlined tier crests) and W1125 (the onboarding's last screen asks how the hunter found the app; W1126 keeps it in place when the keyboard opens). [history] W1114 — 3.0.19 approved 2026-10-30 (submitted 1:45 AM PST, w1113: shadows 1 in 5, armor upgrades, relic power by boss rank, relic cards three across); 3.0.20 opened with the feed's boss rank chips, no What's New entry yet. W1107 — 3.0.18 approved and LIVE 2026-10-28 8:02 AM PST (submitted 2026-10-27 7:41 PM PST, build 602 = w1106: the four steps trios, the Rising's nine looks, the earned line in the Wardrobe, the richer-backup offer); 3.0.19 opened at approval. [history] W1103 — 3.0.17 approved 2026-10-27 (build 600, submitted 2026-10-26 6:21 PM PST: the automatic friend hunts, the earned looks, the two-tab Wardrobe); 3.0.18 opened at approval, carrying W1102 (the app offers back a richer cloud backup). [history] W1097 — 3.0.16 approved + live 2026-10-26 (build 599, the iOS 27 fix); 3.0.17 opened at approval. Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.16 = the post-3.0.15 train, opened 2026-10-23 (W1085): 3.0.15 was submitted 2026-10-22 2:55 PM PST from build 595 (w1083: the tally, the preview row, the security pass) and approved the same day, so the train closed under it. It carries W1084 (the tally leads the 3.0.15 What's New) forward. [history] 3.0.15 = the post-3.0.14 train, opened 2026-10-22 (W1080): 3.0.14 was approved and LIVE 2026-10-21 5:08 PM PST from build 591 (w1074) — the first 592 upload was refused ("train closed"), the sixth time an approval closed a train under a build. It carries W1077/W1078 (sign-out ends the session, cloud save checksum + gzip, socket token out of the URL, invite links ask first) forward. [history] 3.0.14 = the post-3.0.13 train, opened 2026-10-21 (W1074): 3.0.13 was approved and went LIVE 2026-10-20 3:50 AM PST from build 587 (w1068), so it carries W1069 (the floor 100 curve), W1070-W1073 (the ten weekly step and sleep bosses and their drops) and the real-screen screenshots and header Apple asked for (App Review 2.3.3) forward. [history] 3.0.11 = the post-3.0.10 train, opened 2026-10-05: Apple's store lookup showed 3.0.10 LIVE (released 11:35 AM PST that day, built from w1024, so it carried W1023 the 9:45 PM finish-strong reminder and nothing after). It carries forward W1025 (Myrmidon King art), W1026 (one request for every co-op hunt) and W1027 (steps 'today' = the device's day), all pushed under the 3.0.10 tag after that build was cut. [history] 3.0.10 = the post-3.0.9 train, opened 2026-10-04 when the owner passed on Apple's approval of 3.0.9 (submitted 2026-10-02 12:41 PM PST, approved 2026-10-03; carried W1002–W1022: weekly to-do planner, to-dos first in the briefing, the Monday recap, times-a-week vows, the interactive Status tab, the Jump Manual program, the flights-hunt result fix). It carries W1023 (the 9:45 PM finish-strong reminder) forward. First TWO-DIGIT patch: every version compare in the app is numeric (_updVersionNewer, the What's New compare), never a string compare. [history] 3.0.9 = the post-3.0.8 train, opened 2026-09-25 the moment Apple approved 3.0.8 (submitted 4:57 PM PST, approved the same evening; carried W989–W1001: Items overhaul, Resolved + mod view counts, the sectioned Habits tab + to-dos v2, topic edit). [history] 3.0.8 = the post-3.0.7 train, opened 2026-09-24 the moment Apple approved 3.0.7 (build 543, submitted 1:15 AM PST, approved same day; the Worldgate In-App Event was approved in the same hour). Carries forward: the three description corrections (Ranked PvP / Streak Shields / five-hunter raid = Premium) go out WITH this version, since a description only changes with a new version. [history] 3.0.7 carried W968–W987 (vows yours + glory verified, morning briefing v2, hunt results, Worldgate MVPs + weekly line + strike freeze, Community Updates + briefing line, mod preview rows, awakened:// scheme). [history] 3.0.7 = the post-3.0.6 train, opened 2026-09-20 the moment Apple approved 3.0.6 (submitted 3:14 AM PST that day, approved same day) — an approval CLOSES a train, and uploading under the approved number is refused (CFBundleShortVersionString must exceed it). This has now bitten FOUR times; the bump is done at approval, not at upload. [history] 3.0.6 carried W960–W967 (Manage Vows fix, rank-bar hairline, Worldgate kill ceremony, division-up celebration, owner preview row, 3.0.6 release notes). [history] 3.0.4 = the post-3.0.3 train, opened 2026-09-11 because Apple approved 3.0.3 (live 2026-09-09) and an approval closes a train — carries W935 (weekly-board upload fix + Apple Health asked on every onboarding path). [history] 3.0.3 = the post-3.0.2 train, opened 2026-09-07 the morning after Apple approved 3.0.2 (submitted 2026-09-06 4:41 PM PT; approval closes a train — twice-bitten lesson) — carries W917-W919b (Ledger view, Streak Shields deleted, handoff 29) forward under the new number. [history] 3.0.2 = the post-release train, opened 2026-09-04 because Apple closes a train on approval (build 493 under 3.0.1 was refused: CFBundleShortVersionString must exceed the approved 3.0.1) — carries W903 (boss-sheet hotfix) + W905 (Status is the hunter profile again). 3.0.1 "MAKE IT LAND" = the repair release (W882-W890): Wave-2 progression joins cloud sync, the activation funnel is instrumented end to end, silent Wave-2 server failures leave breadcrumbs, the altar routes to a same-day first kill, the Double Dungeon stops reporting false failures and yields when the stair is unavailable, the beat What's New used to eat is chained, and every banked free engage is visible before the tap. 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.32-w1324';
+  const APP_BUILD_TAG = '3.0.32-w1325';
   // W1192 — the relic and boss paintings are WebP now (the app was 376.9 MB, 290 MB of it these PNGs). A path saved
   // before (the drop history, a friend's card, a cloud save) still says .png: the first time one fails to load it is
   // pointed at the .webp beside it, before the image's own error handler can hide it.
@@ -8449,10 +8449,10 @@
     try { const t = /^(\d{4})-(\d{2})-(\d{2})$/.exec(getPTDate()); if (t) days = Math.round((next.getTime() - Date.UTC(+t[1], +t[2] - 1, +t[3])) / 86400000); } catch (_) {}
     if (c.status === 'slain') {
       const when = days == null || days < 1 ? '' : (days === 1 ? ' · tomorrow' : ' · in ' + days + ' days');
-      return { k: 'A new boss rises every Sunday', v: 'Next: <b>' + label + '</b>' + when };
+      return { k: 'Next boss', v: '<b>' + label + '</b>' + when };
     }
-    const k = days == null ? 'A new boss rises every Sunday' : (days <= 1 ? 'Last day' : days + ' days left');
-    return { k: k, v: 'A new boss rises <b>' + label + '</b>' };
+    const k = days == null ? 'New boss every Sunday' : (days <= 1 ? 'Last day' : days + ' days left');
+    return { k: k, v: 'New boss <b>' + label + '</b>' };
   }
   // W1283 — a three-bar gate: one row per bar (steps, flights, sleep), its fill and what is left.
   function _muBarRow(k, label, icon, v, hp, fmt, d) {
@@ -8470,7 +8470,7 @@
       _muBarRow('steps', 'Steps', _MU_IC.feet, S[0], S[1], _wgFmt, 400) +
       _muBarRow('flights', 'Flights', _MU_IC.stairs, F[0], F[1], _wgFmt, 480) +
       _muBarRow('sleep', 'Sleep', _MU_IC.moon, Z[0], Z[1], _wgHrs, 560) +
-      '<p class="mu-bars-n">All three bars must be emptied to bring it down.</p></section>';
+      '</section>';
   }
   function _muPhaseBar(c) {
     if (_wgThree(c)) {   // W1283 — one bar for the gate's damage: you, your guild, everyone else (each a share of the kill)
@@ -8482,8 +8482,8 @@
         }).join('') + '</div>' +
         '<div class="mu-hpt" data-wg-track><div class="mu-hpf" style="--w:' + pct3.toFixed(2) + '%"><i class="o" style="flex-grow:' + o3 + '"></i><i class="g" style="flex-grow:' + g3 + '"></i>' + (my3 > 0 ? '<i class="y" style="flex-grow:' + Math.max(my3, 0.4) + '"></i>' : '') + '</div>' +
           [25, 50, 75].map(function (p) { return '<i class="mu-tick" style="left:' + p + '%"></i>'; }).join('') + '<div class="wg2-flash" data-wg-flash></div></div>' +
-        '<div class="mu-hpn"><span><b>' + pct3.toFixed(1) + '%</b> down</span><span class="r"><b>' + Math.max(0, 100 - pct3).toFixed(1) + '%</b> HP left</span></div>' +
-        '<div class="mu-leg"><span class="o"><i></i>All hunters</span>' + (gh3 ? '<span class="g"><i></i>Your guild</span>' : '') + '<span class="y"><i></i>You</span></div></section>' + _muBarsHtml(c);
+        '<div class="mu-hpn"><span></span><span class="r"><b>' + Math.max(0, 100 - pct3).toFixed(1) + '%</b> HP left</span></div>' +
+        '<div class="mu-leg"><span class="o"><i></i>Others</span>' + (gh3 ? '<span class="g"><i></i>Your guild</span>' : '') + '<span class="y"><i></i>You</span></div></section>' + _muBarsHtml(c);
     }
     const hp = Math.max(1, Number(c.hp) || 1), pct = _wgPct(c), phase = c.status === 'slain' ? 5 : _wgPhase(c);
     const my = Math.max(0, Number(c.my) || 0), guild = Math.max(0, (c.guild && Number(c.guild.steps)) || 0);
@@ -8494,8 +8494,8 @@
       }).join('') + '</div>' +
       '<div class="mu-hpt" data-wg-track><div class="mu-hpf" style="--w:' + pct.toFixed(2) + '%"><i class="o" style="flex-grow:' + others + '"></i><i class="g" style="flex-grow:' + guild + '"></i>' + (my > 0 ? '<i class="y" style="flex-grow:' + Math.max(my, hp * 0.004) + '"></i>' : '') + '</div>' +
         [25, 50, 75].map(function (p) { return '<i class="mu-tick" style="left:' + p + '%"></i>'; }).join('') + '<div class="wg2-flash" data-wg-flash></div></div>' +
-      '<div class="mu-hpn"><span><b>' + pct.toFixed(1) + '%</b> down</span><span class="r"><b>' + _wgFmt(Math.max(0, hp - (Number(c.pool) || 0))) + '</b> HP left</span></div>' +
-      '<div class="mu-leg"><span class="o"><i></i>All hunters</span>' + (gh ? '<span class="g"><i></i>Your guild</span>' : '') + '<span class="y"><i></i>You</span></div></section>';
+      '<div class="mu-hpn"><span></span><span class="r"><b>' + _wgFmt(Math.max(0, hp - (Number(c.pool) || 0))) + '</b> HP left</span></div>' +
+      '<div class="mu-leg"><span class="o"><i></i>Others</span>' + (gh ? '<span class="g"><i></i>Your guild</span>' : '') + '<span class="y"><i></i>You</span></div></section>';
   }
   function _muShareHtml3(c) {   // W1283 — your damage (% of the kill), its three parts, the 0.5% Kill Wall line
     const slain = c.status === 'slain', mp = Number(c.my_pct) || 0, wl = Number(c.wall_pct) || 0.5, b = c.bars;
@@ -8506,14 +8506,13 @@
     if ((c.wait_f | 0) > 0) waitBits.push(_wgFmt(c.wait_f) + ' flights');
     if ((c.wait_s | 0) > 0) waitBits.push(_wgHrs(c.wait_s) + ' sleep');
     const sv = gated
-      ? '<b>Your steps, flights and sleep count once you open the app on ' + need + ' days this week.</b> ' + had + ' of ' + need + ' so far' + (waitBits.length ? ' · ' + waitBits.join(', ') + ' waiting' : '') + '.'
+      ? '<b>Counts after ' + need + ' app days.</b> ' + had + ' of ' + need + (waitBits.length ? ' · ' + waitBits.join(', ') + ' waiting' : '')
       : slain
-      ? (mp >= wl ? '<b>You are on the Kill Wall.</b> ' + (c.claimed ? 'Your share is collected.' : 'Your share lands on its own.')
-                  : '<b>' + _wgPctTxt(mp) + '</b> of the kill. The gate is down; the Kill Wall asked ' + wl + '%.')
-      : (mp < wl ? '<b>' + _wgPctTxt(mp) + '</b> of the kill so far. Reach <b>' + wl + '%</b> to be named on the Kill Wall.'
-                 : '<b>Kill Wall secured.</b> Keep striking: every step, flight and hour of sleep brings it down faster.');
-    const sf = slain ? _MU_IC.snow + 'Frozen at the kill'
-      : (c.my_rank ? '#' + c.my_rank + ' of ' + _wgFmt(c.hunters) + ' · the top 3 are MVPs' : 'The top 3 are MVPs');
+      ? (mp >= wl ? '<b>On the Kill Wall.</b> ' + (c.claimed ? 'Reward collected.' : 'Reward on its way.')
+                  : 'The Kill Wall needed <b>' + wl + '%</b>.')
+      : (mp < wl ? 'Reach <b>' + wl + '%</b> for the Kill Wall.'
+                 : '<b>On the Kill Wall.</b>');
+    const sf = slain ? _MU_IC.snow + 'Final' : (c.my_rank ? '#' + c.my_rank + ' of ' + _wgFmt(c.hunters) : '');
     let btn = '';
     if (!slain) {
       const pending = _wgPending(c);
@@ -8523,7 +8522,7 @@
     }
     return '<section class="mu-share' + (slain ? ' is-down' : '') + ' mu-e" style="--d:460ms"><div class="mu-ring"><svg viewBox="0 0 80 80" aria-hidden="true"><circle class="t" cx="40" cy="40" r="34"/><circle class="a" cx="40" cy="40" r="34"/></svg>' +
       '<div class="mu-rv mu-rv--pct"><b>' + _wgPctTxt(mp) + '</b><small>Damage</small></div></div>' +
-      '<div><p class="mu-sk">Your part of the kill</p><p class="mu-sv">' + sv + '</p>' + (gated ? '' : '<p class="mu-sparts">' + parts + '</p>') + '<p class="mu-sf">' + sf + '</p></div>' +
+      '<div><p class="mu-sv">' + sv + '</p>' + (gated ? '' : '<p class="mu-sparts">' + parts + '</p>') + (sf ? '<p class="mu-sf">' + sf + '</p>' : '') + '</div>' +
       (btn ? '<div class="mu-share-btn">' + btn + '</div>' : '') + '</section>';
   }
   function _muShareHtml(c) {   // KillShare: the true rules (the 15,000-step Kill Wall, the two days), and STRIKE
@@ -8531,14 +8530,13 @@
     const slain = c.status === 'slain', my = Number(c.my) || 0, floor = Number(c.floor) || 15000, left = Math.max(0, floor - my);
     const need = c.days_needed | 0, had = c.my_days | 0, gated = !slain && need > 0 && had < need;
     const sv = gated
-      ? '<b>Your steps count once you open the app on ' + need + ' days this week.</b> ' + had + ' of ' + need + ' so far' + ((c.waiting | 0) > 0 ? ' · ' + _wgFmt(c.waiting) + ' steps waiting' : '') + '.'
+      ? '<b>Counts after ' + need + ' app days.</b> ' + had + ' of ' + need + ((c.waiting | 0) > 0 ? ' · ' + _wgFmt(c.waiting) + ' steps waiting' : '')
       : slain
-      ? (my >= floor ? '<b>You are on the Kill Wall.</b> ' + (c.claimed ? 'Your share is collected.' : 'Your share lands on its own.')
-                     : '<b>' + _wgFmt(my) + '</b> strikes landed. The gate is down; the Kill Wall asked ' + _wgFmt(floor) + '.')
-      : (left > 0 ? '<b>' + _wgFmt(my) + '</b> strikes landed. Walk <b>' + _wgFmt(left) + '</b> more to be named on the Kill Wall.'
-                  : '<b>Kill Wall secured.</b> Keep striking: every step brings it down faster.');
-    const sf = slain ? _MU_IC.snow + 'Step count frozen at the kill'
-      : (c.my_rank ? '#' + c.my_rank + ' of ' + _wgFmt(c.hunters) + ' · the top 3 are MVPs' : 'The top 3 are MVPs');
+      ? (my >= floor ? '<b>On the Kill Wall.</b> ' + (c.claimed ? 'Reward collected.' : 'Reward on its way.')
+                     : 'The Kill Wall needed <b>' + _wgFmt(floor) + '</b> steps.')
+      : (left > 0 ? 'Walk <b>' + _wgFmt(left) + '</b> more for the Kill Wall.'
+                  : '<b>On the Kill Wall.</b>');
+    const sf = slain ? _MU_IC.snow + 'Final' : (c.my_rank ? '#' + c.my_rank + ' of ' + _wgFmt(c.hunters) : '');
     let btn = '';
     if (!slain) {
       const pending = _wgPending(c);
@@ -8548,7 +8546,7 @@
     }
     return '<section class="mu-share' + (slain ? ' is-down' : '') + ' mu-e" style="--d:460ms"><div class="mu-ring"><svg viewBox="0 0 80 80" aria-hidden="true"><circle class="t" cx="40" cy="40" r="34"/><circle class="a" cx="40" cy="40" r="34"/></svg>' +
       '<div class="mu-rv"><b data-mu-count="' + my + '" data-cd="520">' + _wgFmt(my) + '</b><small>Strikes</small></div></div>' +
-      '<div><p class="mu-sk">Your part of the kill</p><p class="mu-sv">' + sv + '</p><p class="mu-sf">' + sf + '</p></div>' +
+      '<div><p class="mu-sv">' + sv + '</p>' + (sf ? '<p class="mu-sf">' + sf + '</p>' : '') + '</div>' +
       (btn ? '<div class="mu-share-btn">' + btn + '</div>' : '') + '</section>';
   }
   // W1290 — what a strike hit with (owner 2026-11-23: "Richie struck the gate +4,186 steps and +7 flights", "Ricin struck
@@ -8574,8 +8572,8 @@
     const slain = c.status === 'slain', tab = _wgTab === 'rank' || _wgTab === 'kill' ? _wgTab : 'feed';
     const recent = Array.isArray(c.recent) ? c.recent : [], top = Array.isArray(c.top) ? c.top : [];
     const feed = recent.length ? recent.map(function (r) {
-        return '<div class="mu-row' + (_wgIsMe(r.alias) ? ' is-you' : '') + '">' + _muAv(r.alias, r.rank_tier) + '<span class="w">' + _muName(r.alias) + ' struck the gate<span class="mu-hit">' + _wgStrikeHitHtml(r) + '</span></span></div>';   // W1290 / W1291
-      }).join('') : '<p class="mu-empty">No strikes yet this week. Yours could be the first.</p>';
+        return '<div class="mu-row' + (_wgIsMe(r.alias) ? ' is-you' : '') + '">' + _muAv(r.alias, r.rank_tier) + '<span class="w">' + _muName(r.alias) + '<span class="mu-hit">' + _wgStrikeHitHtml(r) + '</span></span></div>';   // W1290 / W1291
+      }).join('') : '<p class="mu-empty">No strikes yet.</p>';
     // W1283 — on a three-bar gate every list ranks by damage (% of the kill), and the Kill Wall asks 0.5% of it.
     const three = _wgThree(c), wl = Number(c.wall_pct) || 0.5;
     const val = function (h) { return three ? Number(h.pct) || 0 : Number(h.steps) || 0; };
@@ -8583,30 +8581,30 @@
     const hrow = function (pos, h, mvp) {   // W977 — the running top three wear MVP / 2ND / 3RD all week
       const me = !!h.me || _wgIsMe(h.alias);
       return '<div class="mu-hrow' + (typeof pos === 'number' && pos <= 3 ? ' p' + pos : '') + (me ? ' is-you' : '') + '"><span class="pos">' + esc(String(pos)) + '</span>' + _muAv(h.alias, h.rank_tier) +
-        '<span class="nm"><span class="nmr">' + _muName(h.alias) + (mvp ? _wgmBadge(mvp, 13, ' data-wg-mvp="1"') : '') + '</span><small>' + (me ? 'You' : (h.rank_tier ? 'Rank ' + esc(String(h.rank_tier)) : 'Hunter')) + '</small></span>' +
+        '<span class="nm"><span class="nmr">' + _muName(h.alias) + (mvp ? _wgmBadge(mvp, 13, ' data-wg-mvp="1"') : '') + '</span></span>' +
         '<span class="a">' + (three ? _wgPctTxt(h.pct) : _wgFmt(h.steps)) + '</span><span class="bar"><i style="width:' + Math.max(2, Math.min(100, val(h) / max * 100)).toFixed(1) + '%"></i></span></div>';
     };
-    let rank = top.length ? top.map(function (h, i) { return hrow(i + 1, h, i < 3 ? i + 1 : 0); }).join('') : '<p class="mu-empty">No strikes yet this week.</p>';
+    let rank = top.length ? top.map(function (h, i) { return hrow(i + 1, h, i < 3 ? i + 1 : 0); }).join('') : '<p class="mu-empty">No strikes yet.</p>';
     if (top.length && !top.some(function (h) { return h.me; }) && (three ? (Number(c.my_pct) || 0) : (Number(c.my) || 0)) > 0 && c.my_rank) rank += hrow('#' + c.my_rank, { alias: _wgMyAlias() || 'You', steps: c.my, pct: c.my_pct, me: true }, 0);
     const floor = Number(c.floor) || 15000, wall = Array.isArray(c.wall) ? c.wall : [], wc = Number(c.wall_count) || 0;
     const wallHtml = '<div class="mu-kb"><p class="mu-kl">Kill Wall<b>' + _wgFmt(wc) + (wc === 1 ? ' hunter' : ' hunters') + '</b></p>' +
       (wall.length ? '<div class="mu-wall">' + wall.map(function (w) { return '<button type="button" class="mu-wn' + (_wgIsMe(w.alias) ? ' is-you' : '') + '" data-wg-profile="' + esc(w.alias) + '">' + esc(_dn(w.alias)) + _crownFor(w.alias) + '</button>'; }).join('') + '</div>'
-                   : '<p>No names yet. The first hunter past ' + (three ? wl + '% of the damage' : _wgFmt(floor) + ' steps') + ' carves it.</p>') + '</div>';
+                   : '<p>No names yet.</p>') + '</div>';
     const k = c.kill, k3 = !!(k && k.bars);
     const odds = c.odds || { s_tier: 0.01, mythic: 0.005 };
     const oddTxt = function (p) { return String(Math.round((Number(p) || 0) * 1000) / 10) + '%'; };
     const kill = slain && k
       ? '<div class="mu-kill"><div class="mu-kb"><p class="mu-kl">Down<b>' + esc(_muDay(Number(k.slain_at) || 0) + ' · ' + (function () { try { return new Date(Number(k.slain_at)).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }); } catch (_) { return ''; } })()) + '</b></p></div>' +
-        '<div class="mu-kb"><p class="mu-kl">MVPs<span>' + (k3 ? 'Most damage at the kill' : 'Most steps at the kill') + '</span></p>' + (Array.isArray(k.mvps) ? k.mvps : []).slice(0, 3).map(function (m, i) {
+        '<div class="mu-kb"><p class="mu-kl">MVPs</p>' + (Array.isArray(k.mvps) ? k.mvps : []).slice(0, 3).map(function (m, i) {
           return '<div class="mu-mvp">' + _wgmBadge(i + 1, 13, ' data-wg-mvp="1"') + '<span class="nmr">' + _muName(m.alias) + '</span><span class="a">' + (k3 ? _wgPctTxt(m.pct) : _wgFmt(m.steps)) + '</span></div>';
         }).join('') + '</div>' + wallHtml + '</div>'
       : three
-      ? '<div class="mu-kill"><div class="mu-kb"><p class="mu-kl">The Kill Wall</p><p>Deal ' + wl + '% of the damage before Sunday and your name stands on it.</p></div>' +
-        '<div class="mu-kb"><p class="mu-kl">The bounty<b>' + _wgFmt(c.souls || 200) + ' souls each</b></p><p>Every hunter on the Kill Wall collects it when the gate falls, with a ' + oddTxt(odds.s_tier) + ' chance at an S-rank relic and ' + oddTxt(odds.mythic) + ' at a mythic weapon.</p></div>' +
-        '<div class="mu-kb"><p class="mu-kl">MVPs</p><p>The three who dealt the most damage when it falls.</p></div>' + wallHtml + '</div>'
-      : '<div class="mu-kill"><div class="mu-kb"><p class="mu-kl">The Kill Wall</p><p>Strike ' + _wgFmt(floor) + '+ steps before Sunday and your name stands on it.</p></div>' +
-        '<div class="mu-kb"><p class="mu-kl">The bounty<b>' + _wgFmt(c.souls || 200) + ' souls each</b></p><p>Every hunter on the Kill Wall collects it when the gate falls.</p></div>' +
-        '<div class="mu-kb"><p class="mu-kl">MVPs</p><p>The three with the most steps when it falls.</p></div>' + wallHtml + '</div>';
+      ? '<div class="mu-kill"><div class="mu-kb"><p class="mu-kl">The Kill Wall</p><p>' + wl + '% of the damage by Sunday.</p></div>' +
+        '<div class="mu-kb"><p class="mu-kl">The bounty<b>' + _wgFmt(c.souls || 200) + ' souls each</b></p><p>' + oddTxt(odds.s_tier) + ' S-rank relic · ' + oddTxt(odds.mythic) + ' mythic weapon</p></div>' +
+        '<div class="mu-kb"><p class="mu-kl">MVPs</p><p>Top 3 by damage.</p></div>' + wallHtml + '</div>'
+      : '<div class="mu-kill"><div class="mu-kb"><p class="mu-kl">The Kill Wall</p><p>' + _wgFmt(floor) + ' steps by Sunday.</p></div>' +
+        '<div class="mu-kb"><p class="mu-kl">The bounty<b>' + _wgFmt(c.souls || 200) + ' souls each</b></p></div>' +
+        '<div class="mu-kb"><p class="mu-kl">MVPs</p><p>Top 3 by steps.</p></div>' + wallHtml + '</div>';
     return '<div class="mu-lists mu-e" style="--d:560ms"><div class="mu-lt" role="tablist">' + [['feed', 'Recent strikes'], ['rank', 'Top hunters'], ['kill', 'The kill']].map(function (t) {
         return '<button type="button" role="tab" data-wg-tab="' + t[0] + '" class="' + (t[0] === tab ? 'on' : '') + '" aria-selected="' + (t[0] === tab) + '">' + t[1] + '</button>';
       }).join('') + '</div><div class="mu-lp on" data-k="' + tab + '">' + (tab === 'feed' ? feed : tab === 'rank' ? '<div class="mu-rank">' + rank + '</div>' : kill) + '</div></div>';
@@ -8615,18 +8613,18 @@
     const slain = c.status === 'slain', clock = _muClock(c), gh = (c.guild && Number(c.guild.hunters)) || 0, three = _wgThree(c);
     const nh = _wgFmt(c.hunters) + (Number(c.hunters) === 1 ? ' hunter' : ' hunters');
     return '<section class="mu-foe mu-e" style="--d:120ms"><div class="mu-emb' + (slain ? ' is-down' : '') + '" data-wg-mon>' + (slain ? _MU_EYE_DOWN : _MU_EYE_ALIVE) + '</div>' +
-        '<div class="mu-ft"><h2>' + esc(_wgBossName(c.week)) + '</h2><p class="mu-fs">World boss · <b>' + (slain ? 'Down' : 'Phase ' + _wgPhase(c) + ' of 4') + '</b></p></div></section>' +
+        '<div class="mu-ft"><h2>' + esc(_wgBossName(c.week)) + '</h2><p class="mu-fs"><b>' + (slain ? 'Down' : 'Phase ' + _wgPhase(c) + ' of 4') + '</b></p></div></section>' +
       (three   // W1283 — three bars: steps, flights and sleep all strike it
-        ? '<p class="mu-rule mu-e" style="--d:160ms">Every <b>step</b>, <b>flight</b> and <b>hour of sleep</b> any hunter logs strikes its HP. When all three bars are empty it falls, and every hunter on the Kill Wall shares the kill.'
-        : '<p class="mu-rule mu-e" style="--d:160ms">Every <b>verified step</b> any hunter walks is one strike on its HP. When it falls, every hunter on the Kill Wall shares the kill.') +
+        ? '<p class="mu-rule mu-e" style="--d:160ms"><b>Steps</b>, <b>flights</b> and <b>sleep</b> from every hunter strike it.'
+        : '<p class="mu-rule mu-e" style="--d:160ms">Every <b>verified step</b> from every hunter strikes it.') +
         '<button class="mu-info" type="button" data-mu-info aria-label="How a step becomes a strike" aria-expanded="' + (_muInfo ? 'true' : 'false') + '">' + _MU_IC.info + '</button></p>' +
       (three
         ? '<div class="mu-how' + (_muInfo ? ' on' : '') + '"><div><div class="mu-howi"><span><b style="color:var(--mu-steps)">' + _MU_IC.feet + 'Walk</b>Steps from Apple Health</span><em>›</em><span><b style="color:var(--mu-flights)">' + _MU_IC.stairs + 'Climb</b>Flights, up to 50 a day</span><em>›</em><span><b style="color:var(--mu-violet2)">' + _MU_IC.moon + 'Sleep</b>From a tracker, up to 9h a night</span></div></div></div>'
         : '<div class="mu-how' + (_muInfo ? ' on' : '') + '"><div><div class="mu-howi"><span><b style="color:var(--mu-steps)">' + _MU_IC.feet + 'Walk</b>Steps count from your phone</span><em>›</em><span><b style="color:var(--mu-violet2)">' + _MU_IC.shield + 'Verify</b>Health sync confirms them</span><em>›</em><span><b style="color:var(--mu-red)">' + _MU_IC.bolt + 'Strike</b>1 step = 1 HP off the gate</span></div></div></div>') +
       (clock ? '<div class="mu-clock mu-e" style="--d:200ms">' + _MU_IC.clock + '<div><b>' + esc(clock.k) + '</b><span>' + clock.v + '</span></div></div>' : '') +
       (three
-        ? '<section class="mu-total mu-e" style="--d:260ms"><div class="mu-big"><b>' + _wgPct(c).toFixed(1) + '%</b><small>/ 100%</small></div><p class="mu-lab">Damage dealt · ' + nh + '</p></section>'
-        : '<section class="mu-total mu-e" style="--d:260ms"><div class="mu-big"><b data-mu-count="' + (Number(c.pool) || 0) + '" data-cd="260">' + _wgFmt(c.pool) + '</b><small>/ ' + _wgFmt(c.hp) + '</small></div><p class="mu-lab">Strikes landed · ' + nh + '</p></section>') +
+        ? '<section class="mu-total mu-e" style="--d:260ms"><div class="mu-big"><b>' + _wgPct(c).toFixed(1) + '%</b></div><p class="mu-lab">' + nh + '</p></section>'
+        : '<section class="mu-total mu-e" style="--d:260ms"><div class="mu-big"><b data-mu-count="' + (Number(c.pool) || 0) + '" data-cd="260">' + _wgFmt(c.pool) + '</b><small>/ ' + _wgFmt(c.hp) + '</small></div><p class="mu-lab">' + nh + '</p></section>') +
       _muPhaseBar(c) + _muShareHtml(c) + _muListsHtml(c) +
       '<div class="mu-acts">' + (gh ? '<button type="button" class="mu-btn mu-btn--ghost" data-wg-rally' + (c.rallied ? ' disabled' : '') + '>' + (c.rallied ? 'Rallied today' : 'Rally your guild') + '</button>' : '') +
         '<button type="button" class="mu-btn mu-btn--ghost" data-wg-share>Share progress</button></div>';
@@ -8833,7 +8831,7 @@
     el.className = 'wg-scope mu-wrap' + (_muRm() ? ' mu-rm' : '');
     el.innerHTML = '<div class="mu-frame" data-tab="' + tab + '" role="dialog" aria-modal="true" aria-label="Team Battles">' +
         '<div class="mu-glow wg"></div><div class="mu-glow rd"></div>' +
-        '<div class="mu-scr" data-mu-scr><header class="mu-top"><div class="mu-head"><p class="mu-eye">Team Battles · No hunter walks alone</p>' +
+        '<div class="mu-scr" data-mu-scr><header class="mu-top"><div class="mu-head"><p class="mu-eye">Team Battles</p>' +
           '<button class="mu-x" type="button" data-wg-close aria-label="Close"><span>' + _MU_IC.x + '</span></button></div><div data-mu-tabs></div></header>' +
           '<div class="mu-pane" data-pane="wg" data-mu-pane="wg"></div><div class="mu-pane" data-pane="raids" data-mu-pane="raids"></div></div></div>';
     document.body.appendChild(el); _wgSheet = el;
@@ -8915,8 +8913,8 @@
     _wgStriking = false;
     const after = _wgCache();
     const gained = (after && before) ? (Number(after.my) || 0) - (Number(before.my) || 0) : 0;
-    if (gained > 0) { _wgToast('+' + _wgFmt(gained) + ' strikes landed. The gold in the bar just grew.'); try { _hapticTick('SUCCESS'); } catch (_) {} }
-    else _wgToast('Your steps are already in. Health syncs the rest as you walk.');
+    if (gained > 0) { _wgToast('+' + _wgFmt(gained) + ' strikes landed.'); try { _hapticTick('SUCCESS'); } catch (_) {} }
+    else _wgToast('Already counted.');
     _wgSheetPaint(); renderWorldgatePulse();
   }
   async function _wgRally(btn) {

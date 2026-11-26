@@ -7155,11 +7155,11 @@ test.describe('BF · Worldgate MVPs (W975)', () => {
     await page.evaluate(() => document.getElementById('wg-pulse')!.click());
     await expect(page.locator('.mu-clock')).toBeVisible({ timeout: 8_000 });   // W1255 — the Muster's BossClock
     const t = await page.locator('.mu-clock').innerText();
-    expect(t).toMatch(/new boss rises every Sunday/i);
-    expect(t).toMatch(/Next: Sun 27 Sep/);
+    expect(t).toMatch(/Next boss/i);   // W1325 — was "A new boss rises every Sunday" / "Next: Sun 27 Sep"
+    expect(t).toMatch(/Sun 27 Sep/);
     expect(t).not.toMatch(/\bfell(ed)?\b/i);
     // W1003 — a fallen gate says the number stopped on purpose (W983 freezes damage at the kill)
-    await expect(page.locator('.mu-share .mu-sf')).toHaveText(/Step count frozen at the kill/);
+    await expect(page.locator('.mu-share .mu-sf')).toHaveText(/Final/);   // W1325 — was "Step count frozen at the kill"
   });
 
   const KILL = (over?: Record<string, unknown>) => ({
