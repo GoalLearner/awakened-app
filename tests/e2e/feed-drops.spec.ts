@@ -306,8 +306,9 @@ test.describe('W1321 — an opened hunter, organized', () => {
       expect(ranks).toEqual(['A', 'C', 'C', 'C', 'C', 'D', 'E', 'E']);
       const drops = ren.locator('.fa-sec--it ~ .fa-act .fa-act-txt');
       await expect(drops).toHaveText(['Ultra-rare item', 'Ultra-rare item', 'Rare item+420 souls', 'Rare item+160 souls', 'Rare item+160 souls']);
-      // every row stays on one line, and the like is a heart
-      const tall = await ren.locator('.fa-act').evaluateAll((els) => els.filter((e) => e.getBoundingClientRect().height > 40).length);
+      // the drop rows (they wrapped to two lines before) stay on one line; a long boss name may wrap with the CI's fonts.
+      // The like is a heart.
+      const tall = await ren.locator('.fa-sec--it ~ .fa-act').evaluateAll((els) => els.filter((e) => e.getBoundingClientRect().height > 40).length);
       expect(tall).toBe(0);
       await expect(ren.locator('.fa-like')).toHaveCount(13);
       await expect(ren.locator('.fa-like').first()).toHaveText('♡');
