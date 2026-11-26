@@ -192,6 +192,11 @@ for (const vp of [{ width: 390, height: 844 }, { width: 375, height: 667 }]) {
       await expect(page.locator('#arena-overlay .tm-ink[aria-checked="true"]')).toHaveCount(1);
       expect(await page.evaluate(() => localStorage.getItem('hb_title_ink'))).toBe('rose');
       expect(await color('#arena-overlay .tm-row--worn .nm')).toBe('rgb(251, 113, 133)');
+      // W1316 — a living ink on the worn row: its gradient fills the words
+      await page.locator('#arena-overlay .tm-ink[data-ink="stardust"]').click();
+      expect(await page.locator('#arena-overlay .tm-row--worn .nm').evaluate((e) => { const c = getComputedStyle(e); return [c.backgroundImage.startsWith('linear-gradient'), c.webkitTextFillColor]; })).toEqual([true, 'rgba(0, 0, 0, 0)']);
+      if (process.env.LB_SHOTS) await page.locator('#arena-overlay .tm-row--worn').screenshot({ path: process.env.LB_SHOTS + '/title-worn-stardust-' + vp.width + '.png' });
+      await page.locator('#arena-overlay .tm-ink[data-ink="rose"]').click();
       // the swatches stay on one row inside the screen
       const r = await page.locator('#arena-overlay .tm-inks .sw').evaluate((e) => { const a = e.getBoundingClientRect(); const k = Array.from(e.children).map((c) => c.getBoundingClientRect().top); return { right: a.right, rows: new Set(k).size }; });
       expect(r.rows).toBe(1);

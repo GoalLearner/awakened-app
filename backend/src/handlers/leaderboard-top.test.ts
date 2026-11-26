@@ -262,8 +262,20 @@ describe('GET /v1/leaderboard/top -- weekly scoping (1z.33)', () => {
     const body = (await res.json()) as { metric: string; top: Array<{ rank: number; alias: string; current_value: number }>; me: { rank: number; current_value: number } | null };
     expect(body.metric).toBe('step_total');
     expect(body.top).toHaveLength(2);
-    expect(body.top[0]).toEqual({ rank: 1, alias: 'rendiesel', current_value: 35369, arena_title: null, bosses_slain: null, prestige: 5, rankTier: 'S+', founderSeq: null, avatar_id: null, card_bg: null, card_ink: null, hall_ordinal: null });   // W453 prestige + W656 founderSeq + W704 avatar_id + W706 card_bg + W844 hall_ordinal + W1146 card_ink flow through
+    expect(body.top[0]).toEqual({ rank: 1, alias: 'rendiesel', current_value: 35369, arena_title: null, card_title_ink: null, bosses_slain: null, prestige: 5, rankTier: 'S+', founderSeq: null, avatar_id: null, card_bg: null, card_ink: null, hall_ordinal: null });   // W453 prestige + W656 founderSeq + W704 avatar_id + W706 card_bg + W844 hall_ordinal + W1146 card_ink + W1316 card_title_ink flow through
     expect(body.me).toEqual({ rank: 12, current_value: 1776 });
+  });
+});
+
+// W1316 — owner 2026-11-25: "It didn't change the color/effect in these rows". The board rows carry the title's colour.
+describe('GET /v1/leaderboard/top -- the title colour on the rows (W1316)', () => {
+  it('selects card_title_ink next to the title and serves it on each row', async () => {
+    const db = makeDb({ topRows: [{ alias: 'galilea', current_value: 24414, arena_title: 'rt_sovereign', card_title_ink: 'void' }, { alias: 'yang', current_value: 21087 }] });
+    const res = await handleLeaderboardTop(new Request('https://example.com/v1/leaderboard/top?metric=step_total'), makeEnv(db), session);
+    const body = (await res.json()) as { top: Array<{ alias: string; card_title_ink: string | null }> };
+    expect(body.top.map((r) => [r.alias, r.card_title_ink])).toEqual([['galilea', 'void'], ['yang', null]]);
+    const top = (db as unknown as { _calls(): CapturedCall[] })._calls().find((c) => c.sql.includes('FROM leaderboard_snapshots ls'));
+    expect(top!.sql).toMatch(/card_title_ink AS card_title_ink/);
   });
 });
 

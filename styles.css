@@ -29035,6 +29035,10 @@ button.pc-shard { cursor: pointer; font: inherit; -webkit-appearance: none; appe
 .lb-rank-class--teal   { --gem-c: #5eead4; --gem-hi: #c8fff2; --gem-glow: rgba(94,234,212,0.42); }
 .lb-rank-class--iron   { --gem-c: #c8c6d8; --gem-hi: #f0effa; --gem-glow: rgba(200,198,216,0.36); }
 .lb-rank-class--gold   { --gem-c: #f5b842; --gem-hi: #ffe9b0; --gem-glow: rgba(245,184,66,0.40); }
+/* W1316 — a living title ink on the board rows: its gradient sweeps over the words and the gem (no text-shadow: it would darken the clipped fill) */
+.lb-rank-class--g .lb-rank-class-name { background-image: var(--tg); background-size: 300% 100%; -webkit-background-clip: text; background-clip: text; color: transparent; -webkit-text-fill-color: transparent; text-shadow: none; animation: wx-inksweep 3.6s linear infinite; }
+.lb-rank-class--g .lb-rank-gem { background: var(--tg); background-size: 300% 100%; }
+@media (prefers-reduced-motion: reduce) { .lb-rank-class--g .lb-rank-class-name { animation: none; } }
 
 /* W387 — 100K Step Club stamp: compact gold hexagon that sits right after the
    class title (ClaudeDesign "Global Leaderboard - Redesign" → Club100k atom).

@@ -35,6 +35,7 @@ interface FriendRow {
   current_value: number;
   rank_label: string | null;
   arena_title: string | null;
+  card_title_ink: string | null;   // W1316 — the title's colour (an ink id; null = its tier colour)
   avatar_id: string | null;
   card_bg: string | null;
   card_ink: string | null;   // W1146 — the name's ink
@@ -77,7 +78,7 @@ export async function handleFriendsLeaderboardGet(
         `${MERGED_FOR_WEEK}
          SELECT u.id AS user_id, u.alias AS alias,
                 COALESCE(m.steps, 0) AS current_value,
-                p.rank_label AS rank_label, p.arena_title AS arena_title, p.avatar_id AS avatar_id, p.card_bg AS card_bg, p.card_ink AS card_ink,
+                p.rank_label AS rank_label, p.arena_title AS arena_title, p.card_title_ink AS card_title_ink, p.avatar_id AS avatar_id, p.card_bg AS card_bg, p.card_ink AS card_ink,
                 p.rank_tier AS rank_tier, p.prestige_level AS prestige, p.founder_seq AS founder_seq,
                 p.bosses_slain_total AS bosses_slain
            FROM users u
@@ -100,7 +101,7 @@ export async function handleFriendsLeaderboardGet(
     : await env.DB.prepare(
         `SELECT u.id AS user_id, u.alias AS alias,
                 COALESCE(ls.current_value, 0) AS current_value,
-                p.rank_label AS rank_label, p.arena_title AS arena_title, p.avatar_id AS avatar_id, p.card_bg AS card_bg, p.card_ink AS card_ink,
+                p.rank_label AS rank_label, p.arena_title AS arena_title, p.card_title_ink AS card_title_ink, p.avatar_id AS avatar_id, p.card_bg AS card_bg, p.card_ink AS card_ink,
                 p.rank_tier AS rank_tier, p.prestige_level AS prestige, p.founder_seq AS founder_seq,
                 p.bosses_slain_total AS bosses_slain
            FROM users u
@@ -137,6 +138,7 @@ export async function handleFriendsLeaderboardGet(
       current_value: r.current_value || 0,
       rank_label: r.rank_label || null,
       arena_title: r.arena_title || null,
+      card_title_ink: r.card_title_ink ?? null,   // W1316
       avatar_id: r.avatar_id || null,
       card_bg: r.card_bg || null,   // W706 — member card background
       card_ink: r.card_ink || null,   // W1146 — the name's ink

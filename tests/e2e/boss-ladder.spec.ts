@@ -70,3 +70,49 @@ test.describe('W1293 — the boss-kill badge ladder', () => {
     if (SHOTS) { await page.waitForTimeout(600); await page.screenshot({ path: SHOTS + '/lb-boss-ladder.png' }); }
   });
 });
+
+// W1316 — owner 2026-11-25: "It didn't change the color/effect in these rows". The title's colour (W1315) on the board
+// rows: another hunter's published ink, my own row from this phone (instant), none → the tier's own label.
+test.describe('W1316 — the title colour on the board rows', () => {
+  for (const vp of [{ width: 390, height: 844 }, { width: 375, height: 667 }]) {
+    test('published inks on the rows, my row from this phone, none = the tier @' + vp.width, async ({ page }) => {
+      await page.setViewportSize(vp);
+      await boot(page);
+      await page.evaluate(() => {
+        localStorage.setItem('hb_arena_title', 'summit_second_awakened');
+        localStorage.setItem('hb_arena_v2', JSON.stringify({ rating: 1000, bestRating: 1000, currentFloor: 100, highestCleared: 100, wins: 100, losses: 0, streak: 0, bestStreak: 0, dailyDate: '', dailyLosses: 0, reclaimDate: '', reclaimFloors: [], reclaimSouls: 0 }));
+        localStorage.setItem('hb_title_ink', 'stardust');
+        const A = (window as any).Auth;
+        A.getCurrentUser = () => ({ jwt: 'e2e', alias: 'Richie' });
+        const rows = [
+          { rank: 1, alias: 'galilea', current_value: 24414, bosses_slain: 224, arena_title: 'rt_sovereign', card_title_ink: 'void' },
+          { rank: 2, alias: 'anthony', current_value: 20100, bosses_slain: 412, arena_title: 'rt_apex', card_title_ink: 'teal' },
+          { rank: 3, alias: 'zynfandel', current_value: 18483, bosses_slain: 100, arena_title: 'rt_sovereign', card_title_ink: null },
+          { rank: 4, alias: 'Richie', current_value: 17726, bosses_slain: 400, arena_title: 'summit_second_awakened', card_title_ink: 'rose' },
+        ];
+        A.fetchLeaderboardTop = async () => ({ ok: true, final: false, week: null, top: rows, me: { rank: 4, current_value: 17726 } });
+        A.fetchLastWeekSteps = async () => ({ ok: true, champion: null, me: null, records: [] });
+        A.fetchStep100kClub = async () => ({ ok: true, members: [], me: null });
+        A.fetchLeaderboardArchive = async (week: string) => ({ ok: true, week, records: [], me: null, weeksAvailable: [week] });
+        (window as any).openLeaderboardRanking('step_total');
+      });
+      const sheet = page.locator('#lb-rank-sheet');
+      const label = (alias: string) => sheet.locator('[data-profile-alias="' + alias + '"] .lb-rank-class').first();
+      const name = (alias: string) => label(alias).locator('.lb-rank-class-name');
+      await expect(name('galilea')).toHaveText(/Sovereign/i, { timeout: 8_000 });
+      // a living ink: the gradient sweeps over the words
+      await expect(label('galilea')).toHaveClass(/lb-rank-class--g/);
+      expect(await name('galilea').evaluate((e) => { const c = getComputedStyle(e); return [c.backgroundImage.startsWith('linear-gradient'), c.webkitTextFillColor]; })).toEqual([true, 'rgba(0, 0, 0, 0)']);
+      // a solid ink
+      expect(await name('anthony').evaluate((e) => getComputedStyle(e).color)).toBe('rgb(94, 234, 212)');
+      // none: the tier's own violet
+      await expect(label('zynfandel')).not.toHaveClass(/lb-rank-class--g/);
+      expect(await name('zynfandel').evaluate((e) => getComputedStyle(e).color)).toBe('rgb(167, 139, 250)');
+      // my row: this phone's choice (stardust) beats the published rose
+      await expect(name('Richie')).toHaveText(/Grandmaster/i);
+      await expect(label('Richie')).toHaveClass(/lb-rank-class--g/);
+      expect(await name('Richie').evaluate((e) => getComputedStyle(e).backgroundImage)).toContain('rgb(253, 230, 138)');   // stardust's gold
+      if (SHOTS) { await page.waitForTimeout(600); await page.screenshot({ path: SHOTS + '/lb-title-ink-' + vp.width + '.png' }); }
+    });
+  }
+});

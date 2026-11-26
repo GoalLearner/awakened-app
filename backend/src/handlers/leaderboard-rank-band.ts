@@ -32,6 +32,7 @@ interface BandRow {
   rank_label: string | null;
   rank_division: string | null;
   arena_title: string | null;
+  card_title_ink: string | null;   // W1316 — the title's colour (an ink id; null = its tier colour)
   avatar_id: string | null;
   card_bg: string | null;
   card_ink: string | null;   // W1146 — the name's ink
@@ -57,6 +58,7 @@ function publicRow(r: BandRow, rank: number, meUserId: string) {
     current_value: r.power || 0,
     rank_label: r.rank_label || null,
     arena_title: r.arena_title || null,
+    card_title_ink: r.card_title_ink ?? null,   // W1316
     avatar_id: r.avatar_id || null,
     card_bg: r.card_bg || null,   // W706 — member card background
     card_ink: r.card_ink || null,   // W1146 — the name's ink
@@ -111,7 +113,7 @@ export async function handleRankBandGet(
   const topResult = await env.DB.prepare(
     `SELECT p.user_id AS user_id, u.alias AS alias, p.power AS power,
             p.rank_label AS rank_label, p.rank_division AS rank_division,
-            p.arena_title AS arena_title, p.avatar_id AS avatar_id, p.card_bg AS card_bg, p.card_ink AS card_ink,
+            p.arena_title AS arena_title, p.card_title_ink AS card_title_ink, p.avatar_id AS avatar_id, p.card_bg AS card_bg, p.card_ink AS card_ink,
             p.rank_tier AS rank_tier, p.prestige_level AS prestige, p.founder_seq AS founder_seq
      FROM public_profile_summary p
      JOIN users u ON u.id = p.user_id
@@ -142,7 +144,7 @@ export async function handleRankBandGet(
     const nearResult = await env.DB.prepare(
       `SELECT p.user_id AS user_id, u.alias AS alias, p.power AS power,
               p.rank_label AS rank_label, p.rank_division AS rank_division,
-              p.arena_title AS arena_title, p.avatar_id AS avatar_id, p.card_bg AS card_bg, p.card_ink AS card_ink,
+              p.arena_title AS arena_title, p.card_title_ink AS card_title_ink, p.avatar_id AS avatar_id, p.card_bg AS card_bg, p.card_ink AS card_ink,
               p.rank_tier AS rank_tier, p.prestige_level AS prestige, p.founder_seq AS founder_seq
        FROM public_profile_summary p
        JOIN users u ON u.id = p.user_id

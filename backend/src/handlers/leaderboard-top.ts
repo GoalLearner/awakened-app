@@ -33,6 +33,7 @@ interface TopRow {
   current_value: number;
   // W257 — equipped Arena title ID (nullable; cosmetic chip on the client)
   arena_title: string | null;
+  card_title_ink: string | null;   // W1316 — the title's colour (an ink id; null = its tier colour)
   // W388 — lifetime boss kills (from public_profile_summary; the client shows a
   // crimson "100" stamp at >= 100). Nullable: LEFT JOIN, no pps row yet → null.
   bosses_slain: number | null;
@@ -68,7 +69,7 @@ async function readFinalStandings(env: Env, week: string, userId: string, limit:
   const topResult = await env.DB.prepare(
     `${FAME_MERGED_FOR_WEEK}
      SELECT u.alias AS alias, m.steps AS current_value,
-            pps.arena_title AS arena_title,
+            pps.arena_title AS arena_title, pps.card_title_ink AS card_title_ink,
             pps.bosses_slain_total AS bosses_slain,
             pps.prestige_level AS prestige, pps.rank_tier AS rank_tier,
             pps.founder_seq AS founder_seq,
@@ -102,6 +103,7 @@ async function readFinalStandings(env: Env, week: string, userId: string, limit:
       alias: row.alias,
       current_value: row.current_value,
       arena_title: row.arena_title ?? null,
+      card_title_ink: row.card_title_ink ?? null,   // W1316
       bosses_slain: row.bosses_slain ?? null,
       prestige: row.prestige ?? 0,
       rankTier: row.rank_tier ?? null,
@@ -173,7 +175,7 @@ export async function handleLeaderboardTop(
   const topResult = weekly
     ? await env.DB.prepare(
         `SELECT u.alias AS alias, ls.current_value AS current_value,
-                pps.arena_title AS arena_title,
+                pps.arena_title AS arena_title, pps.card_title_ink AS card_title_ink,
                 pps.bosses_slain_total AS bosses_slain,
                 pps.prestige_level AS prestige, pps.rank_tier AS rank_tier,
                 pps.founder_seq AS founder_seq,
@@ -193,7 +195,7 @@ export async function handleLeaderboardTop(
         .all<TopRow>()
     : await env.DB.prepare(
         `SELECT u.alias AS alias, ls.current_value AS current_value,
-                pps.arena_title AS arena_title,
+                pps.arena_title AS arena_title, pps.card_title_ink AS card_title_ink,
                 pps.bosses_slain_total AS bosses_slain,
                 pps.prestige_level AS prestige, pps.rank_tier AS rank_tier,
                 pps.founder_seq AS founder_seq,
@@ -218,6 +220,7 @@ export async function handleLeaderboardTop(
     current_value: row.current_value,
     // W257 — null/undefined → client renders no chip (back/forward compatible)
     arena_title: row.arena_title ?? null,
+    card_title_ink: row.card_title_ink ?? null,   // W1316
     // W388 — lifetime boss kills (null when the hunter has no pps row yet)
     bosses_slain: row.bosses_slain ?? null,
     // W453 — Prestige stars + tier (0 / null when no pps row or below S+)
