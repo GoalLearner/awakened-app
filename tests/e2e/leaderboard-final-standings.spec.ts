@@ -78,9 +78,11 @@ test.describe('The Steps board rests on the final standings (W1120)', () => {
     await boot(page);
     await page.clock.setFixedTime(new Date('2026-11-01T15:00:00Z'));   // Sunday 7:00 AM PST
     await openBoard(page, { ok: true, final: false, week: null, top: [row(1, 'Alpha', 4200)], me: null });
-    await expect(page.locator('#lb-rank-list .lb-list-foot')).toContainText('Resets Sunday 12:00 AM Pacific');
-    await expect(page.locator('#lb-week-reset')).toContainText('RESETS SUNDAY');
+    await expect(page.locator('#lb-rank-list .lb-list-foot')).toHaveText('Resets Sunday 12 AM PST');   // W1327 — was "Resets Sunday 12:00 AM Pacific · Apple Health is the only source"
+    await expect(page.locator('#lb-week-reset .lb-ctx-left')).toHaveText(/^(\dD LEFT|FINAL DAY)$/);   // W1327 — the live header's countdown pill ("RESETS SUNDAY" is gone)
     await expect(page.locator('#lb-week-reset .lb-arch-final')).toHaveCount(0);
+    // W1327 — owner 2026-11-26: fewer words on the boards
+    await expect(page.locator('#lb-rank-sheet')).not.toContainText(/GLOBAL LEADERBOARD|RESETS SUNDAY|Apple Health is the only source/);
   });
 
   test('on the phone\'s Sunday morning the header says FINAL before the fetch lands', async ({ page }) => {
@@ -101,7 +103,7 @@ test.describe('The Steps board rests on the final standings (W1120)', () => {
       (window as any).Auth.fetchLeaderboardTop = () => new Promise(() => {});
       (window as any).openLeaderboardRanking('step_total');
     });
-    await expect(page.locator('#lb-week-reset')).toContainText('RESETS SUNDAY');
+    await expect(page.locator('#lb-week-reset .lb-ctx-left')).toHaveText(/^(\dD LEFT|FINAL DAY)$/);   // W1327 — the live header's countdown pill ("RESETS SUNDAY" is gone)
   });
 
   test('a finished week\'s rank is not a new top-10 feat', async ({ page }) => {
