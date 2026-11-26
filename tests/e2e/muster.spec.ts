@@ -282,6 +282,16 @@ test.describe('W1283 — the three-bar Worldgate', () => {
     await boot(page);
     await page.evaluate((c) => { localStorage.setItem('hb_worldgate_v1', JSON.stringify({ ...c, at: Date.now() })); (window as any).__worldgate(); }, { ...WG3, ...extra });
   }
+  // W1323 — owner 2026-11-25: "the sleep shouldn't be at 313h / 300h. It should hit the 300h and stop". The server caps it
+  // now; the sheet caps it too (a kill frozen before W1323 can still carry a bar past its HP).
+  test('a bar past its HP reads its HP: 300h / 300h, DONE', async ({ page }) => {
+    await boot3(page, { bars: { steps: { hp: 1274068, pool: 675875, my: 18139 }, flights: { hp: 750, pool: 663, my: 27 }, sleep: { hp: 18000, pool: 18780, my: 0 } } });
+    await page.evaluate(() => (window as any).__muster.open('wg'));
+    const wg = page.locator('[data-pane="wg"]');
+    await expect(wg.locator('.mu-wgbar.sleep .mu-pv')).toHaveText('300h / 300h', { timeout: 8_000 });
+    await expect(wg.locator('.mu-wgbar.sleep .mu-tag')).toContainText(/done/i);
+    await expect(wg.locator('.mu-wgbar.steps .mu-pv')).toHaveText('675,875 / 1,274,068');
+  });
   test('three bars, the gate\'s damage and yours, every list by damage, the Kill tab in % with the bounty\'s odds', async ({ page }) => {
     await boot3(page);
     await page.evaluate(() => (window as any).__muster.open('wg'));

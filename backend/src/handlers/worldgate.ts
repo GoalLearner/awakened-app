@@ -102,29 +102,41 @@ const pct2 = (v: number) => Math.round(v * 100) / 100;
 export function barsDown(hp: Bars, pool: Bars): boolean {
   return pool.steps >= hp.steps && pool.flights >= hp.flights && pool.sleep >= hp.sleep;
 }
-/** The flights and sleep HPs of the next gate (W1283), from how the last three-bar gate went (`prior`) and what the
- *  fleet put into its bars (`done`). No three-bar gate before: the starting HPs. */
-export function computeNextBars(
-  prior: { week_start: string; hp: number; hp_flights: number | null; hp_sleep: number | null; status: string; slain_at: number | null } | null,
-  done: Bars | null,
-  lossStreak: number,
-): { flights: number; sleep: number } {
-  if (!prior || prior.hp_flights == null || prior.hp_sleep == null || (prior.status !== 'slain' && prior.status !== 'survived')) {
-    return { flights: WG3_START_FLIGHTS, sleep: WG3_START_SLEEP };
-  }
-  if (prior.status === 'slain') {
-    const grow = HP_WIN_BY_DAY[gateKillDay(prior.week_start, prior.slain_at)] || 1;
-    return { flights: Math.max(WG3_MIN_FLIGHTS, Math.round(prior.hp_flights * grow)), sleep: Math.max(WG3_MIN_SLEEP, Math.round(prior.hp_sleep * grow)) };
-  }
-  const factor = Math.max(HP_LOSS_FLOOR, 1 - HP_LOSS_STEP * Math.max(1, lossStreak || 1));
-  const ease = (hp: number, did: number, min: number) => (did >= hp ? hp : Math.max(min, Math.round(Math.max(0, did) * factor)));
-  return { flights: ease(prior.hp_flights, done ? done.flights : 0, WG3_MIN_FLIGHTS), sleep: ease(prior.hp_sleep, done ? done.sleep : 0, WG3_MIN_SLEEP) };
+// W1323 — owner 2026-11-25: "Make sure that the weekly worldgate boss adapts and starts making predictions to the data whether
+// to increase or decrease the goals." Each bar is now sized on its own from a forecast of what the fleet will put into it
+// next week, instead of all three moving together by the day the gate fell (one lagging bar held the others back, and a
+// bar filled by Wednesday never grew). The forecast is the week's RAW total (everything logged, the part past a filled bar
+// included: the locks of 0084 stop the counting, not the recording), nudged by its trend against the week before when
+// there is one (-15% .. +20%). The next HP is WG_AIM of the forecast, so the same fleet doing the same again fills it
+// with a little room, around Saturday; a bar moves at most WG_MAX_UP / WG_MAX_DOWN in one week; after two or more lost
+// gates in a row the aim drops a little more each loss (never under 75%), and no bar goes under its floor.
+export const WG_AIM = 0.92;
+export const WG_MAX_UP = 1.5;
+export const WG_MAX_DOWN = 0.7;
+/** W1323 — what the fleet will likely put into a bar next week: `done` (this week's raw total) times its trend
+ *  against `prev` (the week before), the trend clamped to 0.85 .. 1.20; no earlier week = no trend. */
+export function predictBar(done: number, prev: number | null | undefined): number {
+  const d = Math.max(0, Number(done) || 0);
+  if (!d) return 0;
+  const p = Number(prev) || 0;
+  const trend = p > 0 ? Math.min(1.2, Math.max(0.85, d / p)) : 1;
+  return Math.round(d * trend);
 }
-/** The steps HP after a three-bar gate STOOD: a spent steps bar keeps its size, an unfinished one eases like the others. */
-export function nextStepsAfterThreeBar(prior: { hp: number }, stepsDone: number, lossStreak: number): number {
-  if (stepsDone >= prior.hp) return prior.hp;
-  const factor = Math.max(HP_LOSS_FLOOR, 1 - HP_LOSS_STEP * Math.max(1, lossStreak || 1));
-  return Math.max(HP_MIN, Math.round(Math.max(0, stepsDone) * factor));
+/** W1323 — one bar's next HP from its HP this week, its raw total, the week before's and the loss streak. */
+export function nextBarHp(hp: number, done: number, prev: number | null | undefined, floor: number, lossStreak: number): number {
+  const aim = (lossStreak || 0) >= 2 ? Math.max(0.75, WG_AIM - 0.06 * ((lossStreak || 0) - 1)) : WG_AIM;
+  const want = Math.round(predictBar(done, prev) * aim);
+  const h = Math.max(1, Number(hp) || 1);
+  return Math.max(floor, Math.min(Math.round(h * WG_MAX_UP), Math.max(Math.round(h * WG_MAX_DOWN), want)));
+}
+/** W1323 — the next gate's three HPs (sleep in minutes) from the last three-bar gate's HPs, the raw totals of its week
+ *  and of the week before (null where there is none), and the loss streak. */
+export function computeNextBarsForecast(hp: Bars, done: Bars, prev: { steps: number | null; flights: number | null; sleep: number | null }, lossStreak: number): Bars {
+  return {
+    steps: nextBarHp(hp.steps, done.steps, prev.steps, HP_MIN, lossStreak),
+    flights: nextBarHp(hp.flights, done.flights, prev.flights, WG3_MIN_FLIGHTS, lossStreak),
+    sleep: nextBarHp(hp.sleep, done.sleep, prev.sleep, WG3_MIN_SLEEP, lossStreak),
+  };
 }
 /** A gate row carries three bars. */
 const isThree = (g: { week_start: string; hp_flights?: number | null; hp_sleep?: number | null } | null | undefined): boolean =>
@@ -253,7 +265,8 @@ function ptWeekStartNow(): string {
 }
 
 interface GateRow { week_start: string; hp: number; status: string; slain_at: number | null; slain_by: string | null; kill_json?: string | null;
-  hp_flights?: number | null; hp_sleep?: number | null; }   // W1283 — the flights and sleep HPs of a three-bar gate
+  hp_flights?: number | null; hp_sleep?: number | null;   // W1283 — the flights and sleep HPs of a three-bar gate
+  steps_full_at?: number | null; flights_full_at?: number | null; sleep_full_at?: number | null; }   // W1323 — when each bar filled
 // W1283 — on a three-bar gate a standing also carries the hunter's flights, minutes asleep and damage (% of the kill).
 type Standing = { user_id: string; alias: string; rank_tier: string | null; steps: number; flights?: number; sleep?: number; pct?: number };
 // W1290 — a strike also carries the hunter's flights and minutes asleep this week (0 when none), so the feed can
@@ -311,7 +324,41 @@ async function effortPools(env: Env, week: string): Promise<{ flights: number; s
     .bind(week).first<{ f: number; s: number }>();
   return { flights: Number(r?.f) || 0, sleep: Number(r?.s) || 0 };
 }
-/** W1283 — every hunter of a three-bar week with their steps, flights, sleep and damage, best first, and the three pools. */
+// W1323 — the bar locks (0084). A bar that has reached its HP stops counting: the first read that finds it full writes what
+// every hunter had put into it, then stamps the bar full; from then on each hunter's part of that bar is the locked value.
+const WG_BARS = ['steps', 'flights', 'sleep'] as const;
+type BarKey = typeof WG_BARS[number];
+const barVal = (r: Standing, b: BarKey): number => (b === 'steps' ? r.steps : (r[b] || 0));
+async function applyBarLocks(env: Env, week: string, hp: Bars, rows: Standing[]): Promise<void> {
+  const g = await env.DB.prepare('SELECT steps_full_at, flights_full_at, sleep_full_at FROM world_gates WHERE week_start = ?')
+    .bind(week).first<{ steps_full_at?: number | null; flights_full_at?: number | null; sleep_full_at?: number | null }>();
+  const locked: BarKey[] = WG_BARS.filter((b) => Number(g?.[`${b}_full_at` as const]) > 0);
+  for (const b of WG_BARS) {
+    if (locked.includes(b) || !(hp[b] > 0)) continue;
+    if (rows.reduce((a, r) => a + barVal(r, b), 0) < hp[b]) continue;
+    // full: write everyone's part first (a reader that sees the stamp finds the locks), then stamp it
+    const parts = rows.filter((r) => barVal(r, b) > 0);
+    for (let i = 0; i < parts.length; i += 20) {
+      const chunk = parts.slice(i, i + 20);
+      await env.DB.prepare('INSERT OR IGNORE INTO world_gate_bar_locks (week_start, bar, user_id, value) VALUES '
+        + chunk.map(() => '(?, ?, ?, ?)').join(', '))
+        .bind(...chunk.flatMap((r) => [week, b, r.user_id, barVal(r, b)])).run();
+    }
+    await env.DB.prepare(`UPDATE world_gates SET ${b}_full_at = ? WHERE week_start = ? AND ${b}_full_at IS NULL`).bind(Date.now(), week).run();
+    locked.push(b);
+  }
+  if (!locked.length) return;
+  const lr = await env.DB.prepare('SELECT bar, user_id, value FROM world_gate_bar_locks WHERE week_start = ?')
+    .bind(week).all<{ bar: string; user_id: string; value: number }>();
+  const got = lr.results ?? [];
+  const m = new Map<string, number>(got.map((x) => [x.bar + '|' + x.user_id, Math.max(0, Number(x.value) || 0)]));
+  for (const b of locked) {
+    if (!got.some((x) => x.bar === b)) continue;   // stamped but no locks to read (cannot happen; never zero a bar)
+    for (const r of rows) { const v = m.get(b + '|' + r.user_id) || 0; if (b === 'steps') r.steps = v; else r[b] = v; }
+  }
+}
+/** W1283 — every hunter of a three-bar week with their steps, flights, sleep and damage, best first, and the three pools.
+ *  W1323 — a filled bar reads its locks. */
 async function standings3(env: Env, week: string, hp: Bars): Promise<{ rows: Standing[]; pool: Bars }> {
   const steps = await standingsOf(env, week);
   const eff = (await env.DB.prepare(
@@ -328,6 +375,7 @@ async function standings3(env: Env, week: string, hp: Bars): Promise<{ rows: Sta
     by.set(e.user_id, row);
   }
   const rows = Array.from(by.values());
+  await applyBarLocks(env, week, hp, rows);   // W1323
   const pool: Bars = {
     steps: rows.reduce((a, r) => a + r.steps, 0),
     flights: rows.reduce((a, r) => a + (r.flights || 0), 0),
@@ -502,13 +550,20 @@ async function ensureGate(env: Env, week: string): Promise<GateRow> {
   if (week >= WG3_FROM) {
     // W1283 — a three-bar gate: flights and sleep sized from the last three-bar gate (or the start values), and after a
     // three-bar gate that stood, a spent steps bar keeps its size instead of easing.
-    const lastThree = last && isThree(last) ? last : null;
-    let done: Bars | null = null;
-    if (lastThree && lastThree.status === 'survived') {
-      done = { steps: await weeklyPool(env, lastThree.week_start), ...(await effortPools(env, lastThree.week_start)) };
-      hp = nextStepsAfterThreeBar(lastThree, done.steps, losses);
+    // W1323 — after a settled three-bar gate every bar is sized on its own from the forecast (computeNextBarsForecast):
+    // its week's raw totals and the week before's.
+    const lastThree = last && isThree(last) && (last.status === 'slain' || last.status === 'survived') ? last : null;
+    let bars: { flights: number; sleep: number } = { flights: WG3_START_FLIGHTS, sleep: WG3_START_SLEEP };
+    if (lastThree) {
+      const before = prevWeekOf(lastThree.week_start);
+      const [doneSteps, doneEff, prevSteps, prevEff] = await Promise.all([
+        weeklyPool(env, lastThree.week_start), effortPools(env, lastThree.week_start),
+        weeklyPool(env, before), before >= WG3_FROM ? effortPools(env, before) : Promise.resolve(null),
+      ]);
+      const next = computeNextBarsForecast(gateBars(lastThree as GateRow), { steps: doneSteps, ...doneEff },
+        { steps: prevSteps || null, flights: prevEff ? prevEff.flights || null : null, sleep: prevEff ? prevEff.sleep || null : null }, losses);
+      hp = next.steps; bars = { flights: next.flights, sleep: next.sleep };
     }
-    const bars = computeNextBars(lastThree, done, losses);
     try {
       await env.DB.prepare('INSERT INTO world_gates (week_start, hp, hp_flights, hp_sleep, status, created_at) VALUES (?, ?, ?, ?, ?, ?)')
         .bind(week, hp, bars.flights, bars.sleep, 'open', Date.now()).run();
@@ -633,7 +688,7 @@ async function threeBarAnswer(
   const { kill, myPlace } = await killAnnouncement(env, gate, week, frozenKill, session.userId);
   const mySteps = fz ? (me ? me.steps : 0) : myDamage;
   return jsonOk({
-    ok: true, week_start: week, hp: gate.hp, pool: poolB.steps, status: gate.status,
+    ok: true, week_start: week, hp: gate.hp, pool: Math.min(poolB.steps, hpB.steps), status: gate.status,   // W1323 — never past the HP
     my_damage: mySteps,
     my_days: myDays, days_needed: WORLDGATE_MIN_DAYS, pending_steps: pendingSteps,
     claim_floor: WORLDGATE_CLAIM_FLOOR, souls: WORLDGATE_SOULS,
@@ -652,9 +707,10 @@ async function threeBarAnswer(
     kill,
     // W1283 — the three bars (sleep in minutes), the gate's damage, yours, the Kill Wall line and the bounty's odds
     bars: {
-      steps: { hp: hpB.steps, pool: poolB.steps, my: mySteps },
-      flights: { hp: hpB.flights, pool: poolB.flights, my: me ? me.flights || 0 : 0 },
-      sleep: { hp: hpB.sleep, pool: poolB.sleep, my: me ? me.sleep || 0 : 0 },
+      // W1323 — a bar reads at most its HP (313h of 300h read 300h of 300h)
+      steps: { hp: hpB.steps, pool: Math.min(poolB.steps, hpB.steps), my: mySteps },
+      flights: { hp: hpB.flights, pool: Math.min(poolB.flights, hpB.flights), my: me ? me.flights || 0 : 0 },
+      sleep: { hp: hpB.sleep, pool: Math.min(poolB.sleep, hpB.sleep), my: me ? me.sleep || 0 : 0 },
     },
     pct: pct2(overallPct(hpB, poolB)),
     my_pct: pct2(myPct),

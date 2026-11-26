@@ -9,8 +9,8 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 vi.mock('../lib/apns', () => ({ notifyUser: vi.fn(async () => {}) }));
 import {
-  handleWorldgateGet, handleWorldgateClaim, handleWorldgateEffort, overallPct, damagePct, barsDown, computeNextBars,
-  nextStepsAfterThreeBar, wgDaysBegun, wgCapDays, wgDice, WG3_FROM, WG3_START_FLIGHTS, WG3_START_SLEEP, WG3_WALL_PCT,
+  handleWorldgateGet, handleWorldgateClaim, handleWorldgateEffort, overallPct, damagePct, barsDown, computeNextBarsForecast, predictBar, nextBarHp,
+  wgDaysBegun, wgCapDays, wgDice, WG3_FROM, WG3_START_FLIGHTS, WG3_START_SLEEP, WG3_WALL_PCT,
   WG3_MIN_BUILD, buildNumberOf,
   WG3_DROP_S, WG3_DROP_MYTHIC, WG3_FLIGHTS_DAY_CAP, WG3_SLEEP_NIGHT_CAP, WORLDGATE_SOULS,
 } from './worldgate';
@@ -47,16 +47,30 @@ describe('W1283 — the three-bar math', () => {
     expect(damagePct(a, hp, pool) + damagePct(b, hp, pool)).toBeCloseTo(100);   // overfilled steps share the 1,200 walked
     expect(damagePct({ steps: 0, flights: 0, sleep: 0 }, hp, pool)).toBe(0);
   });
-  it('the next gate: start values with no three-bar gate before; a beaten gate grows by how early it fell; one that stood eases what was left', () => {
-    expect(computeNextBars(null, null, 0)).toEqual({ flights: 750, sleep: 18000 });
-    expect(computeNextBars({ week_start: '2026-11-15', hp: 1, hp_flights: null, hp_sleep: null, status: 'slain', slain_at: 1 }, null, 0)).toEqual({ flights: 750, sleep: 18000 });
-    const wed = Date.parse('2026-12-02T20:00:00Z');   // Wednesday, Pacific
-    expect(computeNextBars({ week_start: '2026-11-29', hp: 1, hp_flights: 1500, hp_sleep: 36000, status: 'slain', slain_at: wed }, null, 0)).toEqual({ flights: 1950, sleep: 46800 });
-    // stood: flights were spent (kept), sleep reached 20,000 of 36,000 (eased to 90% of it)
-    expect(computeNextBars({ week_start: '2026-11-29', hp: 1, hp_flights: 1500, hp_sleep: 36000, status: 'survived', slain_at: null },
-      { steps: 0, flights: 1600, sleep: 20000 }, 1)).toEqual({ flights: 1500, sleep: 18000 });
-    expect(nextStepsAfterThreeBar({ hp: 1_000_000 }, 1_200_000, 1)).toBe(1_000_000);   // a spent steps bar keeps its size
-    expect(nextStepsAfterThreeBar({ hp: 1_000_000 }, 500_000, 1)).toBe(450_000);
+  // W1323 — owner 2026-11-25: "Make sure that the weekly worldgate boss adapts and starts making predictions to the data
+  // whether to increase or decrease the goals." Each bar on its own: 92% of the forecast (the week's raw total x its trend).
+  it('W1323 — the forecast: the raw total, nudged by its trend (-15% .. +20%); no week before = no trend', () => {
+    expect(predictBar(1000, null)).toBe(1000);
+    expect(predictBar(1000, 800)).toBe(1200);    // +25% trend, clamped to +20%
+    expect(predictBar(1000, 950)).toBe(1053);    // +5.3%
+    expect(predictBar(1000, 2000)).toBe(850);    // -50%, clamped to -15%
+    expect(predictBar(0, 500)).toBe(0);
+  });
+  it('W1323 — each bar moves on its own: up when the fleet out-did it, down when it fell short, by at most +50% / -30%', () => {
+    // this week's real case: sleep 300h filled mid-week and ran on (~550h raw); flights 750 nearly done (~900);
+    // steps 1,274,068 half done (~950,000)
+    const next = computeNextBarsForecast({ steps: 1_274_068, flights: 750, sleep: 18000 }, { steps: 950_000, flights: 900, sleep: 33000 },
+      { steps: null, flights: null, sleep: null }, 0);
+    expect(next).toEqual({ steps: 891_848, flights: 828, sleep: 27000 });   // steps 70% (the most it drops), flights 92% of 900, sleep 150% (the most it grows)
+    expect(nextBarHp(1000, 1000, null, 1, 0)).toBe(920);          // the same week again: fills with 8% to spare
+    expect(nextBarHp(1000, 1050, 1000, 1, 0)).toBe(1015);         // a rising fleet: the trend lifts the forecast
+    expect(nextBarHp(100_000, 50_000, null, 120_000, 0)).toBe(120_000);   // never under the bar's floor
+  });
+  it('W1323 — two or more lost gates in a row: the aim drops 6% a loss, never under 75%', () => {
+    expect(nextBarHp(1000, 1000, null, 1, 1)).toBe(920);
+    expect(nextBarHp(1000, 1000, null, 1, 2)).toBe(860);
+    expect(nextBarHp(1000, 1000, null, 1, 3)).toBe(800);
+    expect(nextBarHp(1000, 1000, null, 1, 9)).toBe(750);
   });
   it('the phone\'s day lists: only the days begun (one more for a phone east of Pacific), each capped', () => {
     expect(wgDaysBegun('2026-11-29', '2026-11-28')).toBe(0);
@@ -188,6 +202,66 @@ describe('W1283 — GET /v1/worldgate on a three-bar gate', () => {
     expect(j.kill.my_place).toBe(2);
     expect(j.kill.my_pct).toBeGreaterThan(0);
     expect(j.claimable).toBe(true);
+  });
+});
+
+// W1323 — owner 2026-11-25: "the sleep shouldn't be at 313h / 300h. It should hit the 300h and stop recording more sleep.
+// Same with the other two conditions."
+describe('W1323 — a full bar stops counting', () => {
+  function withLocks(st: St) {
+    const e = env3(st);
+    const locks: Array<{ bar: string; user_id: string; value: number }> = [];
+    const full: Record<string, number | null> = { steps_full_at: null, flights_full_at: null, sleep_full_at: null };
+    const prep = (e.DB as any).prepare;
+    (e.DB as any).prepare = (sql: string) => {
+      const p = prep(sql);
+      return { bind: (...b: unknown[]) => {
+        const q = p.bind(...b);
+        if (/SELECT steps_full_at, flights_full_at, sleep_full_at FROM world_gates/.test(sql)) return { ...q, first: async () => ({ ...full }) };
+        if (/INSERT OR IGNORE INTO world_gate_bar_locks/.test(sql)) return { ...q, run: async () => {
+          for (let i = 0; i < b.length; i += 4) if (!locks.some((l) => l.bar === b[i + 1] && l.user_id === b[i + 2])) locks.push({ bar: b[i + 1] as string, user_id: b[i + 2] as string, value: b[i + 3] as number });
+          return { meta: { changes: 1 } };
+        } };
+        const m = /UPDATE world_gates SET (\w+)_full_at = \?/.exec(sql);
+        if (m) return { ...q, run: async () => { if (!full[m[1] + '_full_at']) full[m[1] + '_full_at'] = b[0] as number; return { meta: { changes: 1 } }; } };
+        if (/SELECT bar, user_id, value FROM world_gate_bar_locks/.test(sql)) return { ...q, all: async () => ({ results: locks.slice(), success: true, meta: {} }) };
+        return q;
+      } };
+    };
+    return { e, locks, full };
+  }
+  const get3 = async (e: Env) => (await (await handleWorldgateGet(new Request('https://x/v1/worldgate'), e, me)).json()) as Record<string, any>;
+
+  it('sleep reaches its HP: it reads 100h of 100h (never more), locks everyone\'s part, and later sleep counts for nothing', async () => {
+    vi.useFakeTimers(); vi.setSystemTime(WED);
+    const st = fresh();   // sleep HP 6000 min (100h); the fleet has 4500
+    st.effort.find((r) => r.user_id === 'u-me')!.sleep_min = 5000;   // 6500 now: past the HP
+    const { e, locks, full } = withLocks(st);
+    const a = await get3(e);
+    expect(a.bars.sleep).toEqual({ hp: 6000, pool: 6000, my: 5000 });   // read at the HP, not 6500
+    expect(full.sleep_full_at).toBeGreaterThan(0);
+    expect(full.steps_full_at).toBeNull();
+    expect(locks.filter((l) => l.bar === 'sleep').map((l) => [l.user_id, l.value]).sort()).toEqual([['u-me', 5000], ['u-sl', 1500]]);
+    // the Sleeper logs 10 more hours, a new hunter logs some: neither counts on the locked bar
+    st.effort.find((r) => r.user_id === 'u-sl')!.sleep_min = 2100;
+    st.effort.push({ user_id: 'u-new', alias: 'Newcomer', flights: 0, sleep_min: 900 });
+    const b2 = await get3(e);
+    expect(b2.bars.sleep.pool).toBe(6000);
+    const sl = b2.top.find((t: any) => t.alias === 'Sleeper');
+    expect(sl.sleep).toBe(1500);   // as of the fill
+    expect(b2.top.find((t: any) => t.alias === 'Newcomer')).toBeUndefined();   // nothing counted: no damage, no row
+    // the bars that are not full still count live
+    st.effort.find((r) => r.user_id === 'u-k')!.flights = 250;
+    expect((await get3(e)).bars.flights.pool).toBe(550);
+  });
+
+  it('a bar under its HP is not locked and reads live', async () => {
+    vi.useFakeTimers(); vi.setSystemTime(WED);
+    const { e, locks, full } = withLocks(fresh());
+    const a = await get3(e);
+    expect(a.bars.sleep).toEqual({ hp: 6000, pool: 4500, my: 3000 });
+    expect(locks).toHaveLength(0);
+    expect(Object.values(full).every((v) => v == null)).toBe(true);
   });
 });
 

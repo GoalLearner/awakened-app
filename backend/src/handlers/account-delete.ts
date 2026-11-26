@@ -103,6 +103,9 @@ export async function handleAccountDelete(
   await bestEffortDelete(env, 'DELETE FROM client_errors WHERE user_id = ?', uid);
   await bestEffortDelete(env, 'DELETE FROM funnel_events WHERE user_id = ?', uid);
   await bestEffortDelete(env, 'DELETE FROM win_back_pushes WHERE user_id = ?', uid);
+  // W1323 — the Worldgate's per-hunter flights and sleep (0082, no cascade: they were never erased) and its bar locks (0084)
+  await bestEffortDelete(env, 'DELETE FROM world_gate_effort WHERE user_id = ?', uid);
+  await bestEffortDelete(env, 'DELETE FROM world_gate_bar_locks WHERE user_id = ?', uid);
   await bestEffortDelete(env, 'DELETE FROM pact_flame_pushes WHERE user_a = ? OR user_b = ?', uid, uid);
   await bestEffortDelete(env, 'DELETE FROM invite_redemptions WHERE redeemer_user_id = ? OR inviter_user_id = ?', uid, uid);
   await bestEffortDelete(env, 'DELETE FROM invite_codes WHERE user_id = ?', uid);
