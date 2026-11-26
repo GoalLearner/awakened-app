@@ -1,7 +1,8 @@
-A cleaner hunter card, five new pins, title colors, and every rare drop in Hunter Activity.
+A cleaner hunter card, five new pins, title colors, and a tidier Hunter Activity.
 
 • Hunter cards are cleaner: your whole look on the left, your name, title and badges on the right, and your stats in one panel.
 • Five new pins to show off: Mythics, God Slayer, Weekly #1, Anomalies and Everest.
-• Pick a color for your Ascent title to match your look. Floor 90 is now Master, and floor 100 is Grandmaster.
-• Every rare, ultra-rare and mythic drop now shows in Hunter Activity, not just the first of each. A rare sold for souls shows what it earned.
-• Hunter Activity now shows everything your friends did in the last 24 hours.
+• Pick a color for your Ascent title, on your card and the leaderboards. Floor 90 is now Master, and floor 100 is Grandmaster.
+• Stats keep earning XP past level 20, all the way to 200,000.
+• Hunter Activity is organized: shadows, milestones, bosses, drops and health each in their own group, and every rare drop shows.
+• The Worldgate's bars stop at their goal, and each week's goals adjust to how hunters are doing.
