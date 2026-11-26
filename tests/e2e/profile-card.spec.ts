@@ -172,7 +172,7 @@ for (const vp of [{ width: 390, height: 844 }, { width: 375, height: 667 }]) {
     // visitor's card wears the published one (an unknown id or none → the tier colour); the heartbeat carries it.
     test('the title color: picked on the Titles view, worn on the card, published, and read on a visitor\'s card', async ({ page }) => {
       await boot(page);
-      await page.evaluate(() => { localStorage.setItem('hb_arena_title', 'rt_sovereign'); localStorage.setItem('hb_arena_v2', JSON.stringify({ rating: 1000, bestRating: 1000, currentFloor: 61, highestCleared: 60, wins: 60, losses: 0, streak: 0, bestStreak: 0, dailyDate: '', dailyLosses: 0, reclaimDate: '', reclaimFloors: [], reclaimSouls: 0 })); });
+      await page.evaluate(() => { localStorage.setItem('hb_arena_title', 'rt_sovereign'); localStorage.setItem('hb_arena_v2', JSON.stringify({ rating: 1000, bestRating: 1000, currentFloor: 81, highestCleared: 80, wins: 80, losses: 0, streak: 0, bestStreak: 0, dailyDate: '', dailyLosses: 0, reclaimDate: '', reclaimFloors: [], reclaimSouls: 0 })); });
       await page.reload();
       await page.waitForFunction(() => !!(window as any).__pcRender && !!document.querySelector('[data-tab="profile"]'));
       await page.evaluate(() => {   // a signed-in phone: catch the heartbeat
@@ -222,6 +222,31 @@ for (const vp of [{ width: 390, height: 844 }, { width: 375, height: 667 }]) {
       // the F100 title's own colour is gold on the card (it read iron grey)
       await render(page, false, { alias: 'galilea', arenaTitle: 'summit_second_awakened', cardTitleInk: null });
       expect(await color('#pc-body div.pcc-title')).toBe('rgb(245, 184, 66)');
+    });
+
+    // W1317 — owner 2026-11-25: "I also want those last 3 title color options only available after floor 80".
+    test('the living title colors (Dawn, Void, Stardust) lock below floor 80', async ({ page }) => {
+      await boot(page);
+      await page.evaluate(() => { localStorage.setItem('hb_arena_title', 'rt_apex'); localStorage.setItem('hb_title_ink', 'void'); localStorage.setItem('hb_arena_v2', JSON.stringify({ rating: 1000, bestRating: 1000, currentFloor: 80, highestCleared: 79, wins: 79, losses: 0, streak: 0, bestStreak: 0, dailyDate: '', dailyLosses: 0, reclaimDate: '', reclaimFloors: [], reclaimSouls: 0 })); });
+      await page.reload();
+      await page.waitForFunction(() => !!(window as any).__pcRender && !!document.querySelector('[data-tab="profile"]'));
+      await render(page, true);
+      // a stored living ink below floor 80 reads as the tier colour
+      const pick = page.locator('#pc-body button.pcc-title--pick');
+      await expect(pick).not.toHaveClass(/pcc-title--g/);
+      expect(await pick.evaluate((e) => getComputedStyle(e).color)).toBe('rgb(167, 139, 250)');
+      await pick.click();
+      const locked = page.locator('#arena-overlay .tm-ink.lock');
+      expect(await locked.evaluateAll((els) => els.map((e) => e.getAttribute('data-ink')))).toEqual(['dawn', 'void', 'stardust']);
+      await expect(locked.first()).toHaveAttribute('aria-disabled', 'true');
+      await expect(page.locator('#arena-overlay .tm-ink--tier')).toHaveClass(/\bon\b/);
+      await page.locator('#arena-overlay .tm-ink[data-ink="stardust"]').click({ force: true });   // aria-disabled: a tap still lands
+      await expect(page.locator(".habit-toast").filter({ hasText: "Unlocks at floor 80." })).toHaveCount(1);
+      await expect(page.locator('#arena-overlay .tm-ink[data-ink="stardust"]')).not.toHaveClass(/\bon\b/);
+      expect(await page.evaluate(() => localStorage.getItem('hb_title_ink'))).toBe('void');   // untouched
+      await page.locator('#arena-overlay .tm-ink[data-ink="frost"]').click();   // a solid ink is open
+      await expect(page.locator('#arena-overlay .tm-ink[data-ink="frost"]')).toHaveClass(/\bon\b/);
+      if (process.env.LB_SHOTS) await page.locator('#arena-overlay .tm-inks').screenshot({ path: process.env.LB_SHOTS + '/title-ink-locked-' + vp.width + '.png' });
     });
 
     test("a visitor's card: the hunter in the plate, the published title, no Change look; the owner's Make moderator keeps the grid", async ({ page }) => {
