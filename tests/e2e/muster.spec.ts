@@ -128,7 +128,11 @@ test.describe('W1255 — Team Battles (the handoff named it The Muster)', () => 
     await expect(draw.locator('.mu-dn')).toContainText('3');
     await expect(draw.locator('.mu-dn')).toContainText('of 5 opens');
     await expect(draw.locator('.mu-days i.on')).toHaveCount(3);
-    await expect(draw.locator('.mu-dc')).toHaveText('Open the app 5 times in 7 days to be drawn for the next raid.');
+    await expect(draw.locator('.mu-dc')).toHaveText('5 opens in 7 days gets you drawn.');   // W1326
+    // W1326 — owner 2026-11-26: fewer words on the Raids tab
+    const rp = page.locator('[data-pane="raids"]');
+    for (const gone of ['Raid boss', 'ranked by progress', 'under way ·', 'MVP so far', 'Pace ·', 'Hall of Fame']) await expect(rp).not.toContainText(gone);
+    await expect(rp.locator('.mu-live')).toContainText('hunters in raids');
     await expect(page.locator('[data-pane="raids"] .mu-team')).toHaveCount(0);
     await expect(page.locator('[data-pane="raids"] .mu-tc')).toHaveCount(2);
     await page.locator('.mu-x').click();
@@ -136,7 +140,7 @@ test.describe('W1255 — Team Battles (the handoff named it The Muster)', () => 
     await stubRaids(page, 'none');
     await page.evaluate(() => { localStorage.removeItem('hb_muster_raids_v1'); });
     await page.evaluate(() => (window as any).__muster.open('raids'));
-    await expect(page.locator('[data-pane="raids"] .mu-quiet')).toContainText('The next raid forms when six active hunters are free.', { timeout: 8_000 });
+    await expect(page.locator('[data-pane="raids"] .mu-quiet')).toContainText('Next raid forms at 6 free hunters.', { timeout: 8_000 });   // W1326
     await expect(page.locator('.mu-tab[data-mu-go="raids"] em')).toHaveText('0 live');
   });
 
@@ -193,9 +197,9 @@ test.describe('W1263 — a team waiting for hunters', () => {
     await expect(team).toBeVisible({ timeout: 8_000 });
     await expect(team.locator('.mu-tl b')).toHaveText('Waiting');
     await expect(team.locator('.mu-tl span')).toHaveText(/Clock stopped · 39h left/i);
-    await expect(team.locator('.mu-wait')).toHaveText('Your team needs more hunters. The clock starts again when they join.');
+    await expect(team.locator('.mu-wait')).toHaveText('Needs more hunters.');   // W1326 — "Clock stopped" above says the rest
     const card = page.locator('[data-pane="raids"] .mu-tc');
-    await expect(card.locator('.mu-ttl')).toHaveText(/Waiting for hunters/i);
+    await expect(card.locator('.mu-ttl')).toHaveText(/^Waiting$/i);   // W1326
   });
   test('a running team shows its hours, never the waiting label', async ({ page }) => {
     await boot(page);
@@ -227,7 +231,7 @@ test.describe('W1282 — the Grinning God Hall of Fame', () => {
     const rd = page.locator('[data-pane="raids"]');
     const rows = rd.locator('.mu-hof .mu-hr');
     await expect(rows).toHaveCount(5, { timeout: 8_000 });
-    await expect(rd.locator('.mu-sec').filter({ hasText: /Hall of Fame/i })).toHaveCount(1);
+    await expect(rd.locator('.mu-sec').filter({ hasText: /^Fastest clears$/i })).toHaveCount(1);   // W1326 — was "Hall of Fame · Fastest clears"
     await expect(rd.locator('.mu-sec').filter({ hasText: /Recently finished/i })).toHaveCount(0);
     await expect(rd.locator('.mu-fin')).toHaveCount(0);
     await expect(rows.first().locator('.mu-hp')).toHaveText('1');
@@ -261,7 +265,7 @@ test.describe('W1282 — the Grinning God Hall of Fame', () => {
     await page.evaluate((x) => { (window as any).Auth.coopRaidsLive = async () => x; }, f);
     await page.evaluate(() => (window as any).__muster.open('raids'));
     const rd = page.locator('[data-pane="raids"]');
-    await expect(rd.locator('.mu-hof-empty')).toHaveText('No team has beaten The Grinning God yet. The first team to win is written here.', { timeout: 8_000 });
+    await expect(rd.locator('.mu-hof-empty')).toHaveText('No clears yet.', { timeout: 8_000 });   // W1326
     await expect(rd.locator('.mu-hr')).toHaveCount(0);
     await expect(rd.locator('.mu-fin')).toHaveCount(0);
   });
