@@ -122,3 +122,17 @@ if (process.argv.indexOf('--ults') !== -1) {
   });
   console.log(fails ? `ULT TABLE: ${fails} weapon cell(s) outside the bar (marked !)` : 'ULT TABLE: every ultimate within the bar');
 }
+
+// ── W1344: FLOOR 101, two at once (opt-in: `node tools/sim-ascent.js --duo [n]`). The owner's target for a max build
+// (Nightfall, all relics and sets) is about 35% with no shadows rising to about 75% with every one, harder than floor 100.
+// Rows: the Usurper first (the strong play, 'threat': hit the bigger hitter), and the Pretender first ('back') for contrast.
+if (process.argv.indexOf('--duo') !== -1) {
+  const n = +(process.argv[process.argv.indexOf('--duo') + 1]) || 1000;
+  const SH = [0, 5, 12, 19, 99];
+  console.log(`\n=== FLOOR 101 (n=${n}, max build): win% by shadows ${SH.join(' / ')} ===`);
+  for (const [label, how] of [['F100 (for scale)', null], ['F101 Usurper first', 'threat'], ['F101 Pretender first', 'back']]) {
+    const cells = SH.map((k) => Arena.simAscent(how ? 101 : 100, NF, { n, seed0: 3, invest: 'max', shadows: k, duoTarget: how || undefined }).winRate);
+    console.log(label.padEnd(22) + cells.map((x) => pct(x).padStart(6)).join(''));
+  }
+  console.log('settings ' + JSON.stringify(Arena._battle.duo()));
+}

@@ -162,7 +162,7 @@ for (const vp of [{ width: 390, height: 844 }, { width: 375, height: 667 }]) {
       await expect(pick).toHaveText(/^Grandmaster$/i);
       await pick.click();
       const rows = page.locator('#arena-overlay .tm-row');
-      expect(await rows.evaluateAll((els) => els.slice(-2).map((e) => [e.querySelector('.at')!.textContent, e.querySelector('.nm')!.textContent]))).toEqual([['F90', 'Master'], ['F100', 'Grandmaster']]);
+      expect(await rows.evaluateAll((els) => els.slice(-3).map((e) => [e.querySelector('.at')!.textContent, e.querySelector('.nm')!.textContent]))).toEqual([['F90', 'Master'], ['F100', 'Grandmaster'], ['F101', 'The King']]);   // W1344 — floor 101's title
       await expect(page.locator('#arena-overlay .tm-row--worn .nm')).toHaveText('Grandmaster');
       await expect(page.locator('#arena-overlay')).not.toContainText('Second Awakened');
       if (process.env.LB_SHOTS) { await page.locator('#arena-overlay .tm-row--worn').scrollIntoViewIfNeeded(); await page.screenshot({ path: process.env.LB_SHOTS + '/titles-' + vp.width + '.png' }); }

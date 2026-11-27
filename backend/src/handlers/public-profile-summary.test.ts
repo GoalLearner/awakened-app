@@ -602,6 +602,15 @@ describe('PUT /v1/users/me/public-profile-summary — arena title (W257)', () =>
     expect(calls[0].binds[12]).toBe('rt_grandmaster');
   });
 
+  it('W1344 — accepts the floor-101 title (beyond_the_king)', async () => {
+    const db = makeDb();
+    const res = await handlePublicProfileSummaryPut(
+      makeReq({ ...validPayload, arenaTitle: 'beyond_the_king' }), makeEnv(db), session);
+    expect(res.status).toBe(200);
+    const calls = (db as unknown as { _calls: () => { sql: string; binds: unknown[] }[] })._calls();
+    expect(calls[0].binds[12]).toBe('beyond_the_king');
+  });
+
   it('accepts a whitelisted arena title id and binds it (insert + sentinel)', async () => {
     const db = makeDb();
     const res = await handlePublicProfileSummaryPut(

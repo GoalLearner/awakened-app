@@ -1664,6 +1664,33 @@ describe('arena_title_earned (W258)', () => {
     });
   }
 
+  it('W1344 — the floor-101 title (The King) is accepted with its exact label', async () => {
+    const db = makeDb({ perInsertChanges: [1] });
+    const res = await handlePublicAchievementEventsPost(
+      makeReq({ events: [{
+        ...VALID_ARENA_TITLE,
+        eventKey: 'beyond_the_king',
+        eventLabel: 'earned the title "The King"',
+        clientEventId: 'arena_title:beyond_the_king',
+      }] }), makeEnv(db), session,
+    );
+    expect(res.status).toBe(200);
+    expect(db._calls().filter((c) => !/^SELECT COUNT/.test(c.sql))[0]?.binds[4]).toBe('earned the title "The King"');
+  });
+
+  it('W1344 — The King on another id is refused', async () => {
+    const db = makeDb();
+    const res = await handlePublicAchievementEventsPost(
+      makeReq({ events: [{
+        ...VALID_ARENA_TITLE,
+        eventKey: 'summit_second_awakened',
+        eventLabel: 'earned the title "The King"',
+        clientEventId: 'arena_title:summit_second_awakened',
+      }] }), makeEnv(db), session,
+    );
+    expect(res.status).toBe(400);
+  });
+
   it('W1314 — an old title name on another id is refused', async () => {
     const db = makeDb();
     const res = await handlePublicAchievementEventsPost(
@@ -1890,6 +1917,22 @@ describe('GET /v1/friends/activity — feed read (1z.200)', () => {
     expect(json.events.length).toBe(1);
     expect(json.events[0]?.eventKey).toBe('rt_contender');
   });
+
+  // W1344 — The King needs the summit (floor_best 100): floor 101 itself is never rated, so the server never sees 101.
+  for (const [fb, kept] of [[100, 1], [99, 0]] as const) {
+    it(`W1344 — The King at floor_best ${fb} is ${kept ? 'kept' : 'suppressed'}`, async () => {
+      const db = makeDb({ feedRows: [{
+        id: 'evt-king', user_id: 'king-uid', event_type: 'arena_title_earned',
+        event_key: 'beyond_the_king', event_label: 'earned the title "The King"',
+        event_value: null, rarity: null, server_created_at: NOW_UTC,
+        alias: 'crowned', rank_label: 'S', floor_best: fb,
+      }] });
+      const req = new Request('https://example.com/v1/friends/activity');
+      const res = await handleFriendsActivityGet(req, makeEnv(db), session);
+      const json = await res.json() as { events: unknown[] };
+      expect(json.events.length).toBe(kept);
+    });
+  }
 
   it('fails open for a legacy/unknown title id even at floor_best 0', async () => {
     const db = makeDb({ feedRows: [{

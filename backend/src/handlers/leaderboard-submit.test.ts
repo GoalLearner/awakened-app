@@ -771,3 +771,41 @@ describe('POST /v1/leaderboard/submit -- weekly scoping (1z.33)', () => {
     expect(accoladeInsert).toBeUndefined();
   });
 });
+
+// W1344 — owner 2026-11-27 (the Highest Floor board, after floor 101 was built): "This will need to be updated as well".
+// floor_best now reads 101 for a hunter who beat the two claimants. An older app (100 at most) cannot pull it back down,
+// and it is told 100 at most, so its W818 self-heal never fires; a 3.0.34+ app reads the true best from best_beyond.
+describe('POST /v1/leaderboard/submit -- floor 101 (W1344)', () => {
+  it('accepts floor_best 101 and refuses 102', async () => {
+    const ok = await handleLeaderboardSubmit(makeReq({ metric: 'floor_best', current_value: 101 }), makeEnv(makeDb({ current_value: 101, best_value: 101 })), session);
+    expect(ok.status).toBe(200);
+    const bad = await handleLeaderboardSubmit(makeReq({ metric: 'floor_best', current_value: 102 }), makeEnv(makeDb()), session);
+    expect(bad.status).toBe(400);
+  });
+
+  it('an older app sending 100 keeps a stored 101 (the upsert writes 101)', async () => {
+    const db = makeDb({ current_value: 101, best_value: 101 });
+    const res = await handleLeaderboardSubmit(makeReq({ metric: 'floor_best', current_value: 100 }), makeEnv(db), session);
+    expect(res.status).toBe(200);
+    const up = db._calls().find((c) => /INSERT INTO leaderboard_snapshots/.test(c.sql))!;
+    expect(up.binds.slice(1, 4)).toEqual(['floor_best', 101, 101]);
+  });
+
+  it('a 100 with nothing past it stays 100; a lower floor is not lifted', async () => {
+    const db = makeDb({ current_value: 100, best_value: 100 });
+    await handleLeaderboardSubmit(makeReq({ metric: 'floor_best', current_value: 100 }), makeEnv(db), session);
+    expect(db._calls().find((c) => /INSERT INTO leaderboard_snapshots/.test(c.sql))!.binds[2]).toBe(100);
+    const db2 = makeDb({ current_value: 101, best_value: 101 });
+    await handleLeaderboardSubmit(makeReq({ metric: 'floor_best', current_value: 40 }), makeEnv(db2), session);
+    expect(db2._calls().find((c) => /INSERT INTO leaderboard_snapshots/.test(c.sql))!.binds[2]).toBe(40);
+  });
+
+  it('the reply says 100 at most, with the true best in best_beyond', async () => {
+    const res = await handleLeaderboardSubmit(makeReq({ metric: 'floor_best', current_value: 101 }), makeEnv(makeDb({ current_value: 101, best_value: 101 })), session);
+    const j = await res.json() as { current_value: number; best_value: number; best_beyond: number };
+    expect([j.current_value, j.best_value, j.best_beyond]).toEqual([100, 100, 101]);
+    const res2 = await handleLeaderboardSubmit(makeReq({ metric: 'floor_best', current_value: 90 }), makeEnv(makeDb({ current_value: 90, best_value: 100 })), session);
+    const j2 = await res2.json() as { best_value: number; best_beyond: number };
+    expect([j2.best_value, j2.best_beyond]).toEqual([100, 0]);
+  });
+});

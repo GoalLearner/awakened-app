@@ -180,6 +180,15 @@ export async function handleLeaderboardSubmit(
     );
   }
 
+  // W1344 — floor 101, the first floor past the summit (app 3.0.34+). An older app tops out at 100 and sends it on every
+  // sync (a second phone, or before the update): it must not pull a hunter's 101 back down to 100 on the board.
+  if (metric === 'floor_best' && value === FLOOR_SUMMIT) {
+    const prev = await env.DB.prepare(
+      'SELECT current_value FROM leaderboard_snapshots WHERE user_id = ? AND metric = ?',
+    ).bind(session.userId, metric).first<{ current_value: number }>();
+    if (prev && Number(prev.current_value) > value) value = Number(prev.current_value);
+  }
+
   // v3 Phase 1z.140 — trusted weekly-sum source tag. Optional. If
   // the client sends a recognised identifier we persist it; anything
   // else (missing, wrong type, unknown string) is treated as
@@ -461,9 +470,18 @@ export async function handleLeaderboardSubmit(
   // W1199 — the steps can be what puts an official week in the 100K Club or the Hall of Fame: announce it
   if (metric === 'step_total' && !isSimUser) await postOfficialFame(env, session.userId, now);
 
+  const cur = row?.current_value ?? value, best = row?.best_value ?? value;
+  // W1344 — an app before 3.0.34 rebuilds its tower to best_value when it is higher than its own climb (W818), and it
+  // knows no floor past 100: it would toast "restored" on every sync. It gets 100 at most; 3.0.34+ reads best_beyond.
+  if (metric === 'floor_best') {
+    return jsonOk({ metric, current_value: Math.min(cur, FLOOR_SUMMIT), best_value: Math.min(best, FLOOR_SUMMIT), best_beyond: best > FLOOR_SUMMIT ? best : 0 });
+  }
   return jsonOk({
     metric,
-    current_value: row?.current_value ?? value,
-    best_value: row?.best_value ?? value,
+    current_value: cur,
+    best_value: best,
   });
 }
+
+/** W1344 — the summit (floor 100). floor_best may read 101 past it; older apps never send above this. */
+const FLOOR_SUMMIT = 100;

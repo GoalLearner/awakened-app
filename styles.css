@@ -37974,3 +37974,69 @@ button.pcc-title { cursor: pointer; -webkit-appearance: none; appearance: none; 
 .tw-fight { box-shadow: inset 0 1px 0 rgba(255,255,255,0.35); }
 .mx-portrait.you { box-shadow: inset 0 0 30px rgba(0,0,0,0.6); }
 .bfs-defeated-hero { box-shadow: inset 0 1px 0 rgba(255,255,255,0.04); }
+
+/* ─── W1344 — Ascent floor 101: two monsters at once ───
+   d0 (the Usurper) stands in front and lower; d1 (the Pretender) a step behind and higher. Your target wears a thin
+   gold ring at its feet and a gold name — no new glows. A fallen one dissolves (the existing defeat look) and stays gone;
+   the survivor's ENRAGED look is the phase-II red the bosses already use. */
+.pkb.pkb2.pkb2--duo .pkb-stage .pkb-spot.foe.duo { width: 44%; top: calc(env(safe-area-inset-top, 0px) + 96px); cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.pkb.pkb2.pkb2--duo .pkb-stage .pkb-spot.foe.duo.d0 { right: 17%; width: 43%; bottom: 3%; z-index: 3; }
+.pkb.pkb2.pkb2--duo .pkb-stage .pkb-spot.foe.duo.d1 { right: -3%; width: 37%; bottom: 12%; top: calc(env(safe-area-inset-top, 0px) + 70px); z-index: 2; }
+.pkb.pkb2.pkb2--duo .pkb-stage .pkb-spot.you { z-index: 4; }
+.pkb.pkb2.pkb2--duo .pkb-spot.duo::after { content: ""; position: absolute; left: 50%; bottom: -2px; width: 58%; height: 14px; transform: translateX(-50%); border-radius: 50%;
+  border: 1.5px solid rgba(255,214,116,0); transition: border-color 0.2s ease; pointer-events: none; }
+.pkb.pkb2.pkb2--duo .pkb-spot.duo.tgt::after { border-color: rgba(255,214,116,0.85); }
+.pkb.pkb2.pkb2--duo .pkb-spot.duo.ko { pointer-events: none; }
+.pkb.pkb2.pkb2--duo .pkb-spot.duo.ko::after { border-color: transparent; }
+.pkb.pkb2.pkb2--duo .pkb-spot.duo.ko .spr { opacity: 0; }
+/* the fall (owner 2026-11-27: "include dialogue and an effect when one monster gets defeated"): it sinks and greys while it
+   speaks its last words, then crumbles: a pale flash, then ash rising from the whole body as it settles and fades */
+.pkb.pkb2.pkb2--duo .pkb-spot.duo.dying .spr { transform: translateY(6px) rotate(-1.5deg); filter: grayscale(0.55) brightness(0.75) drop-shadow(0 10px 14px rgba(0,0,0,0.6)); transition: transform 0.6s ease, filter 0.6s ease; }
+.pkb.pkb2.pkb2--duo .pkb-spot.duo.crumble .spr { animation: pkb2Crumble 1.15s cubic-bezier(0.4,0,0.6,1) both; }
+@keyframes pkb2Crumble {
+  0% { transform: translateY(6px) rotate(-1.5deg); filter: grayscale(0.55) brightness(0.75); opacity: 1; }
+  10% { filter: grayscale(0.2) brightness(2.1); }
+  30% { transform: translateY(8px) rotate(-2deg); filter: grayscale(0.85) brightness(0.95); opacity: 1; }
+  100% { transform: translateY(22px) scale(0.94) rotate(2deg); filter: grayscale(1) brightness(0.35) blur(3px); opacity: 0; } }
+.pkb-spot.crumble .ash { width: 6px; height: 6px; background: #b9b3c9; animation: pkbReAsh 1.4s ease-out both; }
+.pkb-spot.crumble .ash:nth-child(3n) { background: #ff6b4a; }
+.pkb-spot.crumble .ash:nth-child(odd) { top: 38%; animation-delay: 0.12s; }
+.pkb-spot.crumble .ash:nth-child(4n) { top: 22%; animation-delay: 0.24s; }
+.pkb-spot.crumble .ash:nth-child(5n) { top: 70%; animation-delay: 0.05s; }
+@media (prefers-reduced-motion: reduce) { .pkb.pkb2.pkb2--duo .pkb-spot.duo.crumble .spr { animation-duration: 0.01s; } }
+/* its last words: a speech card over its head, the read card's look */
+.pkb2-lastword { position: absolute; z-index: 6; left: 50%; top: 120px; max-width: min(250px, calc(100% - 24px)); padding: 8px 12px 9px; border-radius: 12px; pointer-events: none;
+  background: rgba(10,8,18,0.94); border: 1px solid rgba(255,255,255,0.14); opacity: 0; transform: translateY(6px); transition: opacity 0.25s ease, transform 0.25s ease; }
+.pkb2-lastword.in { opacity: 1; transform: none; }
+.pkb2-lastword.bye { opacity: 0; transform: translateY(-4px); }
+.pkb2-lastword .q { display: block; font-family: "Cormorant Garamond", Georgia, serif; font-style: italic; font-size: 17px; line-height: 1.2; color: #f5f3fb; }
+.pkb2-lastword::after { content: ""; position: absolute; bottom: -5px; left: var(--ax, 50%); width: 9px; height: 9px; margin-left: -5px; background: rgba(10,8,18,0.94);
+  border-right: 1px solid rgba(255,255,255,0.14); border-bottom: 1px solid rgba(255,255,255,0.14); transform: rotate(45deg); }
+.pkb.pkb2.pkb2--duo .pkb-spot.duo.enraged .spr { filter: drop-shadow(0 0 18px rgba(229,40,40,0.55)) drop-shadow(0 10px 14px rgba(0,0,0,0.6)); }
+/* the two badges: the back monster's sits higher, so they never share a row */
+.pkb2--duo .pkb2-intent.d0 { left: 61%; top: calc(env(safe-area-inset-top, 0px) + 98px); }
+.pkb2--duo .pkb2-intent.d1 { left: 82%; top: calc(env(safe-area-inset-top, 0px) + 56px); }
+.pkb2--duo .pkb2-read { top: calc(env(safe-area-inset-top, 0px) + 134px); }
+/* the two plates, stacked in the foe column */
+.pkb2-duoplates { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.pkb.pkb2 .pkb-plate.duo { cursor: pointer; -webkit-tap-highlight-color: transparent; transition: opacity 0.3s ease; }
+.pkb.pkb2 .pkb-plate.duo .pkb2-bname { height: 14px; }
+.pkb.pkb2 .pkb-plate.duo .nm { font-size: 11.5px; color: #c8c6d8; }
+.pkb.pkb2 .pkb-plate.duo .hp { margin-top: 4px; height: 8px; }
+.pkb.pkb2 .pkb-plate.duo .pkb2-bmeta { margin-top: 3px; height: 13px; }
+.pkb.pkb2 .pkb-plate.duo.tgt .nm { color: #ffd574; }
+.pkb.pkb2 .pkb-plate.duo.tgt .pkb2-bname::before { content: ""; flex: none; align-self: center; width: 5px; height: 5px; transform: rotate(45deg); background: #ffd574; }
+.pkb.pkb2 .pkb-plate.duo.enraged .nm { color: #ff9a9a; }
+.pkb.pkb2 .pkb-plate.duo.ko { opacity: 0.38; pointer-events: none; }
+/* both claimants in one frame: the tower hero, the matchup, the intro card, the result */
+.ar-foe-duo { display: flex; align-items: flex-end; justify-content: center; width: 100%; height: 100%; }
+.ar-foe-duo > img { flex: 1 1 0; min-width: 0; width: 50%; height: 100%; object-fit: contain; object-position: 50% 100%; }
+.ar-foe-duo > img + img { margin-left: -14%; transform: scale(0.92); transform-origin: 50% 100%; }
+.tw-hall { display: block; width: 100%; margin-top: 10px; padding: 12px; background: transparent; border: 1px solid var(--tw-line, rgba(255,255,255,0.1)); border-radius: 14px;
+  color: #c8c6d8; font: 800 11px var(--tw-mono, "JetBrains Mono", ui-monospace, monospace); letter-spacing: 0.24em; }
+.tw-hall svg { vertical-align: -2px; margin-left: 6px; }
+/* the rail's 101st cell, one cell tall above the summit band (a band is flex 1 over ten cells) */
+.tw-rb.tw-rb--beyond { flex: 0.1; cursor: default; }
+/* the King: a crimson past the gold of the summit */
+.tm-row--beyond { --tm-c: #e5484d; --tm-hi: #ffc2c4; }
+.lb-rank-class--beyond { --gem-c: #e5484d; --gem-hi: #ffc2c4; --gem-glow: rgba(229,72,77,0.40); }

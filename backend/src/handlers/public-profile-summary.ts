@@ -134,6 +134,8 @@ const ARENA_TITLE_IDS = [
   // W269 — the summit trophy "The Second Awakened" (clear all 100 floors; off
   // the rating ladder). Display name resolves client-side, same as the rest.
   'summit_second_awakened',
+  // W1344 — "The King": beat the two claimants on floor 101 (past the summit)
+  'beyond_the_king',
   // legacy W257-era ids — accepted from pre-W266 clients still in the wild;
   // the client remaps them forward on its next launch
   'asc_brawler', 'asc_wallbreaker', 'asc_ironbreaker', 'asc_edgewalker',

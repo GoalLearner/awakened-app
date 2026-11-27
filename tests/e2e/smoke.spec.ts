@@ -11208,6 +11208,23 @@ test.describe('CC · The Shadow Army drops like a pet (W1035 · W1047)', () => {
     expect(r[3]).toBeGreaterThanOrEqual(0.92);
   });
 
+  // W1344 — owner 2026-11-27: floor 101 is two monsters at once, harder than floor 100 (his pick: about 35% for a max build
+  // alone, about 75% with every shadow). Hitting the Usurper first (the sim's default 'threat' target) is the strong play.
+  test('W1344 — floor 101: the max build wins about a third alone, about three in four with every shadow, under floor 100', async ({ page }) => {
+    test.setTimeout(120_000);
+    await freshApp(page);
+    const r = await page.evaluate(() => [0, 5, 99].map((k) =>
+      (window as any).Arena.simAscent(101, 'nightfall_blade', { n: 600, invest: 'max', shadows: k }).winRate));
+    const f100 = await page.evaluate(() => (window as any).Arena.simAscent(100, 'nightfall_blade', { n: 600, invest: 'max', shadows: 0 }).winRate);
+    expect(r[0]).toBeGreaterThanOrEqual(0.27);
+    expect(r[0]).toBeLessThanOrEqual(0.47);
+    expect(r[1]).toBeGreaterThan(r[0]);
+    expect(r[2]).toBeGreaterThan(r[1]);
+    expect(r[2]).toBeGreaterThanOrEqual(0.63);
+    expect(r[2]).toBeLessThanOrEqual(0.83);
+    expect(r[0]).toBeLessThan(f100);
+  });
+
   test('W1048 — the slots by rank: 1, 2, 4, 7, 12, and at S one for every solo boss', async ({ page }) => {
     await freshApp(page);
     const r = await page.evaluate(() => { const f = (window as any).__shadowSlots; return ['E', 'D', 'C', 'B', 'A', 'S', 'S+', 'nonsense'].map((k) => f(k)); });

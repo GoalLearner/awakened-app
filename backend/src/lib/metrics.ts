@@ -77,8 +77,9 @@ export const METRIC_CAPS: Readonly<Record<Metric, number>> = {
    * stair-climbers. v3 Phase 1z.125. */
   flights_climbed: 1000,
   /** Highest Ascent floor ever cleared. Hard ceiling is the tower
-   * height (100); anything above is corrupt-client garbage. W274. */
-  floor_best: 100,
+   * height (100); anything above is corrupt-client garbage. W274.
+   * W1344 — 101: the first floor past the summit (the two claimants, app 3.0.34+). */
+  floor_best: 101,
   /** Unique relics in the Collection Log. The log holds ~59 eligible
    * relics today (95-card catalog, commons + orphans excluded) and the
    * catalog only grows a few per release — 200 leaves generous headroom
