@@ -37939,3 +37939,6 @@ button.pcc-title { cursor: pointer; -webkit-appearance: none; appearance: none; 
 
 /* W1332 — empty explainers on the Items sheets */
 #mystery-card-howto:empty, #souls-econ-takeaway:empty { display: none; }
+
+/* W1334 — Settings sections whose summary only listed what is inside: the empty span still pushes the chevron right */
+.settings-v2 .settings-collapsible-summary:empty { margin-right: 0; }

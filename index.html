@@ -19,7 +19,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800;900&family=Cormorant+Garamond:ital,wght@0,500;1,500;1,600&family=JetBrains+Mono:wght@400;500;700;800&family=Grenze+Gotisch:wght@400..900&family=Chakra+Petch:wght@500;600;700&family=Alegreya+Sans:ital,wght@0,400;0,500;0,700;1,400;1,500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=857">
+  <link rel="stylesheet" href="styles.css?v=858">
   <!-- Preload tab-bar icons so they render instantly on first paint
        instead of pop-in. Above the fold, always visible — eager load. -->
   <link rel="preload" as="image" href="assets/tab-icons/tab-status.png">
@@ -2902,7 +2902,7 @@
   <script src="simulated-leaderboard.js?v=13"></script>
   <script src="lib/economy.js?v=4"></script>
   <script src="lib/drops.js?v=2"></script>
-  <script src="app.js?v=1670"></script>
+  <script src="app.js?v=1671"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>
@@ -3048,7 +3048,6 @@
       <div id="rankup-founder" class="hidden" style="margin: 2px 0 12px;"></div>
       <button id="rankup-continue" class="rankup-continue-btn">CONTINUE</button>
       <button id="rankup-share" class="rankup-share-btn hidden" type="button">SHARE YOUR HUNTER REPORT</button>
-      <div class="rankup-brand">⚔ Habit RPG</div>
     </div>
   </div>
 
@@ -3094,7 +3093,6 @@
       <div id="statlvl-flavor" class="statlvl-flavor"></div>
       <div id="statlvl-bonus" class="statlvl-bonus hidden"></div>
       <div class="statlvl-dismiss-hint">Tap to dismiss</div>
-      <div class="statlvl-brand">⚔ Habit RPG</div>
     </div>
   </div>
 
@@ -3108,7 +3106,6 @@
       <button id="wn-close-btn" class="wn-close-btn" aria-label="Close">✕</button>
     </div>
     <div id="wn-list" class="wn-list"></div>
-    <div class="wn-footer-text">Tap anywhere or swipe down to dismiss.</div>
   </div>
 
   <!-- Settings sheet — v3 Phase 1z.229 (Direction A: Tight list, glanceable summaries).
@@ -3246,7 +3243,7 @@
                to iOS's native permission sheet. -->
           <button id="settings-rem-enable" class="settings-rem-enable-btn hidden" type="button">Set up notifications</button>
           <p id="settings-rem-web-note" class="settings-rem-note hidden">
-            Reminders work best in the iOS app. Install from App Store for full functionality.
+            Reminders need the iOS app.
           </p>
 
           <div class="settings-v2-subh">Daily system pings</div>
@@ -3265,11 +3262,9 @@
             <span class="settings-v2-fright"><span class="settings-v2-timechip settings-v2-timechip--static">7:00 PM</span></span>
           </div>
 
-          <div class="settings-v2-subh">Quiet hours</div>
           <div class="settings-v2-frow">
             <div class="settings-v2-fcol">
               <div class="settings-v2-fname">Quiet hours</div>
-              <div class="settings-v2-fsub">Silence pings overnight</div>
             </div>
             <span class="settings-v2-fright">
               <button id="settings-rem-quiet-toggle" class="settings-toggle" role="switch" aria-checked="true" aria-label="Quiet hours"></button>
@@ -3326,7 +3321,7 @@
 
           <!-- State A: HealthKit unavailable (web / non-iOS) -->
           <div id="settings-health-state-unavailable" class="hidden">
-            <p class="settings-rem-note">Apple Health integration is available in the iOS app only.</p>
+            <p class="settings-rem-note">Apple Health needs the iOS app.</p>
           </div>
 
           <!-- State B: Connected (permission granted) -->
@@ -3340,17 +3335,17 @@
             <div class="settings-v2-frow" id="settings-health-autoverify-row">
               <div class="settings-v2-fcol">
                 <div class="settings-v2-fname">Auto-verify habits</div>
-                <div class="settings-v2-fsub">Confirm steps, sleep &amp; workouts from Health</div>
+                <div class="settings-v2-fsub">Steps, sleep &amp; workouts</div>
               </div>
               <span class="settings-v2-fright">
                 <button id="settings-health-autoverify-toggle" class="settings-toggle" role="switch" aria-checked="true" aria-label="Auto-verify habits"></button>
               </span>
             </div>
-            <p id="settings-health-paused-note" class="settings-rem-note hidden">Auto-verify is paused. Tap the toggle to resume.</p>
+            <p id="settings-health-paused-note" class="settings-rem-note hidden">Auto-verify is paused.</p>
             <!-- W824 (Train 2, L5) — the W799 verified-only rule, disclosed
                  where users will look when their numbers differ from the
                  Health app. -->
-            <p class="settings-rem-note">Only data your iPhone or Apple Watch recorded counts — steps, floors, sleep, and workouts typed into the Health app by hand are ignored. That's what keeps the leaderboards real.</p>
+            <p class="settings-rem-note">Only data your iPhone or Apple Watch recorded counts. Entries typed into Health by hand are ignored.</p>
 
             <button id="settings-health-manage-link" class="settings-v2-frow settings-v2-rowbtn" type="button">
               <span class="settings-v2-fname">Manage data access</span>
@@ -3366,7 +3361,7 @@
             </div>
             <!-- W824 (L5) — copy was stale-narrow (walk only); auto-verify
                  covers steps, sleep, bedtime, workouts, and flights. -->
-            <p class="settings-rem-note">Connect Apple Health to power your boss hunts, the Worldgate and every leaderboard with your real steps, sleep, workouts and flights. Your data stays on your device; only totals you choose to rank with are sent.</p>
+            <p class="settings-rem-note">Your steps, sleep, workouts and flights power hunts, the Worldgate and the boards. Your data stays on your device; only totals you choose to rank with are sent.</p>
             <button id="settings-health-connect-btn" class="settings-rem-enable-btn" type="button">Connect Apple Health</button>
             <p class="settings-rem-note">If you previously declined, you'll need to enable Steps access in iPhone Settings → Privacy &amp; Security → Health → Awakened.</p>
           </div>
@@ -3378,7 +3373,7 @@
       <div class="settings-collapsible">
         <button id="settings-sound-toggle" class="settings-collapsible-toggle" type="button" aria-expanded="false" data-collapsible="sound">
           <span class="settings-collapsible-lbl">SOUND</span>
-          <span class="settings-collapsible-summary">Effects &amp; music</span>
+          <span class="settings-collapsible-summary"></span>
           <span class="settings-collapsible-chevron">›</span>
         </button>
         <div id="settings-sound-body" class="settings-collapsible-body settings-collapsible-body--collapsed">
@@ -3410,14 +3405,13 @@
       <div class="settings-collapsible">
         <button id="settings-appearance-toggle" class="settings-collapsible-toggle" type="button" aria-expanded="false" data-collapsible="appearance">
           <span class="settings-collapsible-lbl">APPEARANCE</span>
-          <span class="settings-collapsible-summary">List view</span>
+          <span class="settings-collapsible-summary"></span>
           <span class="settings-collapsible-chevron">›</span>
         </button>
         <div id="settings-appearance-body" class="settings-collapsible-body settings-collapsible-body--collapsed">
           <div class="settings-v2-frow">
             <div class="settings-v2-fcol">
               <div class="settings-v2-fname">Habit list view</div>
-              <div class="settings-v2-fsub">Show habits as a list instead of a grid</div>
             </div>
             <span class="settings-v2-fright">
               <button id="settings-habits-view-toggle" class="settings-toggle" role="switch" aria-checked="true" aria-label="Habits list view"></button>
@@ -3438,7 +3432,6 @@
           <button id="settings-field-manual-row" class="settings-v2-frow settings-v2-rowbtn" type="button">
             <div class="settings-v2-fcol">
               <div class="settings-v2-fname">Field Manual</div>
-              <div class="settings-v2-fsub">The system, plainly stated</div>
             </div>
             <span class="settings-v2-fright"><span class="settings-v2-chevsmall">›</span></span>
           </button>
@@ -3446,7 +3439,7 @@
           <button id="settings-report-problem" class="settings-v2-frow settings-v2-rowbtn" type="button">
             <div class="settings-v2-fcol">
               <div class="settings-v2-fname">Report a problem</div>
-              <div class="settings-v2-fsub">Email us · we read every one</div>
+              <div class="settings-v2-fsub">By email</div>
             </div>
             <span class="settings-v2-fright"><span class="settings-v2-chevsmall">›</span></span>
           </button>
@@ -3454,7 +3447,6 @@
           <button id="settings-credits" class="settings-v2-frow settings-v2-rowbtn" type="button">
             <div class="settings-v2-fcol">
               <div class="settings-v2-fname">Credits &amp; licenses</div>
-              <div class="settings-v2-fsub">The artists behind the battle effects</div>
             </div>
             <span class="settings-v2-fright"><span class="settings-v2-chevsmall">›</span></span>
           </button>
@@ -3469,7 +3461,7 @@
           <button id="settings-replay-onboarding" class="settings-v2-frow settings-v2-rowbtn" type="button">
             <div class="settings-v2-fcol">
               <div class="settings-v2-fname">Replay the awakening</div>
-              <div class="settings-v2-fsub">Watch the opening again — nothing is saved</div>
+              <div class="settings-v2-fsub">Nothing is saved</div>
             </div>
             <span class="settings-v2-fright"><span class="settings-v2-chevsmall">›</span></span>
           </button>
@@ -3563,7 +3555,6 @@
           <button id="settings-whats-new-btn" class="settings-v2-frow settings-v2-rowbtn" type="button">
             <div class="settings-v2-fcol">
               <div class="settings-v2-fname">What's New</div>
-              <div class="settings-v2-fsub">Everything recent, in one sheet</div>
             </div>
             <span class="settings-v2-fright"><span class="settings-v2-chevsmall">›</span></span>
           </button>
@@ -3580,7 +3571,6 @@
           <button id="settings-rate-app-row" class="settings-v2-frow settings-v2-rowbtn" type="button">
             <div class="settings-v2-fcol">
               <div class="settings-v2-fname">Rate Awakened</div>
-              <div class="settings-v2-fsub">Share feedback on the App Store</div>
             </div>
             <span class="settings-v2-fright"><span class="settings-v2-chevsmall">›</span></span>
           </button>
@@ -3597,11 +3587,11 @@
       <div class="settings-collapsible">
         <button id="settings-board-toggle" class="settings-collapsible-toggle" type="button" aria-expanded="false" data-collapsible="board">
           <span class="settings-collapsible-lbl">COMMUNITY</span>
-          <span id="settings-board-summary" class="settings-collapsible-summary">Blocked hunters · rules</span>
+          <span id="settings-board-summary" class="settings-collapsible-summary"></span>
           <span class="settings-collapsible-chevron">›</span>
         </button>
         <div id="settings-board-body" class="settings-collapsible-body settings-collapsible-body--collapsed">
-          <div id="settings-board-blocks" class="settings-board-blocks"><div class="settings-v2-fsub">Hunters you block on the board will show here.</div></div>
+          <div id="settings-board-blocks" class="settings-board-blocks"><div class="settings-v2-fsub">No blocked hunters.</div></div>
           <button id="settings-board-rules" type="button" class="settings-legal-row" data-board-rules-open>
             <span class="settings-legal-label">Community rules</span>
             <span class="settings-legal-chevron" aria-hidden="true">›</span>
@@ -3613,7 +3603,7 @@
       <div class="settings-collapsible">
         <button id="settings-legal-toggle" class="settings-collapsible-toggle" type="button" aria-expanded="false" data-collapsible="legal">
           <span class="settings-collapsible-lbl">LEGAL</span>
-          <span class="settings-collapsible-summary">Privacy</span>
+          <span class="settings-collapsible-summary"></span>
           <span class="settings-collapsible-chevron">›</span>
         </button>
         <div id="settings-legal-body" class="settings-collapsible-body settings-collapsible-body--collapsed">
