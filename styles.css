@@ -37936,3 +37936,6 @@ button.pcc-title { cursor: pointer; -webkit-appearance: none; appearance: none; 
 
 /* W1331 — the dungeon flavor line is empty now */
 .dungeon-flavor:empty { display: none; }
+
+/* W1332 — empty explainers on the Items sheets */
+#mystery-card-howto:empty, #souls-econ-takeaway:empty { display: none; }

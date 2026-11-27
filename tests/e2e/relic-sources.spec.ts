@@ -51,7 +51,7 @@ test.describe('Every boss that drops a relic (W1109)', () => {
       'The Grinning GodCO-OP',
       'Every weekly boss',
     ]);
-    await expect(page.locator('#mystery-card-howto')).toHaveText('Defeat any of these bosses for a chance to reveal this relic.');
+    await expect(page.locator('#mystery-card-howto')).toHaveText('');   // W1332 — the sources and HUNT BOSS say how
   });
 
   test('the card detail names every source in one line', async ({ page }) => {
