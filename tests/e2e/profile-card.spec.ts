@@ -87,7 +87,7 @@ for (const vp of [{ width: 390, height: 844 }, { width: 375, height: 667 }]) {
       await expect(page.locator('#pc-body .pcc-fv')).toHaveText('99 / 100');
       const look = page.locator('#pc-body .pcc-actions > .pcc-act--gold[data-wardrobe]');
       await expect(look).toContainText('Change look');
-      await expect(look).toContainText('every hunter sees');
+      await expect(look).toHaveText(/Change look/i); await expect(look).not.toContainText('every hunter sees');   // W1333 — no sub-line
       const act = await box(page, '#pc-body .pcc-act');
       expect(Math.abs(act.l - rec.l)).toBeLessThanOrEqual(1);
       expect(Math.abs(act.r - rec.r)).toBeLessThanOrEqual(1);

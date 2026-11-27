@@ -10877,7 +10877,9 @@ test.describe('CC · The Shadow Army drops like a pet (W1035 · W1047)', () => {
     await expect(page.locator('#arena-body .mx-sh .pc')).toHaveText(['+2%', '+1.75%', '+0.75%']);
     await page.locator('#arena-body .mx-x').click();
     await expect(page.locator('#arena-body .mx')).not.toHaveClass(/mx-panel-open/);
-    await expect(page.locator('#arena-body .mx-stakes')).toContainText('Unlimited attempts.');   // W1087
+    await expect(page.locator('#arena-body .mx-stakes')).toHaveText('Win: Floor 100');   // W1087 · W1333 — unlimited lives: no life line
+    await expect(page.locator('#arena-body .mx-kick')).not.toContainText('TAP A ROW');
+    await expect(page.locator('#arena-body .mx-verdict')).toHaveCount(0);
 
     // floor 90, a milestone: the boosts count there too (W1060, owner 2026-10-15: "I want boosts to
     // be allowed"); no banner was planted on 90, so Blood and the army only
