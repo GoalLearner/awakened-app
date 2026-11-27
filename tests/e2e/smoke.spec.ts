@@ -2985,7 +2985,7 @@ test.describe('AC · Onboarding v4 (W936 → W1050)', () => {
     // W1052 — what is read and where it stays is simply on the screen: nothing
     // types itself (owner, on the phone: "would rather it already be on the screen").
     await expect(page.locator(OB + ' .ob4-s-witness .ob4-l1')).toHaveText('I am the First Awakened. The System reads only what the body did. Steps. Sleep. Workouts.');
-    await expect(page.locator(OB + ' .ob4-s-witness .ob4-l2')).toHaveText('It reads them from Apple Health. They stay on your phone. Awakened never sees them leave it.');
+    await expect(page.locator(OB + ' .ob4-s-witness .ob4-l2')).toHaveText('It reads them from Apple Health. Only your daily totals leave your phone.');
     expect(await page.evaluate(() => !!(window as any).__askedPermission)).toBe(false);
 
     await page.locator('#cn-healthBtn').click();
@@ -3161,7 +3161,7 @@ test.describe('AC · Onboarding v4 (W936 → W1050)', () => {
     expect(r.board.gap).toBe('7,003 steps to pass grubbadub.');   // W1092 — lowercase
 
     // The hunt reads its goal and its drop pool out of the game's own tables.
-    expect(r.hunt.kicker).toBe('The hunt · E-rank · Duo');
+    expect(r.hunt.kicker).toBe('E-rank · Duo');
     expect(r.hunt.line).toContain('4,000');   // W1189 — the Twin Maw's goal
     expect(r.hunt.drops).toEqual(['Twin-Fang Cleaver', 'The Twofold Gaze', 'Bothsight, the Long Hunt']);
 
