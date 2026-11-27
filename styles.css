@@ -37962,3 +37962,15 @@ button.pcc-title { cursor: pointer; -webkit-appearance: none; appearance: none; 
 .gate-cell--holiday { box-shadow: inset 0 0 0 1px rgba(240, 90, 90, 0.18) !important; }
 .gate-cell--members { box-shadow: inset 0 0 0 1px rgba(245, 184, 66, 0.18) !important; }
 .gate-cell--holiday .gate-special-emblem, .gate-cell--members .gate-special-emblem { filter: none !important; }
+
+/* ══ W1337 — VISUAL PASS 2 (owner 2026-11-26: "get started", then "You have my ok") — cards in cards, everyday glows ═════════════════════════
+   Settings was a panel holding section cards holding more cards: the sections are the cards now, and the
+   account's name and backup rows sit flat inside theirs. The Ascent's gold buttons and your portrait lose
+   their halo; the summit and boss portraits keep theirs (rare moments), and so do hunt results. */
+.settings-v2 .settings-v2-list { margin: 6px 0 0; background: transparent; border: 0; border-radius: 0; overflow: visible; }
+.settings-v2 .account-identity-card { background: transparent; border: 0; border-radius: 0; padding: 2px 0 14px; margin-bottom: 0; border-bottom: 1px solid rgba(255,255,255,0.07); }
+.settings-v2 .settings-v2-cloudcard { background: transparent; border: 0; border-radius: 0; padding: 12px 0 2px; margin-top: 0; }
+.mx-fight { box-shadow: 0 4px 12px rgba(0,0,0,0.35); }
+.tw-fight { box-shadow: inset 0 1px 0 rgba(255,255,255,0.35); }
+.mx-portrait.you { box-shadow: inset 0 0 30px rgba(0,0,0,0.6); }
+.bfs-defeated-hero { box-shadow: inset 0 1px 0 rgba(255,255,255,0.04); }
