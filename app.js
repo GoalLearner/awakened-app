@@ -157,10 +157,10 @@
   // Single source of truth for the app's marketing version. Bump this
   // when shipping a new TestFlight / App Store build (and add the
   // matching WHATS_NEW entry below).
-  const APP_VERSION = '3.0.32';   // W1324 — 3.0.31 APPROVED 2026-11-25 (submitted 10:36 PM PST from build 690 = 3.0.31-w1323: the cleaner hunter card, five new pins, title colors and Master/Grandmaster, XP past level 20, the organized Hunter Activity, the Worldgate bar locks), so 3.0.32 opened at approval. 3.0.30 and 3.0.31 shipped without an in-app What's New sheet (the newest is 3.0.29): 3.0.32's sheet should carry their news, as W1237 did. [history] W1310 — 3.0.30 RELEASED 2026-11-24 (build 683, W1305: hunters on 3.0.30-w1305 from 1:45 PM PST; Apple refused build 685 under 3.0.30: "The train version '3.0.30' is closed for new build submissions"), so 3.0.31 opened carrying W1306 (the friend feed returns every event of the last 24 hours), W1307 (every repeat rare, ultra-rare and mythic drop reaches Hunter Activity; a sold rare names its souls) and W1308/W1309 (the cleaned-up hunter card, its frame invisible). [history] W1292 — 3.0.29 APPROVED 2026-11-23 (build 674, submitted 2026-11-22 6:25 PM PST; Apple: "eligible for distribution"), so 3.0.30 opened before build 678 went up, carrying W1285-W1287 (What's New 3.0.29 rewritten, the 200K/300K pins, a drop past its cap sells for souls), W1288/W1289 (the Violet Queen), W1290 (each strike says what it hit with) and W1291 (Friends tab badges, rank-coloured strike circles, coloured strike parts). [history] W1270 — 3.0.28 APPROVED by 2026-11-21 7:06 PM PST (build 667; Apple refused build 670 under 3.0.28: "The train version '3.0.28' is closed for new build submissions"), so 3.0.29 opened carrying W1259 (the 200K pin), W1263 (waiting raid teams), W1264-W1266 (the 300K badge), W1267 (no twin hunts) and W1268/W1269 (Auto Hunts). [history] W1246 — 3.0.27 APPROVED by 2026-11-19 12:15 PM PST (Apple refused build 664 under 3.0.27: "train version '3.0.27' is closed"), so 3.0.28 opened carrying W1245 (steps: one device per day, the legitimate one with the most). [history] W1233 — 3.0.26 SUBMITTED for review 2026-11-17 (build 655, tag 3.0.26-w1230), so 3.0.27 opened early, as W1205 did (an approval refuses an upload under the approved number), carrying W1233 (duels: your ultimate, special attack and shadows, and the Echo's own). [history] W1220 — 3.0.25 APPROVED 2026-11-16 9:44 AM PST (submitted 2026-11-15 2:06 PM PST, build 651, tag 3.0.25-w1213), so 3.0.26 opened carrying W1220 (strangers' shadows fold into one feed row), W1221 (your pinned row under a board opens your card), W1222 (the like limit says what it is), W1225 (invites say "You both get 500 souls"), W1226 (a refused audio start is caught, not reported as an error), W1227 (six calorie bosses, E to S, dropping the sleep bosses' relics), W1228 (the S calorie boss drops a mythic at 1%), W1229 (a mythic drop is its own announcement to every hunter; the crown on the card and feed names) and W1230 (ultra-rares stay friends-only: the owner wanted only mythics). [history] W1205 — 3.0.25 opened 2026-11-14 BEFORE 3.0.24 was approved (3.0.24 = build 649, waiting for review since 2026-11-13): an upload under 3.0.24 is refused the moment Apple approves it, so build 650 goes up as 3.0.25 carrying W1202 (every boss in the Kill Log, the Raid group), W1203 (no 150k step cap) and W1204 (hunts named by partner). [history] W1169 — 3.0.23 APPROVED 2026-11-08 (submitted 2026-11-07 5:00 PM PST, LIVE 2:33 PM PST on the 8th; almost certainly build 628 = w1161: pins, the Wardrobe tap fix), so 3.0.24 opened carrying W1162-W1169 (the 3.0.23 store notes, the board update, matched hunt partners, Add as friend, late steps reach the board, The Patient Flame falls by itself, earned ultimates behind their flag). [history] W1134 — 3.0.22 APPROVED 2026-11-06 (submitted 4:53 AM PST from build 617 = w1132: the Shadowborn + the Elite Eight, the Rising redrawn, profile cards name the look, every open counted), so 3.0.23 opened carrying W1134 (the Worldgate counts a hunter's steps only after 2 days in the app that week). [history] W1127 — 3.0.21 LIVE on the App Store 2026-11-05 9:34 AM PST (built from w1126: no memberships, kill stamps without a title, the tier crests, the onboarding's "How did you find the Gate?"), so 3.0.22 opened carrying W1127 (the app-open ping says when it is a real open; the server counts every one per Pacific day). [history] W1124 — 3.0.20 LIVE on the App Store 2026-11-01 12:50 PM PST (built from w1120: final standings Sunday, shadows in the public feed, Shadow Army on Status); 3.0.21 opened carrying W1121 (its What's New, never shown: re-keyed to 3.0.21), W1122 (no memberships), W1124 (kill stamp without a title, inlined tier crests) and W1125 (the onboarding's last screen asks how the hunter found the app; W1126 keeps it in place when the keyboard opens). [history] W1114 — 3.0.19 approved 2026-10-30 (submitted 1:45 AM PST, w1113: shadows 1 in 5, armor upgrades, relic power by boss rank, relic cards three across); 3.0.20 opened with the feed's boss rank chips, no What's New entry yet. W1107 — 3.0.18 approved and LIVE 2026-10-28 8:02 AM PST (submitted 2026-10-27 7:41 PM PST, build 602 = w1106: the four steps trios, the Rising's nine looks, the earned line in the Wardrobe, the richer-backup offer); 3.0.19 opened at approval. [history] W1103 — 3.0.17 approved 2026-10-27 (build 600, submitted 2026-10-26 6:21 PM PST: the automatic friend hunts, the earned looks, the two-tab Wardrobe); 3.0.18 opened at approval, carrying W1102 (the app offers back a richer cloud backup). [history] W1097 — 3.0.16 approved + live 2026-10-26 (build 599, the iOS 27 fix); 3.0.17 opened at approval. Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.16 = the post-3.0.15 train, opened 2026-10-23 (W1085): 3.0.15 was submitted 2026-10-22 2:55 PM PST from build 595 (w1083: the tally, the preview row, the security pass) and approved the same day, so the train closed under it. It carries W1084 (the tally leads the 3.0.15 What's New) forward. [history] 3.0.15 = the post-3.0.14 train, opened 2026-10-22 (W1080): 3.0.14 was approved and LIVE 2026-10-21 5:08 PM PST from build 591 (w1074) — the first 592 upload was refused ("train closed"), the sixth time an approval closed a train under a build. It carries W1077/W1078 (sign-out ends the session, cloud save checksum + gzip, socket token out of the URL, invite links ask first) forward. [history] 3.0.14 = the post-3.0.13 train, opened 2026-10-21 (W1074): 3.0.13 was approved and went LIVE 2026-10-20 3:50 AM PST from build 587 (w1068), so it carries W1069 (the floor 100 curve), W1070-W1073 (the ten weekly step and sleep bosses and their drops) and the real-screen screenshots and header Apple asked for (App Review 2.3.3) forward. [history] 3.0.11 = the post-3.0.10 train, opened 2026-10-05: Apple's store lookup showed 3.0.10 LIVE (released 11:35 AM PST that day, built from w1024, so it carried W1023 the 9:45 PM finish-strong reminder and nothing after). It carries forward W1025 (Myrmidon King art), W1026 (one request for every co-op hunt) and W1027 (steps 'today' = the device's day), all pushed under the 3.0.10 tag after that build was cut. [history] 3.0.10 = the post-3.0.9 train, opened 2026-10-04 when the owner passed on Apple's approval of 3.0.9 (submitted 2026-10-02 12:41 PM PST, approved 2026-10-03; carried W1002–W1022: weekly to-do planner, to-dos first in the briefing, the Monday recap, times-a-week vows, the interactive Status tab, the Jump Manual program, the flights-hunt result fix). It carries W1023 (the 9:45 PM finish-strong reminder) forward. First TWO-DIGIT patch: every version compare in the app is numeric (_updVersionNewer, the What's New compare), never a string compare. [history] 3.0.9 = the post-3.0.8 train, opened 2026-09-25 the moment Apple approved 3.0.8 (submitted 4:57 PM PST, approved the same evening; carried W989–W1001: Items overhaul, Resolved + mod view counts, the sectioned Habits tab + to-dos v2, topic edit). [history] 3.0.8 = the post-3.0.7 train, opened 2026-09-24 the moment Apple approved 3.0.7 (build 543, submitted 1:15 AM PST, approved same day; the Worldgate In-App Event was approved in the same hour). Carries forward: the three description corrections (Ranked PvP / Streak Shields / five-hunter raid = Premium) go out WITH this version, since a description only changes with a new version. [history] 3.0.7 carried W968–W987 (vows yours + glory verified, morning briefing v2, hunt results, Worldgate MVPs + weekly line + strike freeze, Community Updates + briefing line, mod preview rows, awakened:// scheme). [history] 3.0.7 = the post-3.0.6 train, opened 2026-09-20 the moment Apple approved 3.0.6 (submitted 3:14 AM PST that day, approved same day) — an approval CLOSES a train, and uploading under the approved number is refused (CFBundleShortVersionString must exceed it). This has now bitten FOUR times; the bump is done at approval, not at upload. [history] 3.0.6 carried W960–W967 (Manage Vows fix, rank-bar hairline, Worldgate kill ceremony, division-up celebration, owner preview row, 3.0.6 release notes). [history] 3.0.4 = the post-3.0.3 train, opened 2026-09-11 because Apple approved 3.0.3 (live 2026-09-09) and an approval closes a train — carries W935 (weekly-board upload fix + Apple Health asked on every onboarding path). [history] 3.0.3 = the post-3.0.2 train, opened 2026-09-07 the morning after Apple approved 3.0.2 (submitted 2026-09-06 4:41 PM PT; approval closes a train — twice-bitten lesson) — carries W917-W919b (Ledger view, Streak Shields deleted, handoff 29) forward under the new number. [history] 3.0.2 = the post-release train, opened 2026-09-04 because Apple closes a train on approval (build 493 under 3.0.1 was refused: CFBundleShortVersionString must exceed the approved 3.0.1) — carries W903 (boss-sheet hotfix) + W905 (Status is the hunter profile again). 3.0.1 "MAKE IT LAND" = the repair release (W882-W890): Wave-2 progression joins cloud sync, the activation funnel is instrumented end to end, silent Wave-2 server failures leave breadcrumbs, the altar routes to a same-day first kill, the Double Dungeon stops reporting false failures and yields when the stair is unavailable, the beat What's New used to eat is chained, and every banked free engage is visible before the tap. 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
+  const APP_VERSION = '3.0.33';   // W1340 — 3.0.32 goes to review from build 692 (3.0.32-w1337, VALID 2026-11-26 10:28 PM PST), so 3.0.33 opened early, as W1205 and W1233 did (an approval refuses an upload under the approved number), carrying W1338 (the Shadow Army in rank order) and W1340 (the four half-each duo bosses). [history] W1324 — 3.0.31 APPROVED 2026-11-25 (submitted 10:36 PM PST from build 690 = 3.0.31-w1323: the cleaner hunter card, five new pins, title colors and Master/Grandmaster, XP past level 20, the organized Hunter Activity, the Worldgate bar locks), so 3.0.32 opened at approval. 3.0.30 and 3.0.31 shipped without an in-app What's New sheet (the newest is 3.0.29): 3.0.32's sheet should carry their news, as W1237 did. [history] W1310 — 3.0.30 RELEASED 2026-11-24 (build 683, W1305: hunters on 3.0.30-w1305 from 1:45 PM PST; Apple refused build 685 under 3.0.30: "The train version '3.0.30' is closed for new build submissions"), so 3.0.31 opened carrying W1306 (the friend feed returns every event of the last 24 hours), W1307 (every repeat rare, ultra-rare and mythic drop reaches Hunter Activity; a sold rare names its souls) and W1308/W1309 (the cleaned-up hunter card, its frame invisible). [history] W1292 — 3.0.29 APPROVED 2026-11-23 (build 674, submitted 2026-11-22 6:25 PM PST; Apple: "eligible for distribution"), so 3.0.30 opened before build 678 went up, carrying W1285-W1287 (What's New 3.0.29 rewritten, the 200K/300K pins, a drop past its cap sells for souls), W1288/W1289 (the Violet Queen), W1290 (each strike says what it hit with) and W1291 (Friends tab badges, rank-coloured strike circles, coloured strike parts). [history] W1270 — 3.0.28 APPROVED by 2026-11-21 7:06 PM PST (build 667; Apple refused build 670 under 3.0.28: "The train version '3.0.28' is closed for new build submissions"), so 3.0.29 opened carrying W1259 (the 200K pin), W1263 (waiting raid teams), W1264-W1266 (the 300K badge), W1267 (no twin hunts) and W1268/W1269 (Auto Hunts). [history] W1246 — 3.0.27 APPROVED by 2026-11-19 12:15 PM PST (Apple refused build 664 under 3.0.27: "train version '3.0.27' is closed"), so 3.0.28 opened carrying W1245 (steps: one device per day, the legitimate one with the most). [history] W1233 — 3.0.26 SUBMITTED for review 2026-11-17 (build 655, tag 3.0.26-w1230), so 3.0.27 opened early, as W1205 did (an approval refuses an upload under the approved number), carrying W1233 (duels: your ultimate, special attack and shadows, and the Echo's own). [history] W1220 — 3.0.25 APPROVED 2026-11-16 9:44 AM PST (submitted 2026-11-15 2:06 PM PST, build 651, tag 3.0.25-w1213), so 3.0.26 opened carrying W1220 (strangers' shadows fold into one feed row), W1221 (your pinned row under a board opens your card), W1222 (the like limit says what it is), W1225 (invites say "You both get 500 souls"), W1226 (a refused audio start is caught, not reported as an error), W1227 (six calorie bosses, E to S, dropping the sleep bosses' relics), W1228 (the S calorie boss drops a mythic at 1%), W1229 (a mythic drop is its own announcement to every hunter; the crown on the card and feed names) and W1230 (ultra-rares stay friends-only: the owner wanted only mythics). [history] W1205 — 3.0.25 opened 2026-11-14 BEFORE 3.0.24 was approved (3.0.24 = build 649, waiting for review since 2026-11-13): an upload under 3.0.24 is refused the moment Apple approves it, so build 650 goes up as 3.0.25 carrying W1202 (every boss in the Kill Log, the Raid group), W1203 (no 150k step cap) and W1204 (hunts named by partner). [history] W1169 — 3.0.23 APPROVED 2026-11-08 (submitted 2026-11-07 5:00 PM PST, LIVE 2:33 PM PST on the 8th; almost certainly build 628 = w1161: pins, the Wardrobe tap fix), so 3.0.24 opened carrying W1162-W1169 (the 3.0.23 store notes, the board update, matched hunt partners, Add as friend, late steps reach the board, The Patient Flame falls by itself, earned ultimates behind their flag). [history] W1134 — 3.0.22 APPROVED 2026-11-06 (submitted 4:53 AM PST from build 617 = w1132: the Shadowborn + the Elite Eight, the Rising redrawn, profile cards name the look, every open counted), so 3.0.23 opened carrying W1134 (the Worldgate counts a hunter's steps only after 2 days in the app that week). [history] W1127 — 3.0.21 LIVE on the App Store 2026-11-05 9:34 AM PST (built from w1126: no memberships, kill stamps without a title, the tier crests, the onboarding's "How did you find the Gate?"), so 3.0.22 opened carrying W1127 (the app-open ping says when it is a real open; the server counts every one per Pacific day). [history] W1124 — 3.0.20 LIVE on the App Store 2026-11-01 12:50 PM PST (built from w1120: final standings Sunday, shadows in the public feed, Shadow Army on Status); 3.0.21 opened carrying W1121 (its What's New, never shown: re-keyed to 3.0.21), W1122 (no memberships), W1124 (kill stamp without a title, inlined tier crests) and W1125 (the onboarding's last screen asks how the hunter found the app; W1126 keeps it in place when the keyboard opens). [history] W1114 — 3.0.19 approved 2026-10-30 (submitted 1:45 AM PST, w1113: shadows 1 in 5, armor upgrades, relic power by boss rank, relic cards three across); 3.0.20 opened with the feed's boss rank chips, no What's New entry yet. W1107 — 3.0.18 approved and LIVE 2026-10-28 8:02 AM PST (submitted 2026-10-27 7:41 PM PST, build 602 = w1106: the four steps trios, the Rising's nine looks, the earned line in the Wardrobe, the richer-backup offer); 3.0.19 opened at approval. [history] W1103 — 3.0.17 approved 2026-10-27 (build 600, submitted 2026-10-26 6:21 PM PST: the automatic friend hunts, the earned looks, the two-tab Wardrobe); 3.0.18 opened at approval, carrying W1102 (the app offers back a richer cloud backup). [history] W1097 — 3.0.16 approved + live 2026-10-26 (build 599, the iOS 27 fix); 3.0.17 opened at approval. Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.16 = the post-3.0.15 train, opened 2026-10-23 (W1085): 3.0.15 was submitted 2026-10-22 2:55 PM PST from build 595 (w1083: the tally, the preview row, the security pass) and approved the same day, so the train closed under it. It carries W1084 (the tally leads the 3.0.15 What's New) forward. [history] 3.0.15 = the post-3.0.14 train, opened 2026-10-22 (W1080): 3.0.14 was approved and LIVE 2026-10-21 5:08 PM PST from build 591 (w1074) — the first 592 upload was refused ("train closed"), the sixth time an approval closed a train under a build. It carries W1077/W1078 (sign-out ends the session, cloud save checksum + gzip, socket token out of the URL, invite links ask first) forward. [history] 3.0.14 = the post-3.0.13 train, opened 2026-10-21 (W1074): 3.0.13 was approved and went LIVE 2026-10-20 3:50 AM PST from build 587 (w1068), so it carries W1069 (the floor 100 curve), W1070-W1073 (the ten weekly step and sleep bosses and their drops) and the real-screen screenshots and header Apple asked for (App Review 2.3.3) forward. [history] 3.0.11 = the post-3.0.10 train, opened 2026-10-05: Apple's store lookup showed 3.0.10 LIVE (released 11:35 AM PST that day, built from w1024, so it carried W1023 the 9:45 PM finish-strong reminder and nothing after). It carries forward W1025 (Myrmidon King art), W1026 (one request for every co-op hunt) and W1027 (steps 'today' = the device's day), all pushed under the 3.0.10 tag after that build was cut. [history] 3.0.10 = the post-3.0.9 train, opened 2026-10-04 when the owner passed on Apple's approval of 3.0.9 (submitted 2026-10-02 12:41 PM PST, approved 2026-10-03; carried W1002–W1022: weekly to-do planner, to-dos first in the briefing, the Monday recap, times-a-week vows, the interactive Status tab, the Jump Manual program, the flights-hunt result fix). It carries W1023 (the 9:45 PM finish-strong reminder) forward. First TWO-DIGIT patch: every version compare in the app is numeric (_updVersionNewer, the What's New compare), never a string compare. [history] 3.0.9 = the post-3.0.8 train, opened 2026-09-25 the moment Apple approved 3.0.8 (submitted 4:57 PM PST, approved the same evening; carried W989–W1001: Items overhaul, Resolved + mod view counts, the sectioned Habits tab + to-dos v2, topic edit). [history] 3.0.8 = the post-3.0.7 train, opened 2026-09-24 the moment Apple approved 3.0.7 (build 543, submitted 1:15 AM PST, approved same day; the Worldgate In-App Event was approved in the same hour). Carries forward: the three description corrections (Ranked PvP / Streak Shields / five-hunter raid = Premium) go out WITH this version, since a description only changes with a new version. [history] 3.0.7 carried W968–W987 (vows yours + glory verified, morning briefing v2, hunt results, Worldgate MVPs + weekly line + strike freeze, Community Updates + briefing line, mod preview rows, awakened:// scheme). [history] 3.0.7 = the post-3.0.6 train, opened 2026-09-20 the moment Apple approved 3.0.6 (submitted 3:14 AM PST that day, approved same day) — an approval CLOSES a train, and uploading under the approved number is refused (CFBundleShortVersionString must exceed it). This has now bitten FOUR times; the bump is done at approval, not at upload. [history] 3.0.6 carried W960–W967 (Manage Vows fix, rank-bar hairline, Worldgate kill ceremony, division-up celebration, owner preview row, 3.0.6 release notes). [history] 3.0.4 = the post-3.0.3 train, opened 2026-09-11 because Apple approved 3.0.3 (live 2026-09-09) and an approval closes a train — carries W935 (weekly-board upload fix + Apple Health asked on every onboarding path). [history] 3.0.3 = the post-3.0.2 train, opened 2026-09-07 the morning after Apple approved 3.0.2 (submitted 2026-09-06 4:41 PM PT; approval closes a train — twice-bitten lesson) — carries W917-W919b (Ledger view, Streak Shields deleted, handoff 29) forward under the new number. [history] 3.0.2 = the post-release train, opened 2026-09-04 because Apple closes a train on approval (build 493 under 3.0.1 was refused: CFBundleShortVersionString must exceed the approved 3.0.1) — carries W903 (boss-sheet hotfix) + W905 (Status is the hunter profile again). 3.0.1 "MAKE IT LAND" = the repair release (W882-W890): Wave-2 progression joins cloud sync, the activation funnel is instrumented end to end, silent Wave-2 server failures leave breadcrumbs, the altar routes to a same-day first kill, the Double Dungeon stops reporting false failures and yields when the stair is unavailable, the beat What's New used to eat is chained, and every banked free engage is visible before the tap. 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.32-w1338';
+  const APP_BUILD_TAG = '3.0.33-w1340';
   // W1192 — the relic and boss paintings are WebP now (the app was 376.9 MB, 290 MB of it these PNGs). A path saved
   // before (the drop history, a friend's card, a cloud save) still says .png: the first time one fails to load it is
   // pointed at the .webp beside it, before the image's own error handler can hide it.
@@ -976,6 +976,62 @@
       archetype:  'caster',
       statDomain: 'VIT',
       dropTable:  { mythic: 0.01, ultra_rare: 0.32 },
+    },
+    // W1340 — the HALF-EACH duos (owner 2026-11-26: "one player can't carry the load"). Drops are their rank's
+    // hard-to-get pieces, split by theme, on their rank's co-op tables: A = the Cloven Titan's shape (ultra .32,
+    // rare .58) over the Tideless road set (steps) or the Ascent climb set (flights); S = the Myrmidon King's shape
+    // (mythic .01, ultra .32) over three of his six pieces each, plus the three mythics. About 10.7% a piece a kill.
+    the_yoked_wanderers: {
+      id:         'the_yoked_wanderers',
+      name:       'The Yoked Wanderers',
+      rank:       'A',
+      coopOnly:   true,
+      archetype:  'aggressor',
+      statDomain: 'STR',
+      dropTable:  { ultra_rare: 0.32, rare: 0.58 },
+      pool: {
+        ultra_rare: ['striders_of_the_tideless_road', 'mantle_of_the_long_vigil', 'wraithwind_bow'],
+        rare:       ['band_of_the_roadkeeper', 'restplate_of_the_wanderer'],
+      },
+    },
+    the_chained_ascendants: {
+      id:         'the_chained_ascendants',
+      name:       'The Chained Ascendants',
+      rank:       'A',
+      coopOnly:   true,
+      archetype:  'caster',
+      statDomain: 'WILL',
+      dropTable:  { ultra_rare: 0.32, rare: 0.58 },
+      pool: {
+        ultra_rare: ['amulet_of_the_endless_stair', 'skyward_vigil_ring', 'aetherspire_staff'],
+        rare:       ['nightcrown_of_the_climb', 'ascent_worn_cloak'],
+      },
+    },
+    the_bound_kings: {
+      id:         'the_bound_kings',
+      name:       'The Bound Kings',
+      rank:       'S',
+      coopOnly:   true,
+      archetype:  'aggressor',
+      statDomain: 'STR',
+      dropTable:  { mythic: 0.01, ultra_rare: 0.32 },
+      pool: {
+        ultra_rare: ['watchkeepers_carapace', 'grips_of_the_third_night', 'striders_of_the_waking_march'],
+        mythic:     ['nightfall_blade', 'reverie_staff', 'vigil_bow'],
+      },
+    },
+    the_halved_seraph: {
+      id:         'the_halved_seraph',
+      name:       'The Halved Seraph',
+      rank:       'S',
+      coopOnly:   true,
+      archetype:  'caster',
+      statDomain: 'WILL',
+      dropTable:  { mythic: 0.01, ultra_rare: 0.32 },
+      pool: {
+        ultra_rare: ['circlet_of_lucid_sleep', 'shroud_of_the_dreaming_court', 'pendant_of_the_seventh_hour'],
+        mythic:     ['nightfall_blade', 'reverie_staff', 'vigil_bow'],
+      },
     },
     // W693/W703 — THE GRINNING GOD: the members-only apex raid drop source. A MYTHIC-ONLY
     // table — no ultras, no rares, nothing else — at a FLAT 2% chance (W1200; W703 was 1%) of ANY mega-rare per
@@ -6870,6 +6926,7 @@
       if (dt.mythic || (cfg.pool && cfg.pool.mythic)) return;   // mythic sources stay pristine
       if (_isWeekBoss(cfg)) return;   // W1070 — never engaged, and the week's pick stays the same on every build
       if (_isCalorieBoss(cfg)) return;   // W1227 — six new ids would reshuffle this week's pick mid-week
+      if (cfg.coopHalfEach) return;   // W1340 — the four half-each duos, for the same reason
       seen[id] = true; out.push(id);
     };
     try {
@@ -10872,6 +10929,7 @@
         var scoreSum = scores.reduce(function (s, v) { return s + v; }, 0);
         contrib = roster.map(function (h, i) {
           var c = { alias: h.alias, me: !!h.me, val: _coopBattlePrimary(inst, h.raw) };
+          if (_coopIsHalfEach(inst)) { try { c.val = Math.min(c.val, _coopHalfProgress(inst).share); } catch (_) {} }   // W1340 — never past their half
           if (_coopIsBoth(inst)) c.fl = (h.raw && h.raw.flights) || 0;
           if (_coopIsSleep(inst)) c.sl = (h.raw && h.raw.sleep_minutes) || 0;   // W808 (review F3) — sleep leg was invisible in history
           if (scoreSum > 0) c.share = Math.round(scores[i] / scoreSum * 100);
@@ -10882,7 +10940,7 @@
           if (v > topV) { topV = v; topI = i; }
           else if (v === topV) topI = -1;
         });
-        if (topI >= 0 && topV > 0) mvp = contrib[topI].alias;
+        if (topI >= 0 && topV > 0 && !_coopIsHalfEach(inst)) mvp = contrib[topI].alias;   // W1340 — nobody carries a half-each hunt
       } catch (_) {}
       return {
         contrib: contrib, mvp: mvp, unit: unit,   // W793
@@ -27183,7 +27241,12 @@
     } catch (_) {}
     const t0 = _hrTs(inst.starts_at), t1 = _hrTs(inst.resolved_at || inst.updated_at) || Date.now();
     const took = t0 ? Math.max(0, Math.min(24 * 60, Math.round((t1 - t0) / 60000))) : 0;
-    return { id: inst.id || null, party: party, goal: goal, fgoal: fgoal, unit: (!both && unit === 'flights') ? 'flights' : 'steps', mvp: mvp, pact: pact, fed: !!extra.fed, time: took ? _hrHM(took) : '', match: match };
+    // W1340 — a half-each hunt: each hunter's share, who came up short and by how much, and no MVP (nobody carries)
+    let half = 0;
+    try { if (_coopIsHalfEach(inst)) { half = _coopHalfProgress(inst).share; mvp = null; } } catch (_) {}
+    if (half) party.forEach(function (p) { p.s = Math.min(p.s, half); });   // owner 2026-11-27: "Make sure they don't go over 50%"
+    const shortBy = half ? party.filter(function (p) { return p.s < half; }).map(function (p) { return { n: p.n, you: p.you, by: half - p.s }; }) : [];
+    return { id: inst.id || null, party: party, goal: goal, fgoal: fgoal, unit: (!both && unit === 'flights') ? 'flights' : 'steps', mvp: mvp, pact: pact, fed: !!extra.fed, time: took ? _hrHM(took) : '', match: match, half: half, shortBy: shortBy };
   }
 
   // W1165 — "Add as friend" after a matched win. Hidden when the partner is already a friend or
@@ -27302,7 +27365,7 @@
   }
   function _hrCoopGoalHtml(d, cols, total) {
     const v = d.kind === 'victory', goal = Math.max(1, d.goal), base = v ? Math.max(total, 1) : goal, pct = Math.round(total / goal * 100), near = pct >= 80;
-    const segs = d.party.map(function (p, i) { return '<i class="hr-sg" style="--w:' + (p.s / base * 100).toFixed(2) + '%;--c:' + cols[i] + '"></i>'; }).join('');
+    const segs = d.party.map(function (p, i) { return '<i class="hr-sg" style="--w:' + ((d.half ? Math.min(p.s, d.half) : p.s) / base * 100).toFixed(2) + '%;--c:' + cols[i] + '"></i>'; }).join('');   // W1340 — a half at most
     const unit = d.unit === 'flights' ? ' flights' : ' steps';
     const right = v ? '<span class="hr-ok"><b class="hr-cnt" data-to="' + pct + '">0</b>%</span>' : (near ? '<span class="hr-short hr-rv">' + _hrN(goal - total) + ' short</span>' : '');
     return '<div class="hr-goal hr-rv"><div class="hr-track"><div class="hr-fill">' + segs + '</div>' + (v ? '' : '<i class="hr-gap" style="--l:' + Math.min(100, total / goal * 100).toFixed(2) + '%"></i>') + '</div>' +
@@ -27324,7 +27387,7 @@
           (hasN ? '<span>' + _hrCnt(d.did, d.fmt) + ' / ' + esc(_hrAsk(d.fmt, d.ask)) + '</span><span class="hr-ok"><b class="hr-cnt" data-to="' + Math.round(d.did / d.ask * 100) + '">0</b>%</span>' : '<span>Condition met</span><span class="hr-ok">100%</span>') +
         '</div></div>' + _hrRewardHtml(d);
     } else {
-      const total = d.party.reduce(function (a, p) { return a + p.s; }, 0);
+      const total = d.party.reduce(function (a, p) { return a + (d.half ? Math.min(p.s, d.half) : p.s); }, 0);   // W1340 — capped halves
       body = '<div class="hr-stamp">Beaten together</div>' + (d.time ? '<div class="hr-sub hr-rv">Done in <b>' + esc(d.time) + '</b></div>' : '') +
         _hrRowsHtml(d, cols) + _hrCoopGoalHtml(d, cols, total) + (d.fgoal > 0 ? _hrFlightsHtml(d, cols) : '') +
         (d.mvp ? '<div class="hr-mvp"><svg class="hr-sig" viewBox="0 0 30 30" aria-hidden="true"><path d="M15 1l3.4 10.6L29 15l-10.6 3.4L15 29l-3.4-10.6L1 15l10.6-3.4z"></path></svg><div><div class="hr-me">Hunt MVP</div><div class="hr-mn">' + esc(_dn(d.mvp)) + ' carried the hunt</div><div class="hr-mb">+' + Math.max(1, d.party.length - 1) + '% souls and relic luck</div></div></div>' : '') +
@@ -27353,8 +27416,10 @@
           '<div class="hr-gl"><span>' + _hrCnt(d.best, d.fmt) + ' / ' + esc(_hrAsk(d.fmt, d.ask)) + '</span>' + (near ? '<span class="hr-short hr-rv">' + esc(shortTxt) + '</span>' : '') + '</div></div>' : '') +
         '<div class="hr-rl hr-rv">Kill condition' + (has ? ' · <b>' + esc(d.bestLabel) + '</b>' : '') + '</div><div class="hr-row hr-rv" style="--c:#ef4444"><i class="hr-dot"></i><span class="hr-nm hr-cond">' + esc(d.cond) + '</span>' + (has ? '<span class="hr-v">' + _hrCnt(d.best, d.fmt) + _hrUnit(d.fmt) + '</span>' : '') + '</div>';
     } else {
-      const total = d.party.reduce(function (a, p) { return a + p.s; }, 0), pct = Math.round(total / Math.max(1, d.goal) * 100); near = pct >= 80;
-      body = '<div class="hr-stamp">Survives</div><div class="hr-sub hr-rv">Time ran out</div>' +   // W1331 — 48-hour bosses exist
+      const total = d.party.reduce(function (a, p) { return a + (d.half ? Math.min(p.s, d.half) : p.s); }, 0), pct = Math.round(total / Math.max(1, d.goal) * 100); near = pct >= 80;   // W1340 — capped halves
+      // W1340 — a half-each hunt names who came up short of their half: "anthony: 1,200 steps short"
+      const shortTxt = (d.half && d.shortBy && d.shortBy.length) ? d.shortBy.map(function (s) { return (s.you ? 'You' : _dn(s.n)) + ': ' + _hrN(s.by) + (d.unit === 'flights' ? ' flights' : ' steps') + ' short'; }).join(' · ') : 'Time ran out';
+      body = '<div class="hr-stamp">Survives</div><div class="hr-sub hr-rv">' + esc(shortTxt) + '</div>' +   // W1331 — 48-hour bosses exist
         '<div class="hr-pctbig hr-rv"><b><span class="hr-cnt" data-to="' + Math.min(99, pct) + '">0</span><i>%</i></b><span class="hr-lab">of the goal</span></div>' + _hrCoopGoalHtml(d, cols, total) + _hrRowsHtml(d, cols);
     }
     d._near = near;
@@ -32285,6 +32350,13 @@
     // W1336 — 3.0.32. 3.0.30 and 3.0.31 shipped without a sheet (the W822 failure again), so their news rides here,
     // as W1237/W1270 did: the cleaner screens lead (every screen, W1319/W1325-W1335 + the visual pass), then the card
     // (3.0.30/3.0.31), titles, pins, badges, stats past 20, the feed, the Worldgate, auto-sell (said plainly: half price).
+    '3.0.33': {
+      subtitle: 'Half-each duo bosses.',
+      items: [
+        { emoji: '', title: 'Half-each duo bosses', description: "Four new A and S duo bosses, two for steps and two for stairs. Each of you does your own half; one hunter's extra doesn't count for the other. They drop A and S pieces that rarely drop elsewhere, and the S pair can drop a mythic." },   // W1339, W1340
+        { emoji: '', title: 'Shadow Army in order', description: "Your shadows line up by rank, strongest first." },   // W1338
+      ],
+    },
     '3.0.32': {
       subtitle: 'Cleaner screens, hunter cards, title colors.',
       items: [
@@ -40594,6 +40666,18 @@
     } catch (_) {}
     const remain = (typeof inst.time_remaining_ms === 'number') ? inst.time_remaining_ms
       : (inst.ends_at ? Math.max(0, Date.parse(inst.ends_at) - Date.now()) : null);
+    // W1340 — a half-each hunt reads your own half (and whether theirs is done)
+    let halfPct = null, halfLine = null;
+    try {
+      if (_coopIsHalfEach(inst)) {
+        const hp = _coopHalfProgress(inst);
+        let myId = null; try { myId = _coopMyId(); } catch (_) {}
+        const mineRow = hp.rows.filter(function (r) { return r.user_id === myId; })[0] || hp.rows[0] || { part: 0 };
+        const theirsDone = hp.rows.some(function (r) { return r !== mineRow && r.done; });
+        halfPct = hp.goal ? hp.done / hp.goal : 0;
+        halfLine = 'Your half ' + _huntFmt(mineRow.part) + ' / ' + _huntFmt(hp.share) + ' ' + (flights ? 'flights' : 'steps') + (theirsDone ? ' · theirs done' : '');
+      }
+    } catch (_) {}
     return {
       key: 'coop:' + (inst.id || inst.boss_id),
       name: them || cfg.name || inst.boss_name || 'Co-op hunt',
@@ -40601,8 +40685,8 @@
       tagHtml: _ahReasonTag(inst),   // W1269 — "Your target" / "<partner> needs this drop" (W1268 instance.reason)
       rank: String(inst.boss_rank || cfg.rank || ''),
       art: getBossArtPath(inst.boss_id),
-      pct: both ? Math.min(goal ? cur / goal : 1, gf ? cf / gf : 1) : (goal ? (cur / goal) : 0),
-      line: both
+      pct: halfPct != null ? halfPct : both ? Math.min(goal ? cur / goal : 1, gf ? cf / gf : 1) : (goal ? (cur / goal) : 0),
+      line: halfLine != null ? halfLine : both
         ? _huntFmt(cur) + ' / ' + _huntFmt(goal) + ' steps · ' + _huntFmt(cf) + ' / ' + _huntFmt(gf) + ' flights'
         : _huntFmt(cur) + ' / ' + _huntFmt(goal) + ' ' + (flights ? 'flights' : 'steps') + ' together',
       remainMs: (typeof remain === 'number' && isFinite(remain)) ? remain : null,
@@ -41270,7 +41354,8 @@
   // W1278 — the multi-day duos join (targets only; the server never picks them on Auto): the Cloven Titan, the Myrmidon King
   // (the_sleepless_crown) and the Unresting March
   const AH_DUO = ['the_hollow_monarch', 'the_gaunt_wardens', 'the_coursing_dread', 'the_twin_maw', 'the_sundered_choir',
-    'the_cloven_titan', 'the_sleepless_crown', 'the_unresting_march'];
+    'the_cloven_titan', 'the_sleepless_crown', 'the_unresting_march',
+    'the_bound_kings', 'the_halved_seraph', 'the_yoked_wanderers', 'the_chained_ascendants'];   // W1340 — the half-each duos
   const AH_TRIO = ['the_trinity_colossus', 'the_triune_sentinel', 'the_threefold_court', 'the_crossroads_hound'];
   // = the backend's AUTO_BOSS_DROPS for the duos (coop-auto.ts); a trio is a boss-only target (its pool is a whole rank's)
   const AH_DROPS = {
@@ -41279,6 +41364,10 @@
     the_gaunt_wardens: ['the_wardens_vigil', 'the_stairwalkers_treads', 'the_famished_circlet', 'the_gaunt_mantle'],
     the_coursing_dread: ['the_long_pursuit', 'houndsfang_recurve', 'coursing_houndcall'],
     the_twin_maw: ['bothsight_longbow', 'twin_fang_cleaver', 'twofold_gaze'],
+    the_bound_kings: ['watchkeepers_carapace', 'grips_of_the_third_night', 'striders_of_the_waking_march'],   // W1340
+    the_halved_seraph: ['circlet_of_lucid_sleep', 'shroud_of_the_dreaming_court', 'pendant_of_the_seventh_hour'],
+    the_yoked_wanderers: ['striders_of_the_tideless_road', 'mantle_of_the_long_vigil', 'wraithwind_bow', 'band_of_the_roadkeeper', 'restplate_of_the_wanderer'],
+    the_chained_ascendants: ['amulet_of_the_endless_stair', 'skyward_vigil_ring', 'aetherspire_staff', 'nightcrown_of_the_climb', 'ascent_worn_cloak'],
   };
   const AH_PATH = {
     ret: '<circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.2"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/>',
@@ -65493,6 +65582,49 @@
       coopVictoryTitle:'THE COLOSSUS COMES APART',
       coopDefeatTitle: 'THE COLOSSUS STILL STANDS',
     },
+    // W1340 — HALF-EACH duo (owner 2026-11-26: "one player can't carry the load so it has to be a 50/50 split"):
+    // each hunter must finish their own half (coopGoalSteps ÷ 2); one hunter's extra never counts for the other.
+    // MUST mirror the server COOP_BOSS_CFG (halfEach).
+    the_yoked_wanderers: {
+      id:              'the_yoked_wanderers',
+      name:            'The Yoked Wanderers',
+      rank:            'A',
+      artId:           'the_yoked_wanderers',
+      dropSourceBoss:  'the_yoked_wanderers',
+      coopHalfEach:    true,
+      coopGoalSteps:   12000,
+      coopMetric:      'steps',
+      coopUnit:        'steps',
+      coopRewardSouls: 400,
+      coopWindowHours: 24,
+      statDomain:      'STR',
+      flavorShort:     'Two giants under one yoke. Neither moves unless both walk.',
+      flavorLong:      'Two giants share one iron yoke. Each walks its own road, and neither moves unless both do.',
+      killCondShort:   'Two hunters: 6,000 steps each in 24h',
+      killCondLong:    'Each of you walks 6,000 verified steps within 24 hours. One hunter\'s extra steps do not count for the other. Both hunters are credited the kill.',
+      coopVictoryTitle:'THE YOKE BREAKS',
+      coopDefeatTitle: 'THE YOKE HOLDS',
+    },
+    the_chained_ascendants: {
+      id:              'the_chained_ascendants',
+      name:            'The Chained Ascendants',
+      rank:            'A',
+      artId:           'the_chained_ascendants',
+      dropSourceBoss:  'the_chained_ascendants',
+      coopHalfEach:    true,
+      coopGoalSteps:   14,
+      coopMetric:      'flights',
+      coopUnit:        'flights',
+      coopRewardSouls: 400,
+      coopWindowHours: 24,
+      statDomain:      'WILL',
+      flavorShort:     'Two climbers on one chain. Neither rises alone.',
+      flavorLong:      'Two winged climbers share one chain. Each climbs its own stair, and neither rises unless both do.',
+      killCondShort:   'Two hunters: 7 flights each in 24h',
+      killCondLong:    'Each of you climbs 7 verified flights of stairs within 24 hours. One hunter\'s extra flights do not count for the other. Both hunters are credited the kill.',
+      coopVictoryTitle:'THE CHAIN SNAPS',
+      coopDefeatTitle: 'THE CHAIN HOLDS',
+    },
     // W677 — first TRIO hunt (partySize 3: you + 2 hand-picked friends). Owner spec:
     // C-rank, 27,000 combined steps. Reward = floor(solo C 200 / 3) = 66/hunter
     // (thirds split; MUST mirror server COOP_BOSS_CFG). W678 — the Court now has
@@ -65550,6 +65682,49 @@
       killCondLong:    'Team up with a fellow hunter. Within 72 hours of your ally joining, walk 42,000 verified steps AND bank 39 hours of verified sleep between you — that is 7,000 steps and a 6.5-hour night from each of you, every day for three days. Both hunters are credited the kill.',
       coopVictoryTitle:'THE COLONY KNEELS',
       coopDefeatTitle: 'THE KING NEVER SLEEPS',
+    },
+    // W1340 — HALF-EACH duo (owner 2026-11-26: "one player can't carry the load so it has to be a 50/50 split"):
+    // each hunter must finish their own half (coopGoalSteps ÷ 2); one hunter's extra never counts for the other.
+    // MUST mirror the server COOP_BOSS_CFG (halfEach).
+    the_bound_kings: {
+      id:              'the_bound_kings',
+      name:            'The Bound Kings',
+      rank:            'S',
+      artId:           'the_bound_kings',
+      dropSourceBoss:  'the_bound_kings',
+      coopHalfEach:    true,
+      coopGoalSteps:   14000,
+      coopMetric:      'steps',
+      coopUnit:        'steps',
+      coopRewardSouls: 800,
+      coopWindowHours: 24,
+      statDomain:      'STR',
+      flavorShort:     'Two kings chained wrist to wrist. One cannot drag the other.',
+      flavorLong:      'Two kings were chained wrist to wrist for a war neither would lose. One cannot drag the other down. Each of you brings down your own.',
+      killCondShort:   'Two hunters: 7,000 steps each in 24h',
+      killCondLong:    'Each of you walks 7,000 verified steps within 24 hours. One hunter\'s extra steps do not count for the other. Both hunters are credited the kill.',
+      coopVictoryTitle:'BOTH CROWNS FALL',
+      coopDefeatTitle: 'THE KINGS STILL STAND',
+    },
+    the_halved_seraph: {
+      id:              'the_halved_seraph',
+      name:            'The Halved Seraph',
+      rank:            'S',
+      artId:           'the_halved_seraph',
+      dropSourceBoss:  'the_halved_seraph',
+      coopHalfEach:    true,
+      coopGoalSteps:   20,
+      coopMetric:      'flights',
+      coopUnit:        'flights',
+      coopRewardSouls: 800,
+      coopWindowHours: 24,
+      statDomain:      'WILL',
+      flavorShort:     'Split down the middle. Each half rises on its own wings.',
+      flavorLong:      'Something split it down the middle, and each half still rises on its own wings. Each of you climbs one half down.',
+      killCondShort:   'Two hunters: 10 flights each in 24h',
+      killCondLong:    'Each of you climbs 10 verified flights of stairs within 24 hours. One hunter\'s extra flights do not count for the other. Both hunters are credited the kill.',
+      coopVictoryTitle:'BOTH HALVES FALL',
+      coopDefeatTitle: 'IT RISES STILL',
     },
     // W693 — THE GRINNING GOD: the members-only apex raid (Monarch / "state of god"
     // homage — legally distinct, not a copy). Party of 4–6 (W1182, owner 2026-11-11; was 2–5): the goal never
@@ -66030,11 +66205,35 @@
   function _relicPromise(cfg) {
     return _coopDropGuaranteed(cfg) ? 'and a relic when it falls' : 'and a chance at its relics when it falls';
   }
+  // W1340 — a HALF-EACH hunt (owner 2026-11-26: "one player can't carry the load"): each hunter must finish their own
+  // share (the goal split over the seats: a duo, half). The server sends half_each + share_goal; the boss config says
+  // so too. Mirrors the server's isGoalMet (coop-boss.ts) so the phone never resolves a hunt the server won't call won.
+  function _coopIsHalfEach(inst) {
+    if (!inst) return false;
+    if (inst.half_each === true) return true;
+    const cfg = (typeof COOP_BOSSES === 'object' && COOP_BOSSES) ? COOP_BOSSES[inst.boss_id] : null;
+    return !!(cfg && cfg.coopHalfEach);
+  }
+  // { goal, share, rows: [{ user_id, alias, own, part, done }], done (capped sum), met }. part = min(own, share).
+  function _coopHalfProgress(inst) {
+    const cfg = COOP_BOSSES[inst.boss_id] || {};
+    const goal = Number(inst.goal_steps) || cfg.coopGoalSteps || 0;
+    const seats = (Array.isArray(inst.party) && inst.party.length) ? inst.party.slice() : [inst.challenger, inst.partner].filter(Boolean);
+    const share = Number(inst.share_goal) || Math.ceil(goal / Math.max(2, seats.length));
+    const flights = _coopUnit(inst) === 'flights';
+    const rows = seats.map(function (s) {
+      const own = Math.max(0, Number(flights && s && s.flights != null ? s.flights : (s && s.steps)) || 0);
+      return { user_id: s && s.user_id, alias: s && s.alias, own: own, part: Math.min(share, own), done: own >= share };
+    });
+    let done = 0; rows.forEach(function (r) { done += r.part; });
+    return { goal: goal, share: share, rows: rows, done: done, met: share > 0 && rows.length >= 2 && rows.every(function (r) { return r.done; }) };
+  }
   // W447 — has the hunt hit its goal(s)? A 'both' hunt needs BOTH the steps goal
   // (combined_steps / goal_steps) AND the flights goal (combined_flights / goal_flights).
   // W686 — a steps+sleep hunt needs the steps goal AND the sleep-minutes goal.
   function _coopGoalReached(inst) {
     if (!inst) return false;
+    if (_coopIsHalfEach(inst)) return _coopHalfProgress(inst).met;   // W1340 — every hunter's own half
     const cfg = COOP_BOSSES[inst.boss_id] || _coopSheet.cfg || {};
     const stepGoal = inst.goal_steps || cfg.coopGoalSteps || Infinity;
     if ((inst.combined_steps || 0) < stepGoal) return false;
@@ -66791,6 +66990,7 @@
       case 'ALLY_NOT_MEMBER': return 'Every hunter in this raid must be a member — pick a member ally.';
       // W1211 — one raid at a time (owner 2026-11-14)
       case 'IN_RAID': return 'You’re already in a raid. One raid at a time.';
+      case 'NEEDS_UPDATE': return / needs the latest update for this boss\.$/.test(_coopSheet.errorDetail || '') ? _coopSheet.errorDetail : 'That hunter needs the latest update for this boss.';   // W1340
       case 'ALLY_IN_RAID': return 'One of those hunters is already in a raid.';
       default: return 'Something went wrong. Try again.';
     }
@@ -67001,8 +67201,10 @@
       note +
       '<p class="coop-lead">' + esc(cfg.flavorLong) + '</p>' +
       '<div class="coop-goal-card">' +
-        '<div class="coop-goal-big">' + (cfg.coopGoalSteps || 0).toLocaleString('en-US') + '</div>' +
-        '<div class="coop-goal-sub">' + (cfg.coopMetric === 'both'
+        '<div class="coop-goal-big">' + (cfg.coopHalfEach ? Math.ceil((cfg.coopGoalSteps || 0) / 2) : (cfg.coopGoalSteps || 0)).toLocaleString('en-US') + '</div>' +
+        '<div class="coop-goal-sub">' + (cfg.coopHalfEach   // W1340 — each hunter's own half
+          ? esc(cfg.coopUnit || 'steps') + ' each \u00B7 ' + cfg.coopWindowHours + 'h \u00B7 ' + _partyNoun
+          : cfg.coopMetric === 'both'
           ? 'steps + ' + cfg.coopGoalFlights + ' flights \u00B7 combined \u00B7 ' + cfg.coopWindowHours + 'h \u00B7 ' + _partyNoun
           : cfg.coopMetric === 'steps_sleep'
             ? 'steps + ' + _coopFmtSleep(cfg.coopGoalSleepMinutes || 0) + ' sleep \u00B7 combined \u00B7 ' + cfg.coopWindowHours + 'h \u00B7 ' + _partyNoun
@@ -67139,7 +67341,8 @@
     const r2 = firstShow ? ' coopsm-reveal coopsm-d2' : '';
     const r3 = firstShow ? ' coopsm-reveal coopsm-d3' : '';
     const r4 = firstShow ? ' coopsm-reveal coopsm-d4' : '';
-    const goal = (inst.goal_steps || cfg.coopGoalSteps).toLocaleString('en-US');
+    const halfSm = _coopIsHalfEach(inst);   // W1340 — the pact asks each hunter for their half
+    const goal = (halfSm ? _coopHalfProgress(inst).share : (inst.goal_steps || cfg.coopGoalSteps)).toLocaleString('en-US');
     const hrs = cfg.coopWindowHours;
     return (
       // sr-only context (the decorative hero FX — title + threat rank — is aria-hidden)
@@ -67159,7 +67362,7 @@
       '<div class="coopsm-pact' + r3 + '">' +
         '<div class="coopsm-pact-label">The Pact</div>' +
         '<div class="coopsm-pact-num">' + goal + '</div>' +
-        '<div class="coopsm-pact-sub"><b>' + (_coopIsBoth(inst)
+        '<div class="coopsm-pact-sub"><b>' + (halfSm ? esc(_coopUnit(inst)) + ' each' : _coopIsBoth(inst)
           ? 'combined steps + ' + ((inst.goal_flights || cfg.coopGoalFlights) || 0) + ' flights'
           : _coopIsSleep(inst)
             ? 'combined steps + ' + _coopFmtSleep((inst.goal_sleep_minutes || cfg.coopGoalSleepMinutes) || 0) + ' sleep'
@@ -67294,6 +67497,10 @@
   // the old primary-value shares exactly.
   function _coopDamageScores(inst, roster) {
     roster = roster || _coopBattleRoster(inst);
+    if (_coopIsHalfEach(inst)) {   // W1340 — each hunter's part capped at their half: a finished partner is never out-damaged
+      const hp = _coopHalfProgress(inst);
+      return roster.map(function (h) { const v = Math.max(0, Number(_coopBattlePrimary(inst, h.raw)) || 0); return hp.goal > 0 ? Math.min(v, hp.share) / hp.goal : 0; });
+    }
     const streams = [];
     if (_coopIsBoth(inst)) {
       streams.push({ get: function (h) { return (h.raw && h.raw.steps) || 0; }, goal: inst.goal_steps || 0 });
@@ -67319,6 +67526,11 @@
   // { pct: primary progress 0-1, binding: min across streams (drives vitality
   //   + phases — W686 house rule: the boss can't "break" while a stream is unmet) }
   function _coopBattleProgress(inst) {
+    if (_coopIsHalfEach(inst)) {   // W1340 — the capped halves: the bar fills only as each hunter does their own
+      const hp = _coopHalfProgress(inst);
+      const hpct = hp.goal > 0 ? Math.max(0, Math.min(1, hp.done / hp.goal)) : 0;
+      return { pct: hpct, binding: hpct };
+    }
     const cfg = _coopSheet.cfg || {};
     const unit = _coopUnit(inst);
     // W808 — flights-only hunts serialize under the generic steps-named keys (see _coopBattlePrimary).
@@ -67486,8 +67698,9 @@
     const prog = _coopBattleProgress(inst);
     const phase = prog.binding >= 0.9 ? 3 : prog.binding >= 0.75 ? 2 : 1;
     // W808 — flights-only hunts serialize under the generic steps-named keys (see _coopBattlePrimary).
-    const pGoal = unit === 'flights' ? (inst.goal_flights || inst.goal_steps || cfg.coopGoalFlights || cfg.coopGoalSteps || 0) : (inst.goal_steps || cfg.coopGoalSteps || 0);
-    const pVal = unit === 'flights' ? (inst.combined_flights != null ? inst.combined_flights : (inst.combined_steps || 0)) : (inst.combined_steps || 0);
+    const half = _coopIsHalfEach(inst) ? _coopHalfProgress(inst) : null;   // W1340
+    const pGoal = half ? half.goal : unit === 'flights' ? (inst.goal_flights || inst.goal_steps || cfg.coopGoalFlights || cfg.coopGoalSteps || 0) : (inst.goal_steps || cfg.coopGoalSteps || 0);
+    const pVal = half ? half.done : unit === 'flights' ? (inst.combined_flights != null ? inst.combined_flights : (inst.combined_steps || 0)) : (inst.combined_steps || 0);
 
     // Phase tag mirrors the design's escalation copy.
     const tag = phase === 3 ? '<span class="chd-phase-tag chd-p3">It Breaks — Finish It</span>'
@@ -67498,7 +67711,7 @@
     const total = roster.reduce(function (s, h) { return s + _coopBattlePrimary(inst, h.raw); }, 0);
     let used = 0, segs = '';
     roster.forEach(function (h, i) {
-      const val = _coopBattlePrimary(inst, h.raw);
+      const val = half ? Math.min(half.share, _coopBattlePrimary(inst, h.raw)) : _coopBattlePrimary(inst, h.raw);   // W1340 — a half at most
       const w = pGoal > 0 ? Math.min(Math.max(0, prog.pct * 100 - used), val / pGoal * 100) : 0;
       segs += '<div class="chd-seg chd-c' + Math.min(i, 4) + '" style="left:' + used.toFixed(1) + '%;width:' + w.toFixed(1) + '%"></div>';
       used += w;
@@ -67552,6 +67765,7 @@
       if (v > leadVal) { leadVal = v; leadIdx = i; }
       else if (v === leadVal) leadIdx = -1;
     });
+    if (half) leadIdx = -1;   // W1340 — nobody carries a half-each hunt
     // W805 — pact-streak flame next to each ALLY with a live pact (owner: surface
     // the flame in the hunt itself so hunters fight to keep it burning). Branded
     // SVG flame (never the emoji, handoff-19 rule); risk gradient when today's
@@ -67587,7 +67801,7 @@
         // W793 — the crown is now MVP (tap → incentive explainer via the global [data-mvp-info] handler).
         '<div class="chd-info"><div class="chd-name">' + esc(_dn(h.alias)) + _crownFor(h.alias) + (i === leadIdx ? '<span class="chd-crown" data-mvp-info role="button" tabindex="0">MVP</span>' : '') + pactChip + '</div>' +
         '<div class="chd-status"><span class="chd-pulse"></span>Hunting now</div></div>' +
-        '<div class="chd-num"><div class="chd-val">' + _N(val) + '</div><div class="chd-share chd-c' + c + '">' + share + '% of damage</div>' +
+        '<div class="chd-num"><div class="chd-val">' + _N(half ? Math.min(val, half.share) : val) + '</div><div class="chd-share chd-c' + c + '">' + (half ? (val >= half.share ? 'Done' : _N(half.share - val) + ' to go') : share + '% of damage') + '</div>' +
           // W783 — a dual-metric hunt owes each hunter BOTH numbers. The big value is
           // the primary stream (steps); this line is their own climbed flights, so the
           // second goal stops being an anonymous team total.
@@ -68386,8 +68600,9 @@
     const top = _coopTopRowHtml(inst, ally, bossName, rank);
 
     if (inst.status === 'active') {
+      const half = _coopIsHalfEach(inst) ? _coopHalfProgress(inst) : null;   // W1340 — each hunter against their own half
       const goal = inst.goal_steps || cfg.coopGoalSteps || 14000;
-      const combined = Math.max(0, inst.combined_steps || 0);
+      const combined = half ? half.done : Math.max(0, inst.combined_steps || 0);
       const mine = Math.max(0, (v.me && v.me.steps) || 0);
       // W686 review #13 — for DUAL hunts the headline % is the BINDING constraint
       // (min of the streams), so "100%" can never show while a condition is unmet.
@@ -68399,7 +68614,7 @@
         const sg = inst.goal_sleep_minutes || cfg.coopGoalSleepMinutes || 0;
         if (sg > 0) pct = Math.min(pct, Math.min(100, Math.floor((inst.combined_sleep_minutes || 0) / sg * 100)));
       }
-      const yw = goal > 0 ? Math.min(100, mine / goal * 100) : 0;
+      const yw = goal > 0 ? Math.min(100, (half ? Math.min(mine, half.share) : mine) / goal * 100) : 0;
       // W677 review #7 — one bar segment + one legend entry PER ALLY (the trio's
       // third hunter was invisible and the legend didn't sum to combined). Widths
       // clamp against the cumulative remainder so the bar never overflows 100%.
@@ -68407,12 +68622,12 @@
       let allyBars = '', allyLegend = '';
       others.forEach(function (o, i) {
         const s = Math.max(0, (o && o.steps) || 0);
-        const w = goal > 0 ? Math.min(Math.max(0, 100 - used), s / goal * 100) : 0;
+        const w = goal > 0 ? Math.min(Math.max(0, 100 - used), (half ? Math.min(s, half.share) : s) / goal * 100) : 0;
         used += w;
         allyBars += '<div class="cph-them' + (i > 0 ? ' cph-them--alt' : '') + '" style="width:' + w.toFixed(1) + '%"></div>';
         // W782 — the alias rides in its own span so a long name ELLIPSES inside its
         // grid column instead of shoving the step count out of the card (5-hunter raid).
-        allyLegend += '<span class="cph-leg cph-them' + (i > 0 ? ' cph-them--alt' : '') + '"><span class="cph-sw"></span><span class="cph-nm">' + esc(_coopAlias((o && o.alias) || 'ally')) + _crownFor(o && o.alias) + '</span> <b>' + N(s) + '</b></span>';
+        allyLegend += '<span class="cph-leg cph-them' + (i > 0 ? ' cph-them--alt' : '') + '"><span class="cph-sw"></span><span class="cph-nm">' + esc(_coopAlias((o && o.alias) || 'ally')) + _crownFor(o && o.alias) + '</span> <b>' + (half && s >= half.share ? 'Done' : N(s)) + '</b></span>';
       });
       const flightsLine = _coopIsBoth(inst)
         ? '<div class="cph-prog-second">' + N(inst.combined_flights || 0) + ' <span>/ ' + N(inst.goal_flights || cfg.coopGoalFlights || 0) + '</span> Combined Flights</div>'
@@ -68424,15 +68639,16 @@
           '<div class="cph-prog-top"><span class="cph-prog-num">' + N(combined) + ' <span>/ ' + N(goal) + '</span><span class="cph-pct">' + pct + '%</span></span>' + _coopTimePill(inst, false) + '</div>' +
           '<div class="cph-bar"><div class="cph-you" style="width:' + yw.toFixed(1) + '%"></div>' + allyBars + '</div>' +
           flightsLine +
-          '<div class="cph-legend"><span class="cph-leg cph-you"><span class="cph-sw"></span><span class="cph-nm">You</span> <b>' + N(mine) + '</b></span>' + allyLegend + '</div>' +
+          '<div class="cph-legend"><span class="cph-leg cph-you"><span class="cph-sw"></span><span class="cph-nm">You</span> <b>' + (half && mine >= half.share ? 'Done' : N(mine)) + '</b></span>' + allyLegend + '</div>' +
         '</div>' +
       '</a>';
     }
 
     // pending — an invite TO you (inline Decline / Accept Pact) or a pact YOU sent (waiting)
     if (_coopIsMyInvite(inst)) {   // W677 — either invited seat, unanswered
-      const goal = inst.goal_steps || cfg.coopGoalSteps || 14000;
-      const unit = _coopUnit(inst) === 'flights' ? 'combined flights' : 'combined steps';
+      const halfInv = _coopIsHalfEach(inst);   // W1340 — the invite asks each hunter for their half
+      const goal = halfInv ? _coopHalfProgress(inst).share : (inst.goal_steps || cfg.coopGoalSteps || 14000);
+      const unit = halfInv ? (_coopUnit(inst) === 'flights' ? 'flights each' : 'steps each') : _coopUnit(inst) === 'flights' ? 'combined flights' : 'combined steps';
       return '<div class="cph-hunt cph-pending" data-coop-invite="' + esc(inst.id) + '">' + top +
         '<div class="cph-inv">' +
           '<div class="cph-inv-meta"><span class="cph-inv-target">Target <b>' + N(goal) + '</b> ' + unit + (_coopIsBoth(inst) ? ' + <b>' + N(inst.goal_flights || cfg.coopGoalFlights || 0) + '</b> flights' : '') + (_coopIsSleep(inst) ? ' + <b>' + _coopFmtSleep(inst.goal_sleep_minutes || cfg.coopGoalSleepMinutes || 0) + '</b> sleep' : '') + ' · ' + _coopWindowHrs(inst) + 'h clock</span>' + _coopTimePill(inst, true) + '</div>' +

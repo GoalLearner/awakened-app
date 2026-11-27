@@ -1,6 +1,6 @@
 // ─────────────────────────────────────────────────────────────
 // INCREMENT THIS VERSION NUMBER WITH EVERY NETLIFY DEPLOYMENT
-const CACHE_VERSION = 'v6.566';
+const CACHE_VERSION = 'v6.567';
 // ─────────────────────────────────────────────────────────────
 
 const CACHE_NAME = 'awakened-cache-' + CACHE_VERSION;
@@ -387,6 +387,15 @@ const PRECACHE_ASSETS = [
   '/assets/bosses/the-hollow-monarch-summons.webp',
   '/assets/bosses/the-myrmidon-king.webp',
   '/assets/bosses/the-myrmidon-king-summons.webp',
+  // W1340 — the four half-each duos
+  '/assets/bosses/the-yoked-wanderers.webp',
+  '/assets/bosses/the-yoked-wanderers-summons.webp',
+  '/assets/bosses/the-chained-ascendants.webp',
+  '/assets/bosses/the-chained-ascendants-summons.webp',
+  '/assets/bosses/the-bound-kings.webp',
+  '/assets/bosses/the-bound-kings-summons.webp',
+  '/assets/bosses/the-halved-seraph.webp',
+  '/assets/bosses/the-halved-seraph-summons.webp',
   '/assets/bosses/the-sleepless-ascent.webp',
   '/assets/bosses/the-starved-sentinel.webp',
   '/assets/bosses/the-sundered-choir.webp',

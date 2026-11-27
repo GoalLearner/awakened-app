@@ -48,7 +48,9 @@ test.describe('Every boss that drops a relic (W1109)', () => {
     await expect(page.locator('#mystery-card-source .mcs-src')).toHaveText([
       'Erebus, the Shadow Sovereign',
       'The Calorie Colossus',   // W1228 — the S calorie boss drops a mythic at 1%
+      'The Bound KingsCO-OP',   // W1340 — the S half-each duos
       'The Grinning GodCO-OP',
+      'The Halved SeraphCO-OP',
       'Every weekly boss',
     ]);
     await expect(page.locator('#mystery-card-howto')).toHaveText('');   // W1332 — the sources and HUNT BOSS say how
@@ -82,7 +84,7 @@ test.describe('Every boss that drops a relic (W1109)', () => {
     expect(r.dusk).toContain('The Unending Road');             // W1070 weekly boss, A
     expect(r.dusk).toContain('The Oracle of Deep Hours');      // W1071 weekly sleep boss, A
     expect(r.dusk).toContain('The Trinity Colossus');          // W1104 trio, A
-    expect(r.vigil).toEqual(['The Myrmidon King', 'The Calorie Colossus', 'The Grinning God', 'Every weekly boss']);   // W1228
+    expect(r.vigil).toEqual(['The Myrmidon King', 'The Calorie Colossus', 'The Bound Kings', 'The Grinning God', 'The Halved Seraph', 'Every weekly boss']);   // W1228, W1340
   });
 
   test("the reveal names the boss that dropped the relic, not the relic's own boss", async ({ page }) => {

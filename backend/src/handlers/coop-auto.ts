@@ -143,7 +143,10 @@ import {
  *  real client half through. */
 export const AUTO_HUNT_MIN_W = 1097;
 /** One-day duo bosses, best first (W1195: the flights bosses join; sleep duos still wait). */
-export const AUTO_BOSSES: readonly string[] = ['the_sundered_choir', 'the_hollow_monarch', 'the_gaunt_wardens', 'the_coursing_dread', 'the_twin_maw'];
+/** W1340 — the four half-each duos lead (S, then A): picked only when EACH hunter's own average covers their half and
+ *  both phones have the app that knows them (PickPrefs.half). */
+export const AUTO_BOSSES: readonly string[] = ['the_bound_kings', 'the_halved_seraph', 'the_yoked_wanderers', 'the_chained_ascendants',
+  'the_sundered_choir', 'the_hollow_monarch', 'the_gaunt_wardens', 'the_coursing_dread', 'the_twin_maw'];
 /** W1278 — owner 2026-11-22: "Aren't there more duo bosses though?" … "I don't mind multiple days to appear in here too as
  *  well." The multi-day duos are TARGETS only: never an Auto pick (Auto stays one day), made only when a member of the
  *  pair chases one, and then for the boss's whole window (2 or 3 days) with its goal sized to the pair's walking over it. */
@@ -152,6 +155,11 @@ export const AUTO_MULTI_BOSSES: readonly string[] = ['the_cloven_titan', 'the_sl
  *  the client catalog: the items whose source_boss is the boss, or the boss's own pool (W1104). A
  *  test reads app.js so the two cannot drift. */
 export const AUTO_BOSS_DROPS: Readonly<Record<string, readonly string[]>> = {
+  // W1340 — the half-each duos drop their rank's hard-to-get pieces (the S pair also a mythic, not listed: a mythic is never a target)
+  the_bound_kings: ['watchkeepers_carapace', 'grips_of_the_third_night', 'striders_of_the_waking_march'],
+  the_halved_seraph: ['circlet_of_lucid_sleep', 'shroud_of_the_dreaming_court', 'pendant_of_the_seventh_hour'],
+  the_yoked_wanderers: ['striders_of_the_tideless_road', 'mantle_of_the_long_vigil', 'wraithwind_bow', 'band_of_the_roadkeeper', 'restplate_of_the_wanderer'],
+  the_chained_ascendants: ['amulet_of_the_endless_stair', 'skyward_vigil_ring', 'aetherspire_staff', 'nightcrown_of_the_climb', 'ascent_worn_cloak'],
   the_sundered_choir: ['the_choirmasters_vestment', 'the_discordant_crown', 'the_sundered_grips', 'the_antiphon_striders'],
   the_hollow_monarch: ['the_hollow_crown', 'the_monarchs_writ', 'crownpiercer'],
   the_gaunt_wardens: ['the_wardens_vigil', 'the_stairwalkers_treads', 'the_famished_circlet', 'the_gaunt_mantle'],

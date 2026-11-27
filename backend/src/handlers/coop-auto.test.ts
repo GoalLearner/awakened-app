@@ -107,8 +107,9 @@ describe('pickAutoBoss — the best one-day duo both ranks allow whose printed g
     expect(pickAutoBoss('E', 'E', 1000)).toEqual({ bossId: 'the_twin_maw', goalSteps: 2000 });
     expect(pickAutoBoss('E', 'E', 0).goalSteps).toBe(2000);
   });
-  it('the list, best first: the Choir, the Monarch, the Gaunt Wardens, the Dread, the Twin Maw', () => {
-    expect(AUTO_BOSSES).toEqual(['the_sundered_choir', 'the_hollow_monarch', 'the_gaunt_wardens', 'the_coursing_dread', 'the_twin_maw']);
+  it('the list, best first: the four half-each duos (W1340), the Choir, the Monarch, the Gaunt Wardens, the Dread, the Twin Maw', () => {
+    expect(AUTO_BOSSES).toEqual(['the_bound_kings', 'the_halved_seraph', 'the_yoked_wanderers', 'the_chained_ascendants',
+      'the_sundered_choir', 'the_hollow_monarch', 'the_gaunt_wardens', 'the_coursing_dread', 'the_twin_maw']);
   });
   it('a B pair that walks and climbs faces The Sundered Choir: 10,000 steps and 8 flights', () => {
     expect(pickAutoBoss('B', 'A', 20000, 12)).toEqual({ bossId: 'the_sundered_choir', goalSteps: 10000, goalFlights: 8 });
@@ -250,8 +251,13 @@ describe('pickAutoBoss — the best one-day duo both ranks allow whose printed g
     // a drop source with a pool (the D, B and A trios) drops its pool instead (W1104)
     const card = /\n {4}([a-z0-9_]+): \{\r?\n {6}id: +'([a-z0-9_]+)',[\s\S]*?\r?\n {4}\},/g;
     while ((m = card.exec(app))) {
-      const pool = /pool: \{\s*ultra_rare: \[([^\]]*)\],\s*rare: +\[([^\]]*)\]/.exec(m[0]);
-      if (pool && all.includes(m[2])) drops[m[2]] = [...pool[1].split(','), ...pool[2].split(',')].map((x) => x.trim().replace(/'/g, '')).filter(Boolean);
+      // W1340 — any order, and a pool may list mythics too (never an Auto target): its rare + ultra rare lists
+      const pb = /pool: +\{([\s\S]*?)\}/.exec(m[0]);
+      if (pb && all.includes(m[2])) {
+        const list = (k: string) => { const r = new RegExp('(?:^|[\\s,{])' + k + ': +\\[([^\\]]*)\\]').exec(pb[1]); return r ? r[1].split(',') : []; };
+        const got = [...list('ultra_rare'), ...list('rare')].map((x) => x.trim().replace(/'/g, '')).filter(Boolean);
+        if (got.length) drops[m[2]] = got;
+      }
     }
     // W1274 — poolAllCommons (the Twin Maw): every common relic in the catalog too
     // each card's own block (its key, then id: the same key, up to its closing brace), rarity common
@@ -1896,5 +1902,36 @@ describe('W1339 — halfFitOf: each hunter must do their own half', () => {
     expect(halfFitOf(8000, 8000, new Map([['a', 9]]), builds, 'a', 'b').fl).toBeNull();
     expect(halfFitOf(8000, 8000, new Map(), builds, 'a', 'old').ok).toBe(false);
     expect(halfFitOf(8000, 8000, new Map(), builds, 'a', 'nobody').ok).toBe(false);
+  });
+});
+
+// ── W1340 — Auto picks a half-each duo only when EACH hunter can do their half ──
+describe('W1340 — the half-each duos in Auto', () => {
+  const ok = (fit: number, fl: number | null) => ({ half: { fit, fl, ok: true } });
+  it('a 12,000 + 3,000 pair is not given the Yoked Wanderers (the weaker hunter cannot do 6,000)', () => {
+    const h = halfFitOf(12000, 3000, new Map(), new Map([['a', 'x-w1340'], ['b', 'x-w1340']]), 'a', 'b');
+    expect(pickAutoBoss('A', 'A', 15000, null, { half: h }).bossId).not.toBe('the_yoked_wanderers');
+  });
+  it('a 7,500 + 7,500 A pair is (0.8 x 7,500 = 6,000 covers the half)', () => {
+    expect(pickAutoBoss('A', 'A', 15000, null, ok(6000, null))).toEqual({ bossId: 'the_yoked_wanderers', goalSteps: 12000 });
+  });
+  it('an S pair that walks 8,750 each faces the Bound Kings; flights come from the weaker phone', () => {
+    expect(pickAutoBoss('S', 'S', 17500, null, ok(7000, null))).toEqual({ bossId: 'the_bound_kings', goalSteps: 14000 });
+    expect(pickAutoBoss('S', 'S', 2000, 40, ok(1600, 10))).toEqual({ bossId: 'the_halved_seraph', goalSteps: 20 });
+    expect(pickAutoBoss('S', 'S', 2000, 40, ok(1600, 9.9)).bossId).not.toBe('the_halved_seraph');
+    expect(pickAutoBoss('A', 'A', 2000, 20, ok(1600, 7))).toEqual({ bossId: 'the_chained_ascendants', goalSteps: 14 });
+  });
+  it('ranks gate them: an A pair never gets an S duo; a B pair gets neither', () => {
+    expect(pickAutoBoss('A', 'S', 40000, 40, ok(20000, 20)).bossId).toBe('the_yoked_wanderers');
+    expect(['the_bound_kings', 'the_halved_seraph', 'the_yoked_wanderers', 'the_chained_ascendants']).not.toContain(pickAutoBoss('B', 'B', 40000, 40, ok(20000, 20)).bossId);
+  });
+  it('an older app on either phone, or no weaker-hunter read, never gets one', () => {
+    expect(pickAutoBoss('S', 'S', 40000, null, { half: { fit: 20000, fl: null, ok: false } }).bossId).not.toBe('the_bound_kings');
+    expect(pickAutoBoss('S', 'S', 40000, null, {}).bossId).not.toBe('the_bound_kings');
+  });
+  it('a target is made as printed when both phones have the app that knows it', () => {
+    expect(runDuo('the_bound_kings', 5, 100, null, true)).toEqual({ bossId: 'the_bound_kings', goalSteps: 14000 });
+    expect(runDuo('the_bound_kings', 5, 100, null, false)).toBeNull();
+    expect(runDuo('the_bound_kings', 4, 99999, null, true)).toBeNull();   // an A pair
   });
 });
