@@ -287,7 +287,8 @@ test.describe('W1321 — an opened hunter, organized', () => {
   for (const vp of [{ width: 390, height: 844 }, { width: 375, height: 667 }]) {
     test('bosses by rank, then drops (ultra-rare first, sold souls as a tag), a heart for the like @' + vp.width, async ({ page }) => {
       await page.setViewportSize(vp);
-      const now = Date.now(), m = 60_000;   // minutes apart, one day (CI runs in UTC: hours back can cross midnight)
+      const m = 60_000, midnight = new Date(); midnight.setHours(0, 0, 0, 0);
+      const now = Math.max(Date.now(), midnight.getTime() + 25 * m);   // minutes apart, one day: run just after midnight (CI = UTC), the 20-minute-old rows would land on yesterday
       const kill = (id: string, name: string, rk: string, at: number) => ev(id, 'RenDIESEL', 'boss_kill', at, false, { eventKey: id, eventLabel: 'defeated ' + name, rarity: rk });
       const rare = (id: string, at: number, sold: number) => ev(id, 'RenDIESEL', 'rare_item_drop', at, false, { eventKey: 'rare', eventLabel: 'found a rare item', eventValue: sold });
       await boot(page, [
@@ -320,7 +321,8 @@ test.describe('W1321 — an opened hunter, organized', () => {
   for (const vp of [{ width: 390, height: 844 }, { width: 375, height: 667 }]) {
     test('every kind has its group: Shadows, Milestones, Bosses, Drops, Health @' + vp.width, async ({ page }) => {
       await page.setViewportSize(vp);
-      const now = Date.now(), m = 60_000;
+      const m = 60_000, midnight = new Date(); midnight.setHours(0, 0, 0, 0);
+      const now = Math.max(Date.now(), midnight.getTime() + 25 * m);   // one day, even just after midnight (CI = UTC)
       const e = (id: string, type: string, label: string, at: number, extra: Record<string, unknown> = {}) => ev(id, 'Galilea', type, at, false, { eventKey: id, eventLabel: label, eventValue: null, rarity: null, ...extra });
       await boot(page, [
         e('st1', 'step_milestone_bucket', 'crossed 10,000 steps today', now - 1 * m, { eventValue: 10000 }),

@@ -44,7 +44,8 @@ const DATA = {
 const render = (page: Page, own: boolean, extra?: Record<string, unknown>) => page.evaluate(([d, o]) => (window as any).__pcRender(d, o), [{ ...DATA, ...(extra || {}) }, own] as [Record<string, unknown>, boolean]);
 const settle = (page: Page) => page.evaluate(async () => {   // the sheet slides up on open: wait for it to stop
   const sh = document.getElementById('pc-sheet')!;
-  let last = -1; for (let i = 0; i < 60; i++) { const y = sh.getBoundingClientRect().top; if (y === last) break; last = y; await new Promise((r) => requestAnimationFrame(r)); }
+  // still for 5 frames in a row (one equal pair can be the frame before the slide starts)
+  let last = -1, still = 0; for (let i = 0; i < 120 && still < 5; i++) { const y = sh.getBoundingClientRect().top; still = y === last ? still + 1 : 0; last = y; await new Promise((r) => requestAnimationFrame(r)); }
 });
 
 const box = (page: Page, sel: string) => page.evaluate((q) => { const r = document.querySelector(q)!.getBoundingClientRect(); return { l: r.left, r: r.right, t: r.top, b: r.bottom, w: r.width, h: r.height }; }, sel);
@@ -140,7 +141,7 @@ for (const vp of [{ width: 390, height: 844 }, { width: 375, height: 667 }]) {
       await render(page, true);
       await expect(pick).toHaveText(/Contender/i);
       await settle(page);
-      const n = await box(page, '#pc-body .pcc-name'), t = await box(page, '#pc-body .pcc-title');
+      const [n, t] = await page.evaluate(() => ['#pc-body .pcc-name', '#pc-body .pcc-title'].map((q) => { const r = document.querySelector(q)!.getBoundingClientRect(); return { l: r.left, t: r.top, b: r.bottom }; }));   // one frame: both mid-slide or neither
       expect(t.t).toBeGreaterThanOrEqual(n.b);
       expect(Math.abs(t.l - n.l)).toBeLessThanOrEqual(1);
       await pick.click();
