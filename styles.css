@@ -37942,3 +37942,23 @@ button.pcc-title { cursor: pointer; -webkit-appearance: none; appearance: none; 
 
 /* W1334 — Settings sections whose summary only listed what is inside: the empty span still pushes the chevron right */
 .settings-v2 .settings-collapsible-summary:empty { margin-right: 0; }
+
+/* ══ VISUAL PASS (preview branch, owner 2026-11-26: "less AI-coded") ══════════════════════════════
+   Everyday screens stop moving on their own and lose their neon. Glow stays for moments (a kill,
+   a mythic, a rank-up); a screen you open ten times a day sits still. One block, easy to drop. */
+/* Status: the radar holds still (it breathed, rotated and pulsed seven ways at once) */
+.sc-radar-ring, .sc-radar-dot, .sc-radar-dot--dom, .sc-radar-dot--econ,
+.sc-radar-constellation, .sc-radar-core, .sc-radar-core-ring { animation: none !important; }
+.sc-radar-core-ring { opacity: 0 !important; }
+/* Status: the rank tile is lit, not pulsing (it pulsed, its aura breathed, its frame shimmered) */
+.sc-rank-hero, .sc-rank-hero.splus { animation: none !important; box-shadow: 0 0 8px var(--rank-color-shadow, rgba(139,92,246,0.18)); }
+.sc-rank-hero::before, .sc-rank-hero::after { animation: none !important; }
+/* Habits: a finished day keeps its purple edge without pulsing all day */
+.habit-list.all-complete .habit-item { animation: none !important; box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
+/* Numbers and headings: plain ink, no halo */
+.steps-card__rank, .metric-card-value--combat, .sc-am-word, .board-h2,
+.archive-rarity-header--ultra .pokedex-section-label, .archive-rarity-header--mythic .pokedex-section-label { text-shadow: none !important; }
+/* Co-op: the event gates keep their colour, lose the haze */
+.gate-cell--holiday { box-shadow: inset 0 0 0 1px rgba(240, 90, 90, 0.18) !important; }
+.gate-cell--members { box-shadow: inset 0 0 0 1px rgba(245, 184, 66, 0.18) !important; }
+.gate-cell--holiday .gate-special-emblem, .gate-cell--members .gate-special-emblem { filter: none !important; }
