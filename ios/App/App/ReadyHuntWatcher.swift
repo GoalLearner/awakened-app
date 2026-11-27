@@ -403,7 +403,8 @@ enum ReadyHuntMath {
     /// fi.polar.polarflow, com.ouraring.oura); an app's display name proves nothing.
     static let wearableWords: [String] = ["fitbit", "google", "oura", "ouraring", "garmin", "whoop", "withings", "polar",
                                           "suunto", "coros", "zepp", "huami", "amazfit", "xiaomi", "mifit", "huawei",
-                                          "ultrahuman", "ringconn", "wahoo", "wahoofitness", "samsung"]
+                                          "ultrahuman", "ringconn", "wahoo", "wahoofitness", "samsung",
+                                          "fittrackhealth"]   // 2026-11-27: the Hume Band (com.elink.fittrackhealth)
 
     static func isWearableBundle(_ bundle: String) -> Bool {
         let separators: CharacterSet = CharacterSet(charactersIn: ".-_")
