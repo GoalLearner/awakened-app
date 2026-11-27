@@ -27,6 +27,13 @@ import {
   sweepPendingSummonsReminders,
   COOP_BOSS_CFG,
   COOP_BOSS_NAMES,
+  isGoalMet,
+  isHalfEach,
+  halfShare,
+  halfEachDone,
+  emptyProgress,
+  HALF_EACH_MIN_W,
+  type CoopBossRow,
 } from './coop-boss';
 
 const mockNotify = vi.mocked(notifyUser);
@@ -66,7 +73,7 @@ const TRIO_PENDING_ROW = {
 
 /** Substring-routed D1 mock. `sqlLog` captures every prepared statement so
  *  tests can assert on the cap query's semantics, not just its result. */
-function makeDb(opts: { running?: number; premiumExpiresAt?: number; instance?: Record<string, unknown> | null; rankTier?: string; emoteSentAt?: number; inRaid?: string[]; joinDup?: boolean }, sqlLog?: string[]) {
+function makeDb(opts: { running?: number; premiumExpiresAt?: number; instance?: Record<string, unknown> | null; rankTier?: string; emoteSentAt?: number; inRaid?: string[]; joinDup?: boolean; build?: string; progress?: Array<{ user_id: string; event_type: string; s: number }> }, sqlLog?: string[]) {
   // W692 — the instance the read-path (loadInstance / loadParticipants) resolves to.
   const inst = () => (opts.instance === undefined ? PENDING_ROW : opts.instance) as Record<string, unknown> | null;
   return {
@@ -96,6 +103,7 @@ function makeDb(opts: { running?: number; premiumExpiresAt?: number; instance?: 
             }
             // W686 — per-user MAX(value) progress rows for the steps+sleep raid tests.
             if (sql.includes('FROM verified_events')) {
+              if (opts.progress) return { results: opts.progress, success: true, meta: {} };   // W1339
               return {
                 results: [
                   { user_id: 'u1', event_type: 'steps_total', s: 12000 },
@@ -109,6 +117,7 @@ function makeDb(opts: { running?: number; premiumExpiresAt?: number; instance?: 
           },
           first: async () => {
             if (sql.includes('W1267 join dup')) return opts.joinDup ? { dup: 1 } : null;
+            if (sql.includes('FROM app_opens')) return opts.build ? { build: opts.build } : null;   // W1339 — the ally's newest app
             if (sql.includes('FROM premium_subscriptions')) {
               return opts.premiumExpiresAt != null ? { expires_at_ms: opts.premiumExpiresAt } : null;
             }
@@ -1043,5 +1052,110 @@ describe('W1267 — answering a summons never makes a second live hunt of the sa
   it('no live twin: the answer goes through as before', async () => {
     const res = await handleCoopBossJoin(createReq(), makeEnv(makeDb({ joinDup: false })), session('u2'), 'inst-1');
     expect(res.status).toBe(200);
+  });
+});
+
+// ── W1339 — half-each duos (owner 2026-11-26: "one player can't carry the load so it has to be a 50/50 split") ──
+describe('W1339 — half-each duos: each hunter finishes their own half', () => {
+  const row = (boss: string, extra: Record<string, unknown> = {}) => ({
+    ...PENDING_ROW, id: 'inst-h', boss_id: boss, boss_rank: COOP_BOSS_CFG[boss].rank, goal_steps: COOP_BOSS_CFG[boss].goalSteps,
+    reward_souls: COOP_BOSS_CFG[boss].rewardSouls, status: 'active', partner_joined_at: '2026-11-27 08:00:00',
+    starts_at: new Date(Date.now() - 3600_000).toISOString(), ends_at: new Date(Date.now() + 3600_000).toISOString(), ...extra,
+  });
+  const asRow = (r: Record<string, unknown>) => ({ ...r, participants: [{ user_id: 'u2', joined_at: 'x' }] }) as unknown as CoopBossRow;
+  const prog = (stream: 'steps' | 'flights', a: number, b: number) => {
+    const p = emptyProgress();
+    p[stream].set('u1', a); p[stream].set('u2', b);
+    return p;
+  };
+
+  it('the four bosses: one day, a duo, half each, souls half the solo kill', () => {
+    expect(COOP_BOSS_CFG.the_yoked_wanderers).toEqual({ rank: 'A', goalSteps: 12000, rewardSouls: 400, windowHours: 24, metric: 'steps', halfEach: true });
+    expect(COOP_BOSS_CFG.the_chained_ascendants).toEqual({ rank: 'A', goalSteps: 14, rewardSouls: 400, windowHours: 24, metric: 'flights', halfEach: true });
+    expect(COOP_BOSS_CFG.the_bound_kings).toEqual({ rank: 'S', goalSteps: 14000, rewardSouls: 800, windowHours: 24, metric: 'steps', halfEach: true });
+    expect(COOP_BOSS_CFG.the_halved_seraph).toEqual({ rank: 'S', goalSteps: 20, rewardSouls: 800, windowHours: 24, metric: 'flights', halfEach: true });
+    expect(COOP_BOSS_NAMES.the_yoked_wanderers).toBe('The Yoked Wanderers');
+    expect(COOP_BOSS_NAMES.the_halved_seraph).toBe('The Halved Seraph');
+    // the half-each rule is theirs alone
+    expect(Object.keys(COOP_BOSS_CFG).filter(isHalfEach).sort()).toEqual(['the_bound_kings', 'the_chained_ascendants', 'the_halved_seraph', 'the_yoked_wanderers']);
+  });
+
+  it('steps: 10,000 + 2,000 is not a kill (no carrying); 6,000 + 6,000 is; 6,000 + 5,999 is not', () => {
+    const r = asRow(row('the_yoked_wanderers'));
+    expect(halfShare(r)).toBe(6000);
+    expect(isGoalMet(r)(prog('steps', 10000, 2000))).toBe(false);
+    expect(isGoalMet(r)(prog('steps', 6000, 6000))).toBe(true);
+    expect(isGoalMet(r)(prog('steps', 6000, 5999))).toBe(false);
+    expect(isGoalMet(r)(prog('steps', 20000, 0))).toBe(false);
+    // the bar: each hunter's part capped at their half
+    expect(halfEachDone(r, prog('steps', 10000, 2000))).toBe(8000);
+    expect(halfEachDone(r, prog('steps', 6000, 6000))).toBe(12000);
+  });
+
+  it('flights: 7 + 7 is a kill at 14; 13 + 6 is not; steps never count on a flights boss', () => {
+    const r = asRow(row('the_chained_ascendants'));
+    expect(halfShare(r)).toBe(7);
+    expect(isGoalMet(r)(prog('flights', 7, 7))).toBe(true);
+    expect(isGoalMet(r)(prog('flights', 13, 6))).toBe(false);
+    expect(halfEachDone(r, prog('flights', 13, 6))).toBe(13);
+    expect(isGoalMet(r)(prog('steps', 99999, 99999))).toBe(false);
+  });
+
+  it('the S pair: 7,000 each for the Bound Kings, 10 flights each for the Halved Seraph', () => {
+    expect(isGoalMet(asRow(row('the_bound_kings')))(prog('steps', 7000, 7000))).toBe(true);
+    expect(isGoalMet(asRow(row('the_bound_kings')))(prog('steps', 13999, 6999))).toBe(false);
+    expect(isGoalMet(asRow(row('the_halved_seraph')))(prog('flights', 10, 10))).toBe(true);
+    expect(isGoalMet(asRow(row('the_halved_seraph')))(prog('flights', 19, 9))).toBe(false);
+  });
+
+  it('every other boss still counts the pair together (a carry still wins the Twin Maw)', () => {
+    const r = asRow({ ...row('the_twin_maw'), goal_steps: 4000 });
+    expect(isGoalMet(r)(prog('steps', 3500, 500))).toBe(true);
+  });
+
+  it('GET tells the phone it is half each and each hunter\'s share', async () => {
+    const res = await handleCoopBossGet(createReq(), makeEnv(makeDb({ instance: row('the_yoked_wanderers'), progress: [
+      { user_id: 'u1', event_type: 'steps_total', s: 7000 }, { user_id: 'u2', event_type: 'steps_total', s: 3000 }] })), session('u1'), 'inst-h');
+    const inst = ((await res.json()) as { instance: Record<string, unknown> }).instance;
+    expect(res.status).toBe(200);
+    expect(inst.half_each).toBe(true);
+    expect(inst.share_goal).toBe(6000);
+    expect(inst.goal_steps).toBe(12000);
+  });
+
+  const resolveReq = () => new Request('http://test/v1/coop-boss/inst-h/resolve', { method: 'POST' });
+  it('resolve: one half short stays active, nothing is paid', async () => {
+    const log: string[] = [];
+    await handleCoopBossResolve(resolveReq(), makeEnv(makeDb({ instance: row('the_yoked_wanderers'), progress: [
+      { user_id: 'u1', event_type: 'steps_total', s: 12000 }, { user_id: 'u2', event_type: 'steps_total', s: 5000 }] }, log)), session('u1'), 'inst-h');
+    expect(log.some((q) => /SET status = 'completed'/.test(q))).toBe(false);
+    expect(log.some((q) => /INTO coop_boss_awards/.test(q))).toBe(false);
+  });
+  it('resolve: both halves done is the kill, and both hunters are owed it', async () => {
+    const log: string[] = [];
+    await handleCoopBossResolve(resolveReq(), makeEnv(makeDb({ instance: row('the_yoked_wanderers'), progress: [
+      { user_id: 'u1', event_type: 'steps_total', s: 6000 }, { user_id: 'u2', event_type: 'steps_total', s: 6100 }] }, log)), session('u1'), 'inst-h');
+    expect(log.some((q) => /SET status = 'completed'/.test(q))).toBe(true);
+    expect(log.filter((q) => /INTO coop_boss_awards/.test(q)).length).toBeGreaterThan(0);
+  });
+
+  const summon = (boss: string) => new Request('http://test/v1/coop-boss', { method: 'POST', body: JSON.stringify({ partner_user_id: 'u2', boss_id: boss }) });
+  it('a summons to an ally on an older app is refused by name', async () => {
+    const res = await handleCoopBossCreate(summon('the_yoked_wanderers'), makeEnv(makeDb({ build: '3.0.32-w' + (HALF_EACH_MIN_W - 1) })), session('u1'));
+    expect(res.status).toBe(409);
+    const body = (await res.json()) as { error?: string; detail?: string };
+    expect(body.error).toBe('NEEDS_UPDATE');
+    expect(body.detail).toBe('partner needs the latest update for this boss.');
+    // no app-open on record reads as an older app too
+    expect((await handleCoopBossCreate(summon('the_halved_seraph'), makeEnv(makeDb({})), session('u1'))).status).toBe(409);
+  });
+  it('an ally on the new app can be summoned', async () => {
+    const res = await handleCoopBossCreate(summon('the_bound_kings'), makeEnv(makeDb({ build: '3.0.33-w' + HALF_EACH_MIN_W })), session('u1'));
+    expect(res.status).toBe(200);
+  });
+  it('the other bosses never ask which app the ally has', async () => {
+    const log: string[] = [];
+    await handleCoopBossCreate(summon('the_twin_maw'), makeEnv(makeDb({}, log)), session('u1'));
+    expect(log.some((q) => q.includes('FROM app_opens'))).toBe(false);
   });
 });

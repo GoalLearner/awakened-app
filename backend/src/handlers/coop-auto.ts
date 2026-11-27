@@ -123,6 +123,7 @@ import { readEntitlements } from './iap-entitlements';
 import {
   COOP_BOSS_CFG,
   COOP_BOSS_NAMES,
+  HALF_EACH_MIN_W,
   emptyProgress,
   huntersInLiveRaid,
   getAliasMap,
@@ -303,6 +304,20 @@ export interface PickPrefs {
   wants?: ReadonlyArray<{ uid: string; bosses: readonly string[] }>;
   /** W1268 — the hunt day ('YYYY-MM-DD'): whose turn it is when members chase different bosses */
   day?: string;
+  /** W1339 — what the pair can give a half-each boss (halfFitOf): AUTO_FIT × the weaker hunter's steps and flights a day,
+   *  and whether both phones have the app that knows these bosses. Absent → no half-each boss is picked. */
+  half?: { fit: number; fl: number | null; ok: boolean };
+}
+
+/** W1339 — owner 2026-11-26: Auto may pick a half-each boss "if both can do half". Each hunter walks their own half, so the
+ *  pair's sum says nothing: the WEAKER hunter's steps (and flights, null when either phone sent none) decide, at AUTO_FIT. */
+export function halfFitOf(pa: number | null, pb: number | null, flights: Map<string, number>, builds: Map<string, string>, a: string, b: string): NonNullable<PickPrefs['half']> {
+  const fa = flights.get(a), fb = flights.get(b);
+  return {
+    fit: AUTO_FIT * Math.max(0, Math.min(Number(pa) || 0, Number(pb) || 0)),
+    fl: fa === undefined || fb === undefined ? null : AUTO_FIT * Math.max(0, Math.min(fa, fb)),
+    ok: buildW(builds.get(a)) >= HALF_EACH_MIN_W && buildW(builds.get(b)) >= HALF_EACH_MIN_W,
+  };
 }
 
 /** W1209 — which of the bosses that fit (best first) to hunt: one someone in the group still needs a
@@ -346,6 +361,7 @@ export function stretchPick(list: readonly string[], fits: readonly AutoPick[], 
     const cfg = COOP_BOSS_CFG[bossId];
     if (!cfg || (RANK_ORDER[cfg.rank] ?? 0) > rank) continue;
     if (cfg.windowHours !== 24 || (cfg.partySize ?? 2) !== partySize || cfg.metric !== 'steps') continue;
+    if (cfg.halfEach) continue;   // W1339 — a half-each goal is never lowered to the pair's sum
     if (goal >= cfg.goalSteps) continue;   // would fit as printed (it would be in `fits`)
     if (goal < STRETCH_MIN_SHARE * cfg.goalSteps) return null;   // out of reach, and every boss above more so
     if (!wanted(bossId)) continue;
@@ -362,13 +378,14 @@ export function stretchPick(list: readonly string[], fits: readonly AutoPick[], 
  *  them over the window (2 or 3 days for a multi-day duo, W1278), else lowered toward their walking but never under
  *  STRETCH_MIN_SHARE of the printed goal, so it stays a real attempt (it can be lost). Flights and sleep: as printed.
  *  The Twin Maw stays sized to the walking (every pair's fallback). Null only for a rank, party or window mismatch. Pure. */
-export function runDuo(bossId: string, r: number, fit: number, fl: number | null): AutoPick | null {
+export function runDuo(bossId: string, r: number, fit: number, fl: number | null, halfOk = false): AutoPick | null {
   void fl;   // W1280 — flights are asked as printed now; the parameter stays for the callers
   const multi = AUTO_MULTI_BOSSES.includes(bossId);   // W1278
   if (!AUTO_BOSSES.includes(bossId) && !multi) return null;
   const cfg = COOP_BOSS_CFG[bossId];
   if (!cfg || (RANK_ORDER[cfg.rank] ?? 0) > r || (cfg.partySize ?? 2) !== 2) return null;
   if (!multi && cfg.windowHours !== 24) return null;
+  if (cfg.halfEach) return halfOk ? { bossId, goalSteps: cfg.goalSteps } : null;   // W1339 — a target: as printed (an attempt, W1280)
   const days = multi ? Math.max(1, Math.round(cfg.windowHours / 24)) : 1;
   const fitW = fit * days;
   const walked = Math.round(fitW / 100) * 100;
@@ -447,13 +464,20 @@ export function pickAutoBoss(rankA: string, rankB: string, pairPattern: number, 
   const r = Math.min(RANK_ORDER[rankA] ?? 0, RANK_ORDER[rankB] ?? 0);
   const fit = AUTO_FIT * Math.max(0, Number(pairPattern) || 0);
   const fl = pairFlights == null || !Number.isFinite(Number(pairFlights)) ? null : AUTO_FIT * Math.max(0, Number(pairFlights));
-  const targeted = targetChoice(prefs.wants, (b) => runDuo(b, r, fit, fl), prefs);   // W1268 — the pair's targets first
+  const targeted = targetChoice(prefs.wants, (b) => runDuo(b, r, fit, fl, !!prefs.half?.ok), prefs);   // W1268 — the pair's targets first
   if (targeted) return targeted;
   const fits: AutoPick[] = [];
   for (const bossId of AUTO_BOSSES) {
     const cfg = COOP_BOSS_CFG[bossId];
     if (!cfg || (RANK_ORDER[cfg.rank] ?? 0) > r) continue;
     if (cfg.windowHours !== 24 || (cfg.partySize ?? 2) !== 2) continue;
+    if (cfg.halfEach) {   // W1339 — each hunter must do their own half: the weaker hunter alone decides
+      const h = prefs.half;
+      if (!h || !h.ok) continue;
+      const share = Math.ceil(cfg.goalSteps / 2);
+      if (cfg.metric === 'steps' ? share <= h.fit : cfg.metric === 'flights' && h.fl !== null && share <= h.fl) fits.push({ bossId, goalSteps: cfg.goalSteps });
+      continue;
+    }
     if (cfg.metric === 'steps') {
       if (cfg.goalSteps <= fit) fits.push({ bossId, goalSteps: cfg.goalSteps });
     } else if (cfg.metric === 'flights') {
@@ -1149,7 +1173,8 @@ export async function sweepCoopAutoHunts(env: Env, _ctx?: ExecutionContext): Pro
           const pb = pattern(b);
           if (pa === null || pb === null) { out.skipped++; continue; }
           const prefs = await picks.prefsFor([a, b]);   // W1209
-          const pick = pickAutoBoss(ranks.get(a) ?? 'E', ranks.get(b) ?? 'E', pa + pb, pairFlightsOf(flights, a, b), prefs);
+          const pick = pickAutoBoss(ranks.get(a) ?? 'E', ranks.get(b) ?? 'E', pa + pb, pairFlightsOf(flights, a, b),
+            { ...prefs, half: halfFitOf(pa, pb, flights, builds, a, b) });   // W1339
           if (prefs.live?.(pick.bossId)) { out.skipped++; continue; }   // W1267 — the pair already has this hunt live
           if (await createAutoHunt(env, a, b, today, pick)) { out.created++; picks.add([a, b], pick.bossId); }
         }
@@ -1291,7 +1316,9 @@ async function sweepMatchedPairs(
     if (made >= MAX_CREATE_PER_RUN) break;
     if (doneToday.has(pairKey(a, b))) continue;   // today's row already stands
     const prefs = await picks.prefsFor([a, b]);   // W1209
-    const pick = pickAutoBoss(ranks.get(a) ?? 'E', ranks.get(b) ?? 'E', (byId.get(a)?.pattern ?? 0) + (byId.get(b)?.pattern ?? 0), pairFlightsOf(flights, a, b), prefs);
+    const pa = byId.get(a)?.pattern ?? 0, pb = byId.get(b)?.pattern ?? 0;
+    const pick = pickAutoBoss(ranks.get(a) ?? 'E', ranks.get(b) ?? 'E', pa + pb, pairFlightsOf(flights, a, b),
+      { ...prefs, half: halfFitOf(pa, pb, flights, builds, a, b) });   // W1339
     if (prefs.live?.(pick.bossId)) continue;   // W1267
     if (await createAutoHunt(env, a, b, today, pick, true)) { made++; picks.add([a, b], pick.bossId); }
   }
@@ -2603,7 +2630,8 @@ async function autoPrefsPayload(env: Env, uid: string, echo = false): Promise<Re
       if (!can(p)) return false;
       if (needsSleep(b) && !(sleepers.has(uid) && sleepers.has(p.id))) return false;   // W1281 — both track sleep
       const pf = pairFlightsOf(flights, uid, p.id);
-      return !!runDuo(b, Math.min(rk(uid), rk(p.id)), AUTO_FIT * ((pm ?? 0) + (pattern(p.id) ?? 0)), pf === null ? null : AUTO_FIT * pf);
+      return !!runDuo(b, Math.min(rk(uid), rk(p.id)), AUTO_FIT * ((pm ?? 0) + (pattern(p.id) ?? 0)), pf === null ? null : AUTO_FIT * pf,
+        buildW(builds.get(uid)) >= HALF_EACH_MIN_W && buildW(builds.get(p.id)) >= HALF_EACH_MIN_W);   // W1339
     }).map((p) => p.id);
   }
   for (const b of AUTO_TRIO_BOSSES) {

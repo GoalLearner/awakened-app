@@ -16,6 +16,7 @@ import { notifyUser } from '../lib/apns';
 import {
   AUTO_HUNT_MIN_W,
   buildW,
+  halfFitOf,
   createAutoHunt,
   dailyPattern,
   elapsedDaysPt,
@@ -1879,5 +1880,21 @@ describe('W1282 — the raids feed carries the Hall of Fame', () => {
   });
   it('no win yet: an empty hall', async () => {
     expect((await get({ myOpens: [] })).hall).toEqual([]);
+  });
+});
+
+// ── W1339 — what a pair can give a half-each boss: the WEAKER hunter decides ──
+describe('W1339 — halfFitOf: each hunter must do their own half', () => {
+  const builds = new Map([['a', '3.0.33-w1340'], ['b', '3.0.33-w1341'], ['old', '3.0.32-w1338']]);
+  it('steps and flights are 0.8 x the weaker hunter, not the pair sum', () => {
+    const h = halfFitOf(12000, 3000, new Map([['a', 20], ['b', 6]]), builds, 'a', 'b');
+    expect(h.fit).toBe(2400);
+    expect(h.fl).toBeCloseTo(4.8);
+    expect(h.ok).toBe(true);
+  });
+  it('no flights from either phone reads as unknown; an older app on either phone is not ok', () => {
+    expect(halfFitOf(8000, 8000, new Map([['a', 9]]), builds, 'a', 'b').fl).toBeNull();
+    expect(halfFitOf(8000, 8000, new Map(), builds, 'a', 'old').ok).toBe(false);
+    expect(halfFitOf(8000, 8000, new Map(), builds, 'a', 'nobody').ok).toBe(false);
   });
 });

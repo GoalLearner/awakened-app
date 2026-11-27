@@ -65,7 +65,7 @@ import { readEntitlements } from './iap-entitlements';
 // header already blesses column reuse; no migration.
 export const COOP_BOSS_CFG: Record<
   string,
-  { rank: string; goalSteps: number; goalFlights?: number; rewardSouls: number; windowHours: number; metric: 'steps' | 'flights' | 'both' | 'steps_sleep'; partySize?: number; minParty?: number; maxParty?: number; memberOnly?: boolean; matchmaking?: boolean }
+  { rank: string; goalSteps: number; goalFlights?: number; rewardSouls: number; windowHours: number; metric: 'steps' | 'flights' | 'both' | 'steps_sleep'; partySize?: number; minParty?: number; maxParty?: number; memberOnly?: boolean; matchmaking?: boolean; halfEach?: boolean }
 > = {
   // W1182 (owner 2026-11-10: "more realistic than difficult … earn these by doing them but not struggle
   // too much"; 2026-11-11: "9,000 steps is the highest the S-tier will go ... E-tier should be good at 5000", and the same
@@ -90,6 +90,15 @@ export const COOP_BOSS_CFG: Record<
   // 48h dual-metric window; goals sit between the Choir (12k/10 in 24h) and
   // the raids. Reward = half the solo A kill (800 → 400), the W648 half-split.
   the_cloven_titan:     { rank: 'A', goalSteps: 24000, goalFlights: 16, rewardSouls: 400, windowHours: 48, metric: 'both' },
+  // W1339 — owner 2026-11-26: "one player can't carry the load so it has to be a 50/50 split ... the other player must
+  // complete his portion for this to be rewarded." HALF-EACH duos: each hunter must finish their own half of the goal
+  // in 24h; one hunter's extra never counts toward the other's half (isGoalMet). Goals follow the W1189 ladder a hunter a
+  // day (A 6,000 · S 7,000 steps; A 7 flights like the Unbroken Anvil, S 10). goalSteps holds the flights on a flights
+  // boss, as for the Hollow Monarch. Souls = half the solo kill; drops are rolled on the phone.
+  the_yoked_wanderers:    { rank: 'A', goalSteps: 12000, rewardSouls: 400, windowHours: 24, metric: 'steps', halfEach: true },
+  the_chained_ascendants: { rank: 'A', goalSteps: 14,    rewardSouls: 400, windowHours: 24, metric: 'flights', halfEach: true },
+  the_bound_kings:        { rank: 'S', goalSteps: 14000, rewardSouls: 800, windowHours: 24, metric: 'steps', halfEach: true },
+  the_halved_seraph:      { rank: 'S', goalSteps: 20,    rewardSouls: 800, windowHours: 24, metric: 'flights', halfEach: true },
   // W677 — first TRIO hunt (partySize 3: summoner + 2 hand-picked friends).
   // Owner spec: C-rank, 27,000 COMBINED steps. rewardSouls = floor(solo C 200 / 3)
   // = 66 per hunter (thirds split — the trio analog of the W648 duo half-split).
@@ -129,6 +138,10 @@ export const COOP_BOSS_NAMES: Record<string, string> = {
   the_gaunt_wardens: 'The Gaunt Wardens',
   the_sundered_choir: 'The Sundered Choir',
   the_cloven_titan: 'The Cloven Titan',
+  the_yoked_wanderers: 'The Yoked Wanderers',
+  the_chained_ascendants: 'The Chained Ascendants',
+  the_bound_kings: 'The Bound Kings',
+  the_halved_seraph: 'The Halved Seraph',
   the_crossroads_hound: 'The Crossroads Hound',
   the_threefold_court: 'The Threefold Court',
   the_triune_sentinel: 'The Triune Sentinel',
@@ -378,13 +391,39 @@ function combinedFlights(row: CoopBossRow, p: CoopProgress): number {
 function combinedSleep(row: CoopBossRow, p: CoopProgress): number {
   return participantIds(row).reduce((sum, uid) => sum + (p.sleep.get(uid) || 0), 0);
 }
+/** W1339 — a half-each boss (cfg.halfEach): each hunter must finish their own share. */
+export function isHalfEach(bossId: string): boolean { return COOP_BOSS_CFG[bossId]?.halfEach === true; }
+/** W1339 — a hunter's share of a half-each boss: the goal split evenly over the seats (a duo: half). */
+/** The seats a half-each hunt splits over (the legacy partner column when the participant rows are missing). */
+function halfSeats(row: CoopBossRow): string[] {
+  const ids = participantIds(row);
+  return ids.length >= 2 ? ids : [row.challenger_user_id, row.partner_user_id].filter((x): x is string => !!x);
+}
+export function halfShare(row: CoopBossRow): number {
+  return Math.ceil(Math.max(0, Number(row.goal_steps) || 0) / Math.max(2, halfSeats(row).length));
+}
+function ownPrimary(row: CoopBossRow, p: CoopProgress, uid: string): number {
+  return (bossMetric(row.boss_id) === 'flights' ? p.flights : p.steps).get(uid) || 0;
+}
+/** W1339 — how much of a half-each boss is done: each hunter's part capped at their share, summed
+ *  (one hunter's extra never moves the bar past their own half). */
+export function halfEachDone(row: CoopBossRow, p: CoopProgress): number {
+  const share = halfShare(row);
+  return halfSeats(row).reduce((t, uid) => t + Math.min(share, ownPrimary(row, p, uid)), 0);
+}
 /** Authoritative win test across all boss metrics. A 'both' boss requires BOTH goals;
  *  a flights boss compares its (metric-generic) goal_steps against the flight total.
  *  W686 — a 'steps_sleep' boss requires steps >= goal_steps AND sleep minutes >=
  *  goal_flights (the metric-generic second-goal column). */
 export function isGoalMet(row: CoopBossRow): (p: CoopProgress) => boolean {
   const metric = bossMetric(row.boss_id);
+  const halfEach = isHalfEach(row.boss_id);
   return (p: CoopProgress) => {
+    // W1339 — half each: EVERY hunter's own count reaches their share (no carrying).
+    if (halfEach) {
+      const share = halfShare(row), ids = halfSeats(row);
+      return share > 0 && ids.length >= 2 && ids.every((uid) => ownPrimary(row, p, uid) >= share);
+    }
     if (metric === 'both') return combinedSteps(row, p) >= row.goal_steps && combinedFlights(row, p) >= (row.goal_flights || 0);
     if (metric === 'steps_sleep') return combinedSteps(row, p) >= row.goal_steps && combinedSleep(row, p) >= (row.goal_flights || 0);
     if (metric === 'flights') return combinedFlights(row, p) >= row.goal_steps;
@@ -475,6 +514,8 @@ function serializeCoop(
     // exists, i.e. a won hunt). owed+!claimed → the client claims then grants.
     ...(award ? { award } : {}),
     goal_steps: row.goal_steps,
+    // W1339 — a half-each boss: each hunter's own share of goal_steps (the client draws one bar a hunter).
+    ...(isHalfEach(row.boss_id) ? { half_each: true, share_goal: halfShare(row) } : {}),
     reward_souls: row.reward_souls,
     // W1094 — automatic friend hunts: the client hides LEAVE, plays no defeat screen, charges
     // the fee from the win, and lights the local flame only once `committed` (both posted —
@@ -644,6 +685,14 @@ export async function validateBossInstanceForUser(
 export const DUO_FANOUT_MAX = 5;
 // W1075 — summons a hunter may have waiting for an answer at once.
 export const PENDING_SUMMONS_MAX = 10;
+/** W1339 — the first app build (APP_BUILD_TAG -wNNNN) that knows the half-each bosses. Summons and Auto both
+ *  check it: an older app would show another boss and never pay the kill. */
+export const HALF_EACH_MIN_W = 1340;
+/** "3.0.33-w1340" → 1340; anything else → 0. */
+export function buildWOf(build: string | null | undefined): number {
+  const m = /-w(\d+)/i.exec(String(build || ''));
+  return m ? Number(m[1]) || 0 : 0;
+}
 
 export async function handleCoopBossCreate(
   request: Request,
@@ -775,6 +824,19 @@ async function createCoopHunt(
   for (const ally of allies) {
     if (!(await areAcceptedFriends(env, session.userId, ally))) {
       return { deny: jsonError(403, 'NOT_FRIENDS', 'You can only co-op with an accepted friend.') };
+    }
+  }
+  // W1339 — a half-each boss needs the app that knows it on the ally's phone: an older app shows another boss and never
+  // pays the kill. The summoner picked it, so their app knows it; each ally's newest app-open is checked.
+  if (cfg.halfEach) {
+    for (const ally of allies) {
+      const r = await env.DB.prepare('SELECT build FROM app_opens WHERE user_id = ? AND build IS NOT NULL ORDER BY opened_at DESC LIMIT 1')
+        .bind(ally).first<{ build: string | null }>();
+      if (buildWOf(r?.build) < HALF_EACH_MIN_W) {
+        let who = '';
+        try { who = (await getAliasMap(env, [ally])).get(ally) ?? ''; } catch { /* generic below */ }
+        return { deny: jsonError(409, 'NEEDS_UPDATE', `${who || 'Your ally'} needs the latest update for this boss.`) };
+      }
     }
   }
 
@@ -1380,7 +1442,8 @@ export async function sweepCrunchTimeReminders(env: Env, ctx?: ExecutionContext)
     const metric = bossMetric(row.boss_id);
     const frac = (v: number, g: number) => (g > 0 ? v / g : 0);
     let pct: number;
-    if (metric === 'both') pct = Math.min(frac(combinedSteps(row, p), row.goal_steps), frac(combinedFlights(row, p), row.goal_flights || 0));
+    if (isHalfEach(row.boss_id)) pct = frac(halfEachDone(row, p), row.goal_steps);   // W1339 — capped halves
+    else if (metric === 'both') pct = Math.min(frac(combinedSteps(row, p), row.goal_steps), frac(combinedFlights(row, p), row.goal_flights || 0));
     else if (metric === 'steps_sleep') pct = Math.min(frac(combinedSteps(row, p), row.goal_steps), frac(combinedSleep(row, p), row.goal_flights || 0));
     else if (metric === 'flights') pct = frac(combinedFlights(row, p), row.goal_steps);
     else pct = frac(combinedSteps(row, p), row.goal_steps);
