@@ -19,7 +19,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800;900&family=Cormorant+Garamond:ital,wght@0,500;1,500;1,600&family=JetBrains+Mono:wght@400;500;700;800&family=Grenze+Gotisch:wght@400..900&family=Chakra+Petch:wght@500;600;700&family=Alegreya+Sans:ital,wght@0,400;0,500;0,700;1,400;1,500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=855">
+  <link rel="stylesheet" href="styles.css?v=856">
   <!-- Preload tab-bar icons so they render instantly on first paint
        instead of pop-in. Above the fold, always visible — eager load. -->
   <link rel="preload" as="image" href="assets/tab-icons/tab-status.png">
@@ -650,9 +650,8 @@
             <span class="pe-summon"><svg width="16" height="16" viewBox="0 0 16 16"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></span>
           </span>
           <span class="pe-txt">
-            <span class="pe-eyebrow"><span class="spark"></span>Co-op Hunts</span>
             <span class="pe-title">The Pacts</span>
-            <span class="pe-standing">No active pacts<span class="sep">·</span>summon an ally</span>
+            <span class="pe-standing">No active pacts</span>
           </span>
           <span class="pe-chev"><svg width="8" height="14" viewBox="0 0 8 14"><path d="M1 1l6 6-6 6" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
         </a>
@@ -671,7 +670,7 @@
         </button>
         <div class="dungeon-header-block">
           <h2 id="dungeon-header-text" class="dungeon-header">E-RANK DUNGEON</h2>
-          <p id="dungeon-flavor-text" class="dungeon-flavor">The first threshold. Two bosses linger in the dark.</p>
+          <p id="dungeon-flavor-text" class="dungeon-flavor"></p>
         </div>
         <div id="bosses-list" class="bosses-list"></div>
       </div>
@@ -1169,7 +1168,6 @@
       <button id="coop-dash-close" type="button" class="cph-close" aria-label="Close">
         <svg width="11" height="11" viewBox="0 0 11 11" aria-hidden="true"><path d="M1 1l9 9M10 1l-9 9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
       </button>
-      <div class="cph-eyebrow">Co-op Hunts</div>
       <h1 class="cph-title">The Pacts</h1>
       <div id="coop-dash-count" class="cph-count"><span class="cph-pip"></span>—</div>
       <!-- W716 — History: every past co-op hunt (won/lost), who with, boss + rank. -->
@@ -1183,7 +1181,6 @@
       <div class="cph-sigil"><span class="cph-rune">✦</span></div>
       <div class="cph-eyebrow">No Active Hunts</div>
       <h2>Summon an ally</h2>
-      <p>No bond binds you to a hunt yet. Call a hunter to your side and walk down a boss together.</p>
     </div>
     <div id="coop-dash-foot" class="cph-foot cph-foot--off">
       <button id="coop-dash-accept-all" type="button" class="cph-acceptall">
@@ -1199,7 +1196,6 @@
       <button id="coop-hist-close" type="button" class="cph-close" aria-label="Close">
         <svg width="11" height="11" viewBox="0 0 11 11" aria-hidden="true"><path d="M1 1l9 9M10 1l-9 9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
       </button>
-      <div class="cph-eyebrow">Co-op Hunts</div>
       <h1 class="cph-title">Hunt History</h1>
       <div id="coop-hist-count" class="cph-count"><span class="cph-pip"></span>—</div>
     </div>
@@ -1207,8 +1203,7 @@
     <div id="coop-hist-empty" class="cph-empty hidden">
       <div class="cph-sigil"><span class="cph-rune">✦</span></div>
       <div class="cph-eyebrow">No Hunts Yet</div>
-      <h2>Your saga starts here</h2>
-      <p>Every co-op hunt you finish — won or lost — is recorded here, with the ally who stood beside you.</p>
+      <h2>No hunts yet</h2>
     </div>
   </div>
   <div id="boss-fs-overlay" class="bfs-overlay hidden" role="dialog" aria-labelledby="bfs-name">
@@ -1282,10 +1277,8 @@
       <h1 id="bfs-name" class="bfs-name">—</h1>
       <div id="bfs-rank-label" class="bfs-rank-label">E-RANK BOSS</div>
       <div id="bfs-archetype-row" class="bfs-archetype-row" hidden>
-        <span class="bfs-archetype-eyebrow">ARCHETYPE</span>
         <span id="bfs-archetype-pill" class="boss-archetype-pill" data-archetype=""></span>
       </div>
-      <p id="bfs-archetype-disclaimer" class="bfs-archetype-disclaimer" hidden>Verified behavior decides victory.</p>
     </div>
 
     <p id="bfs-flavor" class="bfs-flavor">—</p>
@@ -1345,11 +1338,10 @@
           </span>
         </div>
         <button id="bfs-engage-btn" type="button" class="bfs-engage-btn">ENGAGE BOSS</button>
-        <p class="bfs-engage-blurb">This boss only counts progress while you're actively hunting it. You can hunt up to 3 bosses at once.</p>
+        <p class="bfs-engage-blurb">Counts only while hunting · 3 at a time</p>
       </div>
       <div id="bfs-engage-preview" class="bfs-engage-preview hidden">
         <div id="bfs-engage-preview-label" class="bfs-engage-preview-label">Reach D rank to engage</div>
-        <p class="bfs-engage-blurb">You can preview this boss now. Engaging unlocks at the rank threshold.</p>
       </div>
     </section>
 
@@ -1366,7 +1358,7 @@
     <section class="bfs-section bfs-section--mercy">
       <h2 class="bfs-section-label">RELIC MERCY</h2>
       <div id="bfs-mercy" class="bfs-mercy"></div>
-      <p class="bfs-mercy-note">Bad-luck protection only increases when this boss is defeated.</p>
+      <p class="bfs-mercy-note">Grows with each kill</p>
     </section>
   </div>
 
@@ -2917,7 +2909,7 @@
   <script src="simulated-leaderboard.js?v=13"></script>
   <script src="lib/economy.js?v=4"></script>
   <script src="lib/drops.js?v=2"></script>
-  <script src="app.js?v=1667"></script>
+  <script src="app.js?v=1668"></script>
 
   <!-- Schedule picker sheet -->
   <div id="sched-overlay" class="sched-overlay hidden"></div>

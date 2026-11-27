@@ -119,7 +119,7 @@ test.describe('W1269 — Auto Hunts', () => {
     await expect(pv).toHaveCount(3);
     // Auto: the targets fold into one line, kept; the save goes up
     await m.locator('[data-ah-act="mode:auto"]').click();
-    await expect(m.locator('.ah-calm').first()).toContainText('never beaten');
+    await expect(m.locator('.ah-calm').first()).toContainText('New bosses first, then missing drops.');   // W1331 — was "...a boss your group has never beaten..."
     await expect(m.locator('.ah-calm').first()).toContainText('Your 2 targets are kept.');
     await expect.poll(() => page.evaluate(() => (window as any).__ahPuts.length)).toBeGreaterThan(0);
     expect(await page.evaluate(() => (window as any).__ahPuts.slice(-1)[0].mode)).toBe('auto');

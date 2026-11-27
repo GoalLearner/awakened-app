@@ -9440,7 +9440,7 @@ test.describe('BH · Hunt results (W980)', () => {
     expect(v.pct).toMatch(/^90 ?%/);
     expect(v.rl.toUpperCase()).toMatch(/BEST NIGHT/);
     expect(v.rows[0]).toMatch(/5h 51m/);
-    expect(v.mood).toBe('So close it hurts.');
+    expect(v.mood).toBe('');   // W1331 — no mood flavor (only the auto-boss and broken-run lines stay)
     expect(v.call).toBe('Hunt again');
     await tap(page);
     expect((await view(page)).shown).toBe(true);
@@ -9547,7 +9547,7 @@ test.describe('BH · Hunt results (W980)', () => {
     expect(v.pct).toMatch(/^87 ?%/);
     expect(v.text).toMatch(/3,090 short/i);
     expect(v.call).toBe('Call again');
-    expect(v.mood).toBe('So close it hurts.');
+    expect(v.mood).toBe('');   // W1331 — no mood flavor (only the auto-boss and broken-run lines stay)
     // Once per hunt: the same hunt never queues twice.
     await page.locator('#boss-result-overlay [data-hr-later]').click();
     await expect.poll(() => view(page).then((x) => x.shown), { timeout: 3_000 }).toBe(false);
@@ -10732,7 +10732,7 @@ test.describe('CC · The Shadow Army drops like a pet (W1035 · W1047)', () => {
     // shadow is not owned says the odds.
     await page.evaluate(() => (window as any).__readyHunt.open('the_glass_strider'));
     await expect(page.locator('#boss-fs-overlay')).toBeVisible({ timeout: 8000 });
-    await expect(page.locator('#bfs-shadow-line')).toHaveText('◈ Its shadow rises on 1 kill in 5, worth +1% in the Ascent.');   // a D-rank boss (W1057, W1111)
+    await expect(page.locator('#bfs-shadow-line')).toHaveText('◈ Shadow 1 in 5 · +1% Ascent');   // W1331   // a D-rank boss (W1057, W1111)
   });
 
   test('a miss says nothing and opens no window; a hit raises the shadow, once, and the boss never rolls again', async ({ page }) => {

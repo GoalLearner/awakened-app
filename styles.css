@@ -37933,3 +37933,6 @@ button.pcc-title { cursor: pointer; -webkit-appearance: none; appearance: none; 
 
 /* W1330 — the stat sheet's description paragraph is empty now */
 #stat-detail-desc:empty { display: none; }
+
+/* W1331 — the dungeon flavor line is empty now */
+.dungeon-flavor:empty { display: none; }

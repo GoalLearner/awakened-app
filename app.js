@@ -160,7 +160,7 @@
   const APP_VERSION = '3.0.32';   // W1324 — 3.0.31 APPROVED 2026-11-25 (submitted 10:36 PM PST from build 690 = 3.0.31-w1323: the cleaner hunter card, five new pins, title colors and Master/Grandmaster, XP past level 20, the organized Hunter Activity, the Worldgate bar locks), so 3.0.32 opened at approval. 3.0.30 and 3.0.31 shipped without an in-app What's New sheet (the newest is 3.0.29): 3.0.32's sheet should carry their news, as W1237 did. [history] W1310 — 3.0.30 RELEASED 2026-11-24 (build 683, W1305: hunters on 3.0.30-w1305 from 1:45 PM PST; Apple refused build 685 under 3.0.30: "The train version '3.0.30' is closed for new build submissions"), so 3.0.31 opened carrying W1306 (the friend feed returns every event of the last 24 hours), W1307 (every repeat rare, ultra-rare and mythic drop reaches Hunter Activity; a sold rare names its souls) and W1308/W1309 (the cleaned-up hunter card, its frame invisible). [history] W1292 — 3.0.29 APPROVED 2026-11-23 (build 674, submitted 2026-11-22 6:25 PM PST; Apple: "eligible for distribution"), so 3.0.30 opened before build 678 went up, carrying W1285-W1287 (What's New 3.0.29 rewritten, the 200K/300K pins, a drop past its cap sells for souls), W1288/W1289 (the Violet Queen), W1290 (each strike says what it hit with) and W1291 (Friends tab badges, rank-coloured strike circles, coloured strike parts). [history] W1270 — 3.0.28 APPROVED by 2026-11-21 7:06 PM PST (build 667; Apple refused build 670 under 3.0.28: "The train version '3.0.28' is closed for new build submissions"), so 3.0.29 opened carrying W1259 (the 200K pin), W1263 (waiting raid teams), W1264-W1266 (the 300K badge), W1267 (no twin hunts) and W1268/W1269 (Auto Hunts). [history] W1246 — 3.0.27 APPROVED by 2026-11-19 12:15 PM PST (Apple refused build 664 under 3.0.27: "train version '3.0.27' is closed"), so 3.0.28 opened carrying W1245 (steps: one device per day, the legitimate one with the most). [history] W1233 — 3.0.26 SUBMITTED for review 2026-11-17 (build 655, tag 3.0.26-w1230), so 3.0.27 opened early, as W1205 did (an approval refuses an upload under the approved number), carrying W1233 (duels: your ultimate, special attack and shadows, and the Echo's own). [history] W1220 — 3.0.25 APPROVED 2026-11-16 9:44 AM PST (submitted 2026-11-15 2:06 PM PST, build 651, tag 3.0.25-w1213), so 3.0.26 opened carrying W1220 (strangers' shadows fold into one feed row), W1221 (your pinned row under a board opens your card), W1222 (the like limit says what it is), W1225 (invites say "You both get 500 souls"), W1226 (a refused audio start is caught, not reported as an error), W1227 (six calorie bosses, E to S, dropping the sleep bosses' relics), W1228 (the S calorie boss drops a mythic at 1%), W1229 (a mythic drop is its own announcement to every hunter; the crown on the card and feed names) and W1230 (ultra-rares stay friends-only: the owner wanted only mythics). [history] W1205 — 3.0.25 opened 2026-11-14 BEFORE 3.0.24 was approved (3.0.24 = build 649, waiting for review since 2026-11-13): an upload under 3.0.24 is refused the moment Apple approves it, so build 650 goes up as 3.0.25 carrying W1202 (every boss in the Kill Log, the Raid group), W1203 (no 150k step cap) and W1204 (hunts named by partner). [history] W1169 — 3.0.23 APPROVED 2026-11-08 (submitted 2026-11-07 5:00 PM PST, LIVE 2:33 PM PST on the 8th; almost certainly build 628 = w1161: pins, the Wardrobe tap fix), so 3.0.24 opened carrying W1162-W1169 (the 3.0.23 store notes, the board update, matched hunt partners, Add as friend, late steps reach the board, The Patient Flame falls by itself, earned ultimates behind their flag). [history] W1134 — 3.0.22 APPROVED 2026-11-06 (submitted 4:53 AM PST from build 617 = w1132: the Shadowborn + the Elite Eight, the Rising redrawn, profile cards name the look, every open counted), so 3.0.23 opened carrying W1134 (the Worldgate counts a hunter's steps only after 2 days in the app that week). [history] W1127 — 3.0.21 LIVE on the App Store 2026-11-05 9:34 AM PST (built from w1126: no memberships, kill stamps without a title, the tier crests, the onboarding's "How did you find the Gate?"), so 3.0.22 opened carrying W1127 (the app-open ping says when it is a real open; the server counts every one per Pacific day). [history] W1124 — 3.0.20 LIVE on the App Store 2026-11-01 12:50 PM PST (built from w1120: final standings Sunday, shadows in the public feed, Shadow Army on Status); 3.0.21 opened carrying W1121 (its What's New, never shown: re-keyed to 3.0.21), W1122 (no memberships), W1124 (kill stamp without a title, inlined tier crests) and W1125 (the onboarding's last screen asks how the hunter found the app; W1126 keeps it in place when the keyboard opens). [history] W1114 — 3.0.19 approved 2026-10-30 (submitted 1:45 AM PST, w1113: shadows 1 in 5, armor upgrades, relic power by boss rank, relic cards three across); 3.0.20 opened with the feed's boss rank chips, no What's New entry yet. W1107 — 3.0.18 approved and LIVE 2026-10-28 8:02 AM PST (submitted 2026-10-27 7:41 PM PST, build 602 = w1106: the four steps trios, the Rising's nine looks, the earned line in the Wardrobe, the richer-backup offer); 3.0.19 opened at approval. [history] W1103 — 3.0.17 approved 2026-10-27 (build 600, submitted 2026-10-26 6:21 PM PST: the automatic friend hunts, the earned looks, the two-tab Wardrobe); 3.0.18 opened at approval, carrying W1102 (the app offers back a richer cloud backup). [history] W1097 — 3.0.16 approved + live 2026-10-26 (build 599, the iOS 27 fix); 3.0.17 opened at approval. Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.16 = the post-3.0.15 train, opened 2026-10-23 (W1085): 3.0.15 was submitted 2026-10-22 2:55 PM PST from build 595 (w1083: the tally, the preview row, the security pass) and approved the same day, so the train closed under it. It carries W1084 (the tally leads the 3.0.15 What's New) forward. [history] 3.0.15 = the post-3.0.14 train, opened 2026-10-22 (W1080): 3.0.14 was approved and LIVE 2026-10-21 5:08 PM PST from build 591 (w1074) — the first 592 upload was refused ("train closed"), the sixth time an approval closed a train under a build. It carries W1077/W1078 (sign-out ends the session, cloud save checksum + gzip, socket token out of the URL, invite links ask first) forward. [history] 3.0.14 = the post-3.0.13 train, opened 2026-10-21 (W1074): 3.0.13 was approved and went LIVE 2026-10-20 3:50 AM PST from build 587 (w1068), so it carries W1069 (the floor 100 curve), W1070-W1073 (the ten weekly step and sleep bosses and their drops) and the real-screen screenshots and header Apple asked for (App Review 2.3.3) forward. [history] 3.0.11 = the post-3.0.10 train, opened 2026-10-05: Apple's store lookup showed 3.0.10 LIVE (released 11:35 AM PST that day, built from w1024, so it carried W1023 the 9:45 PM finish-strong reminder and nothing after). It carries forward W1025 (Myrmidon King art), W1026 (one request for every co-op hunt) and W1027 (steps 'today' = the device's day), all pushed under the 3.0.10 tag after that build was cut. [history] 3.0.10 = the post-3.0.9 train, opened 2026-10-04 when the owner passed on Apple's approval of 3.0.9 (submitted 2026-10-02 12:41 PM PST, approved 2026-10-03; carried W1002–W1022: weekly to-do planner, to-dos first in the briefing, the Monday recap, times-a-week vows, the interactive Status tab, the Jump Manual program, the flights-hunt result fix). It carries W1023 (the 9:45 PM finish-strong reminder) forward. First TWO-DIGIT patch: every version compare in the app is numeric (_updVersionNewer, the What's New compare), never a string compare. [history] 3.0.9 = the post-3.0.8 train, opened 2026-09-25 the moment Apple approved 3.0.8 (submitted 4:57 PM PST, approved the same evening; carried W989–W1001: Items overhaul, Resolved + mod view counts, the sectioned Habits tab + to-dos v2, topic edit). [history] 3.0.8 = the post-3.0.7 train, opened 2026-09-24 the moment Apple approved 3.0.7 (build 543, submitted 1:15 AM PST, approved same day; the Worldgate In-App Event was approved in the same hour). Carries forward: the three description corrections (Ranked PvP / Streak Shields / five-hunter raid = Premium) go out WITH this version, since a description only changes with a new version. [history] 3.0.7 carried W968–W987 (vows yours + glory verified, morning briefing v2, hunt results, Worldgate MVPs + weekly line + strike freeze, Community Updates + briefing line, mod preview rows, awakened:// scheme). [history] 3.0.7 = the post-3.0.6 train, opened 2026-09-20 the moment Apple approved 3.0.6 (submitted 3:14 AM PST that day, approved same day) — an approval CLOSES a train, and uploading under the approved number is refused (CFBundleShortVersionString must exceed it). This has now bitten FOUR times; the bump is done at approval, not at upload. [history] 3.0.6 carried W960–W967 (Manage Vows fix, rank-bar hairline, Worldgate kill ceremony, division-up celebration, owner preview row, 3.0.6 release notes). [history] 3.0.4 = the post-3.0.3 train, opened 2026-09-11 because Apple approved 3.0.3 (live 2026-09-09) and an approval closes a train — carries W935 (weekly-board upload fix + Apple Health asked on every onboarding path). [history] 3.0.3 = the post-3.0.2 train, opened 2026-09-07 the morning after Apple approved 3.0.2 (submitted 2026-09-06 4:41 PM PT; approval closes a train — twice-bitten lesson) — carries W917-W919b (Ledger view, Streak Shields deleted, handoff 29) forward under the new number. [history] 3.0.2 = the post-release train, opened 2026-09-04 because Apple closes a train on approval (build 493 under 3.0.1 was refused: CFBundleShortVersionString must exceed the approved 3.0.1) — carries W903 (boss-sheet hotfix) + W905 (Status is the hunter profile again). 3.0.1 "MAKE IT LAND" = the repair release (W882-W890): Wave-2 progression joins cloud sync, the activation funnel is instrumented end to end, silent Wave-2 server failures leave breadcrumbs, the altar routes to a same-day first kill, the Double Dungeon stops reporting false failures and yields when the stair is unavailable, the beat What's New used to eat is chained, and every banked free engage is visible before the tap. 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.32-w1330';
+  const APP_BUILD_TAG = '3.0.32-w1331';
   // W1192 — the relic and boss paintings are WebP now (the app was 376.9 MB, 290 MB of it these PNGs). A path saved
   // before (the drop history, a friend's card, a cloud save) still says .png: the first time one fails to load it is
   // pointed at the .webp beside it, before the image's own error handler can hide it.
@@ -27377,13 +27377,13 @@
         '<div class="hr-rl hr-rv">Kill condition' + (has ? ' · <b>' + esc(d.bestLabel) + '</b>' : '') + '</div><div class="hr-row hr-rv" style="--c:#ef4444"><i class="hr-dot"></i><span class="hr-nm hr-cond">' + esc(d.cond) + '</span>' + (has ? '<span class="hr-v">' + _hrCnt(d.best, d.fmt) + _hrUnit(d.fmt) + '</span>' : '') + '</div>';
     } else {
       const total = d.party.reduce(function (a, p) { return a + p.s; }, 0), pct = Math.round(total / Math.max(1, d.goal) * 100); near = pct >= 80;
-      body = '<div class="hr-stamp">Survives</div><div class="hr-sub hr-rv">The 24h window closed</div>' +
+      body = '<div class="hr-stamp">Survives</div><div class="hr-sub hr-rv">Time ran out</div>' +   // W1331 — 48-hour bosses exist
         '<div class="hr-pctbig hr-rv"><b><span class="hr-cnt" data-to="' + Math.min(99, pct) + '">0</span><i>%</i></b><span class="hr-lab">of the goal</span></div>' + _hrCoopGoalHtml(d, cols, total) + _hrRowsHtml(d, cols);
     }
     d._near = near;
     return '<div class="hr-eyebrow hr-rv">' + (d.solo ? 'Solo' : 'Co-op') + ' hunt · Rank ' + esc(d.rank) + '</div>' +
       '<div class="hr-hero">' + _hrPortHtml(d) + _hrMarksHtml(d, cols) + '</div><h1 class="hr-boss hr-rv">' + esc(d.boss) + '</h1>' + body +
-      '<p class="hr-mood hr-rv">' + (d.auto ? 'No hunt needed now: it falls on its own when you finish a run.' : d.broke ? 'Hunt again, and today counts.' : near ? 'So close it hurts.' : esc(d.short) + ' was strong this time.') + '</p>' +
+      ((d.auto || d.broke) ? '<p class="hr-mood hr-rv">' + (d.auto ? 'No hunt needed now: it falls on its own when you finish a run.' : 'Hunt again, and today counts.') + '</p>' : '') +   // W1331 — no mood flavor
       (d.auto ? '<div class="hr-acts hr-rv"><button type="button" class="hr-call" data-hr-later>Got it</button></div>'   // W1191
         : '<div class="hr-acts hr-rv"><button type="button" class="hr-call" data-hr-again>' + (d.solo ? 'Hunt again' : 'Call again') + '</button><button type="button" class="hr-later" data-hr-later>Not now</button></div>');
   }
@@ -41480,7 +41480,7 @@
   function _ahTargetsBlock() {
     const st = _ahState(), n = st.targets.length;
     if (st.mode === 'auto') return '<div class="ah-lab"><span>Targets</span><span>Off</span></div><p class="ah-calm">' + _ahIc('spark', 16) +
-      '<span>The game picks each boss. It favours a boss your group has never beaten, then drops you still lack.' + (n ? ' Your ' + n + ' target' + (n > 1 ? 's are' : ' is') + ' kept.' : '') + '</span></p>';
+      '<span>New bosses first, then missing drops.' + (n ? ' Your ' + n + ' target' + (n > 1 ? 's are' : ' is') + ' kept.' : '') + '</span></p>';
     return '<div class="ah-lab"><span>Targets</span><span class="g">' + n + ' of ' + AH_MAX + '</span></div>' + st.targets.map(_ahTargetCard).join('') +
       (n < AH_MAX ? '<button type="button" class="ah-add" data-ah-act="add">' + _ahIc('plus', 16) + 'Add a target</button>' : '');
   }
@@ -41496,7 +41496,7 @@
   }
   function _ahPreviewHtml() {
     const r = _ahPlan();
-    if (!r.length) return '<p class="ah-none">No automatic hunts tomorrow. Summons still work.</p>';
+    if (!r.length) return '<p class="ah-none">No automatic hunts tomorrow.</p>';
     return r.map(function (x) {
       return '<div class="ah-pv ' + x.why + '">' + (x.b ? _ahArt(x.b, 'sm') : '<span class="ah-art sm auto">' + _ahIc('spark', 16) + '</span>') +
         '<span class="b"><span class="l1"><b>' + esc(x.who) + '</b> · ' + (x.b ? esc(_ahName(x.b)) : 'chosen at midnight') + '</span><span class="l2">' + (x.why === 'mine' ? _ahIc('ret', 11) : '') + esc(x.txt) + '</span></span></div>';
@@ -41534,20 +41534,19 @@
     const st = _ahState();
     if (s.name === 'picker') {
       return '<header class="ah-top"><button type="button" class="ah-ib" data-ah-act="back" aria-label="Back">' + _ahIc('back', 20) + '</button><h1>Add a target</h1><span class="ah-sp"></span><span class="ah-cnt">' + st.targets.length + ' of ' + AH_MAX + '</span></header>' +
-        '<div class="ah-body"><div class="ah-lab" style="margin-top:4px"><span>Duo bosses</span><span>Tap for drops</span></div>' + _ahByMissing(AH_DUO).map(function (b) { return _ahPickRow(b, s.open); }).join('') +
-        '<div class="ah-lab"><span>Trio bosses</span><span>Tap for drops</span></div>' + _ahByMissing(AH_TRIO).map(function (b) { return _ahPickRow(b, s.open); }).join('') + '</div>';
+        '<div class="ah-body"><div class="ah-lab" style="margin-top:4px"><span>Duo bosses</span></div>' + _ahByMissing(AH_DUO).map(function (b) { return _ahPickRow(b, s.open); }).join('') +
+        '<div class="ah-lab"><span>Trio bosses</span></div>' + _ahByMissing(AH_TRIO).map(function (b) { return _ahPickRow(b, s.open); }).join('') + '</div>';
     }
     return '<header class="ah-top"><button type="button" class="ah-ib" data-ah-act="back" aria-label="Back">' + _ahIc('back', 20) + '</button><h1>Auto Hunts</h1></header><div class="ah-body">' +
-      '<p class="ah-lede">Steer the hunts made for you each day. Summons you send stay as they are.</p>' +
       '<div class="ah-mode" role="tablist" data-m="' + st.mode + '"><i class="th"></i><button type="button" role="tab" data-ah-act="mode:auto" aria-selected="' + (st.mode === 'auto') + '"><b>Auto</b><span>Surprise me</span></button>' +
         '<button type="button" role="tab" data-ah-act="mode:targets" aria-selected="' + (st.mode === 'targets') + '"><b>Targets</b><span>Up to ' + AH_MAX + '</span></button></div>' +
       '<div class="ah-tgs">' + _ahTargetsBlock() + '</div>' +
-      '<div class="ah-lab"><span>Partners</span><span>Daily hunts with</span></div>' +
+      '<div class="ah-lab"><span>Partners</span></div>' +
       (st.partners.length ? '<div class="ah-group">' + st.partners.map(_ahPartnerRow).join('') + '</div>' : '<p class="ah-calm">' + _ahIc('spark', 16) + '<span>' + (st.loaded ? 'Add a friend and you hunt together every day.' : 'Loading your partners…') + '</span></p>') +
       '<div class="ah-lab"><span>More hunters</span></div><div class="ah-group">' +
-        _ahSetRow('match', st.match, 'Match me with new hunters', 'When a seat is free, pair me with an active hunter') +
+        _ahSetRow('match', st.match, 'Match me with new hunters', '') +
         _ahSetRow('raid', st.raid, 'Join the raid draw', 'The Grinning God · teams of six') + '</div>' +
-      '<div class="ah-lab" data-ah-anchor="tmr"><span>Tomorrow’s hunts</span><span>Preview</span></div><div class="ah-group" data-ah-r="preview">' + _ahPreviewHtml() + '</div>' +
+      '<div class="ah-lab" data-ah-anchor="tmr"><span>Tomorrow’s hunts</span></div><div class="ah-group" data-ah-r="preview">' + _ahPreviewHtml() + '</div>' +
       '<p class="ah-foot">Changes start at midnight PST.</p></div>' +
       '<button type="button" class="ah-tmr" data-ah-act="tmr">' + _ahTmrHtml() + '</button>';
   }
@@ -64227,8 +64226,8 @@
     // line 153). Defeated state ALSO adds a corner trophy overlay
     // (line 180-182) — they're separate visual cues.
     const killText = state.kill_count > 0
-      ? '🏆 Defeated: ' + state.kill_count + ' time' + (state.kill_count === 1 ? '' : 's')
-      : 'Defeated: 0 times';
+      ? 'Defeated ×' + state.kill_count
+      : '';
 
     // Defeated-state corner trophy. Renders as a span overlay so the
     // gold-border treatment can do its own thing on .bcard--defeated.
@@ -64501,7 +64500,7 @@
           shl.classList.remove('hidden');
         } else if (!cfg.coopOnly) {
           // W1047 — the one place a hunter with no shadows learns they exist: every solo boss says it.
-          shl.textContent = '◈ Its shadow rises on 1 kill in ' + SHADOW_DROP_ONE_IN + ', worth +' + _shPctText(_shPct(id)) + '% in the Ascent.';   // W1057
+          shl.textContent = '◈ Shadow 1 in ' + SHADOW_DROP_ONE_IN + ' · +' + _shPctText(_shPct(id)) + '% Ascent';   // W1057 · W1331
           shl.classList.remove('hidden');
         } else {
           shl.classList.add('hidden');
@@ -64807,8 +64806,7 @@
         const blurb = engageCta.querySelector('.bfs-engage-blurb');
         if (blurb) {
           if ((state.kill_count || 0) > 0) {
-            blurb.textContent = (cfg.name || 'This boss') +
-              ' has been defeated. Engage again to begin a new hunt.';
+            blurb.textContent = 'Defeated';   // W1331 — the button says HUNT AGAIN
           } else {
             blurb.textContent = "This boss only counts progress while you're actively hunting it. You can hunt up to 3 bosses at once.";
           }
@@ -64961,7 +64959,7 @@
     const subline = document.getElementById('bfs-defeated-subline');
     if (subline) {
       const when = _formatTimeAgo(state.last_defeated_at);
-      subline.textContent = 'Was defeated ' + when + '. Engage again to begin a new hunt.';
+      subline.textContent = 'Defeated ' + when;
     }
 
     // Last drop callout — top entry from hunt history (if any).
@@ -65071,7 +65069,7 @@
       const cadenceNote = cadence === 'weekly' ? "next weekend's hunt"
                         : cadence === 'triweekly' ? 'the next qualifying ' + unit
                         : 'next ' + unit;
-      ctaFoot.textContent = 'Engages the ' + (cfg.name || 'boss') + ' · ' + cadenceNote + ' counts toward this hunt.';
+      ctaFoot.textContent = cadenceNote.charAt(0).toUpperCase() + cadenceNote.slice(1) + ' counts';   // W1331 — was "Engages the The Steel Wolf · next day counts toward this hunt."
     }
   }
 
@@ -68063,7 +68061,7 @@
     const standing = el.querySelector('.pe-standing');
     if (standing) {
       if (state === 'pending') {
-        standing.innerHTML = '<span class="dot"></span><b>' + pending.length + ' pending</b><span class="sep">·</span>awaiting allies';
+        standing.innerHTML = '<span class="dot"></span><b>' + pending.length + ' pending</b>';
       } else if (state === 'live') {
         let soonest = null;
         live.forEach(function (x) { const t = x.time_remaining_ms; if (typeof t === 'number' && t > 0 && (soonest === null || t < soonest)) soonest = t; });
@@ -68071,7 +68069,7 @@
         if (soonest !== null) { try { clock = _coopFmtRemaining(soonest).replace(/ left$/, ''); } catch (_) { clock = ''; } }
         standing.innerHTML = '<span class="live-dot"></span><b>' + live.length + (live.length === 1 ? ' hunt live' : ' hunts live') + '</b>' + (clock ? '<span class="sep">·</span>next ends ' + esc(clock) : '');
       } else {
-        standing.innerHTML = 'No active pacts<span class="sep">·</span>summon an ally';
+        standing.innerHTML = 'No active pacts';
       }
     }
   }
@@ -68514,8 +68512,8 @@
     const pend = live.filter(function (x) { return x.status === 'pending'; }).sort(byRaidThenTime);
     const act = live.filter(function (x) { return x.status === 'active'; }).sort(byRaidThenTime);
     let html = '';
-    if (pend.length) html += '<div class="cph-grp"><div class="cph-grp-lab">Pending Invites <b>·</b> soonest to expire</div>' + pend.map(_coopHuntCardHtml).join('') + '</div>';
-    if (act.length)  html += '<div class="cph-grp"><div class="cph-grp-lab">Active Hunts <b>·</b> by time left</div>' + act.map(_coopHuntCardHtml).join('') + '</div>';
+    if (pend.length) html += '<div class="cph-grp"><div class="cph-grp-lab">Pending</div>' + pend.map(_coopHuntCardHtml).join('') + '</div>';
+    if (act.length)  html += '<div class="cph-grp"><div class="cph-grp-lab">Active</div>' + act.map(_coopHuntCardHtml).join('') + '</div>';
     listEl.innerHTML = html;
     const nA = act.length, nP = pend.length;
     let txt;
@@ -68944,12 +68942,13 @@
   // state copy from renderBossesPanel; the flavor line above it stays
   // as defined here for atmospheric framing.
   const DUNGEON_FLAVOR = {
-    E: { header: 'E-RANK DUNGEON', flavor: 'The first threshold. Two bosses linger in the dark.' },
-    D: { header: 'D-RANK DUNGEON', flavor: 'A deeper hall awaits its keepers.' },
-    C: { header: 'C-RANK DUNGEON', flavor: 'The middle road. Seasoned ground.' },
-    B: { header: 'B-RANK DUNGEON', flavor: 'Most never reach this gate.' },
-    A: { header: 'A-RANK DUNGEON', flavor: 'Mastery starts here.' },
-    S: { header: 'S-RANK DUNGEON', flavor: 'The apex. The few.' },
+    // W1331 — the flavor lines are gone (owner 2026-11-26: fewer words; E's "Two bosses" was also out of date)
+    E: { header: 'E-RANK DUNGEON', flavor: '' },
+    D: { header: 'D-RANK DUNGEON', flavor: '' },
+    C: { header: 'C-RANK DUNGEON', flavor: '' },
+    B: { header: 'B-RANK DUNGEON', flavor: '' },
+    A: { header: 'A-RANK DUNGEON', flavor: '' },
+    S: { header: 'S-RANK DUNGEON', flavor: '' },
   };
 
   // ═══════════════════════════════════════════════════════════
@@ -69219,7 +69218,7 @@
           if (typeof showNoticeCard === 'function') {
             showNoticeCard({
               title: rank + '-Rank Gate — Locked',
-              body: 'Rank up to open this gate. You earn XP by completing your habits every day, and your rank climbs with your total XP. Reach ' + rank + ' rank and this gate opens for good.',
+              body: 'Reach ' + rank + ' rank to open.',
             });
           } else if (typeof showHabitToast === 'function') {
             showHabitToast('Reach ' + rank + ' rank to unlock');
