@@ -46,6 +46,20 @@ test.describe('The Shadow Army strip sits on the Status card (W1119)', () => {
     await expect(page.locator('#shadow-roster .shr-row')).toHaveCount(2);
   });
 
+  // W1338 — owner 2026-11-26: "arrange these in order instead of randomly placed". Strongest rank first, A to Z inside a
+  // rank, and a row never moves when it is rested or marched.
+  test('the roster runs S to E, A to Z inside a rank, and a tap never moves a row', async ({ page }) => {
+    await openStatus(page, { cls: 'WILL', shadows: ['the_carouser', 'the_worldspine', 'the_glass_strider', 'the_steel_wolf', 'the_patient_flame', 'the_marathon_wraith', 'the_ascendant_colossus'] });
+    await page.evaluate(() => (document.getElementById('shadow-strip') as HTMLElement).click());
+    const order = ['the_worldspine', 'the_patient_flame', 'the_ascendant_colossus', 'the_marathon_wraith', 'the_glass_strider', 'the_carouser', 'the_steel_wolf'];
+    const ids = () => page.locator('#shadow-roster .shr-toggle').evaluateAll((els) => els.map((e) => e.getAttribute('data-shadow-toggle')));
+    await expect.poll(ids).toEqual(order);
+    await expect(page.locator('#shadow-roster .shr-sub').first()).toContainText('S-RANK');
+    await expect(page.locator('#shadow-roster .shr-sub').last()).toContainText('E-RANK');
+    await page.locator('#shadow-roster .shr-toggle[data-shadow-toggle="the_glass_strider"]').click();
+    await expect.poll(ids).toEqual(order);
+  });
+
   test('the strip waits for the first shadow', async ({ page }) => {
     await openStatus(page, { cls: 'WILL' });
     await expect(page.locator('#shadow-strip')).toHaveClass(/hidden/);
