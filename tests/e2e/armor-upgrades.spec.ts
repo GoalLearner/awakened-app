@@ -30,7 +30,7 @@ async function boot(page: Page, inventory?: Record<string, unknown>, souls?: num
       localStorage.setItem('hb_habits', '[]');
       localStorage.setItem('hb_whats_new_seen', '99.99.99');
       localStorage.setItem('hb_onboarding_first_xp_date', '2026-01-01');
-      localStorage.setItem('hb_pokedex_collapsed', '[]');
+      localStorage.setItem('hb_dev_pdx_open', '1');
       if (inv) localStorage.setItem('hb_inventory', JSON.stringify({ cards: inv }));
       if (sl != null) localStorage.setItem('hb_souls', JSON.stringify({ balance: sl, lastDailyBonusDate: null, totalEarned: sl, totalSpent: 0 }));
     } catch (_) { /* noop */ }

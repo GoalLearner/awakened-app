@@ -29,7 +29,7 @@ async function boot(page: Page, inventory: Record<string, unknown>, build?: (str
       localStorage.setItem('hb_habits', '[]');
       localStorage.setItem('hb_whats_new_seen', '99.99.99');
       localStorage.setItem('hb_onboarding_first_xp_date', '2026-01-01');
-      localStorage.setItem('hb_pokedex_collapsed', '[]');
+      localStorage.setItem('hb_dev_pdx_open', '1');
       localStorage.setItem('hb_inventory', JSON.stringify({ cards: inv }));
       if (bld) localStorage.setItem('hb_hunter_build', JSON.stringify({ slots: bld, updated_at: new Date().toISOString() }));
     } catch (_) { /* noop */ }

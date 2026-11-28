@@ -291,7 +291,7 @@ test.describe('W1168/W1169 — earned ultimates', () => {
     await expect(sec.locator('.ua-card').first()).toBeHidden();
     await sec.locator('[data-section-toggle="ultimates"]').click();
     await expect(sec).not.toHaveClass(/pokedex-section--collapsed/);
-    expect(await page.evaluate(() => JSON.parse(localStorage.getItem('hb_pokedex_collapsed') || '[]').indexOf('ultimates'))).toBe(-1);
+    expect(await page.evaluate(() => localStorage.getItem('hb_pokedex_collapsed'))).toBeNull();   // W1349 — nothing is saved
     await expect(sec.locator('.pokedex-section-count')).toHaveText('3 / 9');   // the Signature is always there
     await expect(sec.locator('.ua-card')).toHaveCount(3);
     await expect(sec.locator('.ua-card').first()).toHaveAttribute('data-ua', 'signature');
@@ -326,17 +326,34 @@ test.describe('W1168/W1169 — earned ultimates', () => {
     await expect(sec.locator('.ua-lock')).toHaveCount(8);
   });
 
-  test('W1184: a saved section list from before (Ultimates open) closes it once; after that the hunter choice sticks', async ({ page }) => {
-    await boot(page, 50, { hb_dev_ults: '1', hb_tour_items_v1: '1', hb_pokedex_collapsed: JSON.stringify(['rare']) });
-    await page.evaluate(() => (document.querySelector('[data-tab="items"]') as HTMLElement).click());
-    const sec = page.locator('#pokedex-sections .pokedex-section--ultimates');
-    await expect(sec).toHaveClass(/pokedex-section--collapsed/, { timeout: 6000 });
-    await expect(page.locator('#pokedex-sections .pokedex-section--rare')).toHaveClass(/pokedex-section--collapsed/);
-    await sec.locator('[data-section-toggle="ultimates"]').click();
-    await expect(sec).not.toHaveClass(/pokedex-section--collapsed/);
+  // W1349 — owner 2026-11-28: "I want it always collapsed on default ... I want it be collapsed at all times even after
+  // returning back to it". An old saved list (everything open) is ignored; a group stays open while you stay on the page
+  // (a filter re-renders it open); leaving Items, the Collection, or the app closes every group.
+  test('W1349: Items groups start closed every visit; open while you stay, closed when you come back', async ({ page }) => {
+    await boot(page, 50, { hb_dev_ults: '1', hb_tour_items_v1: '1', hb_pokedex_collapsed: '[]' });
+    const items = () => page.evaluate(() => (document.querySelector('[data-tab="items"]') as HTMLElement).click());
+    const ult = page.locator('#pokedex-sections .pokedex-section--ultimates'), rare = page.locator('#pokedex-sections .pokedex-section--rare');
+    const allClosed = async () => expect(page.locator('#pokedex-sections .pokedex-section:not(.pokedex-section--collapsed)')).toHaveCount(0, { timeout: 6000 });
+    await items();
+    await allClosed();
+    await ult.locator('[data-section-toggle="ultimates"]').click();
+    await rare.locator('[data-section-toggle="rare"]').click();
+    await expect(ult).not.toHaveClass(/pokedex-section--collapsed/);
+    await page.locator('#pokedex-sections [data-pdx-sort]').first().click();   // the PWR sort re-renders: still open
+    await expect(page.locator('#pokedex-sections .pokedex-section--rare')).not.toHaveClass(/pokedex-section--collapsed/);
+    await expect(page.locator('#pokedex-sections .pokedex-section--ultimates')).not.toHaveClass(/pokedex-section--collapsed/);
+    await page.evaluate(() => (document.querySelector('[data-tab="profile"]') as HTMLElement).click());   // off the page …
+    await items();                                                                                       // … and back
+    await allClosed();
+    await page.locator('#pokedex-sections [data-section-toggle="rare"]').click();
+    await page.evaluate(() => (document.querySelector('#cl-lens [data-mode="collection"]') as HTMLElement).click());
+    await page.evaluate(() => (document.querySelector('#cl-lens [data-mode="archive"]') as HTMLElement).click());
+    await allClosed();
+    await page.locator('#pokedex-sections [data-section-toggle="rare"]').click();
     await page.reload();
-    await page.evaluate(() => (document.querySelector('[data-tab="items"]') as HTMLElement).click());
-    await expect(page.locator('#pokedex-sections .pokedex-section--ultimates')).not.toHaveClass(/pokedex-section--collapsed/, { timeout: 6000 });
+    await items();
+    await allClosed();
+    expect(await page.evaluate(() => localStorage.getItem('hb_pokedex_collapsed'))).toBe('[]');   // the old list is left alone, never read
   });
 
   test('W1183: a hunter who never saw the old tab keeps nothing from the milestones', async ({ page }) => {

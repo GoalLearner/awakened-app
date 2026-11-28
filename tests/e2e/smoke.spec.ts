@@ -9262,7 +9262,7 @@ test.describe('AZ · Relic NEW + tier chip (W991)', () => {
         ['hb_tour_first_vow_v1', 'hb_tour_welcome_back_v1', 'hb_fg_guide_v1', 'hb_fm_pointer_seen', 'hb_notif_perm_requested', 'hb_healthkit_prompted', 'hb_first_completion_bonus_v1', 'hb_tour_items_v1'].forEach((k) => localStorage.setItem(k, '1'));
         localStorage.setItem('hb_onboarding_first_xp_date', '2026-01-01');
         localStorage.setItem('hb_dd_v1', JSON.stringify({ day: 3, sealed: [true, true, true], done: true, startedAt: 1 }));
-        localStorage.setItem('hb_pokedex_collapsed', '[]');   // every rarity section open (a first visit starts them collapsed)
+        localStorage.setItem('hb_dev_pdx_open', '1');   // every rarity section open (W1349: Items always starts them collapsed)
         const d = new Date(); const ymd = (x: Date) => x.getFullYear() + '-' + String(x.getMonth() + 1).padStart(2, '0') + '-' + String(x.getDate()).padStart(2, '0');
         const old = new Date(); old.setDate(old.getDate() - 5);
         Object.keys(ex || {}).forEach((k) => localStorage.setItem(k, String((ex as any)[k]).replace(/@today/g, ymd(d)).replace(/@old/g, ymd(old))));
