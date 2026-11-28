@@ -89,6 +89,23 @@ test('W1348 — Flames: floor 102 beaten, Dragon Slayer burns, and Flames burns 
   await expect(page.locator(B + ' .tm-row--worn .nm.ttl-fire')).toHaveCount(0);
 });
 
+// W1350 — owner 2026-11-28: "I want there to be a post category above floor 100 but under enter the hall. I still want to
+// fight floor 101 onwards ... Post floor 100 needs its own category".
+test('W1350 — Beyond the Summit: its own tile under the Hall, open, newest on top; a beaten floor is a rematch', async ({ page }) => {
+  await boot(page, 101);
+  await openTower(page);
+  const tile = page.locator(B + ' .tw-band--beyond');
+  await expect(tile).toHaveClass(/open/);
+  expect(await page.evaluate(() => { const hall = document.querySelector('#arena-body [data-ar="hall"]')!, t = document.querySelector('#arena-body .tw-band--beyond')!, s = document.querySelector('#arena-body .tw-band[data-b="9"]')!;
+    return hall.getBoundingClientRect().bottom <= t.getBoundingClientRect().top && t.getBoundingClientRect().bottom <= s.getBoundingClientRect().top; })).toBe(true);
+  await expect(page.locator(B + ' .tw-band[data-b="9"]')).not.toHaveClass(/open/);   // the Summit tile stays closed under it
+  await expect(tile.locator('.bm')).toContainText('1 OF 2');
+  await expect(tile.locator('.tw-floor .fn')).toHaveText(['102', '101']);
+  await expect(tile.locator('[data-floor="102"] .tw-fnext')).toHaveText('FIGHT');
+  await tile.locator('[data-floor="101"]').click();
+  await expect(page.locator(B + ' .mx')).toContainText('No stakes');
+});
+
 test('W1348 — floor 102 waits for floor 101: the tower leads with 101 until it is beaten', async ({ page }) => {
   await boot(page, 0);
   await openTower(page);

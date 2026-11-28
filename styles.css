@@ -35088,6 +35088,10 @@ button.mx-sh { cursor: pointer; min-height: 40px; }
 .tw-floor .fn.ms { color: var(--tw-gold); }
 .tw-floor .name { flex: 1; min-width: 0; font: 700 14px/1 var(--tw-serif); color: var(--tw-ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .tw-floor .bounty { font: 800 11px var(--tw-mono); color: var(--tw-gold); }
+/* W1350 — Beyond the Summit: the next floor reads FIGHT; a floor not open yet is dimmed with a lock */
+.tw-floor .tw-fnext { font: 800 10px var(--tw-mono); letter-spacing: 0.14em; color: var(--tw-gold); }
+.tw-floor.locked { opacity: 0.45; cursor: default; }
+.tw-floor .tw-flock { display: inline-flex; color: var(--tw-ink3); }
 .tw-mark { flex: 0 0 auto; color: var(--tw-violet); }
 .tw-mark.echo { color: var(--tw-ink3); }
 .tw-re { flex: 0 0 auto; color: var(--tw-ink3); }
@@ -38104,7 +38108,7 @@ button.pcc-title { cursor: pointer; -webkit-appearance: none; appearance: none; 
   color: #c8c6d8; font: 800 11px var(--tw-mono, "JetBrains Mono", ui-monospace, monospace); letter-spacing: 0.24em; }
 .tw-hall svg { vertical-align: -2px; margin-left: 6px; }
 /* the rail's 101st cell, one cell tall above the summit band (a band is flex 1 over ten cells) */
-.tw-rb.tw-rb--beyond { flex: 0.1; cursor: default; }
+.tw-rb.tw-rb--beyond { flex: 0.1; cursor: pointer; }   /* W1350 — taps to Beyond the Summit */
 /* the King: a crimson past the gold of the summit */
 .tm-row--beyond { --tm-c: #e5484d; --tm-hi: #ffc2c4; }
 .lb-rank-class--beyond { --gem-c: #e5484d; --gem-hi: #ffc2c4; --gem-glow: rgba(229,72,77,0.40); }
