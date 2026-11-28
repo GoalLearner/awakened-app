@@ -1,6 +1,6 @@
 // ─────────────────────────────────────────────────────────────
 // INCREMENT THIS VERSION NUMBER WITH EVERY NETLIFY DEPLOYMENT
-const CACHE_VERSION = 'v6.573';
+const CACHE_VERSION = 'v6.574';
 // ─────────────────────────────────────────────────────────────
 
 const CACHE_NAME = 'awakened-cache-' + CACHE_VERSION;
@@ -331,6 +331,7 @@ const PRECACHE_ASSETS = [
   '/assets/arena/boss_90.webp',
   '/assets/arena/boss_101a.webp',   // W1344 — floor 101's two
   '/assets/arena/boss_101b.webp',
+  '/assets/arena/boss_102.webp',   // W1348 — floor 102, the King Black Dragon
   // PWA app-icons (rendered from app-icon-source.png by scripts/generate-app-icons.ps1)
   '/icon-192.png',
   '/icon-512.png',

@@ -1678,6 +1678,20 @@ describe('arena_title_earned (W258)', () => {
     expect(db._calls().filter((c) => !/^SELECT COUNT/.test(c.sql))[0]?.binds[4]).toBe('earned the title "The King"');
   });
 
+  it('W1348 — the floor-102 title (Dragon Slayer) is accepted with its exact label', async () => {
+    const db = makeDb({ perInsertChanges: [1] });
+    const res = await handlePublicAchievementEventsPost(
+      makeReq({ events: [{
+        ...VALID_ARENA_TITLE,
+        eventKey: 'beyond_dragon_slayer',
+        eventLabel: 'earned the title "Dragon Slayer"',
+        clientEventId: 'arena_title:beyond_dragon_slayer',
+      }] }), makeEnv(db), session,
+    );
+    expect(res.status).toBe(200);
+    expect(db._calls().filter((c) => !/^SELECT COUNT/.test(c.sql))[0]?.binds[4]).toBe('earned the title "Dragon Slayer"');
+  });
+
   it('W1344 — The King on another id is refused', async () => {
     const db = makeDb();
     const res = await handlePublicAchievementEventsPost(

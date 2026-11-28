@@ -11226,6 +11226,29 @@ test.describe('CC · The Shadow Army drops like a pet (W1035 · W1047)', () => {
     expect(r[0]).toBeLessThan(f100);
   });
 
+  // W1348 — owner 2026-11-28: floor 102 is the King Black Dragon, "stronger than floor 101 obviously". Three heads and a
+  // dragonfire nothing stops. The max build with Nightfall (Fang head first, the sim's default): about 1 in 20 alone, about
+  // 9 in 20 with every shadow (4.5% / 9% / 44.7%); Duskforge, the best reader, about 1 in 4 alone (25%). Every number sits
+  // under floor 101's at the same army size.
+  test('W1348 — floor 102: harder than floor 101 at every army size, and shadows still help', async ({ page }) => {
+    test.setTimeout(180_000);
+    await freshApp(page);
+    const r = await page.evaluate(() => [0, 5, 99].map((k) =>
+      (window as any).Arena.simAscent(102, 'nightfall_blade', { n: 600, invest: 'max', shadows: k }).winRate));
+    const r101 = await page.evaluate(() => [0, 5, 99].map((k) =>
+      (window as any).Arena.simAscent(101, 'nightfall_blade', { n: 600, invest: 'max', shadows: k }).winRate));
+    const dk = await page.evaluate(() => [0, 99].map((k) => [102, 101].map((f) =>
+      (window as any).Arena.simAscent(f, 'duskforge_greatblade', { n: 600, invest: 'max', shadows: k }).winRate)));
+    expect(r[0]).toBeGreaterThanOrEqual(0.01);
+    expect(r[0]).toBeLessThanOrEqual(0.12);
+    expect(r[1]).toBeGreaterThan(r[0]);
+    expect(r[2]).toBeGreaterThan(r[1]);
+    expect(r[2]).toBeGreaterThanOrEqual(0.32);
+    expect(r[2]).toBeLessThanOrEqual(0.56);
+    r.forEach((x, i) => expect(x).toBeLessThan(r101[i]));
+    dk.forEach(([f102, f101]) => expect(f102).toBeLessThan(f101));
+  });
+
   test('W1048 — the slots by rank: 1, 2, 4, 7, 12, and at S one for every solo boss', async ({ page }) => {
     await freshApp(page);
     const r = await page.evaluate(() => { const f = (window as any).__shadowSlots; return ['E', 'D', 'C', 'B', 'A', 'S', 'S+', 'nonsense'].map((k) => f(k)); });

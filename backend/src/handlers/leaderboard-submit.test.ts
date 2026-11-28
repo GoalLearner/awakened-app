@@ -776,11 +776,21 @@ describe('POST /v1/leaderboard/submit -- weekly scoping (1z.33)', () => {
 // floor_best now reads 101 for a hunter who beat the two claimants. An older app (100 at most) cannot pull it back down,
 // and it is told 100 at most, so its W818 self-heal never fires; a 3.0.34+ app reads the true best from best_beyond.
 describe('POST /v1/leaderboard/submit -- floor 101 (W1344)', () => {
-  it('accepts floor_best 101 and refuses 102', async () => {
+  it('accepts floor_best 101 and 102 (W1348, the King Black Dragon) and refuses 103', async () => {
     const ok = await handleLeaderboardSubmit(makeReq({ metric: 'floor_best', current_value: 101 }), makeEnv(makeDb({ current_value: 101, best_value: 101 })), session);
     expect(ok.status).toBe(200);
-    const bad = await handleLeaderboardSubmit(makeReq({ metric: 'floor_best', current_value: 102 }), makeEnv(makeDb()), session);
+    const ok2 = await handleLeaderboardSubmit(makeReq({ metric: 'floor_best', current_value: 102 }), makeEnv(makeDb({ current_value: 102, best_value: 102 })), session);
+    expect(ok2.status).toBe(200);
+    const j2 = await ok2.json() as { current_value: number; best_value: number; best_beyond: number };
+    expect([j2.current_value, j2.best_value, j2.best_beyond]).toEqual([100, 100, 102]);
+    const bad = await handleLeaderboardSubmit(makeReq({ metric: 'floor_best', current_value: 103 }), makeEnv(makeDb()), session);
     expect(bad.status).toBe(400);
+  });
+
+  it('W1348 — an older app sending 100 keeps a stored 102', async () => {
+    const db = makeDb({ current_value: 102, best_value: 102 });
+    await handleLeaderboardSubmit(makeReq({ metric: 'floor_best', current_value: 100 }), makeEnv(db), session);
+    expect(db._calls().find((c) => /INSERT INTO leaderboard_snapshots/.test(c.sql))!.binds.slice(1, 4)).toEqual(['floor_best', 102, 102]);
   });
 
   it('an older app sending 100 keeps a stored 101 (the upsert writes 101)', async () => {

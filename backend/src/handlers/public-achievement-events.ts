@@ -233,6 +233,7 @@ const ARENA_TITLE_LABELS: Record<string, string> = {
   rt_grandmaster:     'Master',        // W1314 — renamed from Grandmaster (owner 2026-11-25)
   summit_second_awakened: 'Grandmaster', // W1314 — the floor-100 title (was 'The Second Awakened', never listed here)
   beyond_the_king:    'The King',      // W1344 — floor 101, the two claimants (past the summit; never rated)
+  beyond_dragon_slayer: 'Dragon Slayer', // W1348 — floor 102, the King Black Dragon (past the summit; never rated)
   // legacy W257-era ids — events from pre-W266 clients still validate
   asc_brawler:        'Brawler',
   asc_wallbreaker:    'Wallbreaker',
@@ -269,6 +270,7 @@ const ARENA_TITLE_FLOORS: Record<string, number> = {
   rt_apex: 70,      rt_monarch: 80,  rt_grandmaster: 90,
   summit_second_awakened: 100,
   beyond_the_king: 100,   // W1344 — floor 101 is never rated, so floor_best stops at 100: the summit is what the server can see
+  beyond_dragon_slayer: 100,   // W1348 — the same for floor 102 (the title's post can land before the board hears 102)
 };
 
 // v3 Phase 1z.226A — verified streak milestone bands. Allowlist

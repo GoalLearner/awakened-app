@@ -27118,6 +27118,8 @@ body.combat-active #app * { animation-play-state: paused !important; }
 .ar-exit:active { background: rgba(245,184,66,0.2); }
 .ar-body { flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: calc(env(safe-area-inset-top,0px) + 58px) 20px calc(env(safe-area-inset-bottom,0px) + 16px); display: flex; flex-direction: column; animation: ar-fade 0.28s ease; }
 .ar-body.ar-body--bleed { padding: 0; }
+/* W1348 — the Titles view scrolls below the EXIT pill (top + 12px, 34px tall), never under it; at rest nothing moves */
+.ar-body.ar-body--clip { margin-top: calc(env(safe-area-inset-top,0px) + 52px); padding-top: 6px; }
 @keyframes ar-fade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 .ar-kicker { display: inline-flex; align-items: center; gap: 8px; font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 10px; font-weight: 800; letter-spacing: 0.3em; color: #f5b842; text-transform: uppercase; }
 .ar-kicker::before { content: ""; width: 16px; height: 1px; background: linear-gradient(90deg, transparent, #f5b842); }
@@ -27747,7 +27749,7 @@ body.combat-active #app * { animation-play-state: paused !important; }
 /* W1315 — the worn title's colour, under the HIGHEST FLOOR band: the title's own (a gem in its tier colour) + the name's ten inks */
 .tm-inks { margin: 14px 20px 0; }
 .tm-inks .lbl { display: block; font-family: "JetBrains Mono", monospace; font-size: 8px; font-weight: 800; letter-spacing: 2.2px; color: #6b6b86; margin: 0 0 6px 2px; }
-.tm-inks .sw { display: grid; grid-template-columns: repeat(11, 1fr); gap: 4px; }
+.tm-inks .sw { display: grid; grid-template-columns: repeat(12, 1fr); gap: 3px; }   /* W1348 — twelve: the tier, Flames and the ten inks */
 .tm-ink { position: relative; height: 34px; padding: 0; border: 0; background: none; cursor: pointer; -webkit-appearance: none; appearance: none; -webkit-tap-highlight-color: transparent; }
 .tm-ink::before { content: ''; position: absolute; left: 50%; top: 50%; width: 22px; height: 22px; margin: -11px 0 0 -11px; border-radius: 50%; background: var(--c); box-shadow: inset 0 0 0 1px rgba(255,255,255,.16); }
 .tm-ink.on::before { box-shadow: 0 0 0 2px #0b0b16, 0 0 0 3.5px #f5f3fb; }
@@ -38032,6 +38034,72 @@ button.pcc-title { cursor: pointer; -webkit-appearance: none; appearance: none; 
 .ar-foe-duo { display: flex; align-items: flex-end; justify-content: center; width: 100%; height: 100%; }
 .ar-foe-duo > img { flex: 1 1 0; min-width: 0; width: 50%; height: 100%; object-fit: contain; object-position: 50% 100%; }
 .ar-foe-duo > img + img { margin-left: -14%; transform: scale(0.92); transform-origin: 50% 100%; }
+
+/* ─── W1348 — Ascent floor 102: the King Black Dragon, three heads on one body ───
+   One square picture of the whole dragon. Each head is its own spot showing its third of it (t0 left · t1 middle · t2 right),
+   side by side, so the three spots read as one dragon and each can be hit, shaken and turned to ash on its own. Index →
+   third: d0 the Fang head (middle), d1 the Fire head (left), d2 the Smoke head (right). A fallen head stays, grey as ash. */
+/* --dw: the dragon's width, --dr: its right edge; each head's window (--a its left, --w its width, fractions of the picture) */
+.pkb.pkb2.pkb2--dragon { --dw: 72%; --dr: -4%; }
+.pkb2-dragonbase { position: absolute; z-index: 1; right: var(--dr); bottom: 3%; width: var(--dw); aspect-ratio: 1; background: no-repeat 50% 100% / 100% auto; pointer-events: none; }
+.pkb.pkb2.pkb2--dragon .pkb-stage .pkb-spot.foe.duo.head { top: auto; bottom: 3%; height: auto; z-index: 2;
+  width: calc(var(--dw) * var(--w)); right: calc(var(--dr) + var(--dw) * (1 - var(--a) - var(--w))); aspect-ratio: var(--w) / 1; }
+/* you stand a step further left, and a tap on the edge you share with the Fire head reaches the head */
+.pkb.pkb2.pkb2--dragon .pkb-stage .pkb-spot.you { left: -10%; pointer-events: none; }
+.pkb.pkb2.pkb2--dragon .pkb-spot.duo.head .spr { width: 100%; height: 100%; }
+.ar-head { display: block; width: 100%; height: 100%; background-repeat: no-repeat; background-size: calc(100% / var(--w)) auto;
+  background-position: calc(var(--a) / (1 - var(--w)) * 100%) 100%; }
+/* a head strikes without turning (a window of one picture must not tilt): a short reach, the whole dragon beneath it */
+.pkb.pkb2.pkb2--dragon .pkb-spot.foe.duo.head.atk-heavy .spr, .pkb.pkb2.pkb2--dragon .pkb-spot.foe.duo.head.atk-fast .spr, .pkb.pkb2.pkb2--dragon .pkb-spot.foe.duo.head.atk-blunt .spr,
+.pkb.pkb2.pkb2--dragon .pkb-spot.foe.duo.head.atk-ranged .spr, .pkb.pkb2.pkb2--dragon .pkb-spot.foe.duo.head.atk-magic .spr { animation-name: pkb2HeadReach; }
+@keyframes pkb2HeadReach { 0% { transform: none; } 45% { transform: translate(-9px, 4px) scale(1.03); } 100% { transform: none; } }
+.pkb.pkb2.pkb2--dragon .pkb-spot.duo.head::after { width: 70%; }
+.pkb.pkb2.pkb2--dragon .pkb-spot.duo.head.dying .spr { transform: none; }
+.pkb.pkb2.pkb2--dragon .pkb-spot.duo.head.crumble .spr { animation: pkb2HeadAsh 1.15s cubic-bezier(0.4,0,0.6,1) both; }
+.pkb.pkb2.pkb2--dragon .pkb-spot.duo.head.ko .spr { opacity: 1; transform: none; filter: grayscale(1) brightness(0.32); }
+@keyframes pkb2HeadAsh {
+  0% { filter: grayscale(0.55) brightness(0.75); }
+  10% { filter: grayscale(0.2) brightness(2.1); }
+  100% { filter: grayscale(1) brightness(0.32); } }
+@media (prefers-reduced-motion: reduce) { .pkb.pkb2.pkb2--dragon .pkb-spot.duo.head.crumble .spr { animation-duration: 0.01s; } }
+/* an enraged head: its embers burn brighter (a glow would draw each window's box) */
+.pkb.pkb2.pkb2--dragon .pkb-spot.duo.head.enraged .spr { filter: saturate(1.8) contrast(1.1) brightness(1.08); }
+/* the three badges over the three heads: the middle one higher, so none share a row with its neighbour */
+/* the badges: placed over each head by _pkbHeadBadgesPlace (measured off the picture); these are the fallbacks */
+.pkb2--dragon .pkb2-intent.d1 { left: 47%; top: calc(env(safe-area-inset-top, 0px) + 150px); }
+.pkb2--dragon .pkb2-intent.d0 { left: 68%; top: calc(env(safe-area-inset-top, 0px) + 104px); }
+.pkb2--dragon .pkb2-intent.d2 { left: 87%; top: calc(env(safe-area-inset-top, 0px) + 150px); }
+.pkb2--dragon .pkb2-read { top: calc(env(safe-area-inset-top, 0px) + 186px); }
+/* three plates in the foe column, a little tighter than two */
+.pkb2--dragon .pkb2-duoplates { gap: 3px; }
+.pkb.pkb2.pkb2--dragon .pkb-plate.duo .hp { margin-top: 3px; height: 7px; }
+.pkb.pkb2.pkb2--dragon .pkb-plate.duo .pkb2-bmeta { margin-top: 2px; }
+/* dragonfire: a burn no cleanse can touch */
+.ar-st.burn.df { color: #ffb36b; background: rgba(229,72,40,0.2); border-color: rgba(255,120,60,0.6); }
+
+/* ─── W1348 — Dragon Slayer burns (owner 2026-11-28: "It would be cool to have the dragon slayer title burn in flames").
+   The letters are fire: the heat rises and falls through them, out of step, like a flame. The title's gem becomes a small
+   flame that sways, with two sparks lifting off it. Wherever the title shows with no colour picked for it. */
+.ttl-fire { background-image: linear-gradient(0deg, #ffe08a 0%, #ffa62e 28%, #ff5d1c 54%, #c9260c 78%, #7d1206 100%); background-size: 100% 190%; background-position: 50% 100%;
+  -webkit-background-clip: text; background-clip: text; color: transparent; -webkit-text-fill-color: transparent; text-shadow: none;
+  filter: drop-shadow(0 1px 1.5px rgba(0,0,0,.8)) drop-shadow(0 0 4px rgba(255,96,24,.4)); animation: ttlFire 2.3s ease-in-out infinite; }
+@keyframes ttlFire { 0% { background-position: 50% 100%; } 17% { background-position: 50% 66%; } 30% { background-position: 50% 86%; } 49% { background-position: 50% 52%; }
+  66% { background-position: 50% 78%; } 83% { background-position: 50% 58%; } 100% { background-position: 50% 100%; } }
+.ttl-flame, .tm-gem.ttl-flame, .lb-rank-gem.ttl-flame, .pcc-title i.ttl-flame { position: relative; flex: none; display: inline-block; width: 8px; height: 11px; transform: none; border: 0; border-radius: 0; background: none; box-shadow: none; opacity: 1; }
+.ttl-flame::before { content: ""; position: absolute; left: 50%; bottom: 0; width: 7px; height: 7px; margin-left: -3.5px; border-radius: 50% 0 50% 50%; transform: rotate(-45deg);
+  background: radial-gradient(circle at 62% 38%, #fff1c2 0%, #ffbe45 30%, #ff6a1f 62%, #b8220b 100%); animation: ttlFlame 0.85s ease-in-out infinite alternate; }
+@keyframes ttlFlame { 0% { transform: rotate(-45deg) scale(1, 1); } 45% { transform: rotate(-40deg) scale(.9, 1.14); } 100% { transform: rotate(-50deg) scale(1.08, .94); } }
+.ttl-flame::after { content: ""; position: absolute; left: 50%; bottom: 7px; width: 2px; height: 2px; border-radius: 50%; background: #ffc15a;
+  box-shadow: 3px 2px 0 0 rgba(255,140,50,.85), -3px 4px 0 0 rgba(255,190,90,.75); animation: ttlEmber 1.7s linear infinite; }
+@keyframes ttlEmber { 0% { transform: translateY(4px); opacity: 0; } 25% { opacity: 1; } 100% { transform: translate(1px, -8px); opacity: 0; } }
+.sc-title-chip.sc-title-chip--fire { border-color: rgba(255,110,40,.5); }
+/* the Flames swatch (Dragon Slayer's reward): a dark coal with a small flame in it; locked, the lock shows over the coal */
+.tm-ink.tm-ink--fire::before { background: radial-gradient(circle at 50% 80%, #6a1206 0%, #2a0b08 70%); box-shadow: inset 0 0 0 1px rgba(255,120,50,.5); }
+.tm-ink.tm-ink--fire.on::before { box-shadow: inset 0 0 0 1px rgba(255,120,50,.5), 0 0 0 2px #0b0b16, 0 0 0 3.5px #f5f3fb; }
+.tm-ink.tm-ink--fire:not(.lock)::after { content: ""; position: absolute; left: 50%; top: 50%; width: 9px; height: 9px; margin: -3px 0 0 -4.5px; border-radius: 50% 0 50% 50%; transform: rotate(-45deg);
+  background: radial-gradient(circle at 62% 38%, #fff1c2 0%, #ffbe45 30%, #ff6a1f 62%, #b8220b 100%); animation: ttlFlame 0.85s ease-in-out infinite alternate; }
+@media (prefers-reduced-motion: reduce) { .tm-ink.tm-ink--fire:not(.lock)::after { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .ttl-fire, .ttl-flame::before, .ttl-flame::after { animation: none; } }
 .tw-hall { display: block; width: 100%; margin-top: 10px; padding: 12px; background: transparent; border: 1px solid var(--tw-line, rgba(255,255,255,0.1)); border-radius: 14px;
   color: #c8c6d8; font: 800 11px var(--tw-mono, "JetBrains Mono", ui-monospace, monospace); letter-spacing: 0.24em; }
 .tw-hall svg { vertical-align: -2px; margin-left: 6px; }

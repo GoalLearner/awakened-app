@@ -162,7 +162,7 @@ for (const vp of [{ width: 390, height: 844 }, { width: 375, height: 667 }]) {
       await expect(pick).toHaveText(/^Grandmaster$/i);
       await pick.click();
       const rows = page.locator('#arena-overlay .tm-row');
-      expect(await rows.evaluateAll((els) => els.slice(-3).map((e) => [e.querySelector('.at')!.textContent, e.querySelector('.nm')!.textContent]))).toEqual([['F90', 'Master'], ['F100', 'Grandmaster'], ['F101', 'The King']]);   // W1344 — floor 101's title
+      expect(await rows.evaluateAll((els) => els.slice(-4).map((e) => [e.querySelector('.at')!.textContent, e.querySelector('.nm')!.textContent]))).toEqual([['F90', 'Master'], ['F100', 'Grandmaster'], ['F101', 'The King'], ['F102', 'Dragon Slayer']]);   // W1344 — floor 101's title · W1348 — 102's
       await expect(page.locator('#arena-overlay .tm-row--worn .nm')).toHaveText('Grandmaster');
       await expect(page.locator('#arena-overlay')).not.toContainText('Second Awakened');
       if (process.env.LB_SHOTS) { await page.locator('#arena-overlay .tm-row--worn').scrollIntoViewIfNeeded(); await page.screenshot({ path: process.env.LB_SHOTS + '/titles-' + vp.width + '.png' }); }
@@ -185,7 +185,7 @@ for (const vp of [{ width: 390, height: 844 }, { width: 375, height: 667 }]) {
       expect(await color('#pc-body button.pcc-title--pick')).toBe('rgb(167, 139, 250)');   // Sovereign's violet tier
       await page.locator('#pc-body button.pcc-title--pick').click();
       const sw = page.locator('#arena-overlay .tm-inks .tm-ink');
-      await expect(sw).toHaveCount(11);
+      await expect(sw).toHaveCount(12);   // W1348 — the tier, the ten inks, then Flames (floor 102's reward)
       await expect(sw.first()).toHaveClass(/tm-ink--tier/);
       await expect(sw.first()).toHaveClass(/\bon\b/);
       await page.locator('#arena-overlay .tm-ink[data-ink="rose"]').click();
@@ -238,7 +238,7 @@ for (const vp of [{ width: 390, height: 844 }, { width: 375, height: 667 }]) {
       expect(await pick.evaluate((e) => getComputedStyle(e).color)).toBe('rgb(167, 139, 250)');
       await pick.click();
       const locked = page.locator('#arena-overlay .tm-ink.lock');
-      expect(await locked.evaluateAll((els) => els.map((e) => e.getAttribute('data-ink')))).toEqual(['dawn', 'void', 'stardust']);
+      expect(await locked.evaluateAll((els) => els.map((e) => e.getAttribute('data-ink')))).toEqual(['dawn', 'void', 'stardust', 'flames']);   // W1348 — Flames waits for floor 102
       await expect(locked.first()).toHaveAttribute('aria-disabled', 'true');
       await expect(page.locator('#arena-overlay .tm-ink--tier')).toHaveClass(/\bon\b/);
       await page.locator('#arena-overlay .tm-ink[data-ink="stardust"]').click({ force: true });   // aria-disabled: a tap still lands

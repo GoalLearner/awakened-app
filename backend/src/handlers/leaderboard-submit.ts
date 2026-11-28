@@ -483,5 +483,5 @@ export async function handleLeaderboardSubmit(
   });
 }
 
-/** W1344 — the summit (floor 100). floor_best may read 101 past it; older apps never send above this. */
+/** W1344 — the summit (floor 100). floor_best may read 101 or 102 (W1348) past it; older apps never send above this. */
 const FLOOR_SUMMIT = 100;

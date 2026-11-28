@@ -137,3 +137,25 @@ if (process.argv.indexOf('--duo') !== -1) {
   }
   console.log('settings ' + JSON.stringify(Arena._battle.duo()));
 }
+
+// ── W1348: FLOOR 102, the King Black Dragon (opt-in: `node tools/sim-ascent.js --dragon [n]`). Three heads, each its own
+// target, and dragonfire nothing stops. Owner 2026-11-28: "stronger than floor 101 obviously". Every weapon must sit under
+// its floor-101 rate at every army size; the best order is the Fang head first (Fire first is close for Nightfall), and
+// the Smoke head first is the trap. Tuned at DRAGON_POWER 0.7, DF_PCT 0.0175 (n=1000, seed0 3, best order, 0/5/10/12/19/all):
+// Nightfall 6/11/17/19/27/42 (F101 16/30/42/62/68/70), Duskforge 26/46/57/59/71/79 (F101 51/57/66/68/79/84),
+// Vigil 3/9/16/20/29/43 (F101 33/46/55/59/77/81).
+if (process.argv.indexOf('--dragon') !== -1) {
+  const n = +(process.argv[process.argv.indexOf('--dragon') + 1]) || 1000;
+  const SH = [0, 5, 10, 12, 19, 99];
+  console.log(`\n=== FLOOR 102 (n=${n}, max build): win% by shadows ${SH.map((k) => (k === 99 ? 'all' : k)).join(' / ')} ===`);
+  for (const [wn, w] of [['Nightfall', NF], ['Duskforge', DF], ['Vigil', VB]]) {
+    const f101 = SH.map((k) => Math.max(Arena.simAscent(101, w, { n, seed0: 3, invest: 'max', shadows: k, duoTarget: 'threat' }).winRate,
+      Arena.simAscent(101, w, { n, seed0: 3, invest: 'max', shadows: k, duoTarget: 'back' }).winRate));
+    console.log((wn + ' F101 best').padEnd(26) + f101.map((x) => pct(x).padStart(7)).join(''));
+    for (const [label, order] of [['Fang first', [0, 1, 2]], ['Fire first', [1, 0, 2]], ['Smoke first', [2, 0, 1]]]) {
+      const cells = SH.map((k) => Arena.simAscent(102, w, { n, seed0: 3, invest: 'max', shadows: k, duoTarget: order }).winRate);
+      console.log(('  F102 ' + label).padEnd(26) + cells.map((x) => pct(x).padStart(7)).join(''));
+    }
+  }
+  console.log('settings ' + JSON.stringify(Arena._battle.dragon()));
+}

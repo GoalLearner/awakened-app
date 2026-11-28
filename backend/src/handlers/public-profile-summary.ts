@@ -83,6 +83,9 @@ const CARD_BG_IDS = [
 const CARD_FRAME_IDS = ['gilded', 'rankforged', 'obsidian', 'runebound', 'eclipse'] as const;
 const CARD_INK_IDS = ['ivory', 'gold', 'violet', 'teal', 'ember', 'rose', 'frost', 'dawn', 'void', 'stardust'] as const;
 const CARD_AURA_IDS = ['none', 'motes', 'embers', 'storm', 'void', 'stardust'] as const;
+// W1348 — the title's colour adds Flames (the reward for beating floor 102, the King Black Dragon): a title-only effect,
+// not one of the name's inks.
+const CARD_TITLE_INK_IDS = [...CARD_INK_IDS, 'flames'] as const;
 // W1155 — the card's pins (up to two): the id names the badge, v the number it shows.
 const CARD_PIN_IDS = ['steps1m', 'club100k', 'club200k', 'club300k', 'prestige', 'shadows', 'wgmvp', 'bestday', 'mythics', 'godslayer', 'weekly1', 'anomalies', 'everest'] as const;   // W1312 — the Mythics pin (v = which weapons, one bit each); W1313 — God Slayer, Weekly Champion, Anomaly Hunter, Everest   // W1286 — the 200K and 300K week pins, their own pins in the Wardrobe (owner 2026-11-22)
 // W1157 — bosses and summit dropped (the card's stats say them already), wgmvp added, before any client shipped; W1158 — the 100K Step Club seal and the Prestige pill became pins
@@ -136,6 +139,8 @@ const ARENA_TITLE_IDS = [
   'summit_second_awakened',
   // W1344 — "The King": beat the two claimants on floor 101 (past the summit)
   'beyond_the_king',
+  // W1348 — "Dragon Slayer": beat the King Black Dragon on floor 102
+  'beyond_dragon_slayer',
   // legacy W257-era ids — accepted from pre-W266 clients still in the wild;
   // the client remaps them forward on its next launch
   'asc_brawler', 'asc_wallbreaker', 'asc_ironbreaker', 'asc_edgewalker',
@@ -472,7 +477,7 @@ function validate(body: PutBody):
     cardAura: { set: false, value: null } as AchField<string>,
     cardTitleInk: { set: false, value: null } as AchField<string>,   // W1315 — the title's colour, from the same inks
   };
-  const lookIds: Record<keyof typeof look, readonly string[]> = { cardFrame: CARD_FRAME_IDS, cardInk: CARD_INK_IDS, cardAura: CARD_AURA_IDS, cardTitleInk: CARD_INK_IDS };
+  const lookIds: Record<keyof typeof look, readonly string[]> = { cardFrame: CARD_FRAME_IDS, cardInk: CARD_INK_IDS, cardAura: CARD_AURA_IDS, cardTitleInk: CARD_TITLE_INK_IDS };   // W1348
   const lookCodes: Record<keyof typeof look, string> = { cardFrame: 'INVALID_CARD_FRAME', cardInk: 'INVALID_CARD_INK', cardAura: 'INVALID_CARD_AURA', cardTitleInk: 'INVALID_CARD_TITLE_INK' };
   for (const key of ['cardFrame', 'cardInk', 'cardAura', 'cardTitleInk'] as const) {
     const raw = body[key];

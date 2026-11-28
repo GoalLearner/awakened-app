@@ -602,6 +602,15 @@ describe('PUT /v1/users/me/public-profile-summary — arena title (W257)', () =>
     expect(calls[0].binds[12]).toBe('rt_grandmaster');
   });
 
+  it('W1348 — accepts the floor-102 title (beyond_dragon_slayer)', async () => {
+    const db = makeDb();
+    const res = await handlePublicProfileSummaryPut(
+      makeReq({ ...validPayload, arenaTitle: 'beyond_dragon_slayer' }), makeEnv(db), session);
+    expect(res.status).toBe(200);
+    const calls = (db as unknown as { _calls: () => { sql: string; binds: unknown[] }[] })._calls();
+    expect(calls[0].binds[12]).toBe('beyond_dragon_slayer');
+  });
+
   it('W1344 — accepts the floor-101 title (beyond_the_king)', async () => {
     const db = makeDb();
     const res = await handlePublicProfileSummaryPut(
@@ -983,6 +992,15 @@ describe('W1315 — title colour (cardTitleInk)', () => {
     expect(upd.length).toBe(1);
     expect(upd[0].sql).toMatch(/card_title_ink = CASE WHEN \? = 1 THEN \? ELSE card_title_ink END/);
     expect(upd[0].binds).toEqual([0, null, 0, null, 0, null, 0, null, 1, 'void', session.userId]);
+  });
+
+  it('W1348 — Flames (the floor-102 reward) is a title colour, never a name ink', async () => {
+    const db = makeDb();
+    const res = await handlePublicProfileSummaryPut(makeReq({ ...validPayload, cardTitleInk: 'flames' }), makeEnv(db), session);
+    expect(res.status).toBe(200);
+    expect(lookCalls(db)[0].binds).toEqual([0, null, 0, null, 0, null, 0, null, 1, 'flames', session.userId]);
+    const bad = await handlePublicProfileSummaryPut(makeReq({ ...validPayload, cardInk: 'flames' }), makeEnv(makeDb()), session);
+    expect(bad.status).toBe(400);
   });
 
   it('null goes back to the tier colour of the title', async () => {

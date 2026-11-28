@@ -160,7 +160,7 @@
   const APP_VERSION = '3.0.34';   // W1343 — 3.0.33 SUBMITTED for review 2026-11-27 ~3:12 AM PST from build 694 (3.0.33-w1342: the half-each duo bosses, set bonuses, the 3.0.32 news), so 3.0.34 opened early (an approval refuses an upload under the approved number), carrying W1343 (the onboarding without its kicker lines; the Apple Health line says only daily totals leave the phone). [history] W1340 — 3.0.32 goes to review from build 692 (3.0.32-w1337, VALID 2026-11-26 10:28 PM PST), so 3.0.33 opened early, as W1205 and W1233 did (an approval refuses an upload under the approved number), carrying W1338 (the Shadow Army in rank order) and W1340 (the four half-each duo bosses). [history] W1324 — 3.0.31 APPROVED 2026-11-25 (submitted 10:36 PM PST from build 690 = 3.0.31-w1323: the cleaner hunter card, five new pins, title colors and Master/Grandmaster, XP past level 20, the organized Hunter Activity, the Worldgate bar locks), so 3.0.32 opened at approval. 3.0.30 and 3.0.31 shipped without an in-app What's New sheet (the newest is 3.0.29): 3.0.32's sheet should carry their news, as W1237 did. [history] W1310 — 3.0.30 RELEASED 2026-11-24 (build 683, W1305: hunters on 3.0.30-w1305 from 1:45 PM PST; Apple refused build 685 under 3.0.30: "The train version '3.0.30' is closed for new build submissions"), so 3.0.31 opened carrying W1306 (the friend feed returns every event of the last 24 hours), W1307 (every repeat rare, ultra-rare and mythic drop reaches Hunter Activity; a sold rare names its souls) and W1308/W1309 (the cleaned-up hunter card, its frame invisible). [history] W1292 — 3.0.29 APPROVED 2026-11-23 (build 674, submitted 2026-11-22 6:25 PM PST; Apple: "eligible for distribution"), so 3.0.30 opened before build 678 went up, carrying W1285-W1287 (What's New 3.0.29 rewritten, the 200K/300K pins, a drop past its cap sells for souls), W1288/W1289 (the Violet Queen), W1290 (each strike says what it hit with) and W1291 (Friends tab badges, rank-coloured strike circles, coloured strike parts). [history] W1270 — 3.0.28 APPROVED by 2026-11-21 7:06 PM PST (build 667; Apple refused build 670 under 3.0.28: "The train version '3.0.28' is closed for new build submissions"), so 3.0.29 opened carrying W1259 (the 200K pin), W1263 (waiting raid teams), W1264-W1266 (the 300K badge), W1267 (no twin hunts) and W1268/W1269 (Auto Hunts). [history] W1246 — 3.0.27 APPROVED by 2026-11-19 12:15 PM PST (Apple refused build 664 under 3.0.27: "train version '3.0.27' is closed"), so 3.0.28 opened carrying W1245 (steps: one device per day, the legitimate one with the most). [history] W1233 — 3.0.26 SUBMITTED for review 2026-11-17 (build 655, tag 3.0.26-w1230), so 3.0.27 opened early, as W1205 did (an approval refuses an upload under the approved number), carrying W1233 (duels: your ultimate, special attack and shadows, and the Echo's own). [history] W1220 — 3.0.25 APPROVED 2026-11-16 9:44 AM PST (submitted 2026-11-15 2:06 PM PST, build 651, tag 3.0.25-w1213), so 3.0.26 opened carrying W1220 (strangers' shadows fold into one feed row), W1221 (your pinned row under a board opens your card), W1222 (the like limit says what it is), W1225 (invites say "You both get 500 souls"), W1226 (a refused audio start is caught, not reported as an error), W1227 (six calorie bosses, E to S, dropping the sleep bosses' relics), W1228 (the S calorie boss drops a mythic at 1%), W1229 (a mythic drop is its own announcement to every hunter; the crown on the card and feed names) and W1230 (ultra-rares stay friends-only: the owner wanted only mythics). [history] W1205 — 3.0.25 opened 2026-11-14 BEFORE 3.0.24 was approved (3.0.24 = build 649, waiting for review since 2026-11-13): an upload under 3.0.24 is refused the moment Apple approves it, so build 650 goes up as 3.0.25 carrying W1202 (every boss in the Kill Log, the Raid group), W1203 (no 150k step cap) and W1204 (hunts named by partner). [history] W1169 — 3.0.23 APPROVED 2026-11-08 (submitted 2026-11-07 5:00 PM PST, LIVE 2:33 PM PST on the 8th; almost certainly build 628 = w1161: pins, the Wardrobe tap fix), so 3.0.24 opened carrying W1162-W1169 (the 3.0.23 store notes, the board update, matched hunt partners, Add as friend, late steps reach the board, The Patient Flame falls by itself, earned ultimates behind their flag). [history] W1134 — 3.0.22 APPROVED 2026-11-06 (submitted 4:53 AM PST from build 617 = w1132: the Shadowborn + the Elite Eight, the Rising redrawn, profile cards name the look, every open counted), so 3.0.23 opened carrying W1134 (the Worldgate counts a hunter's steps only after 2 days in the app that week). [history] W1127 — 3.0.21 LIVE on the App Store 2026-11-05 9:34 AM PST (built from w1126: no memberships, kill stamps without a title, the tier crests, the onboarding's "How did you find the Gate?"), so 3.0.22 opened carrying W1127 (the app-open ping says when it is a real open; the server counts every one per Pacific day). [history] W1124 — 3.0.20 LIVE on the App Store 2026-11-01 12:50 PM PST (built from w1120: final standings Sunday, shadows in the public feed, Shadow Army on Status); 3.0.21 opened carrying W1121 (its What's New, never shown: re-keyed to 3.0.21), W1122 (no memberships), W1124 (kill stamp without a title, inlined tier crests) and W1125 (the onboarding's last screen asks how the hunter found the app; W1126 keeps it in place when the keyboard opens). [history] W1114 — 3.0.19 approved 2026-10-30 (submitted 1:45 AM PST, w1113: shadows 1 in 5, armor upgrades, relic power by boss rank, relic cards three across); 3.0.20 opened with the feed's boss rank chips, no What's New entry yet. W1107 — 3.0.18 approved and LIVE 2026-10-28 8:02 AM PST (submitted 2026-10-27 7:41 PM PST, build 602 = w1106: the four steps trios, the Rising's nine looks, the earned line in the Wardrobe, the richer-backup offer); 3.0.19 opened at approval. [history] W1103 — 3.0.17 approved 2026-10-27 (build 600, submitted 2026-10-26 6:21 PM PST: the automatic friend hunts, the earned looks, the two-tab Wardrobe); 3.0.18 opened at approval, carrying W1102 (the app offers back a richer cloud backup). [history] W1097 — 3.0.16 approved + live 2026-10-26 (build 599, the iOS 27 fix); 3.0.17 opened at approval. Marketing version (single source of truth; prep-local-build.sh feeds this to agvtool new-marketing-version). 3.0.16 = the post-3.0.15 train, opened 2026-10-23 (W1085): 3.0.15 was submitted 2026-10-22 2:55 PM PST from build 595 (w1083: the tally, the preview row, the security pass) and approved the same day, so the train closed under it. It carries W1084 (the tally leads the 3.0.15 What's New) forward. [history] 3.0.15 = the post-3.0.14 train, opened 2026-10-22 (W1080): 3.0.14 was approved and LIVE 2026-10-21 5:08 PM PST from build 591 (w1074) — the first 592 upload was refused ("train closed"), the sixth time an approval closed a train under a build. It carries W1077/W1078 (sign-out ends the session, cloud save checksum + gzip, socket token out of the URL, invite links ask first) forward. [history] 3.0.14 = the post-3.0.13 train, opened 2026-10-21 (W1074): 3.0.13 was approved and went LIVE 2026-10-20 3:50 AM PST from build 587 (w1068), so it carries W1069 (the floor 100 curve), W1070-W1073 (the ten weekly step and sleep bosses and their drops) and the real-screen screenshots and header Apple asked for (App Review 2.3.3) forward. [history] 3.0.11 = the post-3.0.10 train, opened 2026-10-05: Apple's store lookup showed 3.0.10 LIVE (released 11:35 AM PST that day, built from w1024, so it carried W1023 the 9:45 PM finish-strong reminder and nothing after). It carries forward W1025 (Myrmidon King art), W1026 (one request for every co-op hunt) and W1027 (steps 'today' = the device's day), all pushed under the 3.0.10 tag after that build was cut. [history] 3.0.10 = the post-3.0.9 train, opened 2026-10-04 when the owner passed on Apple's approval of 3.0.9 (submitted 2026-10-02 12:41 PM PST, approved 2026-10-03; carried W1002–W1022: weekly to-do planner, to-dos first in the briefing, the Monday recap, times-a-week vows, the interactive Status tab, the Jump Manual program, the flights-hunt result fix). It carries W1023 (the 9:45 PM finish-strong reminder) forward. First TWO-DIGIT patch: every version compare in the app is numeric (_updVersionNewer, the What's New compare), never a string compare. [history] 3.0.9 = the post-3.0.8 train, opened 2026-09-25 the moment Apple approved 3.0.8 (submitted 4:57 PM PST, approved the same evening; carried W989–W1001: Items overhaul, Resolved + mod view counts, the sectioned Habits tab + to-dos v2, topic edit). [history] 3.0.8 = the post-3.0.7 train, opened 2026-09-24 the moment Apple approved 3.0.7 (build 543, submitted 1:15 AM PST, approved same day; the Worldgate In-App Event was approved in the same hour). Carries forward: the three description corrections (Ranked PvP / Streak Shields / five-hunter raid = Premium) go out WITH this version, since a description only changes with a new version. [history] 3.0.7 carried W968–W987 (vows yours + glory verified, morning briefing v2, hunt results, Worldgate MVPs + weekly line + strike freeze, Community Updates + briefing line, mod preview rows, awakened:// scheme). [history] 3.0.7 = the post-3.0.6 train, opened 2026-09-20 the moment Apple approved 3.0.6 (submitted 3:14 AM PST that day, approved same day) — an approval CLOSES a train, and uploading under the approved number is refused (CFBundleShortVersionString must exceed it). This has now bitten FOUR times; the bump is done at approval, not at upload. [history] 3.0.6 carried W960–W967 (Manage Vows fix, rank-bar hairline, Worldgate kill ceremony, division-up celebration, owner preview row, 3.0.6 release notes). [history] 3.0.4 = the post-3.0.3 train, opened 2026-09-11 because Apple approved 3.0.3 (live 2026-09-09) and an approval closes a train — carries W935 (weekly-board upload fix + Apple Health asked on every onboarding path). [history] 3.0.3 = the post-3.0.2 train, opened 2026-09-07 the morning after Apple approved 3.0.2 (submitted 2026-09-06 4:41 PM PT; approval closes a train — twice-bitten lesson) — carries W917-W919b (Ledger view, Streak Shields deleted, handoff 29) forward under the new number. [history] 3.0.2 = the post-release train, opened 2026-09-04 because Apple closes a train on approval (build 493 under 3.0.1 was refused: CFBundleShortVersionString must exceed the approved 3.0.1) — carries W903 (boss-sheet hotfix) + W905 (Status is the hunter profile again). 3.0.1 "MAKE IT LAND" = the repair release (W882-W890): Wave-2 progression joins cloud sync, the activation funnel is instrumented end to end, silent Wave-2 server failures leave breadcrumbs, the altar routes to a same-day first kill, the Double Dungeon stops reporting false failures and yields when the stair is unavailable, the beat What's New used to eat is chained, and every banked free engage is visible before the tap. 3.0.0 = v3 Train V1 "Ask at the Peak" (W847 review escalation ladder + W848 haptics resurrection + capstone ceremonies) FOLDED TOGETHER WITH the never-built-separately 2.5.1 (Trains 3-5 client bits: W839 funnel emitters, W840 shield notification, W843 invite links, W845 THE HUNGER client, W846 SIWA "null"-sub fix) — 2.5.1 was never uploaded, so its content ships under the v3 banner. [history] 2.5.1 opened with Train 3 "Reach Out, Measure Everything" (W834–W839: build+funnel reporting, Monday-push version gate + 600/wk ceiling, win-back push, pact-flame-at-risk push, hunt-lost push — backend already live; client = build tag on the app-open ping + funnel emitters). [history] 2.5.0 = Trains 1+2 (W820–W833), TestFlight builds 482–485, Health-blackout saga epilogues (W829–W833) — submit build 485 for App Store review. 2.4.8 SUBMITTED 2026-08-20 build 481 (W815–W819 auth saga). 2.4.9 was never uploaded — Train 1 "Honest Rails" (W820 release-gated Monday push + retirement defusal; W821 entitlement hardening, guest telemetry, quarantine recovery, PT weekly reset, relic precache, honest LB errors) folds into 2.5.0 with Train 2 "Say What's True" (W822+ legibility sweep: honest rankings hub + floor row, All-Streaks re-host, What's New unfrozen). [history] 2.4.7 APPROVED ~2026-08-14 while owner traveled (carried W805–W814: vitals row, sleep accuracy, commitment pacts, iOS 15 floor) → 2.4.8 opened with W815 session refresh (the 90-day JWT cliff fix). [history] 2.4.6 APPROVED 2026-07-30 (carried W789–W804) → 2.4.7 opened with W805 pact-flame roster chips + W806 sims-off (real-hunter boards). [history] 2.4.5 APPROVED + RELEASED (train closed by Apple 2026-07-28, upload 90186); 2.4.6 carried W789–W795 (Pacts raid sort, guest-mode toasts, version-checked Monday banner, raid start time, Hunt History breakdowns + MVP carry bonus, ranked-PvP seal) + W796–W804 (System Notice modal, crunch sync, crunch push, anti-cheat, dual-metric damage, emotes, live solo resolve, market squeeze). [history] (2.4.4 approved + eligible for distribution 2026-07-21). 2.4.5 carries W739 security-day fixes, W740 auth hardening (session-invalidate-on-delete + SIWA nonce), W741 GEAR POWER now reflects relic upgrades + set bonuses, W742 tappable "How Gear Power works" breakdown. Prior 2.4.4 carried: W656 Founder Marker, W664–W667 Pact Flames (co-op daily-streak hub + Guild-roster reskin) + W665 server-authoritative pacts, W661 First-Awakened buff/floor determinism, W662 cleared-boss fade + push, W663 co-op UX fixes, W659/660 perf sweep. [history] 2.4.1 approved; 2.4.3 carried W527–W560 (Forged Plate, ranger evasion + Bulwark, F100 Ascension finale, TIME TO SUMMIT, Accept-All, new icon/splash)
   // Build tag — touched on every web deploy so SW byte-compare detects
   // an update even when no functional code changed (e.g. CSS-only fixes).
-  const APP_BUILD_TAG = '3.0.34-w1347';   // W1347 floor 101 a bit stronger (W1344 floor 101 was w1346, above the fork's W1345 Hume Band)
+  const APP_BUILD_TAG = '3.0.34-w1348';   // W1348 floor 102, the King Black Dragon + Dragon Slayer's flames (W1347 floor 101 a bit stronger)
   // W1192 — the relic and boss paintings are WebP now (the app was 376.9 MB, 290 MB of it these PNGs). A path saved
   // before (the drop history, a friend's card, a cloud save) still says .png: the first time one fails to load it is
   // pointed at the .webp beside it, before the image's own error handler can hide it.
@@ -12667,7 +12667,7 @@
       if (m) {
         // W1344 — a title from past the summit says the floor: "beat Floor 101 and earned the title "The King""
         let bt = null; try { bt = ARENA_TITLES.find((t) => t.kind === 'beyond' && ('"' + t.name + '"') === m[1]); } catch (_) {}
-        return { prefix: bt ? 'beat Floor ' + bt.floor + ' and earned the title ' : 'earned the title ', target: m[1], suffix: '', cls: 'arenatitle' };
+        return { prefix: bt ? 'beat Floor ' + bt.floor + ' and earned the title ' : 'earned the title ', target: m[1], suffix: '', cls: 'arenatitle', fire: !!(bt && _titleBurns(bt.id, '')) };   // W1348
       }
     }
     // ultra_rare_drop — fixed → iridescent gold (Tier 1 crown)
@@ -12755,7 +12755,7 @@
       : '';
     const labelHtml = parts
       ? (esc(parts.prefix) +
-         '<span class="guildhall-activity-target guildhall-activity-target--' + parts.cls + '">' +
+         '<span class="guildhall-activity-target guildhall-activity-target--' + parts.cls + (parts.fire ? ' ttl-fire' : '') + '">' +
            esc(parts.target) + targetCheck +
          '</span>' +
          esc(parts.suffix))
@@ -12953,7 +12953,7 @@
         // W1220 — in the folded shadows row each feat names its hunter (the name opens their card)
         // W1229 — the crown rides the name here too (W969: "next to our name … everywhere")
         (who ? '<button type="button" class="fa-who" data-board-profile="' + esc(String(ev.alias || '')) + '" style="--bc:' + _faColor(ev.rankLabel) + '">' + esc(_dn(_displayAliasLower(String(ev.alias || 'a hunter')))) + _crownFor(ev.alias) + '</button>' + (ev.eventType === 'raid_won' ? '<span class="fa-mvp">MVP</span>' : '') + ' ' : '') +
-        esc(p.prefix) + (ev.eventType === 'boss_kill' ? _bossRankChipHtml(_faBossRank(ev, p.target)) : '') + '<b class="fa-c fa-c--' + _faChipCls(p.cls) + '">' + esc(p.target) + (p.verified ? ' ✓' : '') + '</b>' + esc(p.suffix) + souls + '</span>' +
+        esc(p.prefix) + (ev.eventType === 'boss_kill' ? _bossRankChipHtml(_faBossRank(ev, p.target)) : '') + '<b class="fa-c fa-c--' + _faChipCls(p.cls) + (p.fire ? ' ttl-fire' : '') + '">' + esc(p.target) + (p.verified ? ' ✓' : '') + '</b>' + esc(p.suffix) + souls + '</span>' +
       '<span class="fa-t">' + esc(_guildhallFormatRelativeTs(ts)) + '</span>' +
       _faLikeHtml(ev) +
       // W1093 — every hunter sees what the shadow is worth: the boss id is the event key, the
@@ -13252,7 +13252,7 @@
       return '<div class="fa-ol-row' + (isNew ? ' fa-ol-row--new' : '') + '" data-fa-ev="' + esc(ev.id || '') + '">' +
         '<span class="fa-ico fa-ico--' + ic[1] + '" aria-hidden="true">' + ic[0] + '</span>' +
         '<span class="fa-ol-main">' +
-          '<span class="fa-act-txt">' + esc(p.prefix) + (ev.eventType === 'boss_kill' ? _bossRankChipHtml(_faBossRank(ev, p.target)) : '') + '<b class="fa-c fa-c--' + _faChipCls(p.cls) + '">' + esc(p.target) + (p.verified ? ' ✓' : '') + '</b>' + esc(p.suffix) + '</span>' +
+          '<span class="fa-act-txt">' + esc(p.prefix) + (ev.eventType === 'boss_kill' ? _bossRankChipHtml(_faBossRank(ev, p.target)) : '') + '<b class="fa-c fa-c--' + _faChipCls(p.cls) + (p.fire ? ' ttl-fire' : '') + '">' + esc(p.target) + (p.verified ? ' ✓' : '') + '</b>' + esc(p.suffix) + '</span>' +
           '<span class="fa-ol-who">' + esc(names) + '</span>' +
         '</span>' +
         '<span class="fa-ol-n">♥ ' + n + '</span>' +
@@ -14275,8 +14275,17 @@
   // reached only by its number, is never rated (no lives, no board, no tower post) and records its clear in
   // beyondCleared. Ascent-only: a PvP match never builds a duo (arenaStartBattle checks !m._pvp).
   const ASCENT_DUO_FLOOR = 101;
-  function _ascentClampFloor(floor) { const f = floor | 0; return f === ASCENT_DUO_FLOOR ? f : Math.min(ASCENT_FLOORS, Math.max(1, f)); }
-  function _ascentIsDuo(floor) { return (floor | 0) === ASCENT_DUO_FLOOR; }
+  const ASCENT_DRAGON_FLOOR = 102, ASCENT_TOP = 102;   // W1348 — floor 102, the King Black Dragon; ASCENT_TOP = the tower's last floor
+  function _ascentClampFloor(floor) { const f = floor | 0; return (f > ASCENT_FLOORS && f <= ASCENT_TOP) ? f : Math.min(ASCENT_FLOORS, Math.max(1, f)); }
+  // A floor past the summit: more than one foe at once (the duo engine, N slots). 101 = two claimants, 102 = three heads.
+  function _ascentIsDuo(floor) { const f = floor | 0; return f === ASCENT_DUO_FLOOR || f === ASCENT_DRAGON_FLOOR; }
+  // W1348 — floor 101 opens once the summit is cleared; every floor past it opens once the floor below is beaten.
+  function _ascentBeyondOpen(floor, st) {
+    const f = floor | 0;
+    if (!st || f <= ASCENT_FLOORS || f > ASCENT_TOP) return false;
+    if ((st.highestCleared | 0) < ASCENT_FLOORS) return false;
+    return f === ASCENT_DUO_FLOOR || (st.beyondCleared | 0) >= f - 1;
+  }
   // The pair. Each member's power = _ascentFloorPower(100) × DUO_POWER, split by its archetype. When one falls the survivor
   // is enraged (×DUO_ENRAGE_ATK attack, ×DUO_ENRAGE_EDGE edge, afflictions shed) and RISES to at least DUO_RISE × your own
   // attack, defense and edge (owner 2026-11-27 picked this over a pure power fight: power alone gave a curve that only
@@ -14312,6 +14321,52 @@
       attack: sum('attack'), defense: sum('defense'), edge: sum('edge'), power: sum('power'),
       floor: ASCENT_DUO_FLOOR, isBoss: true, isBot: true, isDuo: true, _duo: members };
   }
+
+  // ── W1348 — FLOOR 102, THE KING BLACK DRAGON (owner 2026-11-28: "a king black dragon with three heads and every attack
+  // applies burn that can't be immune because the fire is too strong"; the name and the title Dragon Slayer are his).
+  // Three heads on one body, each its own target (the duo engine with three slots): the Fang head bites hard, the Fire
+  // head makes the burn hotter, the Smoke head makes you miss. DRAGONFIRE: any head that swings sets you alight for
+  // DF_DUR turns (each swing refreshes it), and it burns every turn for DF_PCT of your health per head still standing,
+  // ×DF_FIRE while the Fire head lives. Nothing stops it: it is not a DoT the engine knows (no cleanse, no cauterize, no
+  // intake cap), and it is lit by the swing, so a guard, a parry, a dodge or a reflect still catches fire. When a head
+  // falls the others enrage (×DRAGON_ENRAGE_ATK attack, ×DRAGON_ENRAGE_EDGE edge, afflictions shed), and again at the
+  // second. The art is one picture of the whole dragon; each head's spot shows its third of it (third: 0 left … 2 right).
+  // Sim-tuned (node tools/sim-ascent.js --dragon; max relic set, best target order). Each head is measured as the whole
+  // dragon at the one-hit cliff (outPow), or every shadow would one-shot the heads. Every weapon is harder than floor 101 at
+  // every army size (TUNING below); Duskforge, which reads the badges best, gains the most from reading them here.
+  let DRAGON_POWER = 0.7, DRAGON_ENRAGE_ATK = 1.2, DRAGON_ENRAGE_EDGE = 1.2, DRAGON_RISE = 0;   // let: the sim tunes them
+  let DRAGON_SHARES = [1, 1, 1];
+  let DF_PCT = 0.0175, DF_FIRE = 1.5, DF_DUR = 2, DF_GROW = 0;   // DF_GROW: the fire grows hotter every turn (× 1 + DF_GROW × (turn − 1))
+  const ASCENT_DRAGON = [
+    { key: 'fang',  name: 'Fang Head',  arch: 'aggressor', kit: ['maul', 'gnash', 'snap', 'bellow'], third: 1,
+      rage: 'You will not leave this tower.', fall: 'Bite… the hand…' },
+    { key: 'fire',  name: 'Fire Head',  arch: 'sentinel',  kit: ['firebreath', 'inferno', 'scorch', 'kindle'], third: 0,
+      rage: 'Burn. All of you, burn.', fall: 'The fire… goes on without me.' },
+    { key: 'smoke', name: 'Smoke Head', arch: 'trickster', kit: ['smokecloud', 'ashgust', 'cinder', 'shroud'], third: 2,
+      rage: 'You cannot hit what you cannot see.', fall: 'Only smoke… after all.' },
+  ];
+  // The picture: one square of the whole dragon. cuts = where the three heads' windows meet (fractions of its width:
+  // left window = the Fire head, middle = the Fang head, right = the Smoke head); heads = each head's centre x and top y
+  // (fractions), where its badge sits. Measured off the art. Owner 2026-11-28 picked "C · Crouched to strike" of three.
+  let ASCENT_DRAGON_LOOK = { art: 'assets/arena/boss_102.webp', cuts: [0.36, 0.62], heads: { fire: [0.24, 0.37], fang: [0.48, 0.11], smoke: [0.80, 0.38] } };
+  function _dragonWin(third) { const c = ASCENT_DRAGON_LOOK.cuts, e = [0, c[0], c[1], 1], a = e[third | 0]; return [a, e[(third | 0) + 1] - a]; }
+  function _ascentDragon() {
+    const base0 = _ascentFloorPower(ASCENT_FLOORS) * DRAGON_POWER;
+    const members = ASCENT_DRAGON.map((d, i) => {
+      const a = ASCENT_ARCHETYPES[d.arch] || ASCENT_ARCHETYPES.balanced;
+      const base = base0 * (DRAGON_SHARES[i] || 1), per = base / 3;
+      const hp = ASCENT_DRAGON_LOOK.heads[d.key] || [0.5, 0.2];
+      return { name: d.name, rankLabel: 'S', archetype: a.label, archKey: d.arch, kit: d.kit.slice(), art: ASCENT_DRAGON_LOOK.art, third: d.third, win: _dragonWin(d.third), hx: hp[0], hy: hp[1], rage: d.rage, fall: d.fall, duoKey: d.key, duoIdx: i,
+        attack: per * a.atk, defense: per * a.def, edge: per * a.edge, power: base, floor: ASCENT_DRAGON_FLOOR, isBoss: true, isBot: true, isHead: true };
+    });
+    const sum = (k) => members.reduce((t, m) => t + m[k], 0);
+    members.forEach((m) => { m.outPow = sum('power'); });   // the one-hit cliff (_OUTCLASS) reads the whole dragon, never one head
+    const b = ASCENT_BOSSES[ASCENT_DRAGON_FLOOR];
+    return { name: b.name, taunt: b.taunt, rankLabel: 'S', archetype: 'Three Heads', archKey: 'balanced',   // "Melee + Magic + Ranged" wrapped the tower card
+      attack: sum('attack'), defense: sum('defense'), edge: sum('edge'), power: sum('power'), art: ASCENT_DRAGON_LOOK.art,
+      floor: ASCENT_DRAGON_FLOOR, isBoss: true, isBot: true, isDuo: true, isDragon: true, _duo: members };
+  }
+  function _ascentMulti(floor) { return (floor | 0) === ASCENT_DRAGON_FLOOR ? _ascentDragon() : _ascentDuo(); }
 
   // 10 bands of 10 floors, rank-tiered + themed.
   const ASCENT_BANDS = [
@@ -14361,6 +14416,7 @@
     90:  { name: 'The Dread Harbinger', arch: 'trickster',   taunt: 'The summit knows your name. It is not impressed.' },
     100: { name: 'The First Awakened',  arch: 'balanced',    taunt: 'I was the first to climb. No one has reached me since.' },
     101: { name: 'The Two Claimants',   arch: 'balanced',    taunt: 'One throne. Two of us. Kneel to both, or fall to both.' },   // W1344 — the pair (ASCENT_DUO); no rhythm pattern
+    102: { name: 'King Black Dragon',   arch: 'balanced',    taunt: 'Three heads. One fire. It has never gone out.' },   // W1348 — the three heads (ASCENT_DRAGON); no rhythm pattern
   };
 
   // Procedural name pool for the 90 regular floors (stable per floor via
@@ -14399,7 +14455,10 @@
      blurb: 'Climbed all 100 floors and bested the First Awakened.' }])   // W269 — the one title earned a single way, off the rating ladder
    // W1344 — owner 2026-11-16: "Let's start with The King" (floor 101's title); every floor past the summit earns its own.
    .concat([{ id: 'beyond_the_king', name: 'The King', kind: 'beyond', floor: 101, tier: 'beyond',
-     blurb: 'Beat the Two Claimants on floor 101.' }]);
+     blurb: 'Beat the Two Claimants on floor 101.' }])
+   // W1348 — owner 2026-11-28: "The title earned is dragon slayer" (floor 102).
+   .concat([{ id: 'beyond_dragon_slayer', name: 'Dragon Slayer', kind: 'beyond', floor: 102, tier: 'beyond',
+     blurb: 'Beat the King Black Dragon on floor 102.' }]);
   // Legacy id remap (W257-era equipped titles on devices). Ids whose meaning
   // survives map to their successor; retired boss-only ids simply stop
   // resolving (getEquippedArenaTitle returns null for unknown ids — no crash,
@@ -14476,14 +14535,15 @@
   }
   // W1344 — owner 2026-11-27 (Titles, the tower, the board): "Make sure all of these are updated as well". The top of the
   // tower as a hunter sees it: 100 while climbing, 101 once the summit is cleared ("100 / 101", then "101 / 101").
+  function _ascentBeyondNow() { let b = 0; try { b = getAscentState().beyondCleared | 0; } catch (_) {} return Math.min(ASCENT_TOP, Math.max(ASCENT_DUO_FLOOR, b + 1)); }   // W1348
   function ascentFloorTop(cleared) {
     let c = cleared; if (c == null) { try { c = getAscentState().highestCleared | 0; } catch (_) { c = 0; } }
-    return (c | 0) >= ASCENT_FLOORS ? ASCENT_DUO_FLOOR : ASCENT_FLOORS;
+    return (c | 0) >= ASCENT_FLOORS ? ASCENT_TOP : ASCENT_FLOORS;   // W1348 — 102 now
   }
   // W1344 — the server's best past the summit (best_beyond) comes back to a phone that lost it (a reinstall). True if healed.
   function _ascentHealBeyond(resp) {
     try {
-      const b = Math.min(ASCENT_DUO_FLOOR, Number(resp && resp.best_beyond) | 0), st = getAscentState();
+      const b = Math.min(ASCENT_TOP, Number(resp && resp.best_beyond) | 0), st = getAscentState();   // W1348 — up to 102
       if (b > ASCENT_FLOORS && (st.highestCleared | 0) >= ASCENT_FLOORS && (st.beyondCleared | 0) < b) { st.beyondCleared = b; _persistAscentState(st); return true; }
     } catch (_) {}
     return false;
@@ -14508,7 +14568,7 @@
       reclaimDate:    (typeof st.reclaimDate === 'string') ? st.reclaimDate : '',
       reclaimFloors:  Array.isArray(st.reclaimFloors) ? st.reclaimFloors.filter((n) => typeof n === 'number').slice(0, 120) : [],
       reclaimSouls:   num(st.reclaimSouls, 0),
-      beyondCleared:  Math.min(ASCENT_DUO_FLOOR, num(st.beyondCleared, 0)),   // W1344
+      beyondCleared:  Math.min(ASCENT_TOP, num(st.beyondCleared, 0)),   // W1344 · W1348 — up to 102
     };
     // keep invariants
     if (st.currentFloor <= st.highestCleared) st.currentFloor = Math.min(ASCENT_FLOORS, st.highestCleared + 1);
@@ -14680,8 +14740,8 @@
   // the ABSOLUTE floor curve (not scaled to the player) and is split
   // across roles by the archetype weights (sum 3 → total preserved).
   function _ascentOpponent(floor) {
-    const f = _ascentClampFloor(floor);   // W1344 — 101 by its number, else 1-100
-    if (_ascentIsDuo(f)) return _ascentDuo();
+    const f = _ascentClampFloor(floor);   // W1344 — 101 by its number, else 1-100 · W1348 — and 102
+    if (_ascentIsDuo(f)) return _ascentMulti(f);
     const band  = _ascentBandFor(f);
     const power = _ascentFloorPower(f);
     let name, archKey;
@@ -15128,6 +15188,22 @@
     piercingshot: { name: 'Piercing Shot', gl: 'ranged', power: 1.05, acc: 0.95, cd: 2, exe: { thr: 0.30, mult: 2.2 }, desc: 'Through the crack in the armor — brutal below 30%.' },
     rend:         { name: 'Rend',          gl: 'sword',  power: 0.9,  acc: 0.92, cd: 1, fx: { t: 'bleed', mag: 0.12, dur: 3 }, desc: 'A ragged tear that keeps bleeding.' },
     pinshot:      { name: 'Pinning Shot',  gl: 'ranged', power: 0.8,  acc: 0.9,  cd: 4, fx: { t: 'stun', dur: 1 }, desc: 'Pins the foe — they skip a turn.' },
+    // ── W1348 — the King Black Dragon's heads (floor 102 only; no weapon carries them). Each mirrors a move above, so
+    // the AI reads them as it reads those: maul≡cleave+, gnash≡rend, snap≡slash, bellow≡focus, firebreath≡searing,
+    // inferno≡immolate, scorch≡arcanebolt, kindle≡temper, ashgust≡snapshot, cinder≡quickshot, shroud≡tumble. The one
+    // new effect is the Smoke head's blind: your attacks are mag less accurate for dur turns (a curse: a cleanse sheds it).
+    maul:       { name: 'Maul',        gl: 'sword',  power: 1.6,  acc: 0.82, cd: 2, desc: 'Jaws that close like a gate.' },
+    gnash:      { name: 'Gnash',       gl: 'sword',  power: 0.9,  acc: 0.92, cd: 1, fx: { t: 'bleed', mag: 0.12, dur: 3 }, desc: 'Teeth that tear and keep tearing.' },
+    snap:       { name: 'Snap',        gl: 'sword',  power: 1.0,  acc: 0.95, cd: 0, desc: 'A quick bite.' },
+    bellow:     { name: 'Bellow',      gl: 'burst',  power: 0,    acc: 1,    cd: 2, fx: { t: 'atkUp', kind: 'focus', mag: 0.4, dur: 3 }, desc: 'A roar that shakes the tower (+40%).' },
+    firebreath: { name: 'Fire Breath', gl: 'burst',  power: 1.1,  acc: 0.9,  cd: 1, pierce: true, fx: { t: 'burn', mag: 0.10, dur: 3 }, desc: 'A long breath of fire. No guard stops it.' },
+    inferno:    { name: 'Inferno',     gl: 'burst',  power: 1.45, acc: 0.85, cd: 3, pierce: true, fx: { t: 'burn', mag: 0.10, dur: 2 }, desc: 'The whole floor burns. No guard stops it.' },
+    scorch:     { name: 'Scorch',      gl: 'burst',  power: 1.0,  acc: 0.95, cd: 0, pierce: true, desc: 'A lick of flame. No guard stops it.' },
+    kindle:     { name: 'Kindle',      gl: 'burst',  power: 0,    acc: 1,    cd: 3, fx: { t: 'atkUp', kind: 'temper', mag: 0.4, dur: 3 }, desc: 'Stokes the fire in its throat (+40%).' },
+    smokecloud: { name: 'Smoke Cloud', gl: 'magic',  power: 0.7,  acc: 0.95, cd: 2, fx: { t: 'blind', kind: 'smoke', mag: 0.25, dur: 2 }, desc: 'Choking smoke: your attacks miss more (2t).' },
+    ashgust:    { name: 'Ash Gust',    gl: 'magic',  power: 0.7,  acc: 0.99, prio: 1, cd: 1, desc: 'Always strikes first.' },
+    cinder:     { name: 'Cinder Spit', gl: 'magic',  power: 1.0,  acc: 0.95, cd: 0, desc: 'A gob of burning ash.' },
+    shroud:     { name: 'Shroud',      gl: 'magic',  power: 0,    acc: 1,    cd: 2, fx: { t: 'dodge', kind: 'evade', mag: 0.4, dur: 2 }, desc: 'Hides in its own smoke (40% dodge, 2t).' },
   };
   // Weapon id → 4 move ids (the weapon names your kit). Unknown weapon → unarmed.
   const WEAPON_MOVES = {
@@ -15192,6 +15268,7 @@
   function _arStatAtkMult(s) { let m = 1; s.mods.forEach((x) => { if (x.k === 'atk') m *= (1 + x.mag); }); return _arClamp(m, _ATK_CLAMP[0], _ATK_CLAMP[1]); }
   function _arStatTakenMult(s) { let m = 1; s.mods.forEach((x) => { if (x.k === 'def') m *= (1 + x.mag); }); return _arClamp(m, _TAKEN_CLAMP[0], _TAKEN_CLAMP[1]); }
   function _arStatDodge(s) { let d = 0; s.mods.forEach((x) => { if (x.k === 'dodge') d += x.mag; }); return Math.min(_DODGE_CAP, d); }
+  function _arStatAcc(s) { let a = 0; s.mods.forEach((x) => { if (x.k === 'acc') a += x.mag; }); return Math.max(-0.5, a); }   // W1348 — the Smoke head's blind (no duel move carries one: 0)
   // W529 — Ranger (trickster) passive evasion: edge-built hunters slip the scary
   // stuff. Scales with the INCOMING hit's power (a heavy, committed swing is easier
   // to read and roll away from) and with MISSING HP (a cornered hunter fights like a
@@ -15416,6 +15493,7 @@
       if (fx.t === 'burn' || fx.t === 'bleed') return !ctx.foeS.mods.some((x) => x.k === 'dot' && x.kind === fx.t);
       if (fx.t === 'defDown') return !ctx.foeS.mods.some((x) => x.k === 'shred' && x.kind === (fx.kind || fx.t));
       if (fx.t === 'atkDown') return !ctx.foeS.mods.some((x) => x.k === 'atk' && x.kind === (fx.kind || fx.t));
+      if (fx.t === 'blind') return !ctx.foeS.mods.some((x) => x.k === 'acc');   // W1348
       if (fx.t === 'stun') return !(ctx.foeS.stun > 0);
       return false;
     };
@@ -15536,6 +15614,7 @@
       case 'dodge': return att.S.mods.some((x) => x.k === 'dodge') ? 0 : (fx.mag || 0) * bestFoeDmg * dur2 * 0.7;
       case 'atkUp': return att.S.mods.some((x) => x.k === 'atk' && x.mag > 0) ? 0 : (fx.mag || 0) * _aiBestDamage(att, def) * dur3 * 0.8;
       case 'atkDown': return def.S.mods.some((x) => x.k === 'atk' && x.kind === (fx.kind || fx.t)) ? 0 : (fx.mag || 0) * bestFoeDmg * dur3 * 0.8;
+      case 'blind': return def.S.mods.some((x) => x.k === 'acc') ? 0 : (fx.mag || 0) * bestFoeDmg * dur2 * 0.8;   // W1348 — the Smoke head
       case 'defDown': return def.S.mods.some((x) => x.k === 'shred' && x.kind === (fx.kind || fx.t)) ? 0 : (fx.mag || 0) * _aiBestDamage(att, def) * dur3 * 0.6;
       case 'burn': case 'bleed': {
         const already = def.S.mods.some((m) => m.k === 'dot' && m.kind === fx.t);
@@ -15760,7 +15839,7 @@
       const exeM = (move.exe && remBefore / Math.max(1, maxHPd) <= move.exe.thr) ? move.exe.mult : 1;
       let total = 0, anyLanded = false, anyCrit = false, missed = 0, dodged = 0, guardUsed = false;
       for (let h = 0; h < hits; h++) {
-        const acc = Math.min(0.99, (move.acc != null ? move.acc : 1) + accBonus);
+        const acc = Math.min(0.99, (move.acc != null ? move.acc : 1) + accBonus + _arStatAcc(atkS));   // W1348 — blind
         if (sess.rng() > acc) { missed++; continue; }
         if (dodge > 0 && sess.rng() < dodge) { dodged++; continue; }
         const crit = sess.rng() < critCh;
@@ -15776,7 +15855,7 @@
       // W233 — the anti-one-shot cap binds on the MOVE TOTAL (multi-hit moves
       // could previously stack to capFrac × hits). Values unchanged. W1067 — except against a
       // fighter outclassed _OUTCLASS times over: no cap, so the power gap alone decides the hit.
-      const outclass = side === 'p' ? _arPow(sess.m.player) >= _OUTCLASS * _arPow(sess.m.bot)
+      const outclass = side === 'p' ? _arPow(sess.m.player) >= _OUTCLASS * (sess.m.bot.outPow || _arPow(sess.m.bot))   // W1348 — a head is measured as the whole dragon
                                     : _arPow(sess.m.bot) >= _OUTCLASS * _arPow(sess.m.player);
       if (anyLanded && !outclass) total = Math.min(total, (anyCrit ? _MAX_HIT_FRAC_CRIT : _MAX_HIT_FRAC) * maxHPd);
       if (anyLanded) {
@@ -15811,7 +15890,7 @@
     const rc = sess._counter;
     if (rc && side === 'b' && rc.kind === 'reflect' && !rc.done && _CURSE_FX.test(fx.t) && (rc.fi == null || rc.fi === sess._fi)) {   // W1344
       rc.done = true; rc.read = true; sess._counterDone = 'reflect';
-      events.push({ side: 'p', t: 'counter', kind: 'reflect', read: true, text: 'Reflected — the ' + (fx.t === 'defDown' ? 'shred' : fx.t === 'atkDown' ? 'curse' : fx.t) + ' turns back.' });
+      events.push({ side: 'p', t: 'counter', kind: 'reflect', read: true, text: 'Reflected — the ' + (fx.t === 'defDown' ? 'shred' : fx.t === 'atkDown' ? 'curse' : fx.t === 'blind' ? 'smoke' : fx.t) + ' turns back.' });
       _arApplyFx(sess, 'p', fx.mag != null ? Object.assign({}, fx, { mag: fx.mag * REFLECT_MAG }) : fx, events, defName, atkName);
       return;
     }
@@ -15845,6 +15924,7 @@
         break;
       case 'atkUp': _arPushMod(selfS, 'atk', fx.kind || fx.t, fx.mag, fx.dur); events.push({ side, t: 'fx', atkUp: true, text: atkName + ' — attack up.' }); break;
       case 'atkDown': _arPushMod(foeS, 'atk', fx.kind || fx.t, -fx.mag, fx.dur); events.push({ side, t: 'fx', text: defName + ' — attack down.' }); break;
+      case 'blind': _arPushMod(foeS, 'acc', fx.kind || fx.t, -fx.mag, fx.dur); events.push({ side, t: 'fx', text: defName + ' — lost in the smoke.' }); break;   // W1348
       case 'defUp': if (noStance) { events.push({ side, t: 'fx', text: atkName + ' — readied.' }); break; }   // W1139 — the stance was spent on the read
         _arPushMod(selfS, 'def', fx.kind || fx.t, fx.mag, fx.dur); events.push({ side, t: 'fx', text: atkName + ' braces.' }); break;   // Brace (mag negative → take less)
       case 'defDown': _arPushMod(foeS, 'shred', fx.kind || fx.t, fx.mag, fx.dur); events.push({ side, t: 'fx', text: defName + ' — armor shredded.' }); break;   // pierces the divisor
@@ -16338,7 +16418,7 @@
     const pw = (mv.power || 0) * (mv.hits || 1), fx = mv.fx;
     if (pw <= 0) return fx && fx.t === 'atkUp' ? 'CHARGE' : 'GUARD';
     if ((mv.exe && pFrac <= mv.exe.thr) || pw > 1.5) return 'HEAVY';
-    if (fx && /^(atkDown|defDown|stun|burn|bleed)$/.test(fx.t)) return 'CURSE';
+    if (fx && /^(atkDown|defDown|stun|burn|bleed|blind)$/.test(fx.t)) return 'CURSE';   // W1348 — blind
     return 'STRIKE';
   }
   // The intent badge for the committed move (display only): STUNNED while the foe will skip its action.
@@ -16361,7 +16441,7 @@
   //    always true. The boss breaks at half HP (its phase-2 cycle); a stunned boss skips its beat and the cycle moves on.
   let READ_SURGE = 0.15, SURGE_GUARD_COST = 0.40, RIPOSTE_POWER = 0.8;   // let: the balance sim tunes them through Arena._battle.tune
   let PARRY_RESETS_CD = false, REFLECT_MAG = 1.0;   // dials the sim can flip (both measured, both kept off / 1.0)
-  const _CURSE_FX = /^(atkDown|defDown|stun|burn|bleed)$/;
+  const _CURSE_FX = /^(atkDown|defDown|stun|burn|bleed|blind)$/;   // W1348 — blind
   const ASCENT_BOSS_PATTERNS = {
     10: { p1: ['slash', 'slash', 'cleave'],                          p2: ['focus', 'slash', 'cleave', 'sunder'],            line: 'Two strikes, then the big swing.' },
     20: { p1: ['arcanebolt', 'dispel', 'arcanebolt', 'siphon'],      p2: ['manaward', 'arcanebolt', 'arcanebolt', 'siphon'], line: 'A bolt, a shrug, a bolt, then it feeds.' },
@@ -16557,7 +16637,8 @@
     sess._duo = true;
     sess._duoBot = m.bot;            // the pair (matchup + result screens)
     sess._pattern = null;
-    sess.foes = [{ dead: false, enraged: false }, _arFoeSlot(sess, members[1])];
+    sess._dragon = !!m.bot.isDragon;   // W1348 — floor 102: three heads and the dragonfire
+    sess.foes = [{ dead: false, enraged: false }].concat(members.slice(1).map((b) => _arFoeSlot(sess, b)));
     sess._fi = 0;
     _arDuoStore(sess);
     sess.target = 0;
@@ -16594,7 +16675,7 @@
   function _arDuoReadCounter(sess, pMove, moves) {
     const RANK = { HEAVY: 3, CURSE: 2, CHARGE: 1 };
     let best = null;
-    [sess.target, 1 - sess.target].forEach((i) => {
+    [sess.target].concat(sess.foes.map((s, k) => k).filter((k) => k !== sess.target)).forEach((i) => {   // W1348 — N monsters
       if (!moves[i] || sess.foes[i].dead) return;
       _arDuoLoad(sess, i);
       const c = _arReadCounter(sess, pMove, moves[i]);
@@ -16609,30 +16690,31 @@
     const i = sess._fi, sl = sess.foes[i];
     if (!sl.dead) {
       sl.dead = true; sess.bHP = 0; sess._bNext = null;
-      const j = 1 - i, other = sess.foes[j], last = !!other.dead;
+      const live = sess.foes.map((s, k) => k).filter((k) => k !== i && !sess.foes[k].dead), last = !live.length;   // W1348 — N monsters
       if (events) events.push({ side: 'b', t: 'fall', fi: i, name: sess.m.bot.name, line: sess.m.bot.fall || '', last, text: esc(sess.m.bot.name) + ' falls.' });   // line: its last words
-      if (!last) { _arDuoEnrage(sess, j, events); if (sess.target === i) sess.target = j; }
+      if (!last) { live.forEach((j, n) => _arDuoEnrage(sess, j, events, n > 0)); if (sess.target === i) sess.target = live[0]; }   // one ENRAGED beat (the rest are quiet)
     }
     return sess.foes.some((s) => !s.dead);
   }
   // The survivor rises: attack and edge up, afflictions shed (its committed move stands, so its badge never lies).
-  function _arDuoEnrage(sess, j, events) {
+  function _arDuoEnrage(sess, j, events, quiet) {
     const sl = sess.foes[j];
-    if (!sl || sl.dead || sl.enraged || j === sess._fi) return;
+    if (!sl || sl.dead || (sl.enraged && !sess._dragon) || j === sess._fi) return;   // W1348 — a head enrages at every fall
     const b = Object.assign({}, sl.bot);
-    b.attack *= DUO_ENRAGE_ATK; b.edge *= DUO_ENRAGE_EDGE;
-    if (DUO_RISE > 0 && sess.m && sess.m.player) {
+    const RA = sess._dragon ? DRAGON_ENRAGE_ATK : DUO_ENRAGE_ATK, RE = sess._dragon ? DRAGON_ENRAGE_EDGE : DUO_ENRAGE_EDGE, RISE = sess._dragon ? DRAGON_RISE : DUO_RISE;
+    b.attack *= RA; b.edge *= RE;
+    if (RISE > 0 && sess.m && sess.m.player) {
       const P = sess.m.player;
-      b.attack = Math.max(b.attack, DUO_RISE * (P.attack || 0)); b.defense = Math.max(b.defense, DUO_RISE * (P.defense || 0)); b.edge = Math.max(b.edge, DUO_RISE * (P.edge || 0));
+      b.attack = Math.max(b.attack, RISE * (P.attack || 0)); b.defense = Math.max(b.defense, RISE * (P.defense || 0)); b.edge = Math.max(b.edge, RISE * (P.edge || 0));
     }
     b.power = b.attack + b.defense + b.edge;
     sl.bot = b;
     sl.bCrit = _arenaSideOdds(b).crit; sl.bAccB = _arAccBonusOf(b);
     sl.bS.mods = sl.bS.mods.filter((x) => !(x.k === 'dot' || x.k === 'shred' || x.mag < 0)); sl.bS.stun = 0;
     sl.bS.enraged = true;
-    if (DUO_ENRAGE_HEAL > 0) sl.bHP = Math.min(sl.bMax, sl.bHP + DUO_ENRAGE_HEAL * sl.bMax);
-    sl.enraged = true;
-    if (events) events.push({ side: 'b', t: 'enrage', fi: j, name: b.name, line: b.rage || '', bHP: sl.bHP, bMax: sl.bMax, text: esc(b.name) + ' is enraged.' });
+    if (DUO_ENRAGE_HEAL > 0 && !sess._dragon) sl.bHP = Math.min(sl.bMax, sl.bHP + DUO_ENRAGE_HEAL * sl.bMax);
+    sl.enraged = true; sl.rage = (sl.rage | 0) + 1;
+    if (events) events.push({ side: 'b', t: 'enrage', fi: j, name: b.name, line: b.rage || '', bHP: sl.bHP, bMax: sl.bMax, quiet: !!quiet, text: esc(b.name) + ' is enraged.' });
   }
   // One duo turn, step for step with arenaTakeTurn (whose 1v1 path is untouched).
   function _arDuoTurn(sess, pMove, ultUsed, surgeGuard) {
@@ -16684,14 +16766,19 @@
       for (let k = n0; k < events.length; k++) if (events[k].fi == null) events[k].fi = fi;
     };
     const seq = first.map((i) => ['b', i]).concat([['p', -1]], later.map((i) => ['b', i]));
+    let dfLit = false;   // W1348 — a head swung this turn (the dragonfire)
     for (const step of seq) {
       if (sess.done) break;
       if (step[0] === 'b') {
         if (sess.foes[step[1]].dead) continue;
-        run(step[1], () => _arExecMove(sess, 'b', moves[step[1]], events));
+        run(step[1], () => {
+          const swings = sess._dragon && !(sess.bS.stun > 0) && (moves[step[1]].power || 0) > 0;
+          _arExecMove(sess, 'b', moves[step[1]], events);
+          if (swings && !dfLit) { dfLit = true; _arDragonfireLight(sess, events); }
+        });
       } else {
-        if (sess.foes[sess.target].dead) sess.target = 1 - sess.target;
-        if (sess.foes[sess.target].dead) continue;
+        if (sess.foes[sess.target].dead) sess.target = _arDuoFirstLive(sess);
+        if (sess.target < 0 || sess.foes[sess.target].dead) continue;
         run(sess.target, () => _arExecMove(sess, 'p', pMove, events));
       }
     }
@@ -16714,17 +16801,18 @@
       if (PARRY_RESETS_CD && counter && counter.fi === i && sess._counterDone && sess._counterDone !== 'interrupt') return;
       _arDuoSlot(sess, i).bcd[mv.id] = mv.cd + 1;
     });
+    if (!sess.done && sess._dragon) _arDragonfireTick(sess, events);   // W1348 — before the end of turn counts its turns down
     if (!sess.done) {
-      const live = [0, 1].filter((i) => !sess.foes[i].dead);
+      const live = sess.foes.map((s, k) => k).filter((i) => !sess.foes[i].dead);   // W1348 — N monsters
       if (live.length) run(live[0], () => _arEndTurn(sess, events));
-      if (!sess.done && live.length > 1 && !sess.foes[live[1]].dead) run(live[1], () => _arEndTurn(sess, events, 'b'));
+      for (let k = 1; k < live.length; k++) { if (!sess.done && !sess.foes[live[k]].dead) run(live[k], () => _arEndTurn(sess, events, 'b')); }
     }
     if (!sess._pvp) {
       for (let i = events.length - 1; i >= 0; i--) {
         const e = events[i];
         if (e.side !== 'b' || (e.t !== 'hit' && e.t !== 'dot')) continue;
         const dotKind = e.t === 'dot' ? ((/from (\w+)\./.exec(e.text || '') || [])[1] || 'burn') : '';
-        const mv = moves[e.fi] || moves[0] || moves[1];
+        const mv = moves[e.fi] || moves.find(Boolean);   // W1348 — N monsters
         sess._lastFoeHit = e.t === 'dot'
           ? { name: dotKind.charAt(0).toUpperCase() + dotKind.slice(1), word: 'CURSE', dmg: e.dmg || 0, turn: sess.turn }
           : { name: mv ? mv.name : 'a blow', word: _arMoveWord(mv, 1), dmg: e.dmg || 0, turn: sess.turn };
@@ -16749,12 +16837,36 @@
       sess.done = true;
     }
     if (!sess.done) {
-      if (sess.foes[sess.target].dead) sess.target = 1 - sess.target;
+      if (sess.foes[sess.target].dead) sess.target = _arDuoFirstLive(sess);
       _arDuoPrime(sess);
     }
     _arDuoLoad(sess, sess.target);
     sess.log = events;
     return events;
+  }
+  function _arDuoFirstLive(sess) { for (let k = 0; k < sess.foes.length; k++) if (!sess.foes[k].dead) return k; return -1; }
+  // W1348 — DRAGONFIRE (floor 102). A mod on you that no cleanse strips (k 'dfire', mag > 0) and no cauterize stops (it
+  // never passes _arApplyFx); lit by any head's swing, landed or not. The end of turn counts it down like any mod.
+  function _arDragonfireLight(sess, events) {
+    const ex = sess.pS.mods.find((x) => x.k === 'dfire');
+    if (ex) { ex.dur = Math.max(ex.dur, DF_DUR); return; }
+    sess.pS.mods.push({ k: 'dfire', kind: 'dragonfire', mag: 1, dur: DF_DUR });
+    if (events) events.push({ side: 'b', t: 'fx', df: true, text: 'You catch dragonfire. Nothing puts it out.' });
+  }
+  function _arDragonfireHeat(sess) {
+    let heads = 0, fire = false;
+    sess.foes.forEach((s, k) => { if (s.dead) return; heads++; const b = (k === sess._fi) ? sess.m.bot : s.bot; if (b && b.duoKey === 'fire') fire = true; });
+    return { heads, fire, pct: DF_PCT * heads * (fire ? DF_FIRE : 1) * (1 + DF_GROW * Math.max(0, (sess.turn | 0) - 1)) };
+  }
+  function _arDragonfireTick(sess, events) {
+    if (!sess.pS.mods.some((x) => x.k === 'dfire') || sess.pHP <= 0) return;
+    const h = _arDragonfireHeat(sess);
+    if (!h.heads) return;
+    const dmg = Math.max(1, Math.round(sess.pMax * h.pct)), before = sess.pHP;
+    sess.pHP = Math.max(0, sess.pHP - dmg); sess.untouched = false;
+    sess.dmgDealt.b += Math.min(dmg, before);
+    events.push({ side: 'b', t: 'dot', df: true, fi: sess.target, dmg, text: 'You take ' + dmg + ' from dragonfire.' });
+    if (sess.pHP <= 0) { sess.done = true; sess.won = false; }
   }
   // Both monsters' HP summed (the timeout rule, the result screen, the sim).
   function _arDuoHP(sess) {
@@ -16802,8 +16914,9 @@
       // keeps clear-once, and the handler swallows the violation by design.
       if (won) { try { _towerOnFloorCleared(m.floor); } catch (_) {} }   // W870 plant/avenge, W893 any win
       if (!won) { try { _towerOnRunEnded(m.floor); } catch (_) {} }   // W870 — kneel here
-    } else if (won && !m.test && _ascentIsDuo(m.floor) && (st.highestCleared | 0) >= ASCENT_FLOORS && (st.beyondCleared | 0) < m.floor) {
+    } else if (won && !m.test && _ascentIsDuo(m.floor) && _ascentBeyondOpen(m.floor, st) && (st.beyondCleared | 0) < m.floor) {
       // W1344 — the first clear of floor 101: never rated (no lives, board or tower post), recorded in beyondCleared
+      // W1348 — and of floor 102, once 101 is beaten
       st.beyondCleared = m.floor; floorCleared = m.floor; bossCleared = ASCENT_BOSSES[m.floor]; beyondFirst = true;
     } else if (won && !m.test && m.floor <= st.highestCleared) {   // W1061 — no Reclaim in a test build
       // W439 — Reclaim the Floor: the first won re-fight of a CLEARED floor TODAY pays a small
@@ -16839,8 +16952,8 @@
   function ascentFloorInfo(floor) {
     const st = getAscentState();
     const f  = _ascentClampFloor(floor);   // W1344 — 101 by its number
-    if (_ascentIsDuo(f)) return { floor: f, band: _ascentBandFor(f), isBoss: true, isDuo: true, opponent: _ascentOpponent(f),
-      cleared: (st.beyondCleared | 0) >= f, current: false, locked: (st.highestCleared | 0) < ASCENT_FLOORS };
+    if (_ascentIsDuo(f)) return { floor: f, band: _ascentBandFor(f), isBoss: true, isDuo: true, isDragon: f === ASCENT_DRAGON_FLOOR, opponent: _ascentOpponent(f),
+      cleared: (st.beyondCleared | 0) >= f, current: false, locked: !_ascentBeyondOpen(f, st) };   // W1348 — 102 opens once 101 is beaten
     return {
       floor: f, band: _ascentBandFor(f), isBoss: _ascentIsBoss(f),
       opponent: _ascentOpponent(f),
@@ -17429,6 +17542,40 @@
         const pv76 = arenaStartBattle({ floor: 101, advances: false, _pvp: true, player: DY(), bot: _ascentDuo() }, 309);
         ok('T76 floors 1-100 keep one foe; 105 clamps to 100; a duel never builds a duo', !_ascentOpponent(100)._duo && _ascentOpponent(105).floor === 100 &&
           !!_ascentOpponent(101)._duo && !pv76._duo && _ascentIsBoss(101) && !_ascentIsBoss(99));
+        // ── W1348 — floor 102, the King Black Dragon ──
+        const KD = (sd) => arenaStartBattle({ floor: 102, advances: false, player: DY(), bot: _ascentDragon() }, sd);
+        const k77 = KD(311); _arPrimeIntent(k77);
+        ok('T77 dragon start: three heads, target 0, three intents, Apex, no rhythm', k77._duo && k77._dragon && k77.foes.length === 3 && k77.target === 0 &&
+          !k77._pattern && k77.aiTier === 5 && [0, 1, 2].every((i) => !!_arDuoSlot(k77, i)._bNext) &&
+          k77.foes.map((s) => s.bot.duoKey).join() === 'fang,fire,smoke' && k77.foes.every((s) => s.bot.outPow > s.bot.power * 2.9));
+        const k78 = KD(312); k78.pMoves = [lib('slash'), lib('guard')];
+        [0, 1, 2].forEach((i) => { _arDuoLoad(k78, i); k78._bNext = lib('snap'); }); _arDuoLoad(k78, 0);
+        const ev78 = arenaTakeTurn(k78, 'slash') || [];
+        ok('T78 dragon: all three heads act; a swing lights the dragonfire', [0, 1, 2].every((i) => ev78.some((e) => e.side === 'b' && e.fi === i)) &&
+          k78.pS.mods.some((x) => x.k === 'dfire') && ev78.some((e) => e.df && e.t === 'dot'));
+        const k79 = KD(313); k79.pMoves = [lib('refuse'), lib('slash')];
+        _arDragonfireLight(k79, null); k79.pS.mods.push({ k: 'dot', kind: 'burn', mag: 0.1, dur: 3, src: 'b' });
+        [0, 1, 2].forEach((i) => { _arDuoLoad(k79, i); k79._bNext = lib('shroud'); }); _arDuoLoad(k79, 0);
+        const p79 = k79.pHP, ev79 = arenaTakeTurn(k79, 'refuse') || [];
+        const df79 = ev79.filter((e) => e.df && e.t === 'dot');
+        ok('T79 dragonfire: a cleanse sheds the burn but not the fire; cauterized, it still burns', !k79.pS.mods.some((x) => x.k === 'dot') &&
+          k79.pS.mods.some((x) => x.k === 'dotImmune') && df79.length === 1 && df79[0].dmg === Math.max(1, Math.round(k79.pMax * DF_PCT * 3 * DF_FIRE)) && k79.pHP === p79 - df79[0].dmg);
+        const k80 = KD(314); _arDuoLoad(k80, 1); k80.bHP = 0; const ev80 = []; const c80 = _arDuoFoeFell(k80, ev80); _arDuoLoad(k80, 0);
+        const h80 = _arDragonfireHeat(k80);
+        ok('T80 dragon: a head falls, the other two enrage (one beat), the fire cools', c80 && k80.foes[0].enraged && k80.foes[2].enraged &&
+          ev80.filter((e) => e.t === 'enrage').length === 2 && ev80.filter((e) => e.t === 'enrage' && !e.quiet).length === 1 && h80.heads === 2 && !h80.fire);
+        _arDuoLoad(k80, 2); k80.bHP = 0; const c80b = _arDuoFoeFell(k80, ev80); _arDuoLoad(k80, 0);
+        ok('T81 dragon: the second fall enrages the last head again; all three down is the win', c80b && (k80.foes[0].rage | 0) === 2 && k80.target === 0 &&
+          (k80.bHP = 0, _arDuoFoeFell(k80, ev80) === false));
+        const k82 = KD(315); k82.pMoves = [lib('slash')]; _arDuoLoad(k82, 2); k82._bNext = lib('smokecloud'); _arDuoLoad(k82, 0);
+        k82.pS.mods.push({ k: 'acc', kind: 'smoke', mag: -0.25, dur: 2 });
+        ok('T82 the Smoke head blinds: a curse badge, minus accuracy, shed by a cleanse', _arMoveWord(lib('smokecloud'), 1) === 'CURSE' && _arStatAcc(k82.pS) === -0.25 &&
+          (_arApplyFx(k82, 'p', { t: 'guardCleanse' }, [], 'You', 'It'), !k82.pS.mods.some((x) => x.k === 'acc')));
+        const st83 = { highestCleared: 100, beyondCleared: 100 };
+        ok('T83 102 opens once 101 is beaten; 103 clamps to 100; a duel never builds the dragon', _ascentBeyondOpen(101, st83) && !_ascentBeyondOpen(102, st83) &&
+          _ascentBeyondOpen(102, { highestCleared: 100, beyondCleared: 101 }) && !_ascentBeyondOpen(102, { highestCleared: 99, beyondCleared: 101 }) &&
+          _ascentOpponent(103).floor === 100 && !!_ascentOpponent(102).isDragon &&
+          !arenaStartBattle({ floor: 102, advances: false, _pvp: true, player: DY(), bot: _ascentDragon() }, 316)._duo);
       }
     } catch (e) {
       checks.push({ name: 'EXCEPTION: ' + (e && e.message), pass: false });
@@ -17535,10 +17682,11 @@
         const policy = opts.policy || 'reader';
         if (sess._duo) {   // W1344 — pick a target first ('smart' default: the monster you can finish soonest)
           _arPrimeIntent(sess);
-          const live = [0, 1].filter((i) => !sess.foes[i].dead);
+          const live = sess.foes.map((s, k) => k).filter((i) => !sess.foes[i].dead);   // W1348 — N monsters
           const how = opts.duoTarget || 'threat';   // the default player hits the harder hitter first
           let pick = sess.target;
-          if (how === 'back') pick = live.indexOf(1) !== -1 ? 1 : live[0];   // the back monster first
+          if (Array.isArray(how)) pick = how.find((i) => live.indexOf(i) !== -1);   // W1348 — a fixed order (the dragon's heads)
+          else if (how === 'back') pick = live.indexOf(1) !== -1 ? 1 : live[0];   // the back monster first
           else if (how !== 'first' && live.length > 1) {
             const score = (i) => {
               const sl = _arDuoSlot(sess, i), b = sl.bot;
@@ -17552,7 +17700,7 @@
         }
         if (policy !== 'legacy') {
           _arPrimeIntent(sess);
-          const words = sess._duo ? [0, 1].map((i) => _arIntentWordAt(sess, i)) : [_arIntentWord(sess)];   // W1344 — the reader reads both badges
+          const words = sess._duo ? sess.foes.map((s, i) => _arIntentWordAt(sess, i)) : [_arIntentWord(sess)];   // W1344 — the reader reads both badges · W1348 — every badge
           const word = _arIntentWord(sess), has = (w) => words.indexOf(w) !== -1, one = true;   // one: kept for a future fogged badge
           const fam = _arMoveFamily, off = (fn) => sess.pMoves.find((x) => !(sess.cd[x.id] > 0) && fn(x)) || null;
           const stunned = sess.pS.stun > 0, sg = sess._surge || 0;
@@ -17636,13 +17784,19 @@
                          ults: () => ASCENT_ULTIMATES, ultOrder: () => ULT_ORDER.slice(), ultUnlocked: ultUnlocked, ultEquipped: getEquippedUltimate, ultEquip: setEquippedUltimate, ultsLive: ultsLive,   // W1168
                          counter: _arReadCounter, rail: _arBossRail, family: _arMoveFamily, patterns: () => ASCENT_BOSS_PATTERNS,   // W1139
                          target: arenaSetTarget, intentWordAt: _arIntentWordAt, duo: () => ({ DUO_POWER, DUO_ENRAGE_ATK, DUO_ENRAGE_EDGE, DUO_ENRAGE_HEAL, DUO_SURGE_TAKEN }),   // W1344
+                         dragon: () => ({ DRAGON_POWER, DRAGON_ENRAGE_ATK, DRAGON_ENRAGE_EDGE, DRAGON_RISE, DRAGON_SHARES: DRAGON_SHARES.slice(), DF_PCT, DF_FIRE, DF_DUR, DF_GROW }),   // W1348
+                         dragonfireHeat: _arDragonfireHeat,
                          consts: () => ({ READ_SURGE, SURGE_GUARD_COST, RIPOSTE_POWER, PARRY_RESETS_CD, REFLECT_MAG }),
                          tune: (o) => { o = o || {}; if (o.READ_SURGE != null) READ_SURGE = o.READ_SURGE; if (o.SURGE_GUARD_COST != null) SURGE_GUARD_COST = o.SURGE_GUARD_COST; if (o.RIPOSTE_POWER != null) RIPOSTE_POWER = o.RIPOSTE_POWER; if (o.PARRY_RESETS_CD != null) PARRY_RESETS_CD = o.PARRY_RESETS_CD; if (o.REFLECT_MAG != null) REFLECT_MAG = o.REFLECT_MAG;
                            if (o.DUO_POWER != null) DUO_POWER = o.DUO_POWER; if (o.DUO_ENRAGE_ATK != null) DUO_ENRAGE_ATK = o.DUO_ENRAGE_ATK; if (o.DUO_ENRAGE_EDGE != null) DUO_ENRAGE_EDGE = o.DUO_ENRAGE_EDGE;
                            if (o.DUO_ENRAGE_HEAL != null) DUO_ENRAGE_HEAL = o.DUO_ENRAGE_HEAL; if (o.DUO_SURGE_TAKEN != null) DUO_SURGE_TAKEN = o.DUO_SURGE_TAKEN; if (o.DUO_SHARES) DUO_SHARES = o.DUO_SHARES.slice(); if (o.DUO_RISE != null) DUO_RISE = o.DUO_RISE;
-                           if (o.DUO_KITS) o.DUO_KITS.forEach((k, i) => { if (k && ASCENT_DUO[i]) ASCENT_DUO[i].kit = k.slice(); }); if (o.DUO_ARCHS) o.DUO_ARCHS.forEach((a, i) => { if (a && ASCENT_DUO[i]) ASCENT_DUO[i].arch = a; }); },   // dev-only: the balance sim's dials (W1344: the duo's)
+                           if (o.DUO_KITS) o.DUO_KITS.forEach((k, i) => { if (k && ASCENT_DUO[i]) ASCENT_DUO[i].kit = k.slice(); }); if (o.DUO_ARCHS) o.DUO_ARCHS.forEach((a, i) => { if (a && ASCENT_DUO[i]) ASCENT_DUO[i].arch = a; });
+                           if (o.DRAGON_POWER != null) DRAGON_POWER = o.DRAGON_POWER; if (o.DRAGON_ENRAGE_ATK != null) DRAGON_ENRAGE_ATK = o.DRAGON_ENRAGE_ATK; if (o.DRAGON_ENRAGE_EDGE != null) DRAGON_ENRAGE_EDGE = o.DRAGON_ENRAGE_EDGE; if (o.DRAGON_RISE != null) DRAGON_RISE = o.DRAGON_RISE;
+                           if (o.DRAGON_SHARES) DRAGON_SHARES = o.DRAGON_SHARES.slice(); if (o.DF_PCT != null) DF_PCT = o.DF_PCT; if (o.DF_FIRE != null) DF_FIRE = o.DF_FIRE; if (o.DF_DUR != null) DF_DUR = o.DF_DUR; if (o.DF_GROW != null) DF_GROW = o.DF_GROW;
+                           if (o.DRAGON_LOOK) ASCENT_DRAGON_LOOK = o.DRAGON_LOOK;
+                           if (o.DRAGON_KITS) o.DRAGON_KITS.forEach((k, i) => { if (k && ASCENT_DRAGON[i]) ASCENT_DRAGON[i].kit = k.slice(); }); if (o.DRAGON_ARCHS) o.DRAGON_ARCHS.forEach((a, i) => { if (a && ASCENT_DRAGON[i]) ASCENT_DRAGON[i].arch = a; }); },   // dev-only: the balance sim's dials (W1344: the duo's · W1348: the dragon's)
                          lib: (id) => (ARENA_MOVE_LIB[id] ? Object.assign({ id }, ARENA_MOVE_LIB[id]) : null) },
-      _live:           { sess: () => _arSess, paint: () => { try { const s = _arSess; if (s && s._duo) { [1 - s.target, s.target].forEach((i) => { _pkbBindFoe(i); _pkbHPm.b = s.bHP; _pkbSetHP('b', s.bHP, false); _pkbChips('b'); const sp = _pkbEl('pkb-spot-b'), pl = _pkbEl('pkb-plate-b'); [sp, pl].forEach((el) => { if (el) { el.classList.toggle('ko', !!s.foes[i].dead); el.classList.toggle('enraged', !!s.foes[i].enraged); } }); }); _pkbHPm.p = s.pHP; _pkbSetHP('p', s.pHP, false); _pkbTargetPaint(); _pkbIntentPaint(); } else if (s) { _pkbHPm = { p: s.pHP, b: s.bHP }; _pkbSetHP('p', s.pHP, false); _pkbSetHP('b', s.bHP, false); } _pkbHudPaint(); _pkbRefreshMoves(); } catch (_) {} } },   // W1344 — both monsters   // W1135 debug: the open fight (paint = resync the screen to the session)
+      _live:           { sess: () => _arSess, paint: () => { try { const s = _arSess; if (s && s._duo) { s.foes.map((x, k) => k).filter((k) => k !== s.target).concat([s.target]).forEach((i) => { _pkbBindFoe(i); _pkbHPm.b = s.bHP; _pkbSetHP('b', s.bHP, false); _pkbChips('b'); const sp = _pkbEl('pkb-spot-b'), pl = _pkbEl('pkb-plate-b'); [sp, pl].forEach((el) => { if (el) { el.classList.toggle('ko', !!s.foes[i].dead); el.classList.toggle('enraged', !!s.foes[i].enraged); } }); }); _pkbHPm.p = s.pHP; _pkbSetHP('p', s.pHP, false); _pkbTargetPaint(); _pkbIntentPaint(); } else if (s) { _pkbHPm = { p: s.pHP, b: s.bHP }; _pkbSetHP('p', s.pHP, false); _pkbSetHP('b', s.bHP, false); } _pkbHudPaint(); _pkbRefreshMoves(); } catch (_) {} } },   // W1344 — both monsters   // W1135 debug: the open fight (paint = resync the screen to the session)
     };
   } catch (_) {}
 
@@ -17676,6 +17830,8 @@
   // (No art ships in W215 — silhouettes remain until files + sw.js precache land.)
   function _arFoeArt(foe, big) {
     const cls = 'ar-foe-art' + (big ? ' big' : '');
+    if (foe && foe.isDragon) return '<img src="' + esc(foe.art) + '" alt="" class="' + cls + ' dragon" onerror="window.__arFoeArtFail(this)">';   // W1348 — the whole dragon
+    if (foe && foe.isHead) return '<span class="ar-head" style="background-image:url(\'' + esc(foe.art) + '\');--a:' + foe.win[0] + ';--w:' + foe.win[1] + '"></span>';   // W1348 — its window of the dragon
     if (foe && foe._duo) return '<span class="ar-foe-duo">' + foe._duo.map((m) => _arFoeArt(m, big)).join('') + '</span>';   // W1344 — both claimants
     if (foe && foe.art) return '<img src="' + esc(foe.art) + '" alt="" class="' + cls + '" onerror="window.__arFoeArtFail(this)">';
     if (foe && foe.isBoss && foe.floor === 100) {
@@ -17708,7 +17864,7 @@
   };
   function _arBody() { return document.getElementById('arena-body'); }
   function _arSet(html) { const b = _arBody(); if (b) { b.classList.remove('ar-body--mx'); b.innerHTML = html; } }   // W1058 — the Matchup re-adds its own padding
-  function _arBodyMode(tower) { const b = _arBody(); if (b) b.classList.toggle('ar-body--bleed', !!tower); }
+  function _arBodyMode(tower) { const b = _arBody(); if (b) { b.classList.toggle('ar-body--bleed', !!tower); b.classList.remove('ar-body--clip'); } }   // W1348 — --clip: the Titles view's own
   function _arD(n) { return Math.round((Number(n) || 0) * _ASC_DISP); }
   function _arFoeSil() {
     return '<svg viewBox="0 0 64 86" fill="none" aria-hidden="true">' +
@@ -17763,10 +17919,10 @@
   function _scClimbStripHtml() {
     let floor = 1, done = 0;
     let beyond = false;
-    try { const stx = getAscentState(); floor = Math.max(1, Math.min(100, stx.currentFloor || 1)); done = stx.highestCleared || 0; beyond = (stx.beyondCleared | 0) > ASCENT_FLOORS; } catch (_) {}
+    try { const stx = getAscentState(); floor = Math.max(1, Math.min(100, stx.currentFloor || 1)); done = stx.highestCleared || 0; beyond = (stx.beyondCleared | 0) >= ASCENT_TOP; } catch (_) {}   // W1348 — "The Tower is Yours" once the top (102) is beaten
     const finished = done >= 100;
-    const top = finished ? ASCENT_DUO_FLOOR : 100;   // W1344 — past the summit the tower has a 101st floor
-    const dispFloor = finished ? top : floor;
+    const top = finished ? ASCENT_TOP : 100;   // W1344 — past the summit the tower has a 101st floor · W1348 — and a 102nd
+    const dispFloor = finished ? _ascentBeyondNow() : floor;
     let bandName = ''; try { bandName = _ascentBandFor(dispFloor).name; } catch (_) {}
     if (beyond) bandName = 'The Tower is Yours';
     const summit = finished || dispFloor >= 91;
@@ -17795,8 +17951,8 @@
     let floor = 1, done = 0;
     try { const stx = getAscentState(); floor = Math.max(1, Math.min(100, stx.currentFloor || 1)); done = stx.highestCleared || 0; } catch (_) {}
     const finished = done >= 100;
-    const top = finished ? ASCENT_DUO_FLOOR : 100;   // W1344 — past the summit the tower has a 101st floor
-    const dispFloor = finished ? top : floor;
+    const top = finished ? ASCENT_TOP : 100;   // W1344 — past the summit the tower has a 101st floor · W1348 — and a 102nd
+    const dispFloor = finished ? _ascentBeyondNow() : floor;
     const summit = finished || dispFloor >= 91;
     const litColor = (dispFloor >= 40 || summit) ? '#f5b842' : '#c8c6d8';
     const climbCta = summit ? 'SUMMIT' : 'CLIMB';
@@ -17998,7 +18154,7 @@
   function _twUltChipPaint() { try { const b = document.querySelector('#arena-body .tw-ult'); if (b) b.innerHTML = _twUltInner(); } catch (_) {} }
   function _twHeaderHtml() {
     const left = ascentLivesLeft();
-    let eqTitle = null; try { const t = getEquippedArenaTitle(); eqTitle = t && t.name; } catch (_) {}
+    let eqTitle = null, eqBurn = false; try { const t = getEquippedArenaTitle(); eqTitle = t && t.name; eqBurn = !!t && _titleBurns(t.id, _titleInkLocal().id); } catch (_) {}   // W1348
     // W272 — POWER, the climb's own number (vows → stats + relics → power); tap for the breakdown
     let pwr = 0; try { pwr = _arD(_ascFightPower()); } catch (_) {}
     let hearts = '';
@@ -18008,7 +18164,7 @@
       '<div class="tw-r1"><span class="tw-brand">THE ASCENT</span>' +
         (_ascTestBuild
           ? '<button class="tw-chip test" data-ar="twtestend" type="button">TEST BUILD ✕</button></div>'   // W1061
-          : '<button class="tw-chip" data-ar="titles" type="button">' + (eqTitle ? '“' + esc(eqTitle) + '”' : 'TITLES') + TW_I.chevR + '</button></div>') +
+          : '<button class="tw-chip" data-ar="titles" type="button">' + (eqTitle ? (eqBurn ? '<span class="ttl-fire">“' + esc(eqTitle) + '”</span>' : '“' + esc(eqTitle) + '”') : 'TITLES') + TW_I.chevR + '</button></div>') +
       '<div class="tw-r2"><div class="tw-r2l">' +
         '<button class="tw-power" data-ar="powerinfo" type="button" aria-label="What makes up your power"><span class="tw-lbl">POWER ' + TW_I.info + '</span>' +
           '<span class="num">' + pwr.toLocaleString('en-US') + '</span></button>' + _twUltChipHtml() + '</div>' +   // W1173 — the equipped ultimate, beside POWER
@@ -18121,10 +18277,13 @@
       h += '</div>';
     }
     // W1344 — past the summit the rail grows a 101st cell, in the King's crimson (lit once floor 101 is beaten)
+    // W1348 — and a 102nd above it (the King Black Dragon)
     if (done) {
-      const won = (st.beyondCleared | 0) > ASCENT_FLOORS;
-      h = h.replace('<div class="tw-spire"></div>', '<div class="tw-spire"></div><div class="tw-rb tw-rb--beyond" style="--tw-c:#e5484d"><i class="c ms' + (won ? ' on' : ' now') + '"></i></div>');
-      return h + '<span class="num top">' + (won ? ASCENT_DUO_FLOOR : ASCENT_FLOORS) + '</span>';
+      const bc = st.beyondCleared | 0;
+      let cells = '';
+      for (let f = ASCENT_TOP; f > ASCENT_FLOORS; f--) cells += '<i class="c ms' + (bc >= f ? ' on' : (f === Math.max(ASCENT_DUO_FLOOR, bc + 1) ? ' now' : '')) + '"></i>';
+      h = h.replace('<div class="tw-spire"></div>', '<div class="tw-spire"></div><div class="tw-rb tw-rb--beyond" style="--tw-c:#e5484d">' + cells + '</div>');
+      return h + '<span class="num top">' + (bc > ASCENT_FLOORS ? bc : ASCENT_FLOORS) + '</span>';
     }
     return h + '<span class="num" id="tw-rail-num">' + cur + '</span>';
   }
@@ -18142,13 +18301,13 @@
     const curBandIdx = done ? ASCENT_BANDS.length - 1 : ASCENT_BANDS.indexOf(_ascentBandFor(cur));
     // W1344 — past the summit, floor 101 is the next fight; the Hall of the Awakened is one tap under it
     const hero = done
-      ? _twHeroHtml(ascentFloorInfo(ASCENT_DUO_FLOOR), Infinity) +
+      ? _twHeroHtml(ascentFloorInfo(Math.min(ASCENT_TOP, Math.max(ASCENT_DUO_FLOOR, (st.beyondCleared | 0) + 1))), Infinity) +   // W1348 — the next floor past the summit (102 once 101 is beaten)
         '<button class="tw-hall" data-ar="hall" type="button">ENTER THE HALL ' + TW_I.play + '</button>'   // W269 — the Hall of the Awakened
       : _twHeroHtml(ascentFloorInfo(cur), left);
     // W1064 — the test build can fight any of the ten bosses, to see each one's celebration.
     let testBosses = '';
     if (_ascTestBuild) {
-      for (let f = 10; f <= ASCENT_DUO_FLOOR; f += (f < ASCENT_FLOORS ? 10 : 1)) testBosses += '<button class="tw-tb" data-ar="fight" data-floor="' + f + '" type="button">' + f + '</button>';   // W1344 — and 101
+      for (let f = 10; f <= ASCENT_TOP; f += (f < ASCENT_FLOORS ? 10 : 1)) testBosses += '<button class="tw-tb" data-ar="fight" data-floor="' + f + '" type="button">' + f + '</button>';   // W1344 — and 101
       testBosses = '<div class="tw-testbosses"><div class="tw-lbl">FIGHT ANY BOSS</div><div class="row">' + testBosses + '</div></div>';
     }
     // W513 — no PvP banner in the tower (the Status card's DUEL tile is the one way in).
@@ -18298,8 +18457,9 @@
     if (m.test) return 'Test build. Nothing counts.';   // W1061
     const st = getAscentState();
     if (_ascentIsDuo(m.floor)) {   // W1344 — never rated: the first clear earns the title
-      if ((st.highestCleared | 0) < ASCENT_FLOORS) return 'Clear Floor 100 first';
-      return (st.beyondCleared | 0) >= m.floor ? 'No stakes' : 'Win: the title The King';
+      if (!_ascentBeyondOpen(m.floor, st)) return 'Clear Floor ' + (m.floor === ASCENT_DUO_FLOOR ? ASCENT_FLOORS : m.floor - 1) + ' first';   // W1348
+      const t = ARENA_TITLES.find((x) => x.kind === 'beyond' && x.floor === m.floor);
+      return (st.beyondCleared | 0) >= m.floor ? 'No stakes' : 'Win: the title ' + (t ? t.name : '');
     }
     if (m.advances) {
       const win = m.floor >= ASCENT_FLOORS ? 'Win: the summit' : 'Win: Floor ' + (m.floor + 1);   // W1333
@@ -18499,7 +18659,7 @@
     const taunt = boss ? ((ASCENT_BOSSES[m.floor] || {}).taunt || 'You should not have climbed this high.') : '';
     const marks = _mxMarksHtml(c, marching, owned);
     const top = boss
-      ? '<span class="mx-ribbon">FLOOR ' + m.floor + ' · ' + (duo ? 'TWO AT ONCE' : apex ? 'SUMMIT' : 'MILESTONE') + '</span>'   // fits beside EXIT at 375
+      ? '<span class="mx-ribbon">FLOOR ' + m.floor + ' · ' + (F.isDragon ? 'THREE HEADS' : duo ? 'TWO AT ONCE' : apex ? 'SUMMIT' : 'MILESTONE') + '</span>'   // fits beside EXIT at 375
       : '<span class="mx-floor">FLOOR ' + m.floor + '</span>';
     _arSet(
       '<div class="mx' + (boss ? ' mx--boss' : '') + (apex ? ' mx--apex' : '') + (duo ? ' mx--duo' : '') + '">' +
@@ -18519,7 +18679,7 @@
           '<div class="mx-pw foe"><div class="n">' + c.foePow + '</div><div class="l">' + (boss ? 'BOSS POWER' : 'FLOOR POWER') + '</div></div>' +
         '</div>' + marks + '</div>' +
         '<div class="mx-odds"><span class="mx-band' + (d.cls === 'tough' ? ' out' : '') + '"><i></i>' + d.key + '</span><span>≈ <b>' + o + '%</b> WIN</span></div>' +
-        '<button class="mx-fight" data-ar="introgo" type="button"><b>' + (duo ? 'CHALLENGE BOTH' : apex ? 'CHALLENGE' : boss ? 'CHALLENGE BOSS' : 'FIGHT') + '</b>' +
+        '<button class="mx-fight" data-ar="introgo" type="button"><b>' + (F.isDragon ? 'CHALLENGE' : duo ? 'CHALLENGE BOTH' : apex ? 'CHALLENGE' : boss ? 'CHALLENGE BOSS' : 'FIGHT') + '</b>' +
           '<span>FLOOR ' + m.floor + (duo ? '' : apex ? ' · THE SUMMIT' : boss ? ' · MILESTONE' : '') + '</span></button>' +
         '<div class="mx-stakes">' + _mxStakesHtml(m) + '</div>' + echo +
         _mxTapeHtml(m, c, boss) + _mxLoadoutHtml() +
@@ -19236,6 +19396,8 @@
       else if (x.k === 'shred') h += '<span class="ar-st down">ARMOR−' + n + '</span>';
       else if (x.k === 'dotImmune') h += '<span class="ar-st up cau">CAUTERIZED' + n + '</span>';
       else if (x.k === 'dodge') h += '<span class="ar-st up">EVA' + n + '</span>';
+      else if (x.k === 'acc') h += '<span class="ar-st down">SMOKE' + n + '</span>';   // W1348 — the Smoke head's blind
+      else if (x.k === 'dfire') h += '<span class="ar-st burn df">DRAGONFIRE</span>';   // W1348 — it never ends while a head swings
     });
     if (S.guard > 0) h += '<span class="ar-st up">GUARD</span>';
     if (S.stun > 0) h += '<span class="ar-st down">STUN</span>';
@@ -19325,7 +19487,7 @@
   function _arMoveType(mv) {
     const f = mv && mv.fx && mv.fx.t;
     if (f === 'heal' || f === 'defUp' || f === 'atkUp' || f === 'dodge' || f === 'guard' || f === 'guardCleanse' || f === 'bulwark') return 'defense';
-    if (f === 'defDown' || f === 'atkDown' || f === 'burn' || f === 'bleed' || f === 'stun') return 'debuff';
+    if (f === 'defDown' || f === 'atkDown' || f === 'burn' || f === 'bleed' || f === 'stun' || f === 'blind') return 'debuff';
     return 'attack';
   }
   // W1135 — the redesigned cards (Claude Design "The Ascent - Battle Redesign"): accent bar, icon box, name +
@@ -19363,7 +19525,7 @@
   }
   function _pkb2RefreshMoves(s, box) {
     const word = s._pvp ? null : (s._duo ? _arIntentWordAt(s, s.target) : _arIntentWord(s));
-    const duoMoves = s._duo ? [0, 1].map((i) => (s.foes[i].dead ? null : (i === s._fi ? s._bNext : s.foes[i]._bNext))) : null;   // W1344
+    const duoMoves = s._duo ? s.foes.map((sl, i) => (sl.dead ? null : (i === s._fi ? s._bNext : sl._bNext))) : null;   // W1344 · W1348 — N
     const duoTag = { parry: 'PARRY', sidestep: 'SIDESTEP', reflect: 'REFLECT', ward: 'WARD', interrupt: 'INTERRUPT' };
     const pS = s.pS || _arBlankStatus();
     const warded = pS.guard > 0 || (pS.mods || []).some((x) => x.k === 'def' && x.mag < 0);
@@ -19541,7 +19703,7 @@
     const ready = v >= 1 && !s.done && !stunned;
     // W1140 — the Surge parry: on a HEAVY turn, below full, once two segments are banked.
     const canParry = !s._pvp && !ready && !s.done && !stunned && v >= SURGE_GUARD_COST &&
-      (s._duo ? [0, 1].some((i) => _arIntentWordAt(s, i) === 'HEAVY') : _arIntentWord(s) === 'HEAVY');   // W1233 — no reads in a duel · W1344 — either monster's heavy
+      (s._duo ? s.foes.some((x, i) => _arIntentWordAt(s, i) === 'HEAVY') : _arIntentWord(s) === 'HEAVY');   // W1233 — no reads in a duel · W1344 — either monster's heavy (W1348: any)
     const was = el.classList.contains('full');
     el.classList.toggle('full', ready);
     el.classList.toggle('canparry', canParry);
@@ -19657,7 +19819,7 @@
     el.innerHTML = '<div class="bgart"><img class="bg" src="assets/backgrounds/bg_' + _arBgTier(m.floor) + '.webp" alt="" onerror="this.remove()">' +
         '<div class="boss">' + _arFoeArt(m.bot, true) + '</div></div>' +
       '<div class="dark"></div>' +
-      '<div class="body"><div class="kick">FLOOR ' + m.floor + (m.bot._duo ? ' · TWO AT ONCE' : ' · BOSS') + '</div><div class="ttl">' + esc(m.bot.name) + '</div>' +
+      '<div class="body"><div class="kick">FLOOR ' + m.floor + (m.bot.isDragon ? ' · THREE HEADS' : m.bot._duo ? ' · TWO AT ONCE' : ' · BOSS') + '</div><div class="ttl">' + esc(m.bot.name) + '</div>' +
         (band ? '<div class="sub">' + esc(band) + '</div>' : '') + '<div class="rule"><i></i></div>' +
         (bz.taunt && bz.taunt !== '…' ? '<div class="quote">“' + esc(bz.taunt) + '”</div>' : '<div class="quote">…</div>') +
         (rail ? '<div class="rhythm"><span class="k">ITS RHYTHM</span><span class="steps">' + _pkbRailHtml(Object.assign({}, rail, { on: -1 })) + '</span><span class="t">' + esc(rail.line || '') + '</span></div>' : '') + '</div>' +
@@ -19707,15 +19869,16 @@
 
   // ── W1344 — the duo on the battle screen. Two foe spots, plates and badges; the director's ids follow the BOUND
   // monster (_pkbBindFoe swaps them, with the per-foe mirrors), so every HP / chip / FX / motion path runs unchanged.
-  let _pkbBound = 0, _pkbOther = null;
-  const _PKB_DUO_IDS = [['pkb-spot-b', 'pkb-spot-bx'], ['pkb-plate-b', 'pkb-plate-bx'], ['pkb-ghost-b', 'pkb-ghost-bx'], ['pkb-bar-b', 'pkb-bar-bx'],
-    ['pkb-chips-b', 'pkb-chips-bx'], ['pkb-num-b', 'pkb-num-bx'], ['pkb-intent', 'pkb-intent-x']];
+  // W1348 — N monsters: the bound one's elements carry the plain ids, every other one's the id + 'x' + its index.
+  let _pkbBound = 0, _pkbOthers = {};
+  const _PKB_DUO_IDS = ['pkb-spot-b', 'pkb-plate-b', 'pkb-ghost-b', 'pkb-bar-b', 'pkb-chips-b', 'pkb-num-b', 'pkb-intent'];
   function _pkbBindFoe(fi) {
     const s = _arSess; if (!s || !s._duo || fi == null) return;
     if (fi === _pkbBound) { _arDuoLoad(s, fi); return; }
-    _PKB_DUO_IDS.forEach((pair) => { const ea = _pkbEl(pair[0]), eb = _pkbEl(pair[1]); if (ea && eb) { ea.id = '__pkbswap'; eb.id = pair[0]; ea.id = pair[1]; } });
-    const o = _pkbOther || { hp: null, ghost: 1, last: false, eff: false };
-    _pkbOther = { hp: _pkbHPm.b, ghost: _pkbGhostFrac.b, last: _pkbLastStand.b, eff: _pkbEffShown.b };
+    const was = _pkbBound;
+    _PKB_DUO_IDS.forEach((id) => { const ea = _pkbEl(id), eb = _pkbEl(id + 'x' + fi); if (ea && eb) { ea.id = id + 'x' + was; eb.id = id; } });
+    _pkbOthers[was] = { hp: _pkbHPm.b, ghost: _pkbGhostFrac.b, last: _pkbLastStand.b, eff: _pkbEffShown.b };
+    const o = _pkbOthers[fi] || { hp: null, ghost: 1, last: false, eff: false };
     _arDuoLoad(s, fi);
     _pkbHPm.b = (o.hp != null) ? o.hp : s.bHP; _pkbGhostFrac.b = o.ghost; _pkbLastStand.b = o.last; _pkbEffShown.b = o.eff;
     _pkbBound = fi;
@@ -19748,6 +19911,26 @@
       el.setAttribute('aria-label', 'Next turn: ' + w);
       void el.offsetWidth; el.classList.add('pop');
     });
+    if (s._dragon) _pkbHeadBadgesPlace();
+  }
+  // W1348 — each head's badge over that head: its window's spot, the picture's width behind it, the head's point in it.
+  function _pkbHeadBadgesPlace() {
+    try {
+      const stage = _pkbEl('pkb-stage'); if (!stage) return;
+      const sr = stage.getBoundingClientRect();
+      document.querySelectorAll('#arena-body .pkb2-intent[data-fi]').forEach((el) => {
+        const fi = el.getAttribute('data-fi');
+        const spot = document.querySelector('#arena-body .pkb-spot.duo.head[data-fi="' + fi + '"]');
+        if (!spot) return;
+        const r = spot.getBoundingClientRect(), cs = getComputedStyle(spot);
+        const a = parseFloat(cs.getPropertyValue('--a')) || 0, w = parseFloat(cs.getPropertyValue('--w')) || 1;
+        const hx = parseFloat(spot.getAttribute('data-hx')) || 0.5, hy = parseFloat(spot.getAttribute('data-hy')) || 0.2;
+        const imgW = r.width / w, x = r.left - a * imgW + hx * imgW - sr.left, y = r.top + hy * r.height - sr.top;
+        const bw = el.offsetWidth || 80, bh = el.offsetHeight || 28;
+        el.style.left = Math.round(Math.max(bw / 2 + 6, Math.min(sr.width - bw / 2 - 6, x))) + 'px';
+        el.style.top = Math.round(Math.max(48, y - bh - 10)) + 'px';
+      });
+    } catch (_) {}
   }
   // W1344 — owner 2026-11-27: "include dialogue and an effect when one monster gets defeated". Its last words in a
   // speech card over its head (the read card's look) while it sinks and greys; then it crumbles: a pale flash, a burst of
@@ -19801,7 +19984,7 @@
   function _pkb2Html(o) {
     let motes = ''; for (let i = 0; i < 6; i++) motes += '<i></i>';
     // W1344 — a duo foe plate: its own ids (the second monster's carry an 'x'), its index, tap to target
-    const duoPlate = (d, i) => { const x = i ? 'x' : ''; return '<div class="pkb-plate foe duo d' + i + (i === 0 ? ' tgt' : '') + '" id="pkb-plate-b' + x + '" data-fi="' + i + '" data-ar="target">' +
+    const duoPlate = (d, i) => { const x = i ? 'x' + i : ''; return '<div class="pkb-plate foe duo d' + i + (i === 0 ? ' tgt' : '') + '" id="pkb-plate-b' + x + '" data-fi="' + i + '" data-ar="target">' +   // W1348 — N plates
       '<div class="pkb2-bname"><span class="nm">' + esc(d.name) + '</span></div>' +
       '<div class="hp"><i class="ghost" id="pkb-ghost-b' + x + '"></i><i id="pkb-bar-b' + x + '" class="ok"></i><span class="ticks"></span></div>' +
       '<div class="pkb2-bmeta"><span class="chips" id="pkb-chips-b' + x + '"></span><span class="num" id="pkb-num-b' + x + '"></span></div></div>'; };
@@ -19824,17 +20007,18 @@
         '<span class="ult"><span class="ulx"><span class="k">SURGE READY</span><span class="n">' + esc(o.ultName || '') + '</span></span>' +
           '<span class="go"><svg width="11" height="13" viewBox="0 0 11 13" aria-hidden="true"><path d="M6.6 0.6 1.2 7.4h3.6L3.9 12.4l5.9-7.3H6.1Z" fill="currentColor"/></svg>UNLEASH</span></span>' +
         '<span class="shine" aria-hidden="true"></span></button>';
-    return '<div class="pkb pkb2' + (o.pvp ? ' pkb--pvp pkb2--pvp' : '') + (o.hasExe ? ' has-exe' : '') + (o.duo ? ' pkb2--duo' : '') + '">' +
+    return '<div class="pkb pkb2' + (o.pvp ? ' pkb--pvp pkb2--pvp' : '') + (o.hasExe ? ' has-exe' : '') + (o.duo ? ' pkb2--duo' : '') + (o.dragon ? ' pkb2--dragon' : '') + '">' +
       '<div class="pkb-stage settle" id="pkb-stage">' +
         '<div class="pkb-bgwrap" aria-hidden="true"></div>' +
         '<div class="pkb2-tint" aria-hidden="true"></div>' +
         '<div class="pkb-motes' + (o.isBoss ? ' embers' : '') + '" aria-hidden="true">' + motes + '</div>' +
-        (o.duo ? o.duo.map((d, i) => '<div class="pkb-spot foe boss duo d' + i + (i === 0 ? ' tgt' : '') + '" id="pkb-spot-b' + (i ? 'x' : '') + '" data-fi="' + i + '" data-ar="target"><span class="plat"></span><div class="spr">' + d.art + '</div></div>').join('')   // W1344
+        (o.dragonArt ? '<div class="pkb2-dragonbase" style="background-image:url(\'' + esc(o.dragonArt) + '\')" aria-hidden="true"></div>' : '') +   // W1348 — the whole dragon under its heads
+        (o.duo ? o.duo.map((d, i) => '<div class="pkb-spot foe boss duo d' + i + (d.head ? ' head t' + d.third : '') + (i === 0 ? ' tgt' : '') + '" id="pkb-spot-b' + (i ? 'x' + i : '') + '" data-fi="' + i + '" data-ar="target"' + (d.head ? ' style="--a:' + d.win[0] + ';--w:' + d.win[1] + '" data-hx="' + d.hx + '" data-hy="' + d.hy + '"' : '') + '><span class="plat"></span><div class="spr">' + d.art + '</div></div>').join('')   // W1344 · W1348 — a head shows its window
           : '<div class="pkb-spot foe' + (o.isBoss ? ' boss' : '') + (o.fa ? ' fa' : '') + '" id="pkb-spot-b"><span class="plat"></span><div class="spr">' + (o.foeArt || '') + '</div></div>') +
         '<div class="pkb-spot you" id="pkb-spot-p"><span class="plat"></span><span class="aura" aria-hidden="true"></span><div class="spr">' + (o.youArt || '') + '</div></div>' +
         '<div class="pkb2-scrim" aria-hidden="true"></div>' +
         '<div class="pkb-top">' + esc(o.top || '') + '</div>' +
-        (o.duo ? '<div class="pkb2-intent d0 hidden" id="pkb-intent" data-ar="intent" data-fi="0" role="button"></div><div class="pkb2-intent d1 hidden" id="pkb-intent-x" data-ar="intent" data-fi="1" role="button"></div>'   // W1344
+        (o.duo ? o.duo.map((d, i) => '<div class="pkb2-intent d' + i + ' hidden" id="pkb-intent' + (i ? 'x' + i : '') + '" data-ar="intent" data-fi="' + i + '" role="button"></div>').join('')   // W1344 · W1348 — one badge per monster
           : '<div class="pkb2-intent hidden" id="pkb-intent" data-ar="intent" role="button"></div>') +   // W1150 — tappable
         '<div class="pkb2-read hidden" id="pkb-read"></div>' +
         '<div class="pkb-fx" id="pkb-fx"></div>' +
@@ -21544,6 +21728,7 @@
       if (spot) spot.classList.add('enraged'); if (plate) plate.classList.add('enraged');
       if (e.bHP != null) { _pkbHPm.b = e.bHP; _pkbSetHP('b', e.bHP, true); }
       _pkbChips('b', true);
+      if (e.quiet) { try { _pkbTargetPaint(); } catch (_) {} next(); return; }   // W1348 — the other heads rage with the first one's line
       _pkbDuoEnrage(e, () => { try { _pkbTargetPaint(); } catch (_) {} next(); });
       return;
     }
@@ -21910,7 +22095,7 @@
       let fin = null;
       try { _arFlawless = !!(s.won && s.untouched); fin = arenaFinalizeBattle(s); _arFight = fin; s._finalized = true; } catch (_) {}
       try { _arAnnounceNewTitles(fin); } catch (_) {}   // W258 — guild-feed title broadcast (KO-commit path)
-      _pkbSay(s.won ? (s._duo ? 'Both claimants fall!' : esc(_arMatchup.bot.name) + ' is down!') : 'You fall…', _PKB_T.koHold, () => {   // W1344
+      _pkbSay(s.won ? (s._dragon ? 'The ' + esc(_arMatchup.bot.name) + ' falls!' : s._duo ? 'Both claimants fall!' : esc(_arMatchup.bot.name) + ' is down!') : 'You fall…', _PKB_T.koHold, () => {   // W1344 · W1348
         _pkbAfter(_PKB_T.ko, () => {
           // W1135 — the KO stamp, then the result sheet rises on its own (CONTINUE still taps through).
           const stamp = !s.won ? 'DEFEAT' : (fin && (fin.advanced || fin.beyondFirst) ? (fin.bossCleared ? 'BOSS SLAIN' : 'FLOOR CLEARED') : 'VICTORY');   // W1344
@@ -21958,10 +22143,12 @@
     // W1135 — the boss intro card carries the taunt now, so every fight opens on the same line.
     const flavor = 'Choose your opening move.';
     const effChip = s.pEff > 1.001 ? '<span class="pkb2-eff up">WEAK TO YOU</span>' : s.pEff < 0.999 ? '<span class="pkb2-eff dn">RESISTS YOU</span>' : '';
-    _pkbBound = 0; _pkbOther = s._duo ? { hp: s.foes[1].bHP, ghost: 1, last: false, eff: false } : null;   // W1344
+    _pkbBound = 0; _pkbOthers = {};   // W1344 · W1348 — every other monster's mirror
+    if (s._duo) s.foes.forEach((sl, k) => { if (k) _pkbOthers[k] = { hp: sl.bHP, ghost: 1, last: false, eff: false }; });
     _arSet(_pkb2Html({
       pvp: false, isBoss, hasExe: (s.pMoves || []).some((mv) => mv && mv.exe),
-      duo: s._duo ? s.foes.map((sl) => ({ name: sl.bot.name, art: _arFoeArt(sl.bot, true) })) : null,   // W1344 — floor 101's two
+      duo: s._duo ? s.foes.map((sl) => ({ name: sl.bot.name, art: _arFoeArt(sl.bot, true), head: !!sl.bot.isHead, third: sl.bot.third | 0, win: sl.bot.win, hx: sl.bot.hx, hy: sl.bot.hy })) : null,   // W1344 — floor 101's two · W1348 — 102's three heads
+      dragon: !!s._dragon, dragonArt: s._dragon ? (s._duoBot.art || '') : '',
       top: 'FLOOR ' + m.floor + ' — ' + String(m.bot.name || '').toUpperCase(),
       foeName: m.bot.name, foeArt: _arFoeArt(m.bot, isBoss), foeTag: 'FLOOR ' + m.floor, effChip, fa: isBoss && m.floor === ASCENT_FLOORS,
       rail: !!_arBossRail(s),   // W1140 — a rhythm boss shows its cycle in the band
@@ -21970,7 +22157,7 @@
     }));
     _pkbSetHP('p', s.pHP, false); _pkbSetHP('b', s.bHP, false);
     _pkbChips('p'); _pkbChips('b');
-    if (s._duo) { _pkbBindFoe(1); _pkbSetHP('b', s.bHP, false); _pkbChips('b'); _pkbBindFoe(0); _pkbTargetPaint(); }   // W1344 — the second plate
+    if (s._duo) { for (let k = 1; k < s.foes.length; k++) { _pkbBindFoe(k); _pkbSetHP('b', s.bHP, false); _pkbChips('b'); } _pkbBindFoe(0); _pkbTargetPaint(); }   // W1344 — the other plates (W1348: N)
     _pkbBusy = true;                 // W249 — input locked through the splash beat
     _pkbRefreshMoves();
     // W249 Patch 2a — freeze the move-grid slot height so SEE RESULT swaps in
@@ -22671,9 +22858,10 @@
       rows.push(row(_ascStar(), f.bossCleared ? 'BOSS SLAIN' : 'ASCENDED',
         f.bossCleared ? esc(f.bossCleared.name) + ' falls' : top ? 'The summit is yours' : 'Floor ' + (f.floorCleared + 1) + ' is open'));
     }
-    if (won && f.beyondFirst && f.bossCleared) rows.push(row(_ascStar(), 'BOSS SLAIN', esc(f.bossCleared.name) + ' fall'));   // W1344 — floor 101
+    if (won && f.beyondFirst && f.bossCleared) rows.push(row(_ascStar(), 'BOSS SLAIN', esc(f.bossCleared.name) + (f.floorCleared === ASCENT_DRAGON_FLOOR ? ' falls' : ' fall')));   // W1344 — floor 101 · W1348 — 102
     if (won && f.newTitles && f.newTitles.length) {
-      rows.push(row(_pkb2Svg('relic', 16), 'NEW TITLE', esc(f.newTitles[0].name), '<span class="tag new">NEW</span>', ' data-ar="titles"'));
+      const nt = f.newTitles[0], ntBurn = _titleBurns(nt.id, '');   // W1348 — Dragon Slayer burns the moment it is earned
+      rows.push(row(_pkb2Svg('relic', 16), 'NEW TITLE', ntBurn ? '<span class="ttl-fire">' + esc(nt.name) + '</span>' : esc(nt.name), '<span class="tag new">NEW</span>', ' data-ar="titles"'));
     }
     if (f.reclaimedSouls > 0) {   // W439 — Reclaim the Floor payout
       const left = Math.max(0, ASCENT_RECLAIM_DAILY_CAP - ((f.state && f.state.reclaimSouls) || 0));
@@ -22736,6 +22924,9 @@
   function _arRenderTitles() {
     _arView = 'titles';
     _arBodyMode(false);
+    // W1348 — owner 2026-11-28: "Make sure that exit isn't blocking the color". The list scrolls in a box that starts below
+    // the EXIT pill, so the colours and the rows never slide under it.
+    try { const b = _arBody(); if (b) b.classList.add('ar-body--clip'); } catch (_) {}
     const st = getAscentState();
     const equipped = getEquippedArenaTitle();
     // W1315 — the worn title's colour: its own (the tier) or one of the name's inks; the worn row previews it
@@ -22747,7 +22938,9 @@
       const sw = (id, cls, c, label) => '<button type="button" class="tm-ink' + cls + (tiId === id ? ' on' : '') + '" data-ar="tink" data-ink="' + id + '" style="--c:' + c + '" role="radio" aria-checked="' + (tiId === id) + '"' + (/ lock/.test(cls) ? ' aria-disabled="true"' : '') + ' aria-label="' + label + '"></button>';
       inkRow = '<div class="tm-inks"><span class="lbl">TITLE COLOR</span><div class="sw" role="radiogroup" aria-label="Title color">' +
         sw('', ' tm-ink--tier', _PC_TIER_COLORS[equipped.tier] || '#f5b842', 'The title&#39;s own color') +
-        WX_INKS.map((k) => { const open = _titleInkOpen(k); return sw(k.id, open ? '' : ' lock', k.grad ? 'linear-gradient(135deg,' + k.grad + ')' : k.css, k.n + (open ? '' : ', unlocks at floor ' + TITLE_INK_LIVING_FLOOR)); }).join('') + '</div></div>';   // W1317 — the living three lock below floor 80
+        WX_INKS.map((k) => { const open = _titleInkOpen(k); return sw(k.id, open ? '' : ' lock', k.grad ? 'linear-gradient(135deg,' + k.grad + ')' : k.css, k.n + (open ? '' : ', unlocks at floor ' + TITLE_INK_LIVING_FLOOR)); }).join('') +
+        (() => { const open = _titleFlamesOpen(); return sw('flames', ' tm-ink--fire' + (open ? '' : ' lock'), '#ff6a1f', 'Flames' + (open ? '' : ', unlocks at floor ' + ASCENT_DRAGON_FLOOR)); })() +   // W1348 — Dragon Slayer's reward, last
+        '</div></div>';   // W1317 — the living three lock below floor 80
     }
     let firstLockedSeen = false;
     const rows = ARENA_TITLES.map((t, i) => {
@@ -22772,13 +22965,14 @@
       } else {
         right = '<svg class="tm-lock" width="11" height="11" viewBox="0 0 14 14" aria-hidden="true"><g stroke="#6b6b86" stroke-width="1.2" fill="none"><rect x="3.2" y="6" width="7.6" height="5.6" rx="1.2"/><path d="M4.8 6V4.4a2.2 2.2 0 0 1 4.4 0V6"/></g></svg>';
       }
+      const burn = unlocked && _titleBurns(t.id, isEq ? tiId : '');   // W1348 — earned Dragon Slayer burns (worn in a picked colour, it wears that)
       const cls = 'tm-row tm-row--' + (t.tier || 'gold') + (isEq ? ' tm-row--worn' : '') +
         (unlocked ? ' tm-row--open' : isNext ? ' tm-row--next' : ' tm-row--deep');
       const tap = unlocked ? ' data-ar="equip" data-tid="' + esc(t.id) + '"' : '';
       return '<div class="' + cls + '"' + tap + '>' +
         '<span class="at">' + (t.kind === 'summit' ? 'F' + ASCENT_FLOORS : 'F' + t.floor) + '</span>' +
-        '<span class="tm-gem' + (unlocked ? '' : ' locked') + '"' + (isEq ? wornGem : '') + '></span>' +
-        '<span class="nm' + (isEq ? wornNm.cls : '') + '"' + (isEq ? wornNm.attr : '') + '>' + esc(t.name) + '</span>' + right + '</div>';
+        '<span class="tm-gem' + (unlocked ? '' : ' locked') + (burn ? ' ttl-flame' : '') + '"' + (isEq ? wornGem : '') + '></span>' +
+        '<span class="nm' + (isEq ? wornNm.cls : '') + (burn ? ' ttl-fire' : '') + '"' + (isEq ? wornNm.attr : '') + '>' + esc(t.name) + '</span>' + right + '</div>';
     }).join('');
     _arSet(
       '<div class="tm-head"><div class="tm-name">Titles</div></div>' +   // W1333 — no kicker, no sub
@@ -23020,7 +23214,7 @@
       else if (a === 'pvpretry')  { _pvpRatingError = false; try { _pvpRepaintRank(); _pvpFetchRating(); } catch (_) {} }   // retry a failed first rating load
       else if (a === 'pvpcerdone'){ try { _pvpCerFinish(); } catch (_) {} }
       else if (a === 'pcback')  { _arExit(); }   // W1318 — back to the card the Titles view came from
-      else if (a === 'tink')    { if (_titleInkSet(act.getAttribute('data-ink') || '')) _arRenderTitles(); else { try { showHabitToast('Unlocks at floor ' + TITLE_INK_LIVING_FLOOR + '.'); } catch (_) {} } }   // W1315 — the title's colour; W1317 — locked: say when
+      else if (a === 'tink')    { const ink = act.getAttribute('data-ink') || ''; if (_titleInkSet(ink)) _arRenderTitles(); else { try { showHabitToast(ink === 'flames' ? 'Beat floor ' + ASCENT_DRAGON_FLOOR + ' to unlock Flames.' : 'Unlocks at floor ' + TITLE_INK_LIVING_FLOOR + '.'); } catch (_) {} } }   // W1315 — the title's colour; W1317 — locked: say when
       else if (a === 'equip')   {
         const tid = act.getAttribute('data-tid');
         const cur = getEquippedArenaTitle();
@@ -32227,7 +32421,7 @@
     // — every floor_best submit was zeroed before sending, so the Highest-Floor
     // board showed every OTHER real player at Floor 0 (your own row was correct
     // only because it reads highestCleared directly, bypassing the sanitizer).
-    floor_best:     101,   // W1344 — floor 101, past the summit (backend METRIC_CAPS.floor_best 101)
+    floor_best:     102,   // W1344 — floor 101, past the summit · W1348 — 102 (backend METRIC_CAPS.floor_best 102)
     // W622 — unique relics in the Collection Log (~59 eligible today; catalog
     // grows). Matches backend METRIC_CAPS.relics_collected.
     relics_collected: 200,
@@ -32938,9 +33132,10 @@
     // W1344 — 3.0.34. 3.0.33 is in review and ships first, so this sheet carries only what is new: floor 101 (the onboarding
     // change is invisible to someone updating).
     '3.0.34': {
-      subtitle: 'Floor 101: two bosses at once.',
+      subtitle: 'Floors 101 and 102, past the summit.',
       items: [
         { emoji: '', title: 'Floor 101', description: "Clear floor 100 and two bosses wait above it, both fighting you at once. Tap one to hit it. When one falls, the other gets stronger. Beat both to earn the title The King." },   // W1344
+        { emoji: '', title: 'Floor 102', description: "Above them waits the King Black Dragon. Each of its three heads is its own target, and every attack sets you on fire. Nothing puts that fire out, and it burns hotter for every head still standing. Beat it to earn the title Dragon Slayer, which burns, and Flames: a title colour that sets any title alight." },   // W1348
         { emoji: '', title: 'Hume Band steps', description: "Steps from the Hume Band now count." },   // owner 2026-11-27 (the step-source allowlist, app.js + both Swift copies)
       ],
     },
@@ -43452,7 +43647,7 @@
                 '<span class="sc-tap-cue" aria-hidden="true">›</span>' +   // W490 — tappability cue (class details)
               '</span>' +
               // W1020 — the equipped Arena title, as a chip (nothing when no title is equipped)
-              (function () { let t = null; try { const eq = getEquippedArenaTitle(); t = eq && eq.name; } catch (_) {} return t ? '<span class="sc-title-chip">' + esc(String(t).toUpperCase()) + '</span>' : ''; })() +
+              (function () { let t = null, burn = false; try { const eq = getEquippedArenaTitle(); t = eq && eq.name; burn = !!eq && _titleBurns(eq.id, _titleInkLocal().id); } catch (_) {} return t ? '<span class="sc-title-chip' + (burn ? ' sc-title-chip--fire' : '') + '">' + (burn ? '<span class="ttl-fire">' + esc(String(t).toUpperCase()) + '</span>' : esc(String(t).toUpperCase())) + '</span>' : ''; })() +   // W1348
             '</div>' +
             // W1119 — the class flavor line is gone (owner 2026-10-31); only a Civilian keeps it,
             // because it says how to awaken a class. The Shadow Army strip took the space.
@@ -50724,8 +50919,8 @@
         const cur = Math.max(1, Math.min(100, stx.currentFloor || 1));
         const cleared = stx.highestCleared || 0;
         const started = cleared >= 1 || (stx.currentFloor || 0) > 1;
-        if ((stx.beyondCleared | 0) > 100) { ascFloor = stx.beyondCleared | 0; ascBand = 'The Tower is Yours'; }   // W1344 — floor 101 beaten
-        else if (cleared >= 100) { ascFloor = 101; ascBand = 'Beyond the Summit'; }   // W1344 — floor 101 next
+        if ((stx.beyondCleared | 0) >= ASCENT_TOP) { ascFloor = stx.beyondCleared | 0; ascBand = 'The Tower is Yours'; }   // W1344 — floor 101 beaten · W1348 — the top (102)
+        else if (cleared >= 100) { ascFloor = Math.min(ASCENT_TOP, Math.max(101, (stx.beyondCleared | 0) + 1)); ascBand = 'Beyond the Summit'; }   // W1344 — floor 101 next · W1348 — or 102
         else if (started) { ascFloor = cur; ascBand = (typeof _ascentBandFor === 'function') ? (_ascentBandFor(cur).name || '') : ''; }
       }
     } catch (_) { ascFloor = 0; ascBand = ''; }
@@ -51641,7 +51836,7 @@
         artPath: summit ? _BKS_SUMMIT_ART : (opts.bossId ? getBossArtPath(opts.bossId) : null),
         rankId: 'S',
         context: summit ? 'THE ASCENT · THE SUMMIT' : beyond ? ('BEYOND THE SUMMIT · FLOOR ' + floor) : ('THE ASCENT · FLOOR ' + floor),
-        feat: summit ? ('Floor ' + cap + ' — the First Awakened, bested') : beyond ? ('Floor ' + floor + ' — two bosses at once, both beaten') : ('Floor ' + floor + ' cleared, the climb continues'),
+        feat: summit ? ('Floor ' + cap + ' — the First Awakened, bested') : beyond ? (floor === 102 ? 'Floor 102 — the King Black Dragon, all three heads' : ('Floor ' + floor + ' — two bosses at once, both beaten')) : ('Floor ' + floor + ' cleared, the climb continues'),   // W1348
         killNo: 0,
         stamp: summit ? 'SUMMIT' : 'CLEARED',
       };
@@ -59401,7 +59596,7 @@
     // Companion to the Hall of the Awakened (the floor-100 finisher registry).
     floor_best: {
       title: 'Highest floor',
-      blurb: 'First to Floor 100 enters the Hall of the Awakened. Floor 101 crowns The King.',   // W1344
+      blurb: 'First to Floor 100 enters the Hall of the Awakened. Floor 101 crowns The King. Floor 102 makes a Dragon Slayer.',   // W1344 · W1348
       unit:  'floor',
       formatValue: n => 'Floor ' + (n || 0),
       leaderValue: n => String(n || 0),   // W1335 — the leader card's FLOOR label already says it ("Floor 100 / FLOOR" cut the name to "Richi")
@@ -60080,9 +60275,10 @@
         if (tdef) {
           _lbTier = tdef.tier || 'gold';
           const _ti = _titleInkRow(_titleInkFor(row, isMe));   // W1316 — the title's colour
+          const _burn = _titleBurns(tdef.id, _titleInkFor(row, isMe));   // W1348
           classLabel = '<span class="lb-rank-class lb-rank-class--' + _lbTier + _ti.cls + '"' + _ti.attr + '>' +
-            '<i class="lb-rank-gem" aria-hidden="true"></i>' +
-            '<span class="lb-rank-class-name">' + esc(tdef.name) + '</span>' + _stamps +
+            '<i class="lb-rank-gem' + (_burn ? ' ttl-flame' : '') + '" aria-hidden="true"></i>' +
+            '<span class="lb-rank-class-name' + (_burn ? ' ttl-fire' : '') + '">' + esc(tdef.name) + '</span>' + _stamps +
           '</span>';
         }
       }
@@ -60766,8 +60962,9 @@
         if (tdef) {
           const tier = tdef.tier || 'gold';
           const _ti = _titleInkRow(_titleInkFor(null, true));   // W1316 — the title's colour
+          const _burn = _titleBurns(tdef.id, _titleInkFor(null, true));   // W1348
           classLabel = '<span class="lb-rank-class lb-rank-class--' + tier + _ti.cls + '"' + _ti.attr + '>' +
-            '<i class="lb-rank-gem" aria-hidden="true"></i><span class="lb-rank-class-name">' + esc(tdef.name) + '</span></span>';
+            '<i class="lb-rank-gem' + (_burn ? ' ttl-flame' : '') + '" aria-hidden="true"></i><span class="lb-rank-class-name' + (_burn ? ' ttl-fire' : '') + '">' + esc(tdef.name) + '</span></span>';
         }
       }
     } catch (_) {}
@@ -62510,17 +62707,17 @@
     if (!data) { body.innerHTML = '<div class="pc-skeleton">Profile unavailable — try again.</div>'; return; }
     const rankLetter = data.rankTier || ((data.rankLabel || '').trim().split(' ')[0]) || 'E';
     const rankColor = _PC_RANK_COLORS[rankLetter] || '#a78bfa';
-    let titleName = null, tierColor = _PC_TIER_COLORS.iron;
+    let titleName = null, tierColor = _PC_TIER_COLORS.iron, titleId = null;
     try {
       if (data.arenaTitle && typeof ARENA_TITLES !== 'undefined') {
         let tid = data.arenaTitle;
         if (typeof _ARENA_TITLE_LEGACY !== 'undefined' && _ARENA_TITLE_LEGACY[tid]) tid = _ARENA_TITLE_LEGACY[tid];
         const t = ARENA_TITLES.find((x) => x.id === tid);
-        if (t) { titleName = t.name; tierColor = _PC_TIER_COLORS[t.tier] || tierColor; }
+        if (t) { titleName = t.name; tierColor = _PC_TIER_COLORS[t.tier] || tierColor; titleId = t.id; }
       }
     } catch (_) {}
     // W1154 — the own card reads the title THIS phone wears (instant, like the background), not the published one
-    if (isOwn) { try { const t = getEquippedArenaTitle(); titleName = t ? t.name : null; tierColor = t ? (_PC_TIER_COLORS[t.tier] || tierColor) : tierColor; } catch (_) {} }
+    if (isOwn) { try { const t = getEquippedArenaTitle(); titleName = t ? t.name : null; tierColor = t ? (_PC_TIER_COLORS[t.tier] || tierColor) : tierColor; titleId = t ? t.id : null; } catch (_) {} }
     const avatar = data.avatarId || 'avatar-base.png';
     // W1129 named the worn look under the portrait; W1299 — gone (owner 2026-11-23: "remove the name of the avatar of the
     // player card ... Don't want too much information on these player cards"), and the Ascent title took its place under the
@@ -62582,9 +62779,11 @@
     const nameCls = nameLen > 15 ? ' pcc-name--xxl' : nameLen > 12 ? ' pcc-name--xl' : nameLen > 9 ? ' pcc-name--l' : '';
     // W1315 — the title in its chosen ink: the own card reads this phone's choice, a visitor's card the published one
     const tInk = titleName ? _titleInkAttrs(isOwn ? _titleInkLocal().id : (data.cardTitleInk || ''), tierColor) : { cls: '', style: '--tc:#8e8ca6' };
+    const tBurn = !!titleName && _titleBurns(titleId, isOwn ? _titleInkLocal().id : (data.cardTitleInk || ''));   // W1348 — Dragon Slayer burns
+    const tGem = tBurn ? '<i class="ttl-flame"></i>' : '<i></i>', tSpan = tBurn ? '<span class="ttl-fire">' : '<span>';
     const titleHtml = isOwn
-      ? '<button type="button" class="pcc-title pcc-title--pick' + (titleName ? '' : ' pcc-title--none') + tInk.cls + '" data-pctitle="1" style="' + tInk.style + '"><i></i><span>' + (titleName ? esc(titleName) : 'Choose a title') + '</span>' + _PCC_CHEV_SM + '</button>'
-      : (titleName ? '<div class="pcc-title' + tInk.cls + '" style="' + tInk.style + '"><i></i><span>' + esc(titleName) + '</span></div>' : '');
+      ? '<button type="button" class="pcc-title pcc-title--pick' + (titleName ? '' : ' pcc-title--none') + tInk.cls + '" data-pctitle="1" style="' + tInk.style + '">' + tGem + tSpan + (titleName ? esc(titleName) : 'Choose a title') + '</span>' + _PCC_CHEV_SM + '</button>'
+      : (titleName ? '<div class="pcc-title' + tInk.cls + '" style="' + tInk.style + '">' + tGem + tSpan + esc(titleName) + '</span></div>' : '');
     const cell = function (k, v, cls) { return '<div class="pcc-cell"><span class="pcc-lbl">' + k + '</span><b class="pcc-v' + (cls ? ' ' + cls : '') + '">' + v + '</b></div>'; };
     // W440 — "Spar their Echo": only for an accepted friend who has published a loadout (canEcho). Unrated AI mirror; the
     // server re-verifies the friendship and runs it ranked:false. W1308 — the own card's row is Change look.
@@ -63087,8 +63286,20 @@
   // inks (Dawn, Void, Stardust) open once floor 80 is cleared; until then a stored one reads as the tier colour.
   const TITLE_INK_LIVING_FLOOR = 80;
   function _titleInkOpen(it) { if (!it) return false; if (!it.grad) return true; try { return (getAscentState().highestCleared | 0) >= TITLE_INK_LIVING_FLOOR; } catch (_) { return false; } }
-  function _titleInkLocal() { let raw = null; try { raw = localStorage.getItem('hb_title_ink'); } catch (_) {} if (raw === null) return { set: false, id: '' }; return { set: true, id: _titleInkOpen(_wxSlotItem('ink', raw)) ? raw : '' }; }
+  // W1348 — owner 2026-11-28: "It unlocks the burning flames effect". Beating floor 102 (Dragon Slayer) opens a title colour
+  // of its own, Flames, for any title: the letters burn and the gem is a flame (_titleBurns). Not one of the name's ten inks
+  // (the Wardrobe keeps those); the server allow-lists it for the title only.
+  function _titleFlamesOpen() { try { return (getAscentState().beyondCleared | 0) >= ASCENT_DRAGON_FLOOR; } catch (_) { return false; } }
+  function _titleInkLocal() { let raw = null; try { raw = localStorage.getItem('hb_title_ink'); } catch (_) {} if (raw === null) return { set: false, id: '' };
+    if (raw === 'flames') return { set: true, id: _titleFlamesOpen() ? raw : '' };   // W1348
+    return { set: true, id: _titleInkOpen(_wxSlotItem('ink', raw)) ? raw : '' }; }
   function _titleInkSet(id) {
+    if (id === 'flames') {   // W1348 — opens once floor 102 is beaten
+      if (!_titleFlamesOpen()) return false;
+      try { localStorage.setItem('hb_title_ink', 'flames'); } catch (_) {}
+      try { _maybeSubmitPublicRankSummary('title-ink-change'); } catch (_) {}
+      return true;
+    }
     const it = _wxSlotItem('ink', id); if (it && !_titleInkOpen(it)) return false;   // W1317 — a locked living ink: no change
     try { localStorage.setItem('hb_title_ink', it ? id : ''); } catch (_) {}
     try { _maybeSubmitPublicRankSummary('title-ink-change'); } catch (_) {}
@@ -63096,6 +63307,10 @@
   }
   // the title line in an ink: a solid ink is --tc (the words and the gem); a living ink paints the words with its
   // gradient (the name's sweep) and the gem with it too. '' or an unknown id = the tier colour passed in.
+  // W1348 — owner 2026-11-28: "It would be cool to have the dragon slayer title burn in flames". Its letters are fire and
+  // its gem a small flame, wherever it shows with no colour picked for it (a picked ink still wins: it was chosen).
+  // W1348 — then "It unlocks the burning flames effect": the Flames colour burns any title.
+  function _titleBurns(titleId, inkId) { if (inkId === 'flames') return !!titleId; return titleId === 'beyond_dragon_slayer' && !(inkId && _wxSlotItem('ink', inkId)); }
   function _titleInkAttrs(id, tierColor) {
     const it = id ? _wxSlotItem('ink', id) : null;
     if (!it) return { cls: '', style: '--tc:' + tierColor };

@@ -9,9 +9,9 @@ describe('metric registry', () => {
     for (const m of METRICS) expect(typeof METRIC_CAPS[m]).toBe('number');
   });
 
-  it('W274 — floor_best is registered, capped at 101 (W1344: floor 101 past the summit), and NOT weekly', () => {
+  it('W274 — floor_best is registered, capped at 102 (W1344 floor 101, W1348 floor 102, past the summit), and NOT weekly', () => {
     expect(isValidMetric('floor_best')).toBe(true);
-    expect(METRIC_CAPS.floor_best).toBe(101);
+    expect(METRIC_CAPS.floor_best).toBe(102);
     expect(isWeeklyMetric('floor_best')).toBe(false);
     expect(WEEKLY_METRICS.has('floor_best')).toBe(false);
   });
