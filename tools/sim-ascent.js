@@ -125,6 +125,7 @@ if (process.argv.indexOf('--ults') !== -1) {
 
 // ── W1344: FLOOR 101, two at once (opt-in: `node tools/sim-ascent.js --duo [n]`). The owner's target for a max build
 // (Nightfall, all relics and sets) is about 35% with no shadows rising to about 75% with every one, harder than floor 100.
+// W1347: after an easy win he picked "A bit stronger" (DUO_POWER 0.95): about 16% alone, about 70% with every shadow.
 // Rows: the Usurper first (the strong play, 'threat': hit the bigger hitter), and the Pretender first ('back') for contrast.
 if (process.argv.indexOf('--duo') !== -1) {
   const n = +(process.argv[process.argv.indexOf('--duo') + 1]) || 1000;

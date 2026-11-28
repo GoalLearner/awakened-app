@@ -11210,14 +11210,15 @@ test.describe('CC · The Shadow Army drops like a pet (W1035 · W1047)', () => {
 
   // W1344 — owner 2026-11-27: floor 101 is two monsters at once, harder than floor 100 (his pick: about 35% for a max build
   // alone, about 75% with every shadow). Hitting the Usurper first (the sim's default 'threat' target) is the strong play.
-  test('W1344 — floor 101: the max build wins about a third alone, about three in four with every shadow, under floor 100', async ({ page }) => {
+  // W1347 — then "A bit stronger" (DUO_POWER 0.95): about one in six alone (17.7%), about seven in ten with every shadow (71%).
+  test('W1344 — floor 101: the max build wins about one in six alone, about seven in ten with every shadow, under floor 100', async ({ page }) => {
     test.setTimeout(120_000);
     await freshApp(page);
     const r = await page.evaluate(() => [0, 5, 99].map((k) =>
       (window as any).Arena.simAscent(101, 'nightfall_blade', { n: 600, invest: 'max', shadows: k }).winRate));
     const f100 = await page.evaluate(() => (window as any).Arena.simAscent(100, 'nightfall_blade', { n: 600, invest: 'max', shadows: 0 }).winRate);
-    expect(r[0]).toBeGreaterThanOrEqual(0.27);
-    expect(r[0]).toBeLessThanOrEqual(0.47);
+    expect(r[0]).toBeGreaterThanOrEqual(0.09);
+    expect(r[0]).toBeLessThanOrEqual(0.29);
     expect(r[1]).toBeGreaterThan(r[0]);
     expect(r[2]).toBeGreaterThan(r[1]);
     expect(r[2]).toBeGreaterThanOrEqual(0.63);
